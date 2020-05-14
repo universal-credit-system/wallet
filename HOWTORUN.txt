@@ -1,0 +1,29 @@
+HOW TO RUN
+----------
+The Universal Credit System was written as shell script on a Raspberry Pi 3 with Raspbian.
+
+Make sure you have the following programs installed before running the UCS Client:
+
+bc		(used for floating point calculations)
+openssl		(used for TSA verification)
+gpg		(aka GnuPG, used for signing)
+dialog		(used for GUI)
+
+Install >bc< by executing the following command:
+sudo apt-get install bc
+
+Install >gpg< by executing the following command:
+sudo apt-get install gnupg2
+
+Install >openssl< by executing the following command:
+sudo apt-get install openssl
+
+Install >dialog< by executing the following command:
+sudo apt-get install dialog
+
+Once you have installed all these programs, you have to execute the install.sh script that created required folders:
+./install.sh
+
+Now you can run the UCS Client just like you would executed any other script:
+./ucs_client.sh
+
