@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 login_account(){
 		account_name_chosen=$1
 		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
@@ -290,7 +290,7 @@ check_input(){
 }
 build_ledger(){
 		date_stamp=1577142000
-		
+
 		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED
 		ls -1 ${script_path}/keys >${script_path}/accounts.tmp
 		cat ${script_path}/blacklisted_accounts.dat >>${script_path}/accounts.tmp
@@ -380,7 +380,6 @@ build_ledger(){
 					fi
 					cat ${script_path}/ledger.tmp|sed "s/${account_name}=${account_prev_balance}/${account_name}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-					
 					grep -n "$focus" ${script_path}/trxs_${account_name}.tmp >${script_path}/trx_day_${focus}.tmp
 					no_hits_that_day=`cat ${script_path}/trx_day_${focus}.tmp|wc -l`
 					if [ $no_hits_that_day -gt 0 ]
@@ -392,6 +391,7 @@ build_ledger(){
 							trx_date_filename=`echo $trx_filename|cut -d'.' -f1`
 							trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
 							trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
+							trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
 							#if [ $trx_date_filename = $trx_date_inside ]
 							#then
 								###CHECK IF FRIENDS KNOW OF THIS TRX
@@ -399,12 +399,16 @@ build_ledger(){
 								number_of_friends_add=0
 								while read line
 								do
-									number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
-									number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
+									###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+									if [ $trx_sender != $line -a $trx_receiver != $line ]
+									then
+										number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
+										number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
+									fi
 								done <${script_path}/friends.dat
 								if [ $number_of_friends_trx -gt 0 -o $trx_sender = $handover_account ]
 								then
-									trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
+									#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
 									trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
 									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
 									is_greater_one=`echo "${trx_fee}>1"|bc`
@@ -451,7 +455,7 @@ build_ledger(){
 							#else
 							#	echo "${trx_filename}" >>${script_path}/blacklisted_trx.dat
 							#fi
-						done <${script_path}/trx_day_${focus}.tmp					
+						done <${script_path}/trx_day_${focus}.tmp
 					else
 						rm ${script_path}/trx_day_${focus}.tmp
 					fi
