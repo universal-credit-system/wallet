@@ -392,69 +392,66 @@ build_ledger(){
 							trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
 							trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
 							trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-							#if [ $trx_date_filename = $trx_date_inside ]
-							#then
-								###CHECK IF FRIENDS KNOW OF THIS TRX
-								number_of_friends_trx=0
-								number_of_friends_add=0
-								while read line
-								do
-									###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-									if [ $trx_sender != $line -a $trx_receiver != $line ]
-									then
-										number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
-										number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
-									fi
-								done <${script_path}/friends.dat
-								if [ $number_of_friends_trx -gt 0 -o $trx_sender = $handover_account ]
+							
+							###CHECK IF FRIENDS KNOW OF THIS TRX
+							number_of_friends_trx=0
+							number_of_friends_add=0
+							while read line
+							do
+								###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+								if [ $trx_sender != $line -a $trx_receiver != $line ]
 								then
-									#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-									trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
-									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-									is_greater_one=`echo "${trx_fee}>1"|bc`
-                                				        if [ $is_greater_one = 0 ]
-					                                then
-                	                               				trx_fee="0${trx_fee}"
-                        	                			fi
-               	                	        	        	trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
-                       	                	        	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
-                               	                        		enough_balance=`echo "${account_check_balance}>0"|bc`
-        	                       	        	        	if [ $enough_balance = 1 ]
-                                               	        		then
-                                                       	        		account_balance=$account_check_balance
-										is_greater_one=`echo "${account_balance}>1"|bc`
-						                                if [ $is_greater_one = 0 ]
-        	                                				then
-                	                                				account_balance="0${account_balance}"
-                        	                				fi
-										account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
-										cat ${script_path}/ledger.tmp|sed "s/${account_name}=${account_prev_balance}/${account_name}=${account_balance}/g" >${script_path}/ledger_mod.tmp
-										mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-										receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|wc -l`
-										if [ $receiver_in_ledger = 0 ]
-										then
-											echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
-										else
-											receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|cut -d'=' -f2`
-											is_greater_one=`echo "${receiver_old_balance}>1"|bc`
-											if [ $is_greater_one = 0 ]
-											then
-												receiver_old_balance="0${receiver_old_balance}"
-											fi
-											receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-											is_greater_one=`echo "${receiver_new_balance}>1"|bc`
-											if [ $is_greater_one = 0 ]
-											then
-												receiver_new_balance="0${receiver_new_balance}"
-											fi
-										 	cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
-											mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-										fi
-        	                	        	                fi
+									number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
+									number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
 								fi
-							#else
-							#	echo "${trx_filename}" >>${script_path}/blacklisted_trx.dat
-							#fi
+							done <${script_path}/friends.dat
+							
+							#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
+							trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
+							trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+							is_greater_one=`echo "${trx_fee}>1"|bc`
+                                			if [ $is_greater_one = 0 ]
+					                       then
+                	                               		trx_fee="0${trx_fee}"
+                        	                	fi
+               	                	        	trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
+                       	                	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
+                               	                        enough_balance=`echo "${account_check_balance}>0"|bc`
+        	                       	        	if [ $enough_balance = 1 ]
+                                               	        then
+                                                       	       	account_balance=$account_check_balance
+								is_greater_one=`echo "${account_balance}>1"|bc`
+						                if [ $is_greater_one = 0 ]
+        	                                		then
+                	                                		account_balance="0${account_balance}"
+                        	                		fi
+								account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
+								cat ${script_path}/ledger.tmp|sed "s/${account_name}=${account_prev_balance}/${account_name}=${account_balance}/g" >${script_path}/ledger_mod.tmp
+								mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+								if [ $number_of_friends_trx -gt 0 ]
+								then
+									receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|wc -l`
+									if [ $receiver_in_ledger = 0 ]
+									then
+										echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
+									else
+										receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|cut -d'=' -f2`
+										is_greater_one=`echo "${receiver_old_balance}>1"|bc`
+										if [ $is_greater_one = 0 ]
+										then
+											receiver_old_balance="0${receiver_old_balance}"
+										fi
+										receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
+										is_greater_one=`echo "${receiver_new_balance}>1"|bc`
+										if [ $is_greater_one = 0 ]
+										then
+											receiver_new_balance="0${receiver_new_balance}"
+										fi
+									 	cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
+										mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+									fi
+								fi
+        	                	        	fi
 						done <${script_path}/trx_day_${focus}.tmp
 					else
 						rm ${script_path}/trx_day_${focus}.tmp
