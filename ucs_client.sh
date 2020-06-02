@@ -593,26 +593,42 @@ do
 	else
 		###FREETSA CERTIFICATE DOWNLOAD###
 		freetsa_available=0
+		freetsa_cert_available=0
+		freetsa_rootcert_available=0
 		cd ${script_path}/certs
-		wget https://freetsa.org/files/tsa.crt
-		rt_quiery=$?
-		if [ $rt_quiery = 0 ]
+		if [ ! -s ${script_path}/certs/freetsa/tsa.crt ]
+		then
+			wget https://freetsa.org/files/tsa.crt
+			rt_quiery=$?
+			if [ $rt_quiery = 0 ]
+			then
+				mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
+				freetsa_cert_available=1
+			else
+				rm ${script_path}/certs/tsa.crt
+			fi
+		else
+			freetsa_cert_available=1
+		fi
+		if [ ! -s ${script_path}/certs/freetsa/tsacert.pem ]
 		then
 			wget https://freetsa.org/files/cacert.pem
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 				mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/tsacert.pem
-				freetsa_available=1
+				freetsa_rootcert_available=1
 			else
-				rm ${script_path}/certs/tsa.crt
 				rm ${script_path}/certs/cacert.pem
 			fi
 		else
-			rm ${script_path}/certs/tsa.crt
+			freetsa_rootcert_available=1
 		fi
 		cd ${script_path}
+		if [ $freetsa_cert_available = 1 -a $freetsa_rootcert_available = 1 ]
+		then
+			freetsa_available=1
+		fi
 		######################################
 
 		###VERIFY USERS AND THEIR TSA STAMPS###
