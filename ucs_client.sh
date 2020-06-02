@@ -666,6 +666,30 @@ do
 				###############################################
 			done <${script_path}/proofs/${account_to_check}.txt
 		done <${script_path}/all_accounts.tmp
+		
+		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
+                ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
+                while read line
+                do
+                        key_uname=`echo $line|cut -d'.' -f1`
+                        key_imported=`gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys|grep "${key_uname}"|wc -l`
+                        if [ $key_imported = 0 ]
+                        then
+                                gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line}
+                                rt_quiery=$?
+                                if [ $rt_quiery -gt 0 ]
+                                then
+                        		dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Öffentlicher Schlüssel für user <${key_uname}> konnte nicht importiert werden (Datei: ${script_path}/keys/$line)!" 0 0
+                                        key_already_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${key_uname}"|wc -l`
+                                        if [ $key_already_blacklisted = 0 ]
+                                        then
+                                                echo "${line}" >>${script_path}/blacklisted_accounts.dat
+                                        fi
+                                fi
+                        fi
+                done <${script_path}/keys_import.tmp
+		rm ${script_path}/keys_import.tmp
+                ##########################################################
 
 		###VERIFY TRX AT THE BEGINNING AND MOVE TRX THAT HAVE NOT BEEN SIGNED BY THE OWNER TO BLACKLISTED
 		ls -1 ${script_path}/trx >${script_path}/all_trx.tmp
@@ -673,8 +697,8 @@ do
 		do
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|cut -d'.' -f2`
-			key_there=`ls -1 ${script_path}/keys/|grep "${user_to_check}"|wc -l`
-			if [ $key_there = 1 ]
+			usr_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${user_to_check}"|wc -l`
+			if [ $usr_blacklisted = 0 ]
 			then
 				user_file=`ls -1 ${script_path}/keys/|grep "${user_to_check}"`
 				verify_signature $file_to_check $user_file
