@@ -88,7 +88,7 @@ create_keys(){
 		then
 			file_stamp=`date +%s`
 			key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
-			name_hashed=`echo "${name_cleared}_${file_stamp}_Account"|shasum -a 256|cut -d' ' -f1`
+			name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
 			echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
 			gpg2 --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${password_second} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
 			rt_quiery=$?
