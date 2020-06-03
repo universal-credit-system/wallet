@@ -86,7 +86,7 @@ create_keys(){
 		done
 		if [ $password_aborted = 0 ]
 		then
-			file_stamp=`date +%Y%m%d`
+			file_stamp=`date +%s`
 			key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
 			name_hashed=`echo "${name_cleared}_${file_stamp}_Account"|shasum -a 256|cut -d' ' -f1`
 			echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
@@ -317,7 +317,8 @@ build_ledger(){
 		do
 			date_stamp=1577142000
 			account_name=`echo $line|cut -d'.' -f1`
-			account_date=`echo $line|cut -d'.' -f2`
+			account_date_unformatted=`echo $line|cut -d'.' -f2`
+			account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			now_stamp=`date +%s`
 			now=`date +%Y%m%d --date=@${now_stamp}`
