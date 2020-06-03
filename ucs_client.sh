@@ -737,7 +737,7 @@ do
 
 		####GET COINS FOR ACCOUNT LOGGED IN
 		build_ledger
-		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${keylist_hash}"|cut -d'=' -f2`
+		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}"|cut -d'=' -f2`
 		user_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Zurück' --title "Menü" --backtitle "Universal Credit System" --menu "\nAngemeldet als :\n${account_name_chosen}\n\nAdresse :\n${keylist_hash}\n\nKontostand :\n${account_my_balance} ${currency_symbol}\n\nBitte wählen:" 0 0 0 "Senden" "" "Empfangen" "" "Sync" "" "Historie" "" "Stats" "" "Log out" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
 		then
