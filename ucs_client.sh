@@ -1,6 +1,7 @@
 #!/bin/sh
 login_account(){
 		account_name_chosen=$1
+		account_key_rn=$2
 		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
 		account_found=0
 		handover_user=""
@@ -9,7 +10,7 @@ login_account(){
 		do
 			keylist_name=`echo $line|cut -d'.' -f1`
 			keylist_stamp=`echo $line|cut -d'.' -f2`
-			keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_Account"|shasum -a 256|cut -d' ' -f1`
+			keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d' ' -f1`
 			if [ $keylist_name = $keylist_hash ]
 			then
 				account_found=1
@@ -86,6 +87,7 @@ create_keys(){
 		if [ $password_aborted = 0 ]
 		then
 			file_stamp=`date +%Y%m%d`
+			key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
 			name_hashed=`echo "${name_cleared}_${file_stamp}_Account"|shasum -a 256|cut -d' ' -f1`
 			echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
 			gpg2 --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${password_second} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
@@ -169,7 +171,7 @@ create_keys(){
 							echo "100"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Fertig..." 0 0 0
 							sleep 3s
 							clear
-							dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nDatum :\n${file_stamp}\n\n" 0 0
+							dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
 							clear
 							cp ${script_path}/${name_cleared}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
 						else
@@ -178,8 +180,8 @@ create_keys(){
 
 							###Remove created keys out of keyring
 							key_fp=`gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
-							gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
-							gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
+							#gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
+							#gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
 						fi
 					fi
 				fi
@@ -536,7 +538,20 @@ do
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										account_entered_correct=1
+										account_rn=`dialog --title "Login" --backtitle "Universal Credit System" --inputbox "Login-Key eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+                                                                                rt_quiery=$?
+                                                                                if [ $rt_quiery = 0 ]
+                                                                                then
+                                                                                        check_input $account_rn
+                                                                                        rt_quiery=$?
+                                                                                        if [ $rt_quiery = 0 ]
+                                                                                        then
+                                                                                                account_entered_correct=1
+                                                                                        fi
+                                                                                else
+                                                                                        account_entered_correct=1
+                                                                                        account_entered_aborted=1
+                                                                                fi
 									fi
 								else
 									account_entered_correct=1
@@ -545,7 +560,7 @@ do
 							done
 							if [ $account_entered_aborted = 0 ]
 							then
-								login_account $account_chosen
+								login_account $account_chosen $account_rn
 							fi
 							;;
                         	"Konto erstellen")      account_entered_correct=0
