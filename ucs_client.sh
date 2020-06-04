@@ -122,11 +122,11 @@ create_keys(){
 							if [ $rt_quiery = 0 ]
 							then
 								cd ${script_path}/certs
-								wget https://freetsa.org/files/tsa.crt
+								wget -q https://freetsa.org/files/tsa.crt
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									wget https://freetsa.org/files/cacert.pem
+									wget -q https://freetsa.org/files/cacert.pem
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
@@ -601,7 +601,7 @@ do
 		cd ${script_path}/certs
 		if [ ! -s ${script_path}/certs/freetsa/tsa.crt ]
 		then
-			wget https://freetsa.org/files/tsa.crt
+			wget -q https://freetsa.org/files/tsa.crt
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
@@ -615,7 +615,7 @@ do
 		fi
 		if [ ! -s ${script_path}/certs/freetsa/tsacert.pem ]
 		then
-			wget https://freetsa.org/files/cacert.pem
+			wget -q https://freetsa.org/files/cacert.pem
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
