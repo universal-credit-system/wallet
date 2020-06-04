@@ -112,7 +112,7 @@ create_keys(){
 
 						###FreeTSA
 						cd ${script_path}
-						openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq
+						openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
@@ -132,7 +132,7 @@ create_keys(){
 									then
 										mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 										mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-										openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt
+										openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
 										rt_quiery=$?
 										if [ $rt_quiery = 0 ]
 										then
@@ -648,11 +648,11 @@ do
 				###FREETSA CHECK###############################
 				if [ $freetsa_available = 1 ]
 				then
-					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt
+					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
-						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp
+						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 1>&2
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
