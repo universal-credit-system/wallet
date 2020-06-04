@@ -111,33 +111,25 @@ create_keys(){
 						mkdir ${script_path}/proofs/${name_hashed}
 
 						###FreeTSA
-						echo "Creating quiery file..." >${script_path}/tsa_debug.log
 						cd ${script_path}
 						openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
-							echo "Successfully created quiery file..." >>${script_path}/tsa_debug.log
-							echo "Sending quiery file to TSA..." >>${script_path}/tsa_debug.log
 							cd ${script_path}
 							curl -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								echo "Successfully sent quiery file to TSA..." >>${script_path}/tsa_debug.log
-								echo "Requesting latest certificate file..." >>${script_path}/tsa_debug.log
 								cd ${script_path}/certs
 								wget https://freetsa.org/files/tsa.crt
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									echo "Successfully requested latest certificate file..." >>${script_path}/tsa_debug.log
-									echo "Requesting root certificate file..." >>${script_path}/tsa_debug.log
 									wget https://freetsa.org/files/cacert.pem
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										echo "Successfully requested root certificate file..." >>${script_path}/tsa_debug.log
 										mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 										mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
 										echo "Verifiying request..." >>${script_path}/tsa_debug.log
@@ -145,11 +137,9 @@ create_keys(){
 										rt_quiery=$?
 										if [ $rt_quiery = 0 ]
 										then
-											echo "Request successfully verified..." >>${script_path}/tsa_debug.log
 											mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}/freetsa.tsq
 											mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}/freetsa.tsr
 										else
-											echo "Request could not be verified..." >>${script_path}/tsa_debug.log
 											rm ${script_path}/freetsa.tsq
 											rm ${script_path}/freetsa.tsr
 										fi
