@@ -15,6 +15,7 @@ login_account(){
 			then
 				account_found=1
 				handover_account=$keylist_hash
+				handover_account_stamp=$keylist_stamp
 				account_file=$line
 			fi
 		done <${script_path}/keylist.tmp
@@ -738,7 +739,7 @@ do
 		####GET COINS FOR ACCOUNT LOGGED IN
 		build_ledger
 		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}"|cut -d'=' -f2`
-		user_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Zurück' --title "Menü" --backtitle "Universal Credit System" --menu "\nAngemeldet als :\n${account_name_chosen}\n\nAdresse :\n${keylist_hash}\n\nKontostand :\n${account_my_balance} ${currency_symbol}\n\nBitte wählen:" 0 0 0 "Senden" "" "Empfangen" "" "Sync" "" "Historie" "" "Stats" "" "Log out" "" 3>&1 1>&2 2>&3`
+		user_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Zurück' --title "Menü" --backtitle "Universal Credit System" --menu "\nAngemeldet als :\n${account_name_chosen}\n\nAdresse :\n${handover_account}\n\nKontostand :\n${account_my_balance} ${currency_symbol}\n\nBitte wählen:" 0 0 0 "Senden" "" "Empfangen" "" "Sync" "" "Historie" "" "Stats" "" "Log out" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
 		then
 			user_logged_in=0
@@ -815,8 +816,8 @@ do
 											mv ${script_path}/dependencies_mod.tmp ${script_path}/dependencies.tmp
 										fi
 									done <${script_path}/dependent_trx.tmp
-									keys_to_append="keys/${keylist_hash}.${keylist_stamp} "
-									proof_to_append="proofs/${keylist_hash}/*.tsq proofs/${keylist_hash}/*.tsr "
+									keys_to_append="keys/${handover_account}.${handover_account_stamp} "
+									proof_to_append="proofs/${handover_account}/*.tsq proofs/${handover_account}/*.tsr "
 									trx_to_append="trx/${trx_now}.${handover_account} "
 									while read line
 									do
@@ -977,8 +978,8 @@ do
 						esac
 						;;
 				"Historie")	cd ${script_path}/trx
-						grep -l "S:${keylist_hash}" *.* >${script_path}/my_trx.tmp
-						grep -l " R:${keylist_hash}" *.* >>${script_path}/my_trx.tmp
+						grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp
+						grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp
 						cd ${script_path}
 						no_trx=`cat ${script_path}/my_trx.tmp|wc -l`
 						menu_display_text=""
