@@ -132,7 +132,6 @@ create_keys(){
 									then
 										mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 										mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-										echo "Verifiying request..." >>${script_path}/tsa_debug.log
 										openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt
 										rt_quiery=$?
 										if [ $rt_quiery = 0 ]
