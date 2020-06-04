@@ -117,7 +117,7 @@ create_keys(){
 						if [ $rt_quiery = 0 ]
 						then
 							cd ${script_path}
-							curl -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
+							curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
