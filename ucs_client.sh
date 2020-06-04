@@ -24,11 +24,11 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --encrypt --sign ${script_path}/${account_name_chosen}_account.dat
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat
 			if [ $? = 0 ]
 			then
 				rm ${script_path}/${account_name_chosen}_account.dat
-				gpg2 --batch --no-default-keyring --keyring=${script_path}/keys/${account_file} --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg
+				gpg2 --batch --no-default-keyring --keyring=$${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg
 				encrypt_rt=$?
 				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
