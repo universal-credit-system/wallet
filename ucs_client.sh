@@ -2,6 +2,7 @@
 login_account(){
 		account_name_chosen=$1
 		account_key_rn=$2
+		account_password=$3
 		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
 		account_found=0
 		handover_user=""
@@ -23,11 +24,11 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --local-user $handover_account -r $handover_account --encrypt --sign ${script_path}/${account_name_chosen}_account.dat
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --encrypt --sign ${script_path}/${account_name_chosen}_account.dat
 			if [ $? = 0 ]
 			then
 				rm ${script_path}/${account_name_chosen}_account.dat
-				gpg2 --no-default-keyring --keyring=${script_path}/keys/${account_file} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg
+				gpg2 --batch --no-default-keyring --keyring=${script_path}/keys/${account_file} --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg
 				encrypt_rt=$?
 				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
@@ -551,7 +552,12 @@ do
 							done
 							if [ $account_entered_aborted = 0 ]
 							then
-								login_account $account_chosen $account_rn
+								password_chosen=`dialog --title "Login" --backtitle "Universal Credit System" --insecure --passwordbox "Password eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+                                                                rt_quiery=$?
+                                                                if [ $rt_quiery = 0 ]
+                                                                then
+									login_account $account_chosen $account_rn $password_chosen
+								fi
 							fi
 							;;
                         	"Konto erstellen")      account_entered_correct=0
