@@ -981,7 +981,11 @@ do
 								trx_date=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
                               	                        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f2`
 								trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-								trx_fee="0${trx_fee}"
+								is_greater_one=`echo "${trx_fee}>1"|bc`
+                                                                if [ $is_greater_one = 0 ]
+                                                                then
+                                                                        trx_fee="0${trx_fee}"
+                                                                fi
                                                                	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 								is_user_sender_blacklisted=`grep "${sender}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
 								is_user_receiver_blacklisted=`grep "${handover_user}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
@@ -1075,13 +1079,21 @@ do
 										trx_amount_with_fee=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
 										trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
 										trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
-										trx_fee="0${trx_fee}"
+										is_greater_one=`echo "${trx_fee}>1"|bc`
+                                                                                if [ $is_greater_one = 0 ]
+                                                                                then
+                                                                                        trx_fee="0${trx_fee}"
+                                                                                fi
 										dialog --title "Transaktion anzeigen" --backtitle "Universal Credit System" --msgbox "TYP :\nAusgehende Transaktion\n\nEMPFÄNGER :\n${receiver}\n\nBETRAG :\n-${trx_amount} ${currency_symbol}\n\nGEBÜHR :\n-${trx_fee} ${currency_symbol}\n\nTOTAL :\n-${trx_amount_with_fee} ${currency_symbol}\n\nDATUM :\n${trx_date}\n\nDATEI :\n${trx_file}\n\nSTATUS :\n${trx_status}\n\nCONFIRMATIONS :\n${trx_confirmations}" 0 0
 									else
 										trx_amount=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
                                                                         	trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-                                                                        	trx_fee="0${trx_fee}"
-                                                                        	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
+                                                                        	is_greater_one=`echo "${trx_fee}>1"|bc`
+                                                                                if [ $is_greater_one = 0 ]
+                                                                                then
+                                                                                        trx_fee="0${trx_fee}"
+                                                                                fi
+										trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 										dialog --title "Transaktion anzeigen" --backtitle "Universal Credit System" --msgbox "TYP :\nEingehende Transaktion\n\nSENDER :\n${sender}\n\nBETRAG :\n+${trx_amount} ${currency_symbol}\n\nDATUM :\n${trx_date}\n\nDATEI :\n${trx_file}\n\nSTATUS :\n${trx_status}\n\nCONFIRMATIONS :\n${trx_confirmations}" 0 0
 									fi
 								else
