@@ -3,10 +3,11 @@ login_account(){
 		account_name_chosen=$1
 		account_key_rn=$2
 		account_password=$3
-		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
 		account_found=0
 		handover_user=""
 		account_file=""
+		touch ${script_path}/keylist.tmp
+		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
 		while read line
 		do
 			keylist_name=`echo $line|cut -d'.' -f1`
@@ -24,11 +25,11 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 2>/dev/null
 			if [ $? = 0 ]
 			then
 				rm ${script_path}/${account_name_chosen}_account.dat
-				gpg2 --batch --no-default-keyring --keyring=$${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg
+				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
 				encrypt_rt=$?
 				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
@@ -53,127 +54,91 @@ login_account(){
 }
 create_keys(){
 		name_chosen=$1
-		name_found=0
+		name_passphrase=$2
 		name_cleared=$name_chosen
-		with_pw=1
-                password_found=0
- 	        password_aborted=0
-	     	while [ $password_found = 0 ]
-               	do
-                	password_first=`dialog --insecure --passwordbox "Bitte Passwort eingeben" 0 0 3>&1 1>&2 2>&3`
-			rt_quiery=$?
-			if [ $rt_quiery = 0 ]
-			then
-               			clear
-				password_second=`dialog --insecure --passwordbox "Bitte Passwort ein zweites mal eingeben" 0 0 3>&1 1>&2 2>&3`
-				rt_quiery=$?
-				if [ $rt_quiery = 0 ]
-				then
-					clear
-                                       	if [ $password_first != $password_second ]
-                        		then
-						dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Die eingegeben Passwörter stimmen nicht überein!" 0 0
-						clear
-					else
-                                		password_found=1
-					fi
-				else
-					password_found=1
-					passwort_aborted=1
-				fi
-			else
-				password_found=1
-				password_aborted=1
-			fi
-		done
-		if [ $password_aborted = 0 ]
+		file_stamp=`date +%s`
+		key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
+		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
+		echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
+		gpg2 --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
+		rt_quiery=$?
+		if [ $rt_quiery = 0 ]
 		then
-			file_stamp=`date +%s`
-			key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
-			name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
-			echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
-			gpg2 --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${password_second} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
+			echo "33"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Public Key exportieren..." 0 0 0
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${file_stamp}_pub.asc --export $name_hashed
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				echo "33"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Public Key exportieren..." 0 0 0
-				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${password_second} --output ${script_path}/${name_cleared}_${file_stamp}_pub.asc --export $name_hashed
+				echo "66"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Private Key exportieren..." 0 0 0
+				dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie werden eventuell gleich aufgefordert für den Export des Privaten-Keys das Passwort einzugeben." 0 0
+				clear
+				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
 				rt_quiery=$?
 				if [ $rt_quiery = 0 ]
 				then
-					echo "66"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Private Key exportieren..." 0 0 0
-					dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie werden eventuell gleich aufgefordert für den Export des Privaten-Keys das Passwort einzugeben." 0 0
-					clear
-					gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${password_second} --output ${script_path}/${name_cleared}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
+					###TSA SECTION####
+					mkdir ${script_path}/proofs/${name_hashed}
+					###FreeTSA
+					cd ${script_path}
+					openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
-						###TSA SECTION####
-						mkdir ${script_path}/proofs/${name_hashed}
-
-						###FreeTSA
 						cd ${script_path}
-						openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
+						curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
-							cd ${script_path}
-							curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
+							cd ${script_path}/certs
+							wget -q https://freetsa.org/files/tsa.crt
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								cd ${script_path}/certs
-								wget -q https://freetsa.org/files/tsa.crt
+								wget -q https://freetsa.org/files/cacert.pem
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									wget -q https://freetsa.org/files/cacert.pem
+									mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
+									mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
+									openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
-										mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-										openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
-										rt_quiery=$?
-										if [ $rt_quiery = 0 ]
-										then
-											mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}/freetsa.tsq
-											mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}/freetsa.tsr
-										else
-											rm ${script_path}/freetsa.tsq
-											rm ${script_path}/freetsa.tsr
-										fi
+										mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}/freetsa.tsq
+										mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}/freetsa.tsr
 									else
-										rm ${script_path}/certs/tsa.crt
-										rm ${script_path}/certs/cacert.pem
+										rm ${script_path}/freetsa.tsq 2>/dev/null
+										rm ${script_path}/freetsa.tsr 2>/dev/null
 									fi
 								else
-									rm ${script_path}/certs/tsa.crt
+									rm ${script_path}/certs/tsa.crt 2>/dev/null
+									rm ${script_path}/certs/cacert.pem 2>/dev/null
 								fi
 							else
-								rm ${script_path}/freetsa.tsq
-								rm ${script_path}/freetsa.tsr
+								rm ${script_path}/certs/tsa.crt 2>/dev/null
 							fi
 						else
-							rm ${script_path}/freetsa.tsq
+							rm ${script_path}/freetsa.tsq 2>/dev/null
+							rm ${script_path}/freetsa.tsr 2>/dev/null
 						fi
-						if [ $rt_quiery = 0 ]
-						then
-							echo "100"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Fertig..." 0 0 0
-							sleep 3s
-							clear
-							dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
-							clear
-							cp ${script_path}/${name_cleared}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
-						else
-							###Remove Proofs-folder of Account that could not be created
-							rmdir ${script_path}/proofs/${name_hashed}
-
-							###Remove created keys out of keyring
-							key_fp=`gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
-							#gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
-							#gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
-						fi
+					else
+						rm ${script_path}/freetsa.tsq 2>/dev/null
+					fi
+					if [ $rt_quiery = 0 ]
+					then
+						echo "100"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Fertig..." 0 0 0
+						sleep 3s
+						clear
+						dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
+						clear
+						cp ${script_path}/${name_cleared}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+					else
+						###Remove Proofs-folder of Account that could not be created
+						rmdir ${script_path}/proofs/${name_hashed} 2>/dev/null
+						###Remove created keys out of keyring
+						key_fp=`gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+						gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
+						gpg2 --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
 					fi
 				fi
 			fi
@@ -193,41 +158,33 @@ make_signature(){
 			else
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
                                 message_blank=${script_path}/message_blank.dat
-			#	#ls -1 ${script_path}/keys/ >${script_path}/signed_keys.tmp
-				ls -1 ${script_path}/trx/ >${script_path}/signed_trx.tmp
-			#	#ls -1 ${script_path}/proofs >${script_path}/signed_index.tmp
-			#	#while read line
-			#	#do
-			#	#	key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
-			#	#	key_full_path="keys/${line}"
-			#	#	echo "${key_full_path} ${key_hash} ${trx_now}" >>${message_blank}
-			#	#done <${script_path}/signed_keys.tmp
+				touch ${message_blank}
+				touch ${script_path}/index_keys.tmp
+				touch ${script_path}/index_trx.tmp
+				ls -1 ${script_path}/keys/ >${script_path}/index_keys.tmp
+				while read line
+                                do
+                                        key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
+                                        key_full_path="keys/${line}"
+                                        echo "${key_full_path} ${key_hash} ${trx_now}" >>${message_blank}
+                                done <${script_path}/index_keys.tmp
+				ls -1 ${script_path}/trx/ >${script_path}/index_trx.tmp
 				while read line
                                 do
                                         trx_hash=`cat ${script_path}/trx/${line}|shasum -a 512|cut -d' ' -f1`
                                         trx_full_path="trx/${line}"
                                         echo "${trx_full_path} ${trx_hash} ${trx_now}" >>${message_blank}
-                                done <${script_path}/signed_trx.tmp
-			#	#while read line
-			#	#do
-			#	#	tsa_query_hash=`cat ${script_path}/proofs/${line}/freetsa.tsq|shasum -a 512|cut -d' ' -f1`
-			#	#	tsa_query_full_path="proofs/${line}"
-			#	#	echo "${tsa_query_full_path} ${tsa_query_hash} ${trx_now}" >>${message_blank}
-			#	#	tsa_response_hash=`cat ${script_path}/proofs/${line}/freetsa.tsr|shasum -a 512|cut -d' ' -f1`
-                        #       #        tsa_response_full_path="proofs/${line}"
-                        #       #        echo "${tsa_response_full_path} ${tsa_response_hash} ${trx_now}" >>${message_blank}
-			#	#done <${script_path}/signed_index.tmp
+                                done <${script_path}/index_trx.tmp
 			fi
-			#echo $script_hash >>${message_blank}
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
 			gpg2 --no-default-keyring --keyring=${script_path}/keys/${account_file} --local-user $handover_account --clearsign ${message_blank}
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				rm ${message_blank}
+				rm ${message_blank} 2>/dev/null
 				tail -$total_blank ${message_blank}.asc|sed 's/-----BEGIN PGP SIGNATURE-----//g'|sed 's/-----END PGP SIGNATURE-----//g' >${message}
-				rm ${message_blank}.asc
+				rm ${message_blank}.asc 2>/dev/null
 			fi
 }
 verify_signature(){
@@ -251,10 +208,10 @@ verify_signature(){
 			then
 				signed_correct=`cat ${script_path}/gpg_verify.tmp|grep "GOODSIG"|grep "${user_signed}"|wc -l`
 			else
-				rm ${trx_to_verify}
+				rm ${trx_to_verify} 2>/dev/null
 			fi
-			rm ${build_message}
-			rm ${script_path}/gpg_verify.tmp
+			rm ${build_message} 2>/dev/null
+			rm ${script_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_quiery
 }
 check_input(){
@@ -274,9 +231,9 @@ check_input(){
                         dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie müssen mindestens 1 Zeichen eingeben!" 0 0
                 	rt_quiery=1
 		fi
-		if [ $length_counter -gt 21 ]
+		if [ $length_counter -gt 31 ]
 		then
-			dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Es sind nur maximal 20 Zeichen erlaubt!" 0 0
+			dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Es sind nur maximal 30 Zeichen erlaubt!" 0 0
 			rt_quiery=1
 		fi
 		return $rt_quiery
@@ -290,19 +247,36 @@ build_ledger(){
 		cat ${script_path}/accounts.tmp|sort >${script_path}/accounts_sorted.tmp
 		cat ${script_path}/accounts_sorted.tmp|uniq >${script_path}/accounts_list.tmp
 
+		#Status Bar########################################
+		total_value_timestamp=0
+		now_timestamp=`date +%s`
+		while read line
+		do
+			acc_timestamp=`echo $line|cut -d'.' -f2`
+			acc_value_timestamp=$(( $now_timestamp - $acc_timestamp ))
+			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))	
+		done <${script_path}/accounts_list.tmp
+		total_value_days=`expr $total_value_timestamp / 84600`
+		one_day_is_percent=`expr 100 / $total_value_days`
+		current_percent=0
+		####################################################
+
 		###CREATE FRIENDS LIST
+		touch ${script_path}/friends_trx.tmp
+		touch ${script_path}/friends.tmp
 		cd ${script_path}/trx
-		grep -l "S:${handover_account}" *.* >${script_path}/friends_trx.tmp
+		grep -l "S:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
+		cd ${script_path}
 		while read line
 		do
 			head -1 ${script_path}/trx/${line}|cut -d' ' -f3|cut -d':' -f2 >${script_path}/friends.tmp
 		done <${script_path}/friends_trx.tmp
 		cat ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
-		rm ${script_path}/friends.tmp
-		cd ${script_path}/
+		rm ${script_path}/friends.tmp 2>/dev/null
 
 		#EMPTY LEDGER
-		rm ${script_path}/ledger.tmp
+		rm ${script_path}/ledger.tmp 2>/dev/null
+		touch ${script_path}/ledger.tmp
 
 		while read line
 		do
@@ -321,7 +295,9 @@ build_ledger(){
 
 			###LOAD ALL PREVIOUS TRANSACTIONS
 			cd ${script_path}/trx
-			grep -l "S:${account_name}" *.* >${script_path}/trx_${account_name}.tmp
+			touch ${script_path}/trx_${account_name}.tmp
+			touch ${script_path}/trxl_${account_name}.tmp
+			grep -l "S:${account_name}" *.* >${script_path}/trx_${account_name}.tmp 2>/dev/null
             		while read line
             	    	do
         	        	stamp_to_convert=`echo $line|cut -d'.' -f1`
@@ -329,9 +305,9 @@ build_ledger(){
                 		trx_sender=`echo $line|cut -d'.' -f2`
                 		echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxl_${account_name}.tmp
                 	done <${script_path}/trx_${account_name}.tmp
-			rm ${script_path}/trx_${account_name}.tmp
+			rm ${script_path}/trx_${account_name}.tmp 2>/dev/null
 			cat ${script_path}/trxl_${account_name}.tmp|sort -k1 >${script_path}/trxs_${account_name}.tmp
-			rm ${script_path}/trxl_${account_name}.tmp
+			rm ${script_path}/trxl_${account_name}.tmp 2>/dev/null
 
 			###AS LONG AS FOCUS LESS OR EQUAL YET..
 			while [ $focus -le $now ]
@@ -344,6 +320,10 @@ build_ledger(){
 				fi
 				if [ $focus -ge $account_date ]
 				then
+					###ADD PERCENTS TO STATUS BAR##################
+					current_percent=$(( $current_percent + $one_day_is_percent ))
+					echo "$current_percent"|dialog --title "Create LEDGER file..." --backtitle "Universal Credit System" --gauge "Build ledger for user ${account_name}..." 0 0 0
+					###############################################
 					if [ $focus -eq $account_date ]
 					then
 						account_there=`cat ${script_path}/ledger.tmp|grep "${account_name}"|wc -l`
@@ -386,7 +366,7 @@ build_ledger(){
 							trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
 							trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
 							trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-							
+
 							###CHECK IF FRIENDS KNOW OF THIS TRX
 							number_of_friends_trx=0
 							number_of_friends_add=0
@@ -399,7 +379,7 @@ build_ledger(){
 									number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
 								fi
 							done <${script_path}/friends.dat
-							
+
 							#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
 							trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
 							trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
@@ -448,7 +428,7 @@ build_ledger(){
         	                	        	fi
 						done <${script_path}/trx_day_${focus}.tmp
 					else
-						rm ${script_path}/trx_day_${focus}.tmp
+						rm ${script_path}/trx_day_${focus}.tmp 2>/dev/null
 					fi
 				fi
 				in_days=$(( $multi_next - $day_counter ))
@@ -456,12 +436,13 @@ build_ledger(){
 				focus=`date +%Y%m%d --date=@${date_stamp}`
 				day_counter=$(( $day_counter + 1 ))
 			done
-			rm ${script_path}/trxs_${account_name}.tmp
+			rm ${script_path}/trxs_${account_name}.tmp 2>/dev/null
 		done <${script_path}/accounts_list.tmp
 		cd ${script_path}/
 }
 check_archive(){
 			path_to_tarfile=$1
+			touch ${script_path}/tar_check.tmp
 			tar -tf $path_to_tarfile >${script_path}/tar_check.tmp
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
@@ -488,8 +469,8 @@ check_archive(){
                 				esac
 					fi
 				done <${script_path}/tar_check.tmp
-				rm ${script_path}/tar_check.tmp
 			fi
+			rm ${script_path}/tar_check.tmp
 			return $rt_quiery
 }
 
@@ -561,7 +542,6 @@ do
 							fi
 							;;
                         	"Konto erstellen")      account_entered_correct=0
-							account_entered_aborted=0
 							while [ $account_entered_correct = 0 ]
 							do
 								account_chosen=`dialog --title "Konto erstellen" --backtitle "Universal Credit System" --inputbox "Kontoname eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
@@ -572,28 +552,56 @@ do
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										account_entered_correct=1
+										password_found=0
+	     									while [ $password_found = 0 ]
+               									do
+                									password_first=`dialog --insecure --passwordbox "Bitte Passwort eingeben" 0 0 3>&1 1>&2 2>&3`
+											rt_quiery=$?
+											if [ $rt_quiery = 0 ]
+											then
+               											check_input $password_first
+												rt_quiery=$?
+												if [ $rt_quiery = 0 ]
+												then
+													clear
+													password_second=`dialog --insecure --passwordbox "Bitte Passwort ein zweites mal eingeben" 0 0 3>&1 1>&2 2>&3`
+													rt_quiery=$?
+													if [ $rt_quiery = 0 ]
+													then
+														clear
+                                       										if [ $password_first != $password_second ]
+                        											then
+															dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Die eingegeben Passwörter stimmen nicht überein!" 0 0
+															clear
+														else
+															account_entered_correct=1
+                                											password_found=1
+															create_keys $account_chosen $password_second
+															rt_quiery=$?
+															if [ $rt_quiery = 0 ]
+															then
+																dialog --title "Hinweis" --backtitle "Universal Credit System" --msgbox "Sie können sich nun in Ihr Konto einloggen. Viel Spass!" 0 0
+															else
+																dialog --title "Fehler" --backtitle "Universal Credit System" --msgbox "User konnte nicht erstellt werden!" 0 0
+															fi
+														fi
+													else
+														password_found=1
+													fi
+												fi
+											else
+												password_found=1
+											fi
+										done
 									fi
 								else
 									account_entered_correct=1
-									account_entered_aborted=1
 								fi
 							done
-							if [ $account_entered_aborted = 0 ]
-							then
-								create_keys $account_chosen
-								rt_quiery=$?
-								if [ $rt_quiery = 0 ]
-								then
-									dialog --title "Hinweis" --backtitle "Universal Credit System" --msgbox "Sie können sich nun in Ihr Konto einloggen. Viel Spass!" 0 0
-								else
-									dialog --title "Fehler" --backtitle "Universal Credit System" --msgbox "User konnte nicht erstellt werden!" 0 0
-								fi
-							fi
 							;;
                         	"Exit")			unset user_logged_in
-							rm ${script_path}/*.tmp
-							rm ${script_path}/*.dat
+							rm ${script_path}/*.tmp 2>/dev/null
+							rm ${script_path}/*.dat 2>/dev/null
 							exit
 							;;
                 	esac
@@ -614,21 +622,21 @@ do
 				mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 				freetsa_cert_available=1
 			else
-				rm ${script_path}/certs/tsa.crt
+				rm ${script_path}/certs/tsa.crt 2>/dev/null
 			fi
 		else
 			freetsa_cert_available=1
 		fi
-		if [ ! -s ${script_path}/certs/freetsa/tsacert.pem ]
+		if [ ! -s ${script_path}/certs/freetsa/cacert.pem ]
 		then
 			wget -q https://freetsa.org/files/cacert.pem
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/tsacert.pem
+				mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
 				freetsa_rootcert_available=1
 			else
-				rm ${script_path}/certs/cacert.pem
+				rm ${script_path}/certs/cacert.pem 2>/dev/null
 			fi
 		else
 			freetsa_rootcert_available=1
@@ -643,45 +651,46 @@ do
 		###VERIFY USERS AND THEIR TSA STAMPS###
 		touch ${script_path}/blacklisted_accounts.dat
 		touch ${script_path}/blacklisted_trx.dat
+		touch ${script_path}/all_accounts.tmp
 		ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
 		while read line
 		do
-			account_to_check=`echo $line|cut -d'.' -f1`
-			while read line
-			do
-				accountname_to_check=`echo $line|cut -d'.' -f1`
-				accountdate_to_check=`echo $line|cut -d'.' -f2`
-				###FREETSA CHECK###############################
-				if [ $freetsa_available = 1 ]
+			accountname_to_check=`echo $line|cut -d'.' -f1`
+			###FREETSA CHECK###############################
+			if [ $freetsa_available = 1 ]
+			then
+				openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+				rt_quiery=$?
+				if [ $rt_quiery = 0 ]
 				then
-					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
+					openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
-						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 1>&2
-						rt_quiery=$?
-						if [ $rt_quiery = 0 ]
+						date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
+						date_to_verify_converted=`date -d "${date_to_verify}" +%Y%m%d`
+						accountdate_to_verify=`echo $line|cut -d'.' -f2`
+						accountdate_to_verify_converted=`date -d @${accountdate_to_verify} +%Y%m%d`
+						if [ $date_to_verify_converted != $accountdate_to_verify_converted ]
 						then
-							date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
-							date_to_verify_converted=`date -d "${date_to_verify}" +%Y%m%d`
-							if [ $date_to_verify_converted != $accountdate_to_check ]
-							then
-								echo $line >>${script_path}/blacklisted_accounts.dat
-							fi
+							echo $line >>${script_path}/blacklisted_accounts.dat
 						fi
-						rm ${script_path}/timestamp_check.tmp
 					fi
+					rm ${script_path}/timestamp_check.tmp 2>/dev/null
 				fi
-				###############################################
-			done <${script_path}/proofs/${account_to_check}.txt
+			fi
+			###############################################
 		done <${script_path}/all_accounts.tmp
-		
+
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
+		touch ${script_path}/keys_import.tmp
+		touch ${script_path}/keylist_gpg.tmp
                 ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
+		gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp
                 while read line
                 do
                         key_uname=`echo $line|cut -d'.' -f1`
-                        key_imported=`gpg2 --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys|grep "${key_uname}"|wc -l`
+                        key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
                         if [ $key_imported = 0 ]
                         then
                                 gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line}
@@ -698,9 +707,11 @@ do
                         fi
                 done <${script_path}/keys_import.tmp
 		rm ${script_path}/keys_import.tmp
+		rm ${script_path}/keylist_gpg.tmp
                 ##########################################################
 
 		###VERIFY TRX AT THE BEGINNING AND MOVE TRX THAT HAVE NOT BEEN SIGNED BY THE OWNER TO BLACKLISTED
+		touch ${script_path}/all_trx.tmp
 		ls -1 ${script_path}/trx >${script_path}/all_trx.tmp
 		while read line
 		do
@@ -795,8 +806,9 @@ do
 								if [ $rt_quiery = 0 ]
 								then
 									cd ${script_path}/trx/
-									grep "R:${handover_account}" *.* >${script_path}/dependent_trx.tmp
-									rm ${script_path}/dependencies.tmp
+									touch ${script_path}/dependent_trx.tmp
+									grep "R:${handover_account}" *.* >${script_path}/dependent_trx.tmp 2>/dev/null
+									rm ${script_path}/dependencies.tmp 2>/dev/null
 									while read line
 									do
 										user_to_append_till_date=`echo $line|cut -d':' -f1|cut -d'.' -f1`
@@ -848,7 +860,7 @@ do
 									else
 										dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Fehler beim zusammenstellen der Überweisung!" 0 0
 									fi
-									rm ${script_path}/manifest.txt
+									rm ${script_path}/manifest.txt 2>/dev/null
 								else
 									dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Fehler beim senden der Überweisung!" 0 0
 								fi
@@ -927,7 +939,7 @@ do
 										else
 											dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Die Datei $file_path konnte leider nicht geöffnet werden!" 0 0
 										fi
-										rm ${script_path}/files_to_fetch.tmp
+										rm ${script_path}/files_to_fetch.tmp 2>/dev/null
                                 					else
                                        			 			file_found=1
                                 					fi
@@ -967,14 +979,15 @@ do
                         					else
 									dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Synchronisations-Datei (${script_path}/${synch_now}.tar) konnte nicht erstellt werden!" 0 0
 								fi
-								rm ${script_path}/keys_sync.tmp
-								rm ${script_path}/files_for_sync.tmp
+								rm ${script_path}/keys_sync.tmp 2>/dev/null
+								rm ${script_path}/files_for_sync.tmp 2>/dev/null
 								;;
 						esac
 						;;
 				"Historie")	cd ${script_path}/trx
-						grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp
-						grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp
+						touch ${script_path}/my_trx.tmp
+						grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
+						grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
 						cd ${script_path}
 						no_trx=`cat ${script_path}/my_trx.tmp|wc -l`
 						menu_display_text=""
