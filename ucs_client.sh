@@ -25,11 +25,11 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 2>/dev/null
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				rm ${script_path}/${account_name_chosen}_account.dat
-				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
+				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
@@ -178,7 +178,7 @@ make_signature(){
 			fi
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
-			gpg2 --no-default-keyring --keyring=${script_path}/keys/${account_file} --local-user $handover_account --clearsign ${message_blank}
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
@@ -202,7 +202,7 @@ verify_signature(){
 			echo "" >>${build_message}
 			tail -14 ${trx_to_verify}|head -13 >>${build_message}
 			echo "-----END PGP SIGNATURE-----" >>${build_message}
-			gpg2 --status-fd 1 --no-default-keyring --keyring=${script_path}/keys/${user_signed} --verify ${build_message} >${script_path}/gpg_verify.tmp
+			gpg2 --status-fd 1 --no-default-keyring --keyring=${script_path}/keys/${user_signed} --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
@@ -686,14 +686,14 @@ do
 		touch ${script_path}/keys_import.tmp
 		touch ${script_path}/keylist_gpg.tmp
                 ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
-		gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp
+		gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
                 while read line
                 do
                         key_uname=`echo $line|cut -d'.' -f1`
                         key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
                         if [ $key_imported = 0 ]
                         then
-                                gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line}
+                                gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
                                 rt_quiery=$?
                                 if [ $rt_quiery -gt 0 ]
                                 then
@@ -753,15 +753,15 @@ do
 		else
 			clear
 			case "$user_menu" in
-				"Senden")	receipient_found=0
+				"Senden")	recipient_found=0
 						order_aborted=0
-              			        	while [ $receipient_found = 0 ]
+              			        	while [ $recipient_found = 0 ]
                               		        do
-							order_receipient=`dialog --title "Senden" --backtitle "Universal Credit System" --inputbox "Bitte geben Sie eine Empfangsadresse ein:" 0 0 "260dfa9766929ee5a8a00cadde8f9993182ac5c5b5a67a037fb087ecc1cf6ce0" 3>&1 1>&2 2>&3`
+							order_receipient=`dialog --title "Senden" --backtitle "Universal Credit System" --inputbox "Bitte geben Sie eine Empfangsadresse ein:" 0 0 "b9e305edaeb4894a5c8b34ba86d269c5e0368c12c2e1a270fe5dc242125be2b7" 3>&1 1>&2 2>&3`
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								receipient_found=1
+								recipient_found=1
 								amount_selected=0
 								while [ $amount_selected = 0 ]
 								do
@@ -769,8 +769,8 @@ do
 								        rt_quiery=$?
              								if [ $rt_quiery = 0 ]
                 							then
-										order_amount_alnum=`echo $order_amount|grep '[^[:alnum:]]'|wc -l`
-										if [ $order_amount_alnum -gt 0 ]
+										order_amount_alnum=`echo $order_amount|grep '[[:alpha:]]'|wc -l`
+										if [ $order_amount_alnum = 0 ]
 										then
 											order_amount_formatted=`echo $order_amount|sed 's/,/./g'|sed 's/ //g'`
 											order_amount_formatted="0${order_amount_formatted}"
@@ -779,11 +779,11 @@ do
 											order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
 											amount_selected=1
 										else
-											dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Buchstaben und Alphanumerische Zeichen sind nicht erlaubt. Gültige Beispiele sind: 1.000000 oder 1,000000 oder 10.00 oder 500.50 etc.!" 0 0
+											dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Buchstaben sind nicht erlaubt. Gültige Beispiele sind: 1.000000 oder 1,000000 oder 10.00 oder 500.50 etc.!" 0 0
 										fi
 									else
 										amount_selected=1
-										receipient_found=1
+										recipient_found=1
 										order_aborted=1
 									fi
 								done
@@ -809,6 +809,7 @@ do
 									touch ${script_path}/dependent_trx.tmp
 									grep "R:${handover_account}" *.* >${script_path}/dependent_trx.tmp 2>/dev/null
 									rm ${script_path}/dependencies.tmp 2>/dev/null
+									touch ${script_path}/dependencies.tmp
 									while read line
 									do
 										user_to_append_till_date=`echo $line|cut -d':' -f1|cut -d'.' -f1`
