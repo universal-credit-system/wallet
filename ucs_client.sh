@@ -248,7 +248,7 @@ build_ledger(){
 		cat ${script_path}/accounts_sorted.tmp|uniq >${script_path}/accounts_list.tmp
 
 		#Status Bar########################################
-		total_value_timestamp=0
+		total_value_timestamp=84600
 		now_timestamp=`date +%s`
 		while read line
 		do
@@ -320,10 +320,10 @@ build_ledger(){
 				fi
 				if [ $focus -ge $account_date ]
 				then
-					###ADD PERCENTS TO STATUS BAR##################
-					current_percent=$(( $current_percent + $one_day_is_percent ))
+					###ADD PERCENTS TO STATUS BAR#################
 					echo "$current_percent"|dialog --title "Create LEDGER file..." --backtitle "Universal Credit System" --gauge "Build ledger for user ${account_name}..." 0 0 0
-					###############################################
+					current_percent=$(( $current_percent + $one_day_is_percent ))
+                                        ###############################################
 					if [ $focus -eq $account_date ]
 					then
 						account_there=`cat ${script_path}/ledger.tmp|grep "${account_name}"|wc -l`
