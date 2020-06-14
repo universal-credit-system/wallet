@@ -34,8 +34,6 @@ login_account(){
 				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
 				then
-					rm ${script_path}/${account_name_chosen}_account.dat.gpg
-					rm ${script_path}/${account_name_chosen}_account.dat
 					if [ $extracted_name = $account_name_chosen ]
 					then
 						dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Willkommen, ${account_name_chosen}!" 0 0
@@ -51,6 +49,8 @@ login_account(){
 			dialog --title "WARNUNG" --backtitle "Universal Credit System" --msgbox "Unter ${script_path}/keys/ befinden sich leider keine Profildateien für Account ${account_name_chosen}." 0 0
 			clear
 		fi
+                rm ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
+	        rm ${script_path}/${account_name_chosen}_account.dat 2>/dev/null
 }
 create_keys(){
 		name_chosen=$1
