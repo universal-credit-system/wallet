@@ -212,7 +212,7 @@ verify_signature(){
 			echo "" >>${build_message}
 			tail -14 ${trx_to_verify}|head -13 >>${build_message}
 			echo "-----END PGP SIGNATURE-----" >>${build_message}
-			gpg2 --status-fd 1 --no-default-keyring --keyring=${script_path}/keys/${user_signed} --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
+			gpg2 --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
