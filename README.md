@@ -26,37 +26,18 @@ dialog	(used for GUI)
 
 Package installation via APT (Advanced Packaging Tool):
 
-Install >bc< by executing the following command:
 
 sudo apt-get install bc
 
-
-Install >wget< by executing the following command:
-
 sudo apt-get install wget
-
-
-Install >curl< by executing the following command:
 
 sudo apt-get install curl
 
-
-Install >shasum< by executing the following command:
-
 sudo apt-get install perl
-
-
-Install >gpg< by executing the following command:
 
 sudo apt-get install gnupg2
 
-
-Install >openssl< by executing the following command:
-
 sudo apt-get install openssl
-
-
-Install >dialog< by executing the following command:
 
 sudo apt-get install dialog
 
