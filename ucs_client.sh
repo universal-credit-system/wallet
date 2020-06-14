@@ -65,14 +65,14 @@ create_keys(){
 		if [ $rt_quiery = 0 ]
 		then
 			echo "33"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Public Key exportieren..." 0 0 0
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${file_stamp}_pub.asc --export $name_hashed
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
 				echo "66"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Private Key exportieren..." 0 0 0
 				dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie werden eventuell gleich aufgefordert für den Export des Privaten-Keys das Passwort einzugeben." 0 0
 				clear
-				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
+				gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
 				rt_quiery=$?
 				if [ $rt_quiery = 0 ]
 				then
@@ -129,9 +129,9 @@ create_keys(){
 						echo "100"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Fertig..." 0 0 0
 						sleep 3s
 						clear
-						dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
+						cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+                                                dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
 						clear
-						cp ${script_path}/${name_cleared}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
 					else
 						###Remove Proofs-folder of Account that could not be created
 						rmdir ${script_path}/proofs/${name_hashed} 2>/dev/null
