@@ -6,21 +6,21 @@ The Universal Credit System was written as shell script on a Raspberry Pi 3 with
 But you can run it on any machine, just make sure you have the following programs installed before running the UCS Client:
 
 
-Dependencies:
+Package dependencies:
 
-bc	(used for floating point calculations)
+-bc (used for floating point calculations)
 
-wget	(used to fetch certificate files of TSA from Internet)
+-wget (used to fetch certificate files of TSA from Internet)
 
-curl	(used to send query to TSA and request response)
+-curl (used to send query to TSA and request response)
 
-shasum	(used to hash files)
+-shasum (used to hash files)
 
-openssl	(used for TSA stamp verification)
+-openssl (used for TSA stamp verification)
 
-gpg	(aka GnuPG e.g. used for transaction signing)
+-gpg (used for transaction signing)
 
-dialog	(used for GUI)
+-dialog (used for GUI)
 
 
 
@@ -46,13 +46,17 @@ Now make a directory wherever you want:
 
 mkdir ucs
 
+Step into the directory you just created:
 
-Clone GitHub repository:
+cd ucs
+
+
+Clone the GitHub repository:
 
 git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
 
 
-Step into directory:
+Step into directory git created:
 
 cd ucs_client_v0.0.1/
 
