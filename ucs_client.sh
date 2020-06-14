@@ -80,7 +80,7 @@ create_keys(){
 					mkdir ${script_path}/proofs/${name_hashed}
 					###FreeTSA
 					cd ${script_path}
-					openssl ts -query -data ${script_path}/${name_cleared}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
+					openssl ts -query -data ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
