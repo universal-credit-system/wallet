@@ -159,7 +159,32 @@ make_signature(){
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
                                 message_blank=${script_path}/message_blank.dat
 				touch ${message_blank}
+				touch ${script_path}/index_keys.tmp
+				ls -1 ${script_path}/keys >${script_path}/index_keys.tmp
+				while read line
+				do
+					key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
+                                        key_path="keys/${line}"
+                                        echo "${key_path} ${key_hash} ${trx_now}" >>${message_blank}
+
+					freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
+					if [ -s $freetsa_qfile ]
+					then
+						freetsa_qfile_path="proofs/$line/freetsa.tsq"
+						freetsa_qfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsq|shasum -a 512|cut -d' ' -f1`
+						echo "${freetsa_qfile_path} ${freetsa_qfile_hash} ${trx_now}" >>${message_blank}
+					fi
+					freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
+					if [ -s $freetsa_rfile ]
+					then
+						freetsa_rfile_path="proofs/$line/freetsa.tsr"
+						freetsa_rfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsr|shasum -a 512|cut -d' ' -f1`
+						echo "${freetsa_rfile_path} ${freetsa_rfile_hash} ${trx_now}" >>${message_blank}
+					fi
+				done <${script_path}/index_keys.tmp
+				rm ${script_path}/index_keys.tmp
                                 cat ${script_path}/index_trx.tmp >>${message_blank}
+				rm ${script_path}/index_trx.tmp
 			fi
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
@@ -808,7 +833,7 @@ do
 						done
 						if [ $order_aborted = 0 ]
 						then
-							dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Wollen Sie folgende überweisung wirklich tätigen: \n\nEMPFANGSADRESSE :\n${order_receipient}\n\nIHR AKTUELLER KONTOSTAND: \n${account_balance} ${currency_symbol}\n\nZU ÜBERWEISENDER BETRAG :\n-${order_amount_formatted} ${currency_symbol}\n\nANFALLENDE GEBÜHR :\n-${trx_fee} ${currency_symbol}\n\nTOTAL :\n-${order_amount_with_trx_fee} ${currency_symbol}" 30 120
+							dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Wollen Sie folgende überweisung wirklich tätigen: \n\nEMPFANGSADRESSE :\n${order_receipient}\n\nIHR AKTUELLER KONTOSTAND: \n${account_my_balance} ${currency_symbol}\n\nZU ÜBERWEISENDER BETRAG :\n-${order_amount_formatted} ${currency_symbol}\n\nANFALLENDE GEBÜHR :\n-${trx_fee} ${currency_symbol}\n\nTOTAL :\n-${order_amount_with_trx_fee} ${currency_symbol}" 30 120
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
@@ -838,15 +863,76 @@ do
 											mv ${script_path}/dependencies_mod.tmp ${script_path}/dependencies.tmp
 										fi
 									done <${script_path}/dependent_trx.tmp
-									keys_to_append="keys/${handover_account}.${handover_account_stamp} "
-									proof_to_append="proofs/${handover_account}/freetsa.tsq proofs/${handover_account}/freetsa.tsr "
-									trx_to_append="trx/${trx_now}.${handover_account} "
+									dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Falls möglich, kleine Datei erstellen?" 0 0
+									small_trx=$?
+									if [ $small_trx = 1 ]
+									then
+										me_key_there=`grep "keys/${handover_account}.${handover_account_stamp}" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $me_key_there = 0 ]
+										then
+											keys_to_append="keys/${handover_account}.${handover_account_stamp} "
+										else
+											keys_to_append=""
+										fi
+									else
+										keys_to_append="keys/${handover_account}.${handover_account_stamp} "
+									fi
+									proof_to_append=""
+									if [ $small_trx = 1 ]
+									then
+										me_proofq_there=`grep "proofs/${handover_account}/freetsa.tsq" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $me_proofq_there = 0 ]
+										then
+											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
+										fi
+									else
+										proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
+									fi
+									if [ $small_trx = 1 ]
+									then
+										me_proofr_there=`grep "proofs/${handover_account}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $me_proofr_there = 0 ]
+										then
+											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+										fi
+									else
+										proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+									fi
+
 									while read line
 									do
 										user_to_append=`echo $line|cut -d'=' -f1`
 										user_to_append_key=`ls -1 ${script_path}/keys|grep "${user_to_append}"`
-										proof_to_append="${proof_to_append}proofs/${user_to_append}/freetsa.tsq proofs/${user_to_append}/freetsa.tsr "
-										keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+										user_key_there=`grep "keys/${user_to_append_key}" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $small_trx = 1 ]
+										then
+											if [ $user_key_there = 0 ]
+											then
+												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+											fi
+										else
+											keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+										fi
+										user_proofq_there=`grep "proofs/${user_to_append}/freetsa.tsq" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $small_trx = 1 ]
+										then
+											if [ $user_proofq_there = 0 ]
+											then
+												proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
+											fi
+										else
+											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
+										fi
+										user_proofr_there=`grep "proofs/${user_to_append}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
+										if [ $small_trx = 1 ]
+										then
+											if [ $user_proofr_there = 0 ]
+											then
+												proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+											fi
+										else
+											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+										fi
 										user_to_append_till_date=`echo $line|cut -d'=' -f2`
 										ls -1 ${script_path}/trx|grep "${user_to_append}" >${script_path}/dep_user_trx.tmp
 										trx_till_line=`grep -n ${user_to_append_till_date} ${script_path}/dep_user_trx.tmp`
@@ -855,7 +941,16 @@ do
 										do
 											if [ $append_line_counter -le $trx_till_line ]
 											then
-												trx_to_append="${trx_to_append}trx/${line} "
+												if [ $small_trx = 1 ]											#
+												then													#
+													trx_there=`grep "trx/${line}" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null	#
+													if [ $trx_there = 0 ]										#
+													then												#
+														trx_to_append="${trx_to_append}trx/${line} "
+													fi												#
+												else													#
+													trx_to_append="${trx_to_append}trx/${line} "							#
+												fi													#
 											fi
 										done <${script_path}/dep_user_trx.tmp
 									done <${script_path}/dependencies.tmp
