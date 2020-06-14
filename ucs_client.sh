@@ -159,22 +159,7 @@ make_signature(){
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
                                 message_blank=${script_path}/message_blank.dat
 				touch ${message_blank}
-				touch ${script_path}/index_keys.tmp
-				touch ${script_path}/index_trx.tmp
-				ls -1 ${script_path}/keys/ >${script_path}/index_keys.tmp
-				while read line
-                                do
-                                        key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
-                                        key_full_path="keys/${line}"
-                                        echo "${key_full_path} ${key_hash} ${trx_now}" >>${message_blank}
-                                done <${script_path}/index_keys.tmp
-				ls -1 ${script_path}/trx/ >${script_path}/index_trx.tmp
-				while read line
-                                do
-                                        trx_hash=`cat ${script_path}/trx/${line}|shasum -a 512|cut -d' ' -f1`
-                                        trx_full_path="trx/${line}"
-                                        echo "${trx_full_path} ${trx_hash} ${trx_now}" >>${message_blank}
-                                done <${script_path}/index_trx.tmp
+                                cat ${script_path}/index_trx.tmp >>${message_blank}
 			fi
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
@@ -248,7 +233,9 @@ build_ledger(){
 		cat ${script_path}/accounts_sorted.tmp|uniq >${script_path}/accounts_list.tmp
 
 		#Status Bar########################################
-		total_value_timestamp=84600
+		total_number_accounts=`cat ${script_path}/accounts_list.tmp|wc -l`
+		total_value_timestamp=$(( $total_number_accounts * 84600 ))
+	
 		now_timestamp=`date +%s`
 		while read line
 		do
@@ -257,8 +244,9 @@ build_ledger(){
 			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))	
 		done <${script_path}/accounts_list.tmp
 		total_value_days=`expr $total_value_timestamp / 84600`
-		one_day_is_percent=`expr 100 / $total_value_days`
+		one_day_is_percent=`echo "scale=2; 100 / $total_value_days"|bc`
 		current_percent=0
+		current_percent_display=0
 		####################################################
 
 		###CREATE FRIENDS LIST
@@ -321,8 +309,9 @@ build_ledger(){
 				if [ $focus -ge $account_date ]
 				then
 					###ADD PERCENTS TO STATUS BAR#################
-					echo "$current_percent"|dialog --title "Create LEDGER file..." --backtitle "Universal Credit System" --gauge "Build ledger for user ${account_name}..." 0 0 0
-					current_percent=$(( $current_percent + $one_day_is_percent ))
+					current_percent=`echo "$current_percent + $one_day_is_percent"|bc`
+					current_percent_display=`echo "scale=0; $current_percent / 1.0"|bc`
+					echo "$current_percent_display"|dialog --title "Create LEDGER file..." --backtitle "Universal Credit System" --gauge "Build ledger for user ${account_name}..." 0 0 0
                                         ###############################################
 					if [ $focus -eq $account_date ]
 					then
@@ -393,6 +382,11 @@ build_ledger(){
                                	                        enough_balance=`echo "${account_check_balance}>0"|bc`
         	                       	        	if [ $enough_balance = 1 ]
                                                	        then
+								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)####
+								trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d' ' -f1`
+                                        			trx_path="trx/${trx_filename}"
+                                        			echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
+
                                                        	       	account_balance=$account_check_balance
 								is_greater_one=`echo "${account_balance}>1"|bc`
 						                if [ $is_greater_one = 0 ]
@@ -481,11 +475,13 @@ script_name=${0}
 script_path=$(dirname $(readlink -f ${0}))
 script_name_extr=`echo $script_name|cut -d'/' -f2`
 script_hash=`cat ${script_path}/${script_name_extr}|shasum -a 512|cut -d' ' -f1`
-user_logged_in=0
 core_system_version="v0.0.1"
 current_fee="0.001"
 currency_symbol="UCC"
 initial_coinload=10000
+user_logged_in=0
+action_done=1
+make_ledger=1
 files_to_fetch=""
 while [ 1 != 2 ]
 do
@@ -608,142 +604,154 @@ do
         	fi
 
 	else
-		###FREETSA CERTIFICATE DOWNLOAD###
-		freetsa_available=0
-		freetsa_cert_available=0
-		freetsa_rootcert_available=0
-		cd ${script_path}/certs
-		if [ ! -s ${script_path}/certs/freetsa/tsa.crt ]
+		if [ $action_done = 1 ]
 		then
-			wget -q https://freetsa.org/files/tsa.crt
-			rt_quiery=$?
-			if [ $rt_quiery = 0 ]
+			###FREETSA CERTIFICATE DOWNLOAD###
+			freetsa_available=0
+			freetsa_cert_available=0
+			freetsa_rootcert_available=0
+			cd ${script_path}/certs
+			if [ ! -s ${script_path}/certs/freetsa/tsa.crt ]
 			then
-				mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
-				freetsa_cert_available=1
-			else
-				rm ${script_path}/certs/tsa.crt 2>/dev/null
-			fi
-		else
-			freetsa_cert_available=1
-		fi
-		if [ ! -s ${script_path}/certs/freetsa/cacert.pem ]
-		then
-			wget -q https://freetsa.org/files/cacert.pem
-			rt_quiery=$?
-			if [ $rt_quiery = 0 ]
-			then
-				mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-				freetsa_rootcert_available=1
-			else
-				rm ${script_path}/certs/cacert.pem 2>/dev/null
-			fi
-		else
-			freetsa_rootcert_available=1
-		fi
-		cd ${script_path}
-		if [ $freetsa_cert_available = 1 -a $freetsa_rootcert_available = 1 ]
-		then
-			freetsa_available=1
-		fi
-		######################################
-
-		###VERIFY USERS AND THEIR TSA STAMPS###
-		touch ${script_path}/blacklisted_accounts.dat
-		touch ${script_path}/blacklisted_trx.dat
-		touch ${script_path}/all_accounts.tmp
-		ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
-		while read line
-		do
-			accountname_to_check=`echo $line|cut -d'.' -f1`
-			###FREETSA CHECK###############################
-			if [ $freetsa_available = 1 ]
-			then
-				openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+				wget -q https://freetsa.org/files/tsa.crt
 				rt_quiery=$?
 				if [ $rt_quiery = 0 ]
 				then
-					openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
+					mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
+					freetsa_cert_available=1
+				else
+					rm ${script_path}/certs/tsa.crt 2>/dev/null
+				fi
+			else
+				freetsa_cert_available=1
+			fi
+			if [ ! -s ${script_path}/certs/freetsa/cacert.pem ]
+			then
+				wget -q https://freetsa.org/files/cacert.pem
+				rt_quiery=$?
+				if [ $rt_quiery = 0 ]
+				then
+					mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
+					freetsa_rootcert_available=1
+				else
+					rm ${script_path}/certs/cacert.pem 2>/dev/null
+				fi
+			else
+				freetsa_rootcert_available=1
+			fi
+			cd ${script_path}
+			if [ $freetsa_cert_available = 1 -a $freetsa_rootcert_available = 1 ]
+			then
+				freetsa_available=1
+			fi
+			######################################
+
+			###VERIFY USERS AND THEIR TSA STAMPS###
+			touch ${script_path}/blacklisted_accounts.dat
+			touch ${script_path}/blacklisted_trx.dat
+			touch ${script_path}/all_accounts.tmp
+			ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
+			while read line
+			do
+				accountname_to_check=`echo $line|cut -d'.' -f1`
+				###FREETSA CHECK###############################
+				if [ $freetsa_available = 1 ]
+				then
+					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
-						date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
-						date_to_verify_converted=`date -d "${date_to_verify}" +%Y%m%d`
-						accountdate_to_verify=`echo $line|cut -d'.' -f2`
-						accountdate_to_verify_converted=`date -d @${accountdate_to_verify} +%Y%m%d`
-						if [ $date_to_verify_converted != $accountdate_to_verify_converted ]
+						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
+						rt_quiery=$?
+						if [ $rt_quiery = 0 ]
 						then
-							echo $line >>${script_path}/blacklisted_accounts.dat
+							date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
+							date_to_verify_converted=`date -d "${date_to_verify}" +%Y%m%d`
+							accountdate_to_verify=`echo $line|cut -d'.' -f2`
+							accountdate_to_verify_converted=`date -d @${accountdate_to_verify} +%Y%m%d`
+							if [ $date_to_verify_converted != $accountdate_to_verify_converted ]
+							then
+								echo $line >>${script_path}/blacklisted_accounts.dat
+							fi
 						fi
+						rm ${script_path}/timestamp_check.tmp 2>/dev/null
 					fi
-					rm ${script_path}/timestamp_check.tmp 2>/dev/null
 				fi
-			fi
-			###############################################
-		done <${script_path}/all_accounts.tmp
+				###############################################
+			done <${script_path}/all_accounts.tmp
 
-		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
-		touch ${script_path}/keys_import.tmp
-		touch ${script_path}/keylist_gpg.tmp
-                ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
-		gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
-                while read line
-                do
-                        key_uname=`echo $line|cut -d'.' -f1`
-                        key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
-                        if [ $key_imported = 0 ]
-                        then
-                                gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
-                                rt_quiery=$?
-                                if [ $rt_quiery -gt 0 ]
-                                then
-                        		dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Öffentlicher Schlüssel für user <${key_uname}> konnte nicht importiert werden (Datei: ${script_path}/keys/$line)!" 0 0
-                                        key_already_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${key_uname}"|wc -l`
-                                        if [ $key_already_blacklisted = 0 ]
-                                        then
-                                                echo "${line}" >>${script_path}/blacklisted_accounts.dat
-                                        fi
-                                fi
-                        fi
-                done <${script_path}/keys_import.tmp
-		rm ${script_path}/keys_import.tmp
-		rm ${script_path}/keylist_gpg.tmp
-                ##########################################################
+			###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
+			touch ${script_path}/keys_import.tmp
+			touch ${script_path}/keylist_gpg.tmp
+ 	              	ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
+  	              	while read line
+  	              	do
+                        	key_uname=`echo $line|cut -d'.' -f1`
+ 	                        key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
+        	                if [ $key_imported = 0 ]
+                 		then
+                                	gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
+                      		        rt_quiery=$?
+                                	if [ $rt_quiery -gt 0 ]
+                                	then
+                        			dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Öffentlicher Schlüssel für user <${key_uname}> konnte nicht importiert werden (Datei: ${script_path}/keys/$line)!" 0 0
+                                        	key_already_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${key_uname}"|wc -l`
+                                        	if [ $key_already_blacklisted = 0 ]
+                                        	then
+                                                	echo "${line}" >>${script_path}/blacklisted_accounts.dat
+                                        	fi
+                                	fi
+                        	fi
+                	done <${script_path}/keys_import.tmp
+			rm ${script_path}/keys_import.tmp
+			rm ${script_path}/keylist_gpg.tmp
+                	##########################################################
 
-		###VERIFY TRX AT THE BEGINNING AND MOVE TRX THAT HAVE NOT BEEN SIGNED BY THE OWNER TO BLACKLISTED
-		touch ${script_path}/all_trx.tmp
-		ls -1 ${script_path}/trx >${script_path}/all_trx.tmp
-		while read line
-		do
-			file_to_check=${script_path}/trx/${line}
-			user_to_check=`echo $line|cut -d'.' -f2`
-			usr_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${user_to_check}"|wc -l`
-			if [ $usr_blacklisted = 0 ]
-			then
-				user_file=`ls -1 ${script_path}/keys/|grep "${user_to_check}"`
-				verify_signature $file_to_check $user_file
-				rt_quiery=$?
-				if [ $rt_quiery -gt 0 ]
+			###VERIFY TRX AT THE BEGINNING AND MOVE TRX THAT HAVE NOT BEEN SIGNED BY THE OWNER TO BLACKLISTED
+			touch ${script_path}/all_trx.tmp
+			ls -1 ${script_path}/trx >${script_path}/all_trx.tmp
+			while read line
+			do
+				file_to_check=${script_path}/trx/${line}
+				user_to_check=`echo $line|cut -d'.' -f2`
+				usr_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${user_to_check}"|wc -l`
+				if [ $usr_blacklisted = 0 ]
 				then
-					echo $file_to_check >>${script_path}/blacklisted_trx.dat
-				else
-					trx_date_filename=`echo $line|cut -d'.' -f1`
-					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d' ' -f4`
-					if [ $trx_date_filename != $trx_date_inside ]
+					user_file=`ls -1 ${script_path}/keys/|grep "${user_to_check}"`
+					verify_signature $file_to_check $user_file
+					rt_quiery=$?
+					if [ $rt_quiery -gt 0 ]
 					then
 						echo $file_to_check >>${script_path}/blacklisted_trx.dat
+					else
+						trx_date_filename=`echo $line|cut -d'.' -f1`
+						trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d' ' -f4`
+						if [ $trx_date_filename != $trx_date_inside ]
+						then
+							echo $file_to_check >>${script_path}/blacklisted_trx.dat
+						fi
 					fi
 				fi
-			fi
-		done <${script_path}/all_trx.tmp
-		####################################################################################
+			done <${script_path}/all_trx.tmp
+			####################################################################################
+			action_done=0
+		fi
 
-		###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
 		now=`date +%s`
-		make_signature "none" $now 1
+		if [ $make_ledger = 1 ]
+		then
+			####GET COINS FOR ACCOUNT LOGGED IN
+			build_ledger
+			no_ack_trx=`cat ${script_path}/index.tmp|wc -l`
+			if [ $no_ack_trx -gt 0 ]
+			then
+				###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
+				make_signature "none" $now 1
+			fi
+			make_ledger=0
+		fi
 
-		####GET COINS FOR ACCOUNT LOGGED IN
-		build_ledger
 		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}"|cut -d'=' -f2`
 		user_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Zurück' --title "Menü" --backtitle "Universal Credit System" --menu "\nAngemeldet als :\n${account_name_chosen}\n\nAdresse :\n${handover_account}\n\nKontostand :\n${account_my_balance} ${currency_symbol}\n\nBitte wählen:" 0 0 0 "Senden" "" "Empfangen" "" "Sync" "" "Historie" "" "Stats" "" "Log out" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
@@ -777,7 +785,13 @@ do
 											trx_fee=`echo "${order_amount_formatted} * ${current_fee}"|bc`
 											trx_fee="0${trx_fee}"
 											order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
-											amount_selected=1
+											enough_balance=`echo "${account_my_balance} - ${order_amount_with_trx_fee}>0"|bc`
+											if [ $enough_balance = 1 ]
+											then
+												amount_selected=1
+											else
+												dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie haben nicht genug Guthaben um eine Überweisung über ${order_amount_with_trx_fee} UCC zu tätigen. Ihr Guthaben beträgt lediglich ${account_my_balance} UCC." 0 0
+											fi
 										else
 											dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Buchstaben sind nicht erlaubt. Gültige Beispiele sind: 1.000000 oder 1,000000 oder 10.00 oder 500.50 etc.!" 0 0
 										fi
@@ -825,13 +839,13 @@ do
 										fi
 									done <${script_path}/dependent_trx.tmp
 									keys_to_append="keys/${handover_account}.${handover_account_stamp} "
-									proof_to_append="proofs/${handover_account}/*.tsq proofs/${handover_account}/*.tsr "
+									proof_to_append="proofs/${handover_account}/freetsa.tsq proofs/${handover_account}/freetsa.tsr "
 									trx_to_append="trx/${trx_now}.${handover_account} "
 									while read line
 									do
 										user_to_append=`echo $line|cut -d'=' -f1`
 										user_to_append_key=`ls -1 ${script_path}/keys|grep "${user_to_append}"`
-										proof_to_append="${proof_to_append}proofs/${user_to_append}/*.tsq proofs/${user_to_append}/*.tsr "
+										proof_to_append="${proof_to_append}proofs/${user_to_append}/freetsa.tsq proofs/${user_to_append}/freetsa.tsr "
 										keys_to_append="${keys_to_append}keys/${user_to_append_key} "
 										user_to_append_till_date=`echo $line|cut -d'=' -f2`
 										ls -1 ${script_path}/trx|grep "${user_to_append}" >${script_path}/dep_user_trx.tmp
@@ -839,20 +853,15 @@ do
 										append_line_counter=1
 										while read line
 										do
-											if [ $append_line_counter -lt $trx_till_line ]
+											if [ $append_line_counter -le $trx_till_line ]
 											then
 												trx_to_append="${trx_to_append}trx/${line} "
-											else
-								 				if [ $append_line_counter = $trx_till_line ]
-												then
-													trx_to_append="${trx_to_append}trx/${line} "
-												fi
 											fi
 										done <${script_path}/dep_user_trx.tmp
 									done <${script_path}/dependencies.tmp
+									build_ledger
 									make_signature "none" ${trx_now} 1
 									cd ${script_path}
-									#tar -cvf ${trx_now}.tar ${keys_to_append} ${trx_to_append} ${handover_account}.txt
 									tar -cvf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
@@ -894,6 +903,8 @@ do
 											tar -xvf $file_path $files_to_fetch
 										fi
 										file_found=1
+										action_done=1
+										make_ledger=1
 									else
 										file_found=1
 									fi
@@ -934,6 +945,8 @@ do
                                                 						else
                                                  				       			tar -xvf $file_path $files_to_fetch
                                                 						fi
+												action_done=1
+												make_ledger=1
                                         						else
                                                 						file_found=1
                                         						fi
@@ -951,8 +964,16 @@ do
 								while read line
 								do
 									echo "keys/$line" >>${script_path}/files_for_sync.tmp
-									echo "proofs/$line/freetsa.tsq" >>${script_path}/files_for_sync.tmp
-									echo "proofs/$line/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+									freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
+									if [ -s $freetsa_qfile ]
+									then
+										echo "proofs/$line/freetsa.tsq" >>${script_path}/files_for_sync.tmp	
+									fi
+									freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
+									if [ -s $freetsa_rfile ]
+									then
+										echo "proofs/$line/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+									fi
 								done <${script_path}/keys_for_sync.tmp
 
 								###Get list of trx with path
@@ -970,7 +991,7 @@ do
 								done <${script_path}/files_for_sync.tmp
 								#echo $tar_string
 								synch_now=`date +%s`
-								tar_string="${tar_string} proofs/${handover_account}/${handover_account}.txt"
+								tar_string="${tar_string}proofs/${handover_account}/${handover_account}.txt"
 								cd ${script_path}
 								tar -cvf ${synch_now}.tar ${tar_string}
 								rt_quiery=$?
