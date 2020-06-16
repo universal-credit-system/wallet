@@ -1,4 +1,5 @@
 #!/bin/sh
+
 pkg install bc
 pkg install wget
 pkg install curl
