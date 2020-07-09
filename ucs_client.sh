@@ -22,6 +22,7 @@ login_account(){
 			fi
 		done <${script_path}/keylist.tmp
 		rm ${script_path}/keylist.tmp
+
 		if [ $account_found = 1 ]
 		then
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
@@ -36,17 +37,19 @@ login_account(){
 				then
 					if [ $extracted_name = $account_name_chosen ]
 					then
-						dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Willkommen, ${account_name_chosen}!" 0 0
+						dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<account_name_chosen>/${account_name_chosen}/g"`
+						dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_login_welcome_display" 0 0
 						user_logged_in=1
 					fi
 				else
-					dialog --title "WARNUNG" --backtitle "Universal Credit System" --msgbox "Das Passwort ist nicht korrekt!" 0 0
+					dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_wrongpw" 0 0
 				fi
 			else
-				dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Key für User ${account_name_chosen} nicht in GnuPG Keyring importiert!" 0 0
+				dialog_login_nokey_display="${dialog_login_nokey} (-> ${account_name_chosen})!"
+				dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey_display" 0 0
 			fi
 		else
-			dialog --title "WARNUNG" --backtitle "Universal Credit System" --msgbox "Unter ${script_path}/keys/ befinden sich leider keine Profildateien für Account ${account_name_chosen}." 0 0
+			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2" 0 0
 			clear
 		fi
                 rm ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
@@ -60,18 +63,18 @@ create_keys(){
 		#key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
 		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
-		echo "0"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Generiere Public und Private Keys..." 0 0 0
+		echo "0"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create1" 0 0 0
 		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
 		rt_quiery=$?
 		if [ $rt_quiery = 0 ]
 		then
-			echo "33"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Public Key exportieren..." 0 0 0
+			echo "33"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create2" 0 0 0
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				echo "66"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Private Key exportieren..." 0 0 0
-				dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie werden eventuell gleich aufgefordert für den Export des Privaten-Keys das Passwort einzugeben." 0 0
+				echo "66"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create3" 0 0 0
+				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_export" 0 0
 				clear
 				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
 				rt_quiery=$?
@@ -127,11 +130,10 @@ create_keys(){
 					fi
 					if [ $rt_quiery = 0 ]
 					then
-						echo "100"|dialog --title "Schlüssel erstellen" --backtitle "Universal Credit System" --gauge "Fertig..." 0 0 0
-						sleep 3s
+						echo "100"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create4" 0 0 0
 						clear
 						cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
-                                                dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "RSA-Schlüssel erfolgreich erstellt. Bitte notieren Sie sich diese Daten. Die Adresse benötigen Sie z.B. um zahlungen entgegenzunehmen.\n\nName :\n${name_chosen}\n\nAdresse :\n${name_hashed}\n\nLogin-Key :\n${key_rn}\n\nDatum :\n${file_stamp}\n\n" 0 0
+                                                dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final" 0 0
 						clear
 					else
 						###Remove Proofs-folder of Account that could not be created
@@ -234,17 +236,17 @@ check_input(){
 		alnum_there=`echo $input_string|grep '[^[:alnum:]]'|wc -l`
 		if [ $alnum_there -gt 0 ]
 		then
-			dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Es sind nur Buchstaben (Aa-Zz) und Zahlen (0-9) ohne Leerzeichen erlaubt!" 0 0
+			dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg1" 0 0
 			rt_quiery=1
 		fi
 		if [ $length_counter -le 1 ]
                 then
-                        dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie müssen mindestens 1 Zeichen eingeben!" 0 0
+                        dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg2" 0 0
                 	rt_quiery=1
 		fi
 		if [ $length_counter -gt 31 ]
 		then
-			dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Es sind nur maximal 30 Zeichen erlaubt!" 0 0
+			dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg3" 0 0
 			rt_quiery=1
 		fi
 		return $rt_quiery
@@ -261,13 +263,13 @@ build_ledger(){
 		#Status Bar########################################
 		total_number_accounts=`cat ${script_path}/accounts_list.tmp|wc -l`
 		total_value_timestamp=$(( $total_number_accounts * 84600 ))
-	
+
 		now_timestamp=`date +%s`
 		while read line
 		do
 			acc_timestamp=`echo $line|cut -d'.' -f2`
 			acc_value_timestamp=$(( $now_timestamp - $acc_timestamp ))
-			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))	
+			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))
 		done <${script_path}/accounts_list.tmp
 		total_value_days=`expr $total_value_timestamp / 84600`
 		one_day_is_percent=`echo "scale=2; 100 / $total_value_days"|bc`
@@ -337,7 +339,9 @@ build_ledger(){
 					###ADD PERCENTS TO STATUS BAR#################
 					current_percent=`echo "$current_percent + $one_day_is_percent"|bc`
 					current_percent_display=`echo "scale=0; $current_percent / 1.0"|bc`
-					echo "$current_percent_display"|dialog --title "Create LEDGER file..." --backtitle "Universal Credit System" --gauge "Build ledger for user ${account_name}..." 0 0 0
+					dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<account_name>/${account_name}/g"`
+					clear
+					echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
                                         ###############################################
 					if [ $focus -eq $account_date ]
 					then
@@ -349,20 +353,20 @@ build_ledger(){
 					fi
 					###GRANT COINLOAD OF THAT DAY
 					coinload=`echo "${initial_coinload} / ${multi}"|bc`
-					is_greater_one=`echo "${coinload}>1"|bc`
+					is_greater_one=`echo "${coinload}>=1"|bc`
 	                                if [ $is_greater_one = 0 ]
         	                        then
                 	                	coinload="0${coinload}"
                         	        fi
 					next_coinload=`echo "${initial_coinload} / ${multi_next}"|bc`
-					is_greater_one=`echo "${next_coinload}>1"|bc`
+					is_greater_one=`echo "${next_coinload}>=1"|bc`
 	                                if [ $is_greater_one = 0 ]
         	                        then
                 	                	next_coinload="0${next_coinload}"
                         	        fi
 					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
 					account_balance=`echo "${account_prev_balance} + ${coinload}"|bc`
-					is_greater_one=`echo "${account_balance}>1"|bc`
+					is_greater_one=`echo "${account_balance}>=1"|bc`
 					if [ $is_greater_one = 0 ]
 					then
 						account_balance="0${account_balance}"
@@ -398,14 +402,14 @@ build_ledger(){
 							#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
 							trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
 							trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-							is_greater_one=`echo "${trx_fee}>1"|bc`
+							is_greater_one=`echo "${trx_fee}>=1"|bc`
                                 			if [ $is_greater_one = 0 ]
-					                       then
+					                then
                 	                               		trx_fee="0${trx_fee}"
                         	                	fi
                	                	        	trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
                        	                	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
-                               	                        enough_balance=`echo "${account_check_balance}>0"|bc`
+                               	                        enough_balance=`echo "${account_check_balance}>=0"|bc`
         	                       	        	if [ $enough_balance = 1 ]
                                                	        then
 								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)####
@@ -414,7 +418,7 @@ build_ledger(){
                                         			echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
 
                                                        	       	account_balance=$account_check_balance
-								is_greater_one=`echo "${account_balance}>1"|bc`
+								is_greater_one=`echo "${account_balance}>=1"|bc`
 						                if [ $is_greater_one = 0 ]
         	                                		then
                 	                                		account_balance="0${account_balance}"
@@ -430,13 +434,13 @@ build_ledger(){
 										echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
 									else
 										receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|cut -d'=' -f2`
-										is_greater_one=`echo "${receiver_old_balance}>1"|bc`
+										is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 										if [ $is_greater_one = 0 ]
 										then
 											receiver_old_balance="0${receiver_old_balance}"
 										fi
 										receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-										is_greater_one=`echo "${receiver_new_balance}>1"|bc`
+										is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
 										if [ $is_greater_one = 0 ]
 										then
 											receiver_new_balance="0${receiver_new_balance}"
@@ -470,6 +474,7 @@ check_archive(){
 				script_there=0
 				files_not_homedir=0
 				files_to_fetch=""
+				files_to_fetch_display="${dialog_content}\n"
 				while read line
 				do
 					script_there=`echo $line|grep ".sh"|wc -l|sed 's/ //g'`
@@ -479,14 +484,21 @@ check_archive(){
              		   			case $files_not_homedir in
                         				"keys")		files_to_fetch="${files_to_fetch}$line "
 									echo "$line" >>${script_path}/files_to_fetch.tmp
+									files_to_fetch_display="${files_to_fetch_display}${line}\n"
                                 	        			;;
                    		     			"proofs")	files_to_fetch="${files_to_fetch}$line "
 									echo "$line" >>${script_path}/files_to_fetch.tmp
+									files_to_fetch_display="${files_to_fetch_display}${line}\n"
                                         				;;
                         				"trx")		files_to_fetch="${files_to_fetch}$line "
 									echo "$line" >>${script_path}/files_to_fetch.tmp
+									files_to_fetch_display="${files_to_fetch_display}${line}\n"
                                 		        		;;
+							*)		rt_quiery=1
+									;;
                 				esac
+					else
+						rt_quiery=1
 					fi
 				done <${script_path}/tar_check.tmp
 			fi
@@ -509,11 +521,17 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
+
+###SOURCE LANGUAGE-SELECTION
+. ${script_path}/lang.conf
+. ${script_path}/lang/${lang_file}
+############################
+
 while [ 1 != 2 ]
 do
 	if [ $user_logged_in = 0 ]
 	then
-		main_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Beenden' --title "UNIVERSAL CREDIT SYSTEM" --backtitle "Universal Credit System ${core_system_version}" --menu "MMMWMMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMWMWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMMWK0NMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMW0ONMMMMMMMMMMMMMMMMMWWX0xdllcloxOKWMMMMMMMMMMM\nMMW0xXMMMMMMMMMMMMMMMMXx:'..   .......,lONMMMMMMMM\nMMKokWMMMMMMMMMMMMMMXo.    .:xOKKXK0kdl,.,xNMMWMMM\nMMx:0MMMMMMMMMMMMMM0,      :0NMMMMMMMWWN0o,;OWMMMM\nMMo;KMMMMMMMMMMMMMX;        .,dXMMMMMMMMMWKl'dNMMM\nMMo'OMMMMMMMMMMMMMx.           ;KMMMMMMMMWWWx'oWMM\nMMk'lWMMMMMMMMMMMMd             oWMMMMMMMMMMWo'kMM\nMMWo.dWMMMMMMMMMMMO.            lWMMMMMMMMMMMX;cWM\nMMWXo'lXMMMMMMMMMMWk.          .OMMMMMMMMMMMMWlcXM\nMMMMNx;;xXWWMMWMMMMWKd;.      .xWMMMMMMMMMMMMWooWM\nMMMMMWXd,'cx0NWWMMMWWXx'    .;OWMMMMMMMMMMMMMXokMM\nMMMMMMMMXx:'.';clllc;.   .'cONMMMMMMMMMMMMMMWkxNMM\nMMMMMMMMMMWXOdl:;,,,,:ldOKNMMMMMMMMMMMMMMMMMKkXMMM\nMMMMMMMMMMMMMMMMMWWWMMMMMMMMMMMMMMMMMMMMMMWK0XMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWKKWWWMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWWMMMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n" 0 0 0 "Login" "" "Konto erstellen" "" "Exit" "" 3>&1 1>&2 2>&3`
+		main_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_end" --title "UNIVERSAL CREDIT SYSTEM" --backtitle "Universal Credit System ${core_system_version}" --menu "MMMWMMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMWMWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMMWK0NMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMW0ONMMMMMMMMMMMMMMMMMWWX0xdllcloxOKWMMMMMMMMMMM\nMMW0xXMMMMMMMMMMMMMMMMXx:'..   .......,lONMMMMMMMM\nMMKokWMMMMMMMMMMMMMMXo.    .:xOKKXK0kdl,.,xNMMWMMM\nMMx:0MMMMMMMMMMMMMM0,      :0NMMMMMMMWWN0o,;OWMMMM\nMMo;KMMMMMMMMMMMMMX;        .,dXMMMMMMMMMWKl'dNMMM\nMMo'OMMMMMMMMMMMMMx.           ;KMMMMMMMMWWWx'oWMM\nMMk'lWMMMMMMMMMMMMd             oWMMMMMMMMMMWo'kMM\nMMWo.dWMMMMMMMMMMMO.            lWMMMMMMMMMMMX;cWM\nMMWXo'lXMMMMMMMMMMWk.          .OMMMMMMMMMMMMWlcXM\nMMMMNx;;xXWWMMWMMMMWKd;.      .xWMMMMMMMMMMMMWooWM\nMMMMMWXd,'cx0NWWMMMWWXx'    .;OWMMMMMMMMMMMMMXokMM\nMMMMMMMMXx:'.';clllc;.   .'cONMMMMMMMMMMMMMMWkxNMM\nMMMMMMMMMMWXOdl:;,,,,:ldOKNMMMMMMMMMMMMMMMMMKkXMMM\nMMMMMMMMMMMMMMMMMWWWMMMMMMMMMMMMMMMMMMMMMMWK0XMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWKKWWWMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWWMMMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n" 0 0 0 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_end" "" 3>&1 1>&2 2>&3`
 		if [ $? != 0 ]
         	then
                 	clear
@@ -521,11 +539,11 @@ do
         	else
                 	clear
                 	case "$main_menu" in
-                        	"Login")                account_entered_correct=0
+                        	"$dialog_main_logon")   account_entered_correct=0
 							account_entered_aborted=0
 							while [ $account_entered_correct = 0 ]
 							do
-								account_chosen=`dialog --title "Login" --backtitle "Universal Credit System" --inputbox "Kontoname eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+								account_chosen=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
@@ -533,7 +551,7 @@ do
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										account_rn=`dialog --title "Login" --backtitle "Universal Credit System" --inputbox "Login-Key eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+										account_rn=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "" 3>&1 1>&2 2>&3`
                                                                                 rt_quiery=$?
                                                                                 if [ $rt_quiery = 0 ]
                                                                                 then
@@ -555,7 +573,7 @@ do
 							done
 							if [ $account_entered_aborted = 0 ]
 							then
-								password_chosen=`dialog --title "Login" --backtitle "Universal Credit System" --insecure --passwordbox "Password eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+								password_chosen=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_pw" 0 0 "" 3>&1 1>&2 2>&3`
                                                                 rt_quiery=$?
                                                                 if [ $rt_quiery = 0 ]
                                                                 then
@@ -563,10 +581,10 @@ do
 								fi
 							fi
 							;;
-                        	"Konto erstellen")      account_entered_correct=0
+                        	"$dialog_main_create")  account_entered_correct=0
 							while [ $account_entered_correct = 0 ]
 							do
-								account_chosen=`dialog --title "Konto erstellen" --backtitle "Universal Credit System" --inputbox "Kontoname eingeben:" 0 0 "" 3>&1 1>&2 2>&3`
+								account_chosen=`dialog --title "$dialog_main_create" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
@@ -577,7 +595,7 @@ do
 										password_found=0
 	     									while [ $password_found = 0 ]
                									do
-                									password_first=`dialog --insecure --passwordbox "Bitte Passwort eingeben" 0 0 3>&1 1>&2 2>&3`
+                									password_first=`dialog --insecure --passwordbox "$dialog_keys_pw1" 0 0 3>&1 1>&2 2>&3`
 											rt_quiery=$?
 											if [ $rt_quiery = 0 ]
 											then
@@ -586,14 +604,14 @@ do
 												if [ $rt_quiery = 0 ]
 												then
 													clear
-													password_second=`dialog --insecure --passwordbox "Bitte Passwort ein zweites mal eingeben" 0 0 3>&1 1>&2 2>&3`
+													password_second=`dialog --insecure --passwordbox "$dialog_keys_pw2" 0 0 3>&1 1>&2 2>&3`
 													rt_quiery=$?
 													if [ $rt_quiery = 0 ]
 													then
 														clear
                                        										if [ $password_first != $password_second ]
                         											then
-															dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Die eingegeben Passwörter stimmen nicht überein!" 0 0
+															dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_pwmatch" 0 0
 															clear
 														else
 															account_entered_correct=1
@@ -602,9 +620,9 @@ do
 															rt_quiery=$?
 															if [ $rt_quiery = 0 ]
 															then
-																dialog --title "Hinweis" --backtitle "Universal Credit System" --msgbox "Sie können sich nun in Ihr Konto einloggen. Viel Spass!" 0 0
+																dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_success" 0 0
 															else
-																dialog --title "Fehler" --backtitle "Universal Credit System" --msgbox "User konnte nicht erstellt werden!" 0 0
+																dialog --title "$dialog_type_titel_error" --backtitle "Universal Credit System" --msgbox "$dialog_keys_fail" 0 0
 															fi
 														fi
 													else
@@ -621,7 +639,30 @@ do
 								fi
 							done
 							;;
-                        	"Exit")			unset user_logged_in
+				"$dialog_main_lang")	ls -1 ${script_path}/lang/ >${script_path}/languages.tmp
+							lang_to_display=""
+							while read line
+							do
+								lang_ex_short=`echo $line|cut -d'_' -f2`
+								lang_ex_full=`echo $line|cut -d'_' -f3|cut -d'.' -f1`
+								lang_to_display="${lang_to_display}$lang_ex_short $lang_ex_full "
+							done <${script_path}/languages.tmp
+							lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "Universal Credit System" --menu "$dialog_lang" 0 0 0 ${lang_to_display} 3>&1 1>&2 2>&3`
+							rt_quiery=$?
+							if [ $rt_quiery = 0 ]
+							then
+								new_lang_file=`cat ${script_path}/languages.tmp|grep "lang_${lang_selection}_"`
+								if [ $lang_file != $new_lang_file ]
+								then
+									cat ${script_path}/lang.conf|sed "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" >${script_path}/lang.tmp
+									mv ${script_path}/lang.tmp ${script_path}/lang.conf
+									. ${script_path}/lang.conf
+									. ${script_path}/lang/${lang_file}
+								fi
+							fi
+							rm ${script_path}/languages.tmp
+							;;
+                        	"$dialog_main_end")     unset user_logged_in
 							rm ${script_path}/*.tmp 2>/dev/null
 							rm ${script_path}/*.dat 2>/dev/null
 							exit
@@ -721,7 +762,8 @@ do
                       		        rt_quiery=$?
                                 	if [ $rt_quiery -gt 0 ]
                                 	then
-                        			dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Öffentlicher Schlüssel für user <${key_uname}> konnte nicht importiert werden (Datei: ${script_path}/keys/$line)!" 0 0
+						dialog_import_fail_display=`echo $dialog_import_fail|sed "s/<key_uname>/${key_uname}/g"|sed "s/<file>/${line}/g"`
+                        			dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_import_fail_display" 0 0
                                         	key_already_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${key_uname}"|wc -l`
                                         	if [ $key_already_blacklisted = 0 ]
                                         	then
@@ -764,6 +806,7 @@ do
 			action_done=0
 		fi
 
+
 		now=`date +%s`
 		if [ $make_ledger = 1 ]
 		then
@@ -779,7 +822,8 @@ do
 		fi
 
 		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}"|cut -d'=' -f2`
-		user_menu=`dialog --ok-label 'Auswählen' --cancel-label 'Zurück' --title "Menü" --backtitle "Universal Credit System" --menu "\nAngemeldet als :\n${account_name_chosen}\n\nAdresse :\n${handover_account}\n\nKontostand :\n${account_my_balance} ${currency_symbol}\n\nBitte wählen:" 0 0 0 "Senden" "" "Empfangen" "" "Sync" "" "Historie" "" "Stats" "" "Log out" "" 3>&1 1>&2 2>&3`
+		dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed "s/<account_name_chosen>/${account_name_chosen}/g"|sed "s/<handover_account>/${handover_account}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"`
+		user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
 		then
 			user_logged_in=0
@@ -787,11 +831,11 @@ do
 		else
 			clear
 			case "$user_menu" in
-				"Senden")	recipient_found=0
+				"$dialog_send")	recipient_found=0
 						order_aborted=0
               			        	while [ $recipient_found = 0 ]
                               		        do
-							order_receipient=`dialog --title "Senden" --backtitle "Universal Credit System" --inputbox "Bitte geben Sie eine Empfangsadresse ein:" 0 0 "b9e305edaeb4894a5c8b34ba86d269c5e0368c12c2e1a270fe5dc242125be2b7" 3>&1 1>&2 2>&3`
+							order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "" 3>&1 1>&2 2>&3`
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
@@ -799,7 +843,7 @@ do
 								amount_selected=0
 								while [ $amount_selected = 0 ]
 								do
-									order_amount=`dialog --title "Senden" --backtitle "Universal Credit System" --inputbox "Bitte geben Sie einen Betrag ein:" 0 0 "1.000000" 3>&1 1>&2 2>&3`
+									order_amount=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_amount" 0 0 "1.000000" 3>&1 1>&2 2>&3`
 								        rt_quiery=$?
              								if [ $rt_quiery = 0 ]
                 							then
@@ -807,19 +851,27 @@ do
 										if [ $order_amount_alnum = 0 ]
 										then
 											order_amount_formatted=`echo $order_amount|sed 's/,/./g'|sed 's/ //g'`
-											order_amount_formatted="0${order_amount_formatted}"
+											is_greater_one=`echo "${order_amount_formatted}>=1"|bc`
+											if [ $is_greater_one = 0 ]
+											then
+												order_amount_formatted="0${order_amount_formatted}"
+											fi
 											trx_fee=`echo "${order_amount_formatted} * ${current_fee}"|bc`
-											trx_fee="0${trx_fee}"
+											is_greater_one=`echo "${trx_fee}>=1"|bc`
+											if [ $is_greater_one = 0 ]
+											then
+												trx_fee="0${trx_fee}"
+											fi
 											order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
 											enough_balance=`echo "${account_my_balance} - ${order_amount_with_trx_fee}>0"|bc`
 											if [ $enough_balance = 1 ]
 											then
 												amount_selected=1
 											else
-												dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Sie haben nicht genug Guthaben um eine Überweisung über ${order_amount_with_trx_fee} UCC zu tätigen. Ihr Guthaben beträgt lediglich ${account_my_balance} UCC." 0 0
+												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_nobalance" 0 0
 											fi
 										else
-											dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Buchstaben sind nicht erlaubt. Gültige Beispiele sind: 1.000000 oder 1,000000 oder 10.00 oder 500.50 etc.!" 0 0
+											dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_amount" 0 0
 										fi
 									else
 										amount_selected=1
@@ -834,7 +886,8 @@ do
 						done
 						if [ $order_aborted = 0 ]
 						then
-							dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Wollen Sie folgende überweisung wirklich tätigen: \n\nEMPFANGSADRESSE :\n${order_receipient}\n\nIHR AKTUELLER KONTOSTAND: \n${account_my_balance} ${currency_symbol}\n\nZU ÜBERWEISENDER BETRAG :\n-${order_amount_formatted} ${currency_symbol}\n\nANFALLENDE GEBÜHR :\n-${trx_fee} ${currency_symbol}\n\nTOTAL :\n-${order_amount_with_trx_fee} ${currency_symbol}" 30 120
+							dialog_send_overview_display=`echo $dialog_send_overview|sed "s/<order_receipient>/${order_receipient}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<order_amount_formatted>/${order_amount_formatted}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<order_amount_with_trx_fee>/${order_amount_with_trx_fee}/g"`
+							dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 30 120
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
@@ -845,6 +898,10 @@ do
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
+									cd ${script_path}/trx/
+									last_trx=`ls -1 *.${handover_account}|tail -1`
+									cd ${script_path}
+									trx_to_append="trx/${last_trx} "
 									cd ${script_path}/trx/
 									touch ${script_path}/dependent_trx.tmp
 									grep "R:${handover_account}" *.* >${script_path}/dependent_trx.tmp 2>/dev/null
@@ -864,7 +921,7 @@ do
 											mv ${script_path}/dependencies_mod.tmp ${script_path}/dependencies.tmp
 										fi
 									done <${script_path}/dependent_trx.tmp
-									dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Falls möglich, kleine Datei erstellen?" 0 0
+									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 									small_trx=$?
 									if [ $small_trx = 1 ]
 									then
@@ -962,94 +1019,137 @@ do
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Überweisung erfolgreich erstellt!\nDatei :\n${script_path}/${trx_now}.tar" 0 0
+										dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
+										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 									else
-										dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Fehler beim zusammenstellen der Überweisung!" 0 0
+										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
 									fi
 									rm ${script_path}/manifest.txt 2>/dev/null
 								else
-									dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Fehler beim senden der Überweisung!" 0 0
+									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 								fi
 							fi
 						fi
 						;;
-				"Empfangen")	file_found=0
-						path_to_search=$HOME
-						while [ $file_found = 0 ]
-						do
-							file_path=`dialog --title "Datei einlesen" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
-							rt_quiery=$?
-							if [ $rt_quiery = 0 ]
-							then
-								check_archive $file_path
+				"$dialog_receive")	file_found=0
+							path_to_search=$HOME
+							while [ $file_found = 0 ]
+							do
+								file_path=`dialog --title "$dialog_read" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									dialog --ok-label 'Weiter' --extra-button --extra-label 'Abbrechen' --title "Datei-Inhalt" --backtitle "Universal Credit System" --prgbox "cat ${script_path}/files_to_fetch.tmp" 15 100
-									rt_quiery=$?
-									if [ $rt_quiery = 0 ]
+									if [ -s $file_path ]
 									then
-										cd ${script_path}
-										dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Nur neue Dateien hinzufügen?" 0 0
-										rt_quiery=$?
-										if [ $rt_quiery = 0 ]
+										if [ ! -d $file_path ]
 										then
-											tar -xkf $file_path $files_to_fetch
+											check_archive $file_path
+											rt_quiery=$?
+											if [ $rt_quiery = 0 ]
+											then
+												dialog --title "$dialog_read" --backtitle "Universal Credit System" --yes-label "$dialog_yes" --no-label "$dialog_no" --yesno "$dialog_file_check" 0 0
+												rt_quiery=$?
+												if [ $rt_quiery = 0 ]
+												then
+													dialog --title "$dialog_read" --backtitle "Universal Credit System" --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --msgbox "$files_to_fetch_display" 0 0
+													#dialog --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --title "$dialog_content" --backtitle "Universal Credit System" --prgbox "cat ${script_path}/files_to_fetch.tmp" 15 100
+													rt_quiery=$?
+												else
+													rt_quiery=0
+												fi
+												if [ $rt_quiery = 0 ]
+												then
+													cd ${script_path}
+													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+													rt_quiery=$?
+													if [ $rt_quiery = 0 ]
+													then
+														tar -xkf $file_path 2>/dev/null
+													else
+														tar -xf $file_path $files_to_fetch
+													fi
+													file_found=1
+													action_done=1
+													make_ledger=1
+												else
+													file_found=1
+												fi
+											else
+												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
+											fi
+											rm ${script_path}/files_to_fetch.tmp
 										else
-											tar -xvf $file_path $files_to_fetch
+											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+                                							dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 										fi
-										file_found=1
-										action_done=1
-										make_ledger=1
 									else
-										file_found=1
+										dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+                        							dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 									fi
 								else
-									dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Die Datei $file_path konnte leider nicht geöffnet werden!" 0 0
+									file_found=1
 								fi
-								rm ${script_path}/files_to_fetch.tmp
-							else
-								file_found=1
-							fi
-						done
-						;;
-				"Sync")		dialog --title "Synchronisieren" --backtitle "Universal Credit System" --yes-label "Syncfile einlesen" --no-label "Syncfile erstellen" --yesno "Wollen Sie eine Synchronisations-Datei von anderen Benutzern einlesen oder wollen Sie selbst eine Synchronistations-Datei für andere Benutzer erstellen?" 0 0
+							done
+							;;
+				"$dialog_sync")	dialog --title "$dialog_sync" --backtitle "Universal Credit System" --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --yesno "$dialog_sync_io" 0 0
 						rt_quiery=$?
 						case $rt_quiery in
 							"0")	file_found=0
                         					path_to_search=$HOME
               			          			while [ $file_found = 0 ]
                         					do
-                                					file_path=`dialog --title "Datei einlesen" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
+                                					file_path=`dialog --title "$dialog_read" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
  			                               			rt_quiery=$?
                         		        			if [ $rt_quiery = 0 ]
                                 					then
-										check_archive $file_path
-                              	  						rt_quiery=$?
-						                                if [ $rt_quiery = 0 ]
-										then
-   											dialog --ok-label 'Weiter' --extra-button --extra-label 'Abbrechen' --title "Datei-Inhalt" --backtitle "Universal Credit System" --prgbox "cat ${script_path}/files_to_fetch.tmp" 15 100
-                                 				       			rt_quiery=$?
-                                        						if [ $rt_quiery = 0 ]
-                               			        	 			then
-                                                						cd ${script_path}
-                                                						dialog --title "HINWEIS" --backtitle "Universal Credit System" --yesno "Nur neue Dateien hinzufügen?" 0 0
-                                        		        				rt_quiery=$?
-                     		                           					if [ $rt_quiery = 0 ]
-                                	                					then
-                                        	               			 			tar -xkf $file_path $files_to_fetch
-                                                						else
-                                                 				       			tar -xvf $file_path $files_to_fetch
-                                                						fi
-												action_done=1
-												make_ledger=1
-                                        						else
-                                                						file_found=1
-                                        						fi
+										if [ -s $file_path ]
+                  		                                                then
+                                	                                                if [ ! -d $file_path ]
+                                        	                                        then
+												check_archive $file_path
+                              	  								rt_quiery=$?
+								                                if [ $rt_quiery = 0 ]
+												then
+													dialog --title "$dialog_read" --backtitle "Universal Credit System" --yes-label "$dialog_yes" --no-label "$dialog_no" --yesno "$dialog_file_check" 0 0
+   													rt_quiery=$?
+													if [ $rt_quiery = 0 ]
+													then
+														#dialog --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --title "$dialog_content" --backtitle "Universal Credit System" --prgbox "cat ${script_path}/files_to_fetch.tmp" 15 100
+   														dialog --title "$dialog_read" --backtitle "Universal Credit System" --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --msgbox "$files_to_fetch_display" 0 0
+	                              						       				rt_quiery=$?
+													else
+														rt_quiery=0
+													fi
+                                        								if [ $rt_quiery = 0 ]
+                               			        	 					then
+                                                								cd ${script_path}
+                                         			       						dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+                                        		        						rt_quiery=$?
+                     		                           							if [ $rt_quiery = 0 ]
+                                	                							then
+                                        	               			 					tar -xkf $file_path 2>/dev/null
+		                                                						else
+                		                                 				       			tar -xf $file_path $files_to_fetch
+                                		                						fi
+														action_done=1
+														make_ledger=1
+                                        								else
+                                                								file_found=1
+                                  			      						fi
+												else
+													dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
+												fi
+												rm ${script_path}/files_to_fetch.tmp 2>/dev/null
+											else
+												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+    									                        dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
+											fi
 										else
-											dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Die Datei $file_path konnte leider nicht geöffnet werden!" 0 0
+											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+                                							dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 										fi
-										rm ${script_path}/files_to_fetch.tmp 2>/dev/null
                                 					else
                                        			 			file_found=1
                                 					fi
@@ -1060,17 +1160,23 @@ do
 								while read line
 								do
 									echo "keys/$line" >>${script_path}/files_for_sync.tmp
-									freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
+									user_extracted=`echo $line|cut -d'.' -f1`
+									freetsa_qfile="${script_path}/proofs/${user_extracted}/freetsa.tsq"
 									if [ -s $freetsa_qfile ]
 									then
-										echo "proofs/$line/freetsa.tsq" >>${script_path}/files_for_sync.tmp	
+										echo "proofs/${user_extracted}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
 									fi
-									freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
+									freetsa_rfile="${script_path}/proofs/${user_extracted}/freetsa.tsr"
 									if [ -s $freetsa_rfile ]
 									then
-										echo "proofs/$line/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+										echo "proofs/${user_extracted}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
 									fi
-								done <${script_path}/keys_for_sync.tmp
+									index_file="${script_path}/proofs/${user_extracted}/${user_extracted}.txt"
+									if [ -s $index_file ]
+									then
+										echo "proofs/${user_extracted}/${user_extracted}.txt" >>${script_path}/files_for_sync.tmp
+									fi
+								done <${script_path}/keys_sync.tmp
 
 								###Get list of trx with path
 								ls -1 ${script_path}/trx >${script_path}/trx_sync.tmp
@@ -1085,166 +1191,169 @@ do
 								do
 									tar_string="${tar_string}$line "
 								done <${script_path}/files_for_sync.tmp
-								#echo $tar_string
 								synch_now=`date +%s`
-								tar_string="${tar_string}proofs/${handover_account}/${handover_account}.txt"
 								cd ${script_path}
-								tar -cvf ${synch_now}.tar ${tar_string}
+								tar -cf ${synch_now}.tar ${tar_string}
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Synchronisations-Datei erfolgreich erstellt.\n\nPfad:\n${script_path}/${synch_now}.tar" 0 0
+									dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.tar#g"`
+									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
                         					else
-									dialog --title "FEHLER" --backtitle "Universal Credit System" --msgbox "Synchronisations-Datei (${script_path}/${synch_now}.tar) konnte nicht erstellt werden!" 0 0
+									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.tar#g"`
+									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 								rm ${script_path}/keys_sync.tmp 2>/dev/null
 								rm ${script_path}/files_for_sync.tmp 2>/dev/null
 								;;
 						esac
 						;;
-				"Historie")	cd ${script_path}/trx
-						touch ${script_path}/my_trx.tmp
-						grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-						grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
-						cd ${script_path}
-						no_trx=`cat ${script_path}/my_trx.tmp|wc -l`
-						menu_display_text=""
-						if [ $no_trx -gt 0 ]
-						then
-							while read line
-							do
-								line_extracted=`echo $line`
-								sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f1|cut -d':' -f2`
-								trx_date=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
-                              	                        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f2`
-								trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-								is_greater_one=`echo "${trx_fee}>1"|bc`
-                                                                if [ $is_greater_one = 0 ]
-                                                                then
-                                                                        trx_fee="0${trx_fee}"
-                                                                fi
-                                                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-								is_user_sender_blacklisted=`grep "${sender}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
-								is_user_receiver_blacklisted=`grep "${handover_user}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
-								is_trx_blacklisted=`grep "${line_extracted}" ${script_path}/blacklisted_trx.dat|wc -l|sed 's/ //g'`
-								if [ $is_user_sender_blacklisted = 0 ]
-								then
-									if [ $is_user_receiver_blacklisted = 0 ]
+				"$dialog_history")	cd ${script_path}/trx
+							touch ${script_path}/my_trx.tmp
+							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
+							grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
+							cd ${script_path}
+							no_trx=`cat ${script_path}/my_trx.tmp|wc -l`
+							menu_display_text=""
+							if [ $no_trx -gt 0 ]
+							then
+								while read line
+								do
+									line_extracted=`echo $line`
+									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f1|cut -d':' -f2`
+									trx_date=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
+                              	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f2`
+									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+									is_greater_one=`echo "${trx_fee}>1"|bc`
+	                                                                if [ $is_greater_one = 0 ]
+        	                                                        then
+                	                                                        trx_fee="0${trx_fee}"
+                        	                                        fi
+                                	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
+									is_user_sender_blacklisted=`grep "${sender}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
+									is_user_receiver_blacklisted=`grep "${handover_user}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
+									is_trx_blacklisted=`grep "${line_extracted}" ${script_path}/blacklisted_trx.dat|wc -l|sed 's/ //g'`
+									if [ $is_user_sender_blacklisted = 0 ]
 									then
-
-										if [ $is_trx_blacklisted = 0 ]
+										if [ $is_user_receiver_blacklisted = 0 ]
 										then
-											if [ $sender = $handover_account ]
+											if [ $is_trx_blacklisted = 0 ]
 											then
-												menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} GESENDET "
+												if [ $sender = $handover_account ]
+												then
+													menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_ack_snd "
+												else
+													menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_ack_rcv "
+												fi
 											else
-												menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} EMPFANGEN "
+												if [ $sender = $handover_account ]
+												then
+													menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
+												else
+													menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
+												fi
 											fi
 										else
 											if [ $sender = $handover_account ]
 											then
-												menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} WIDERRUFEN "
+												menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
 											else
-												menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} WIDERRUFEN "
+												menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
 											fi
 										fi
 									else
 										if [ $sender = $handover_account ]
 										then
-											menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} WIDERRUFEN "
+											menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
 										else
-											menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} WIDERRUFEN "
-										fi
+											menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
+                                                	                        fi
 									fi
-								else
-									if [ $sender = $handover_account ]
-									then
-										menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} WIDERRUFEN "
-									else
-										menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} WIDERRUFEN "
-                                                                        fi
-								fi
-							done <${script_path}/my_trx.tmp
-						else
-							menu_display_text="Keine Ergebnisse"
-						fi
-						overview_quit=0
-						while [ $overview_quit = 0 ]
-						do
-							decision=`dialog --ok-label 'Öffnen' --cancel-label 'Zurück' --title "Transaktionshistorie" --backtitle "Universal Credit System" --menu "Übersicht über die Transaktionen Ihres Kontos:" 0 0 0 ${menu_display_text} 3>&1 1>&2 2>&3`
-							rt_quiery=$?
-							if [ $rt_quiery = 0 ]
-							then
-								if [ $decision != "Keine" ]
-								then
-									trx_sign=`echo $decision|cut -d':' -f2|cut -c 1`
-									trx_date=`echo $decision|cut -d':' -f1`
-									trx_file=`cat ${script_path}/my_trx.tmp|grep "${trx_date}"`
-									sender=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f1|cut -d':' -f2`
-									receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f3|cut -d':' -f2`
-									trx_status=""
-									trx_confirmations=0
-									trx_blacklisted=`cat ${script_path}/blacklisted_trx.dat|grep "${trx_file}"|wc -l|sed 's/ //g'`
-									if [ $trx_blacklisted = 1 ]
-									then
-										trx_status="TRX_BLACKLISTED "
-									fi
-									sender_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${sender}"|wc -l|sed 's/ //g'`
-									if [ $sender_blacklisted = 1 ]
-									then
-									trx_status="${trx_status}SDR_BLACKLISTED "
-									fi
-									receiver_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${sender}"|wc -l|sed 's/ //g'`
-									if [ $receiver_blacklisted = 1 ]
-									then
-										trx_status="${trx_status}RCV_BLACKLISTED "
-									fi
-									if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
-									then
-										trx_status="OK"
-									fi
-									while read line
-									do
-										trx_confirmations_user=`grep "${trx_file}" ${script_path}/proofs/$line/$line.txt|wc -l`
-										if [ $trx_confirmations_user = 1 ]
-										then
-											trx_confirmations=$(( $trx_confirmations + 1 ))
-										fi
-									done <${script_path}/friends.dat
-									if [ $sender = $handover_account ]
-									then
-										trx_amount_with_fee=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
-										trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
-										trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
-										is_greater_one=`echo "${trx_fee}>1"|bc`
-                                                                                if [ $is_greater_one = 0 ]
-                                                                                then
-                                                                                        trx_fee="0${trx_fee}"
-                                                                                fi
-										dialog --title "Transaktion anzeigen" --backtitle "Universal Credit System" --msgbox "TYP :\nAusgehende Transaktion\n\nEMPFÄNGER :\n${receiver}\n\nBETRAG :\n-${trx_amount} ${currency_symbol}\n\nGEBÜHR :\n-${trx_fee} ${currency_symbol}\n\nTOTAL :\n-${trx_amount_with_fee} ${currency_symbol}\n\nDATUM :\n${trx_date}\n\nDATEI :\n${trx_file}\n\nSTATUS :\n${trx_status}\n\nCONFIRMATIONS :\n${trx_confirmations}" 0 0
-									else
-										trx_amount=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
-                                                                        	trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-                                                                        	is_greater_one=`echo "${trx_fee}>1"|bc`
-                                                                                if [ $is_greater_one = 0 ]
-                                                                                then
-                                                                                        trx_fee="0${trx_fee}"
-                                                                                fi
-										trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-										dialog --title "Transaktion anzeigen" --backtitle "Universal Credit System" --msgbox "TYP :\nEingehende Transaktion\n\nSENDER :\n${sender}\n\nBETRAG :\n+${trx_amount} ${currency_symbol}\n\nDATUM :\n${trx_date}\n\nDATEI :\n${trx_file}\n\nSTATUS :\n${trx_status}\n\nCONFIRMATIONS :\n${trx_confirmations}" 0 0
-									fi
-								else
-									dialog --title "HINWEIS" --backtitle "Universal Credit System" --msgbox "Es gibt keine Transaktionen zum anzeigen!" 0 0
-								fi
+								done <${script_path}/my_trx.tmp
 							else
-								overview_quit=1
+								menu_display_text="$dialog_history_noresult"
 							fi
-						done
-						;;
-				"Stats")	dialog --title "Statistik" --backtitle "Universal Credit System" --msgbox "Aktuelle Auszahlung pro Tag :\n${coinload} ${currency_symbol}\n\nNächste Phase beginnt :\nin ${in_days} Tagen\n\nNächste Auszahlung pro Tag :\n${next_coinload} ${currency_symbol}\n\n" 0 0
-						;;
-				"Log out")	user_logged_in=0
-						;;
+							overview_quit=0
+							while [ $overview_quit = 0 ]
+							do
+								decision=`dialog --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --menu "$dialog_history_text" 0 0 0 ${menu_display_text} 3>&1 1>&2 2>&3`
+								rt_quiery=$?
+								if [ $rt_quiery = 0 ]
+								then
+									dialog_history_noresults=`echo $dialog_history_noresult|cut -d' ' -f1`
+									if [ $decision != $dialog_history_noresults ]
+									then
+										trx_sign=`echo $decision|cut -d':' -f2|cut -c 1`
+										trx_date=`echo $decision|cut -d':' -f1`
+										trx_file=`cat ${script_path}/my_trx.tmp|grep "${trx_date}"`
+										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f1|cut -d':' -f2`
+										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f3|cut -d':' -f2`
+										trx_status=""
+										trx_confirmations=0
+										trx_blacklisted=`cat ${script_path}/blacklisted_trx.dat|grep "${trx_file}"|wc -l|sed 's/ //g'`
+										if [ $trx_blacklisted = 1 ]
+										then
+											trx_status="TRX_BLACKLISTED "
+										fi
+										sender_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${sender}"|wc -l|sed 's/ //g'`
+										if [ $sender_blacklisted = 1 ]
+										then
+										trx_status="${trx_status}SDR_BLACKLISTED "
+										fi
+										receiver_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${sender}"|wc -l|sed 's/ //g'`
+										if [ $receiver_blacklisted = 1 ]
+										then
+											trx_status="${trx_status}RCV_BLACKLISTED "
+										fi
+										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
+										then
+											trx_status="OK"
+										fi
+										while read line
+										do
+											trx_confirmations_user=`grep "${trx_file}" ${script_path}/proofs/$line/$line.txt|wc -l`
+											if [ $trx_confirmations_user = 1 ]
+											then
+												trx_confirmations=$(( $trx_confirmations + 1 ))
+											fi
+										done <${script_path}/friends.dat
+										if [ $sender = $handover_account ]
+										then
+											trx_amount_with_fee=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
+											trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
+											trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
+											is_greater_one=`echo "${trx_fee}>1"|bc`
+                                                        	                        if [ $is_greater_one = 0 ]
+                                                                	                then
+                                                                        	                trx_fee="0${trx_fee}"
+                                                                                	fi
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
+										else
+											trx_amount=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
+                                	                                        	trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+                                        	                                	is_greater_one=`echo "${trx_fee}>1"|bc`
+                                                	                                if [ $is_greater_one = 0 ]
+                                                        	                        then
+                                                                	                        trx_fee="0${trx_fee}"
+                                                                        	        fi
+											trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_date>/${trx_date}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_in_display" 0 0
+										fi
+									else
+										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_history_fail" 0 0
+									fi
+								else
+									overview_quit=1
+								fi
+							done
+							;;
+				"$dialog_stats")	dialog_statistic_display=`echo $dialog_statistic|sed "s/<coinload>/${coinload}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<in_days>/${in_days}/g"|sed "s/<next_coinload>/${next_coinload}/g"`
+							dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
+							;;
+				"Log out")		user_logged_in=0
+							;;
 			esac
 		fi
 	fi
