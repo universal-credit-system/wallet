@@ -63,9 +63,9 @@ cd ucs_client_v0.0.1/
 
 If you cloned the repository from GitHub you may need to change permissions to make it executable:
 
-chmod 755 install.sh
+chmod +x install.sh
 
-chmod 755 ucs_client.sh
+chmod +x ucs_client.sh
 
 
 Now you have to execute the install.sh script that creates required folders:
