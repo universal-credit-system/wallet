@@ -894,7 +894,7 @@ do
 								trx_now=`date +%s`
 								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now}" ${trx_now} 0
 								last_trx=`ls -1 ${script_path}/trx/*.${handover_account}|tail -1`
-								verify_signature ${last_trx} ${account_file}
+								verify_signature ${last_trx} ${handover_account}
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
