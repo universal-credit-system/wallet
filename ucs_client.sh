@@ -192,7 +192,7 @@ make_signature(){
 			fi
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
+			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
