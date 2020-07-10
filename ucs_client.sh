@@ -133,7 +133,8 @@ create_keys(){
 						echo "100"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create4" 0 0 0
 						clear
 						cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
-                                                dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final" 0 0
+                                                dialog_keys_final_display=`echo $dialog_keys_final|sed "s/<name_chosen>/${name_chosen}/g"|sed "s/<name_hashed>/${name_hashed}/g"|sed "s/<key_rn>/${key_rn}/g"|sed "s/<file_stamp>/${file_stamp}/g"`
+                                                dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final_display" 0 0
 						clear
 					else
 						###Remove Proofs-folder of Account that could not be created
