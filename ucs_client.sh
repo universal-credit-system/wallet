@@ -192,7 +192,7 @@ make_signature(){
 			fi
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
@@ -216,7 +216,7 @@ verify_signature(){
 			echo "" >>${build_message}
 			tail -14 ${trx_to_verify}|head -13 >>${build_message}
 			echo "-----END PGP SIGNATURE-----" >>${build_message}
-			gpg2 --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
+			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
@@ -752,14 +752,14 @@ do
 			touch ${script_path}/keys_import.tmp
 			touch ${script_path}/keylist_gpg.tmp
  	              	ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
-			gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
   	              	while read line
   	              	do
                         	key_uname=`echo $line|cut -d'.' -f1`
  	                        key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
         	                if [ $key_imported = 0 ]
                  		then
-                                	gpg2 --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
+                                	gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
                       		        rt_quiery=$?
                                 	if [ $rt_quiery -gt 0 ]
                                 	then
