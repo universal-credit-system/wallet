@@ -8,17 +8,23 @@ login_account(){
 		account_file=""
 		touch ${script_path}/keylist.tmp
 		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
+		ignore_rest=0
 		while read line
 		do
-			keylist_name=`echo $line|cut -d'.' -f1`
-			keylist_stamp=`echo $line|cut -d'.' -f2`
-			keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d' ' -f1`
-			if [ $keylist_name = $keylist_hash ]
+			if [ $ignore_rest = 0 ]
 			then
-				account_found=1
-				handover_account=$keylist_hash
-				handover_account_stamp=$keylist_stamp
-				account_file=$line
+				keylist_name=`echo $line|cut -d'.' -f1`
+				keylist_stamp=`echo $line|cut -d'.' -f2`
+				keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d' ' -f1`
+				if [ $keylist_name = $keylist_hash ]
+				then
+					account_found=1
+					handover_account=$keylist_hash
+					handover_account_stamp=$keylist_stamp
+					account_file=$line
+					handover_account_hash=`cat ${script_path}/keys/${account_file}|shasum -a 256|cut -d' ' -f1`
+					ignore_rest=1
+				fi
 			fi
 		done <${script_path}/keylist.tmp
 		rm ${script_path}/keylist.tmp
@@ -49,7 +55,8 @@ login_account(){
 				dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey_display" 0 0
 			fi
 		else
-			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2" 0 0
+			dialog_login_nokey2_display=`echo $$dialog_login_nokey2|sed "s/<account_name>/${account_name_chosen}/g"`
+			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2_display" 0 0
 			clear
 		fi
                 rm ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
@@ -299,6 +306,7 @@ build_ledger(){
 		do
 			date_stamp=1577142000
 			account_name=`echo $line|cut -d'.' -f1`
+			account_hash=`cat ${script_path}/keys/${line}|shasum -a 256|cut -d' ' -f1`
 			account_date_unformatted=`echo $line|cut -d'.' -f2`
 			account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
 			focus=`date +%Y%m%d --date=@${date_stamp}`
@@ -349,7 +357,7 @@ build_ledger(){
 						account_there=`cat ${script_path}/ledger.tmp|grep "${account_name}"|wc -l`
 						if [ $account_there = 0 ]
 						then
-							echo "${account_name}=0" >>${script_path}/ledger.tmp
+							echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
 						fi
 					fi
 					###GRANT COINLOAD OF THAT DAY
@@ -372,7 +380,7 @@ build_ledger(){
 					then
 						account_balance="0${account_balance}"
 					fi
-					cat ${script_path}/ledger.tmp|sed "s/${account_name}=${account_prev_balance}/${account_name}=${account_balance}/g" >${script_path}/ledger_mod.tmp
+					cat ${script_path}/ledger.tmp|sed "s/${account_name}.${account_hash}=${account_prev_balance}/${account_name}.${account_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
 					grep -n "$focus" ${script_path}/trxs_${account_name}.tmp >${script_path}/trx_day_${focus}.tmp
 					no_hits_that_day=`cat ${script_path}/trx_day_${focus}.tmp|wc -l`
@@ -386,6 +394,7 @@ build_ledger(){
 							trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
 							trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
 							trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
+							trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f5`
 
 							###CHECK IF FRIENDS KNOW OF THIS TRX
 							number_of_friends_trx=0
@@ -425,14 +434,14 @@ build_ledger(){
                 	                                		account_balance="0${account_balance}"
                         	                		fi
 								account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
-								cat ${script_path}/ledger.tmp|sed "s/${account_name}=${account_prev_balance}/${account_name}=${account_balance}/g" >${script_path}/ledger_mod.tmp
+								cat ${script_path}/ledger.tmp|sed "s/${account_name}.${account_hash}=${account_prev_balance}/${account_name}.${account_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 								mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
 								if [ $number_of_friends_trx -gt 0 ]
 								then
 									receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|wc -l`
 									if [ $receiver_in_ledger = 0 ]
 									then
-										echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
+										echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
 									else
 										receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|cut -d'=' -f2`
 										is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
@@ -446,7 +455,7 @@ build_ledger(){
 										then
 											receiver_new_balance="0${receiver_new_balance}"
 										fi
-									 	cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
+									 	cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}.${trx_receiver_hash}=${receiver_old_balance}/${trx_receiver}.${trx_receiver_hash}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
 										mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
 									fi
 								fi
@@ -733,16 +742,32 @@ do
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
-							date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
-							date_to_verify_converted=`date -d "${date_to_verify}" +%Y%m%d`
-							accountdate_to_verify=`echo $line|cut -d'.' -f2`
-							accountdate_to_verify_converted=`date -d @${accountdate_to_verify} +%Y%m%d`
-							if [ $date_to_verify_converted != $accountdate_to_verify_converted ]
+							openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+							rt_quiery=$?
+							if [ $rt_quiery = 0 ]
 							then
+								date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
+								date_to_verify_converted=`date --date="${date_to_verify}" +%s`
+								accountdate_to_verify=`echo $line|cut -d'.' -f2`
+								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+								if [ $creation_date_diff -gt 0 ]
+								then
+									if [ $creation_date_diff -gt 120 ]
+									then
+										echo $line >>${script_path}/blacklisted_accounts.dat
+									fi
+								else
+									echo $line >>${script_path}/blacklisted_accounts.dat
+								fi
+							else
 								echo $line >>${script_path}/blacklisted_accounts.dat
 							fi
+						else
+							echo $line >>${script_path}/blacklisted_accounts.dat
 						fi
 						rm ${script_path}/timestamp_check.tmp 2>/dev/null
+					else
+						echo $line >>${script_path}/blacklisted_accounts.dat
 					fi
 				fi
 				###############################################
@@ -821,8 +846,13 @@ do
 			fi
 			make_ledger=0
 		fi
-
-		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}"|cut -d'=' -f2`
+		am_i_blacklisted=`cat ${script_path}/blacklisted.dat|grep "${handover_account}"|wc -l`
+		if [ $am_i_blacklisted -gt 0 ]
+		then
+			dialog_blacklisted_display=`echo $dialog_blacklisted|sed "s/<account_name>/${handover_account}/g"`
+			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_blacklisted_display" 0 0
+		fi
+		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}.${handover_account_hash}"|cut -d'=' -f2`
 		dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed "s/<account_name_chosen>/${account_name_chosen}/g"|sed "s/<handover_account>/${handover_account}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"`
 		user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
@@ -840,8 +870,18 @@ do
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								recipient_found=1
-								amount_selected=0
+								ls -1 ${script_path}/keys >${script_path}/keylist.tmp
+								key_there=`cat ${script_path}/keylist.tmp|grep "${order_receipient}"|head -1|wc -l`
+								receiver_file=`cat ${script_path}/keylist.tmp|grep "${order_receipient}"|head -1`
+								if [ $key_there = 1 ]
+								then
+									receiver_hash=`cat ${script_path}/keys/${receiver_file}|shasum -a 256|cut -d' ' -f1`
+									recipient_found=1
+									amount_selected=0
+								else
+									dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${order_receipient}/g"`
+									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2_display" 0 0
+								fi
 								while [ $amount_selected = 0 ]
 								do
 									order_amount=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_amount" 0 0 "1.000000" 3>&1 1>&2 2>&3`
@@ -893,7 +933,7 @@ do
 							if [ $rt_quiery = 0 ]
 							then
 								trx_now=`date +%s`
-								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now}" ${trx_now} 0
+								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now} ${receiver_hash}" ${trx_now} 0
 								last_trx=`ls -1 ${script_path}/trx/*.${handover_account}|tail -1`
 								verify_signature ${last_trx} ${handover_account}
 								rt_quiery=$?
@@ -1212,7 +1252,7 @@ do
 				"$dialog_history")	cd ${script_path}/trx
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-							grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
+							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
 							cd ${script_path}
 							no_trx=`cat ${script_path}/my_trx.tmp|wc -l`
 							menu_display_text=""
