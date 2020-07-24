@@ -270,7 +270,7 @@ build_ledger(){
 
 		#Status Bar########################################
 		total_number_accounts=`cat ${script_path}/accounts_list.tmp|wc -l`
-		total_value_timestamp=$(( $total_number_accounts * 84600 ))
+		total_value_timestamp=$(( $total_number_accounts * 86400 ))
 
 		now_timestamp=`date +%s`
 		while read line
@@ -279,8 +279,13 @@ build_ledger(){
 			acc_value_timestamp=$(( $now_timestamp - $acc_timestamp ))
 			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))
 		done <${script_path}/accounts_list.tmp
-		total_value_days=`expr $total_value_timestamp / 84600`
-		one_day_is_percent=`echo "scale=2; 100 / $total_value_days"|bc`
+		total_value_days=`expr $total_value_timestamp / 86400`
+		one_day_is_percent=`echo "scale=20; 100 / $total_value_days"|bc`
+		is_greater_one=`echo "${one_day_is_percent}>=1"|bc`
+                if [ $is_greater_one = 0 ]
+                then
+                        one_day_is_percent="0${one_day_is_percent}"
+                fi
 		current_percent=0
 		current_percent_display=0
 		####################################################
@@ -345,9 +350,7 @@ build_ledger(){
 				fi
 				if [ $focus -ge $account_date ]
 				then
-					###ADD PERCENTS TO STATUS BAR#################
-					current_percent=`echo "$current_percent + $one_day_is_percent"|bc`
-					current_percent_display=`echo "scale=0; $current_percent / 1.0"|bc`
+					####DISPLAY STATUS BAR#########################
 					dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<account_name>/${account_name}/g"`
 					clear
 					echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
@@ -464,6 +467,9 @@ build_ledger(){
 					else
 						rm ${script_path}/trx_day_${focus}.tmp 2>/dev/null
 					fi
+					###ADD PERCENTS TO STATUS BAR#################
+					current_percent=`echo "$current_percent + $one_day_is_percent"|bc`
+					current_percent_display=`echo "scale=0; $current_percent / 1"|bc`
 				fi
 				in_days=$(( $multi_next - $day_counter ))
 				date_stamp=$(( $date_stamp + 86400 ))
