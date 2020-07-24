@@ -273,12 +273,12 @@ build_ledger(){
 		total_value_timestamp=$(( $total_number_accounts * 86400 ))
 
 		now_timestamp=`date +%s`
-                now_timestamp_date=`date +%Y%m%d --date="${now_timestamp}"`
+                now_timestamp_date=`date +%Y%m%d --date=@${now_timestamp}`
                 now_timestamp_formatted=`date +%s --date="${now_timestamp_date}"`
 		while read line
 		do
 			acc_timestamp=`echo $line|cut -d'.' -f2`
-                        acc_timestamp_date=`date +%Y%m%d --date="${acc_time}"`
+                        acc_timestamp_date=`date +%Y%m%d --date=@${acc_time}`
                         acc_timestamp_formatted=`date +%s --date="${acc_timestamp_date}"`
 			acc_value_timestamp=$(( $now_timestamp_formatted - $acc_timestamp_formatted ))
 			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))
