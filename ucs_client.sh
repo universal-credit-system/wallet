@@ -260,41 +260,16 @@ check_input(){
 		return $rt_quiery
 }
 build_ledger(){
-		date_stamp=1577142000
+		#date_stamp=1577142000
+		date_stamp=1590962400
 
 		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED
 		ls -1 ${script_path}/keys >${script_path}/accounts.tmp
 		cat ${script_path}/blacklisted_accounts.dat >>${script_path}/accounts.tmp
-		cat ${script_path}/accounts.tmp|sort >${script_path}/accounts_sorted.tmp
+		cat ${script_path}/accounts.tmp|sort -t . -k2 >${script_path}/accounts_sorted.tmp
 		cat ${script_path}/accounts_sorted.tmp|uniq >${script_path}/accounts_list.tmp
 
-		#Status Bar########################################
-		total_number_accounts=`cat ${script_path}/accounts_list.tmp|wc -l`
-		total_value_timestamp=$(( $total_number_accounts * 86400 ))
-
-		now_timestamp=`date +%s`
-                now_timestamp_date=`date +%Y%m%d --date=@${now_timestamp}`
-                now_timestamp_formatted=`date +%s --date="${now_timestamp_date}"`
-		while read line
-		do
-			acc_timestamp=`echo $line|cut -d'.' -f2`
-                        acc_timestamp_date=`date +%Y%m%d --date=@${acc_timestamp}`
-                        acc_timestamp_formatted=`date +%s --date="${acc_timestamp_date}"`
-			acc_value_timestamp=$(( $now_timestamp_formatted - $acc_timestamp_formatted ))
-			total_value_timestamp=$(( $total_value_timestamp + $acc_value_timestamp ))
-		done <${script_path}/accounts_list.tmp
-		total_value_days=`expr $total_value_timestamp / 86400`
-		one_day_is_percent=`echo "scale=20; 100 / $total_value_days"|bc`
-		is_greater_one=`echo "${one_day_is_percent}>=1"|bc`
-                if [ $is_greater_one = 0 ]
-                then
-                        one_day_is_percent="0${one_day_is_percent}"
-                fi
-		current_percent=0
-		current_percent_display=0
-		####################################################
-
-		###CREATE FRIENDS LIST
+		###CREATE FRIENDS LIST##############################
 		touch ${script_path}/friends_trx.tmp
 		touch ${script_path}/friends.tmp
 		cd ${script_path}/trx
@@ -306,81 +281,120 @@ build_ledger(){
 		done <${script_path}/friends_trx.tmp
 		cat ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
 		rm ${script_path}/friends.tmp 2>/dev/null
+		####################################################
 
-		#EMPTY LEDGER
+		###EMPTY LEDGER#####################################
 		rm ${script_path}/ledger.tmp 2>/dev/null
 		touch ${script_path}/ledger.tmp
+		####################################################
 
+		###SET FOCUS########################################
+		focus=`date +%Y%m%d --date=@${date_stamp}`
+		now_stamp=`date +%s`
+		now=`date +%Y%m%d --date=@${now_stamp}`
+		multi=1
+		multi_next=$(( $multi * 2 ))
+		day_counter=1
+		####################################################
+
+		###INIT STATUS BAR##################################
+		now_date_status=`date +%s --date=${now}`
+		no_seconds_total=$(( $now_date_status - $date_stamp ))
+		no_days_total=`expr $no_seconds_total / 86400`
+		percent_per_day=`echo "scale=2; 100 / ${no_days_total}"|bc`
+		is_greater_one=`echo "${percent_per_day}>=1"|bc`
+		if [ $is_greater_one = 0 ]
+	        then
+	               	percent_per_day="0${percent_per_day}"
+	        fi
+		current_percent=0
+		current_percent_display=0
+		####################################################
+
+		###LOAD ALL PREVIOUS TRANSACTIONS###################
+		cd ${script_path}/trx
+		touch ${script_path}/trxlist_full.tmp
+		touch ${script_path}/trxlist.tmp
+		touch ${script_path}/trxlist_full_sorted.tmp
+		touch ${script_path}/trxlist_formatted.tmp
+		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
+		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
+		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
+		cat ${script_path}/trxlist.tmp|sort -t . -k1 >${script_path}/trxlist_full_sorted.tmp
+		rm ${script_path}/trxlist.tmp
+		rm ${script_path}/trxlist_full.tmp
 		while read line
 		do
-			date_stamp=1577142000
-			account_name=`echo $line|cut -d'.' -f1`
-			account_hash=`cat ${script_path}/keys/${line}|shasum -a 256|cut -d' ' -f1`
-			account_date_unformatted=`echo $line|cut -d'.' -f2`
-			account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
-			focus=`date +%Y%m%d --date=@${date_stamp}`
-			now_stamp=`date +%s`
-			now=`date +%Y%m%d --date=@${now_stamp}`
-			day_counter=1
-			account_balance=0
-			enough_balance=0
-			multi=1
-			multi_next=$(( $multi * 2 ))
+		     	stamp_to_convert=`echo $line|cut -d'.' -f1`
+		       	stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
+		       	trx_sender=`echo $line|cut -d'.' -f2`
+		       	echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxlist_formatted.tmp
+		done <${script_path}/trxlist_full_sorted.tmp
+		rm {script_path}/trxlist_full_sorted.tmp 2>/dev/null
+		####################################################
 
-			###LOAD ALL PREVIOUS TRANSACTIONS
-			cd ${script_path}/trx
-			touch ${script_path}/trx_${account_name}.tmp
-			touch ${script_path}/trxl_${account_name}.tmp
-			grep -l "S:${account_name}" *.* >${script_path}/trx_${account_name}.tmp 2>/dev/null
-            		while read line
-            	    	do
-        	        	stamp_to_convert=`echo $line|cut -d'.' -f1`
-            	    		stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
-                		trx_sender=`echo $line|cut -d'.' -f2`
-                		echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxl_${account_name}.tmp
-                	done <${script_path}/trx_${account_name}.tmp
-			rm ${script_path}/trx_${account_name}.tmp 2>/dev/null
-			cat ${script_path}/trxl_${account_name}.tmp|sort -k1 >${script_path}/trxs_${account_name}.tmp
-			rm ${script_path}/trxl_${account_name}.tmp 2>/dev/null
+		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
+		while [ $focus -le $now ]
+		do
+			###STATUS BAR####################################
+			clear
+			dialog_for_ledger_display="Process data for date $focus"
+			echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
+			current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
+			current_percent_display=`echo "${current_percent} / 1"|bc`
+			#################################################
 
-			###AS LONG AS FOCUS LESS OR EQUAL YET..
-			while [ $focus -le $now ]
+			###CALCULATE CURRENT AND NEXT COINLOAD###########
+       			if [ $day_counter -eq $multi_next ]
+			then
+				multi=$(( $multi * 2 ))
+				multi_next=$(( $multi * 2 ))
+			fi
+			coinload=`echo "${initial_coinload} / ${multi}"|bc`
+			is_greater_one=`echo "${coinload}>=1"|bc`
+		        if [ $is_greater_one = 0 ]
+	        	then
+	                	coinload="0${coinload}"
+	                fi
+			next_coinload=`echo "${initial_coinload} / ${multi_next}"|bc`
+			is_greater_one=`echo "${next_coinload}>=1"|bc`
+		        if [ $is_greater_one = 0 ]
+	        	then
+	                	next_coinload="0${next_coinload}"
+	                fi
+			###################################################
+
+
+			###GO TROUGH ACCOUNTS LINE BY LINE#####################
+			while read line
 			do
-				###CHECK IF DATE IS DATE OF BEGINNING OF NEXT STAGE
-				if [ $day_counter -eq $multi_next ]
-				then
-					multi=$(( $multi * 2 ))
-					multi_next=$(( $multi * 2 ))
-				fi
+				###EXTRACT ACCOUNT DATA FOR CHECK############################
+				account_name=`echo $line|cut -d'.' -f1`
+				account_hash=`cat ${script_path}/keys/${line}|shasum -a 256|cut -d' ' -f1`
+				account_date_unformatted=`echo $line|cut -d'.' -f2`
+				account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
+				#############################################################
+				
+				###IF FOCUS EQUAL TO DATE OF ACCOUNT CREATION GO AHEAD#######
 				if [ $focus -ge $account_date ]
 				then
-					####DISPLAY STATUS BAR#########################
-					dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<account_name>/${account_name}/g"`
-					clear
-					echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
-                                        ###############################################
+					###SET INITAL VALUES FOR ACCOUNT###############
+					account_balance=0
+					###############################################
+
+					###CHECK IF ACCOUNT ALREADY IN AND ADD ACCOUNT IF NOT###########
 					if [ $focus -eq $account_date ]
 					then
-						account_there=`cat ${script_path}/ledger.tmp|grep "${account_name}"|wc -l`
+						account_there=`cat ${script_path}/ledger.tmp|grep "${account_name}.${account_hash}"|wc -l`
 						if [ $account_there = 0 ]
 						then
 							echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
 						fi
 					fi
-					###GRANT COINLOAD OF THAT DAY
-					coinload=`echo "${initial_coinload} / ${multi}"|bc`
-					is_greater_one=`echo "${coinload}>=1"|bc`
-	                                if [ $is_greater_one = 0 ]
-        	                        then
-                	                	coinload="0${coinload}"
-                        	        fi
-					next_coinload=`echo "${initial_coinload} / ${multi_next}"|bc`
-					is_greater_one=`echo "${next_coinload}>=1"|bc`
-	                                if [ $is_greater_one = 0 ]
-        	                        then
-                	                	next_coinload="0${next_coinload}"
-                        	        fi
-					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
+					########################################################################
+
+					###GRANT COINLOAD#######################################################
+					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}.${account_hash}"|cut -d'=' -f2`
 					account_balance=`echo "${account_prev_balance} + ${coinload}"|bc`
 					is_greater_one=`echo "${account_balance}>=1"|bc`
 					if [ $is_greater_one = 0 ]
@@ -389,99 +403,99 @@ build_ledger(){
 					fi
 					cat ${script_path}/ledger.tmp|sed "s/${account_name}.${account_hash}=${account_prev_balance}/${account_name}.${account_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-					grep -n "$focus" ${script_path}/trxs_${account_name}.tmp >${script_path}/trx_day_${focus}.tmp
-					no_hits_that_day=`cat ${script_path}/trx_day_${focus}.tmp|wc -l`
-					if [ $no_hits_that_day -gt 0 ]
-					then
-						while read line
-						do
-							line_trx_list=`echo $line|cut -d':' -f1`
-							trx_filename=`head -${line_trx_list} ${script_path}/trxs_${account_name}.tmp|tail -1|cut -d' ' -f3`
-							trx_date_filename=`echo $trx_filename|cut -d'.' -f1`
-							trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
-							trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
-							trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-							trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f5`
-
-							###CHECK IF FRIENDS KNOW OF THIS TRX
-							number_of_friends_trx=0
-							number_of_friends_add=0
-							while read line
-							do
-								###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-								if [ $trx_sender != $line -a $trx_receiver != $line ]
-								then
-									number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
-									number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
-								fi
-							done <${script_path}/friends.dat
-
-							#trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-							trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
-							trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
-							is_greater_one=`echo "${trx_fee}>=1"|bc`
-                                			if [ $is_greater_one = 0 ]
-					                then
-                	                               		trx_fee="0${trx_fee}"
-                        	                	fi
-               	                	        	trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
-                       	                	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
-                               	                        enough_balance=`echo "${account_check_balance}>=0"|bc`
-        	                       	        	if [ $enough_balance = 1 ]
-                                               	        then
-								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)####
-								trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d' ' -f1`
-                                        			trx_path="trx/${trx_filename}"
-                                        			echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
-
-                                                       	       	account_balance=$account_check_balance
-								is_greater_one=`echo "${account_balance}>=1"|bc`
-						                if [ $is_greater_one = 0 ]
-        	                                		then
-                	                                		account_balance="0${account_balance}"
-                        	                		fi
-								account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}"|cut -d'=' -f2`
-								cat ${script_path}/ledger.tmp|sed "s/${account_name}.${account_hash}=${account_prev_balance}/${account_name}.${account_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
-								mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-								if [ $number_of_friends_trx -gt 0 ]
-								then
-									receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|wc -l`
-									if [ $receiver_in_ledger = 0 ]
-									then
-										echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
-									else
-										receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}"|cut -d'=' -f2`
-										is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
-										if [ $is_greater_one = 0 ]
-										then
-											receiver_old_balance="0${receiver_old_balance}"
-										fi
-										receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-										is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
-										if [ $is_greater_one = 0 ]
-										then
-											receiver_new_balance="0${receiver_new_balance}"
-										fi
-									 	cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}.${trx_receiver_hash}=${receiver_old_balance}/${trx_receiver}.${trx_receiver_hash}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
-										mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
-									fi
-								fi
-        	                	        	fi
-						done <${script_path}/trx_day_${focus}.tmp
-					else
-						rm ${script_path}/trx_day_${focus}.tmp 2>/dev/null
-					fi
-					###ADD PERCENTS TO STATUS BAR#################
-					current_percent=`echo "$current_percent + $one_day_is_percent"|bc`
-					current_percent_display=`echo "scale=0; $current_percent / 1"|bc`
+					########################################################################
 				fi
-				in_days=$(( $multi_next - $day_counter ))
-				date_stamp=$(( $date_stamp + 86400 ))
-				focus=`date +%Y%m%d --date=@${date_stamp}`
-				day_counter=$(( $day_counter + 1 ))
-			done
-			rm ${script_path}/trxs_${account_name}.tmp 2>/dev/null
-		done <${script_path}/accounts_list.tmp
+			done <${script_path}/accounts_list.tmp
+
+			cat ${script_path}/trxlist_formatted.tmp|grep " ${focus} " >${script_path}/trxlist_${focus}.tmp
+			###############################################
+
+			while read line
+			do
+				###EXRACT DATA FOR CHECK######################################
+				trx_filename=`echo $line|cut -d' ' -f3`
+				trx_date_filename=`echo $trx_filename|cut -d'.' -f2`
+				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
+				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
+				trx_sender_file=`ls -1 ${script_path}/keys|grep "${trx_sender}"|head -1`
+				trx_sender_hash=`cat ${script_path}/keys/${trx_sender_file}|shasum -a 256|cut -d' ' -f1`
+				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
+				trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f5`
+				##############################################################
+
+				###CHECK IF FRIENDS KNOW OF THIS TRX##########################
+				number_of_friends_trx=0
+				number_of_friends_add=0
+				while read line
+				do
+					###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+					if [ $trx_sender != $line -a $trx_receiver != $line ]
+					then
+						number_of_friends_add=`grep "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt|wc -l|sed 's/ //g'`
+						number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
+					fi
+				done <${script_path}/friends.dat
+				##############################################################
+
+				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
+				trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+				is_greater_one=`echo "${trx_fee}>=1"|bc`
+                               	if [ $is_greater_one = 0 ]
+				then
+               	                	trx_fee="0${trx_fee}"
+                       	        fi
+              	                trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
+				account_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d '=' -f2`
+                      	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
+                              	enough_balance=`echo "${account_check_balance}>=0"|bc`
+        	                if [ $enough_balance = 1 ]
+                                then
+					####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)####
+					trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d' ' -f1`
+                        		trx_path="trx/${trx_filename}"
+                              		echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
+
+                                      	account_balance=$account_check_balance
+					is_greater_one=`echo "${account_balance}>=1"|bc`
+				        if [ $is_greater_one = 0 ]
+        	                      	then
+                	              		account_balance="0${account_balance}"
+                        	      	fi
+					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d'=' -f2`
+					cat ${script_path}/ledger.tmp|sed "s/${trx_sender}.${trx_sender_hash}=${account_prev_balance}/${trx_sender}.${trx_sender_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
+					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+					if [ $number_of_friends_trx -gt 0 ]
+					then
+						receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|wc -l`
+						if [ $receiver_in_ledger = 0 ]
+						then
+							echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
+						else
+							receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|cut -d'=' -f2`
+							is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
+							if [ $is_greater_one = 0 ]
+							then
+								receiver_old_balance="0${receiver_old_balance}"
+							fi
+							receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
+							is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
+							if [ $is_greater_one = 0 ]
+							then
+								receiver_new_balance="0${receiver_new_balance}"
+							fi
+							cat ${script_path}/ledger.tmp|sed "s/${trx_receiver}.${trx_receiver_hash}=${receiver_old_balance}/${trx_receiver}.${trx_receiver_hash}=${receiver_new_balance}/g" >${script_path}/ledger_mod.tmp
+							mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+						fi
+					fi
+        	                fi
+			done <${script_path}/trxlist_${focus}.tmp
+			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
+
+			in_days=$(( $multi_next - $day_counter ))
+			date_stamp=$(( $date_stamp + 86400 ))
+			focus=`date +%Y%m%d --date=@${date_stamp}`
+			day_counter=$(( $day_counter + 1 ))
+		done
 		cd ${script_path}/
 }
 check_archive(){
