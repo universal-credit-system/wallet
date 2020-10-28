@@ -455,7 +455,7 @@ build_ledger(){
 		do
 			###STATUS BAR####################################
 			clear
-			dialog_for_ledger_display="Process data for date $focus"
+			dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<focus>/${focus}/g"`
 			echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
 			current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
