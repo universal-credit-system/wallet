@@ -7,42 +7,66 @@ login_account(){
 		handover_user=""
 		account_file=""
 		touch ${script_path}/keylist.tmp
+
+		###WRITE LIST OF KEYS TO FILE################################
 		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
+
+		###SET TRIGGER THAT ACCOUND WAS FOUND TO 0###################
 		ignore_rest=0
+
+		###READ LIST OF KEYS LINE BY LINE############################
 		while read line
 		do
 			if [ $ignore_rest = 0 ]
 			then
+				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $line|cut -d'.' -f1`
 				keylist_stamp=`echo $line|cut -d'.' -f2`
 				keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d' ' -f1`
+				#############################################################
+
+				###IF ACCOUNT MATCHES########################################
 				if [ $keylist_name = $keylist_hash ]
 				then
 					account_found=1
+					ignore_rest=1
+
+					###SET VARIABLES#############################################
 					handover_account=$keylist_hash
 					handover_account_stamp=$keylist_stamp
 					account_file=$line
 					handover_account_hash=`cat ${script_path}/keys/${account_file}|shasum -a 256|cut -d' ' -f1`
-					ignore_rest=1
+					#############################################################
 				fi
+				##############################################################
 			fi
 		done <${script_path}/keylist.tmp
+		#############################################################
+
+		###REMOVE CREATED KEY LIST###################################
 		rm ${script_path}/keylist.tmp
 
+		
+		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
+			###TEST KEY BY ENCRYPTING A MESSAGE##########################
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
+				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/${account_name_chosen}_account.dat
+
+				####TEST KEY BY DECRYPTING THE MESSAGE#######################
 				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
-				extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 				if [ $encrypt_rt = 0 ]
 				then
+					extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
 					if [ $extracted_name = $account_name_chosen ]
 					then
+						###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
 						dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<account_name_chosen>/${account_name_chosen}/g"`
 						dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_login_welcome_display" 0 0
 						user_logged_in=1
@@ -50,15 +74,21 @@ login_account(){
 				else
 					dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_wrongpw" 0 0
 				fi
+				##############################################################
 			else
+				###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND################
 				dialog_login_nokey_display="${dialog_login_nokey} (-> ${account_name_chosen})!"
 				dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey_display" 0 0
 			fi
 		else
-			dialog_login_nokey2_display=`echo $$dialog_login_nokey2|sed "s/<account_name>/${account_name_chosen}/g"`
+			###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
+			dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${account_name_chosen}/g"`
 			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2_display" 0 0
 			clear
 		fi
+		#############################################################
+
+		###REMOVE TEMPORARY FILES####################################
                 rm ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
 	        rm ${script_path}/${account_name_chosen}_account.dat 2>/dev/null
 }
@@ -66,41 +96,69 @@ create_keys(){
 		name_chosen=$1
 		name_passphrase=$2
 		name_cleared=$name_chosen
+		
+		###SET FILESTAMP TO NOW######################################
 		file_stamp=`date +%s`
-		#key_rn=`tr -cd "[:digit:]" < /dev/urandom|head -c 5|sed 's/ //g'`
+
+		###CREATE RANDOM 5 DIGIT NUMBER AS PIN#######################
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
+
+		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
 		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
+
+		###DISPLAY PROGRESS BAR######################################
 		echo "0"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create1" 0 0 0
+		
+		###GENERATE KEY##############################################
 		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
 		rt_quiery=$?
 		if [ $rt_quiery = 0 ]
 		then
+			###DISPLAY PROGRESS ON STATUS BAR############################
 			echo "33"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create2" 0 0 0
+			
+			###EXPORT PUBLIC KEY#########################################
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
+				###DISPLAY PROGRESS ON STATUS BAR############################
 				echo "66"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create3" 0 0 0
+
+				###DISPLAY NOTIFICATION FOR KEY-EXPORT#######################
 				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_export" 0 0
+
+				###CLEAR SCREEN
 				clear
+		
+				###EXPORT PRIVATE KEY########################################
 				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --export-secret-keys $name_hashed
 				rt_quiery=$?
 				if [ $rt_quiery = 0 ]
 				then
-					###TSA SECTION####
+					###CREATE PROOFS DIRECTORY###################################
 					mkdir ${script_path}/proofs/${name_hashed}
-					###FreeTSA
+
+					###STEP INTO THIS DIRECTORY##################################
 					cd ${script_path}
+
+					###CREATE TSA QUIERY FILE####################################
 					openssl ts -query -data ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
+						###STEP BACK INTO UCS HOME DIR###############################
 						cd ${script_path}
+
+						###SET QUIERY TO TSA#########################################
 						curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
+							###STEP INTO CERTS DIRECTORY#################################
 							cd ${script_path}/certs
+		
+							###DOWNLOAD LATEST TSA CERTIFICATES##########################
 							wget -q https://freetsa.org/files/tsa.crt
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
@@ -128,25 +186,36 @@ create_keys(){
 							else
 								rm ${script_path}/certs/tsa.crt 2>/dev/null
 							fi
+							#############################################################
 						else
+							###REMOVE QUIERY AND RESPONSE################################
 							rm ${script_path}/freetsa.tsq 2>/dev/null
 							rm ${script_path}/freetsa.tsr 2>/dev/null
 						fi
 					else
+						###REMOVE TSA QUIERY FILE####################################
 						rm ${script_path}/freetsa.tsq 2>/dev/null
 					fi
+				
+					###CHECK IF EVERYTHING WAS SUCCESSFUL########################
 					if [ $rt_quiery = 0 ]
 					then
+						###DISPLAY PROGRESS ON STATUS BAR############################
 						echo "100"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create4" 0 0 0
 						clear
+
+						###COPY EXPORTED KEYS INTO KEYS-FOLDER#######################
 						cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
-                                                dialog_keys_final_display=`echo $dialog_keys_final|sed "s/<name_chosen>/${name_chosen}/g"|sed "s/<name_hashed>/${name_hashed}/g"|sed "s/<key_rn>/${key_rn}/g"|sed "s/<file_stamp>/${file_stamp}/g"`
+                                                
+						###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
+						dialog_keys_final_display=`echo $dialog_keys_final|sed "s/<name_chosen>/${name_chosen}/g"|sed "s/<name_hashed>/${name_hashed}/g"|sed "s/<key_rn>/${key_rn}/g"|sed "s/<file_stamp>/${file_stamp}/g"`
                                                 dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final_display" 0 0
 						clear
 					else
-						###Remove Proofs-folder of Account that could not be created
+						###Remove Proofs-folder of Account that could not be created#
 						rmdir ${script_path}/proofs/${name_hashed} 2>/dev/null
-						###Remove created keys out of keyring
+
+						###Remove created keys out of keyring########################
 						key_fp=`gpg --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 						gpg --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
 						gpg --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
@@ -160,13 +229,18 @@ make_signature(){
 			transaction_message=$1
 			trx_now=$2
 			create_index_file=$3
+			
+			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
 			if [ $create_index_file = 0 ]
                         then
+				###IF NOT WRITE TRX MESSAGE TO FILE##############################
 				message=${script_path}/trx/${trx_now}.${handover_account}
 				message_blank=${script_path}/message_blank.dat
 				touch ${message_blank}
 				echo $transaction_message >>${message_blank}
+				#################################################################
 			else
+				###IF YES.....###################################################
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
                                 message_blank=${script_path}/message_blank.dat
 				touch ${message_blank}
@@ -174,10 +248,13 @@ make_signature(){
 				ls -1 ${script_path}/keys >${script_path}/index_keys.tmp
 				while read line
 				do
+					###WRITE KEYFILE TO INDEX FILE###################################
 					key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
                                         key_path="keys/${line}"
                                         echo "${key_path} ${key_hash} ${trx_now}" >>${message_blank}
+					#################################################################
 
+					###IF TSA QUIERY FILE IS AVAILABLE ADD TO INDEX FILE#############
 					freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
 					if [ -s $freetsa_qfile ]
 					then
@@ -185,6 +262,9 @@ make_signature(){
 						freetsa_qfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsq|shasum -a 512|cut -d' ' -f1`
 						echo "${freetsa_qfile_path} ${freetsa_qfile_hash} ${trx_now}" >>${message_blank}
 					fi
+					#################################################################
+
+					###IF TSA RESPONSE FILE IS AVAILABLE ADD TO INDEX FILE###########
 					freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
 					if [ -s $freetsa_rfile ]
 					then
@@ -192,13 +272,25 @@ make_signature(){
 						freetsa_rfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsr|shasum -a 512|cut -d' ' -f1`
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash} ${trx_now}" >>${message_blank}
 					fi
+					#################################################################
 				done <${script_path}/index_keys.tmp
+				
+				###REMOVE KEYLIST################################################
 				rm ${script_path}/index_keys.tmp
+
+				####WRITE TRX LIST TO INDEX FILE#################################
                                 cat ${script_path}/index_trx.tmp >>${message_blank}
+
+				###REMOVE TRXLIST################################################
 				rm ${script_path}/index_trx.tmp
 			fi
+			#################################################################
+			
+			###CHECK SIZE OF FILE TO BE SIGNED###############################
 			total_blank=`cat ${message_blank}|wc -l`
 			total_blank=$(( $total_blank + 16 ))
+
+			###SIGN FILE AND REMOVE GPG WRAPPER##############################
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
@@ -207,14 +299,21 @@ make_signature(){
 				tail -$total_blank ${message_blank}.asc|sed 's/-----BEGIN PGP SIGNATURE-----//g'|sed 's/-----END PGP SIGNATURE-----//g' >${message}
 				rm ${message_blank}.asc 2>/dev/null
 			fi
+			#################################################################
 }
 verify_signature(){
 			trx_to_verify=$1
 			user_signed=$2
 			signed_correct=0
 			build_message=${script_path}/verify_trx.tmp
+
+			###CHECK NO OF LINES OF THE TRX TO VERIFY#####################
 			no_lines_trx=`cat ${trx_to_verify}|wc -l|sed 's/ //g'`
+
+			###CALCULATE SIZE OF MESSAGE##################################
 			till_sign=$(( $no_lines_trx - 16 ))	#-16
+
+			###REBUILD GPG FILE###########################################
 			echo "-----BEGIN PGP SIGNED MESSAGE-----" >${build_message}
 			echo "Hash: SHA512" >>${build_message}
 			echo "" >>${build_message}
@@ -223,6 +322,9 @@ verify_signature(){
 			echo "" >>${build_message}
 			tail -14 ${trx_to_verify}|head -13 >>${build_message}
 			echo "-----END PGP SIGNATURE-----" >>${build_message}
+			##############################################################
+
+			###CHECK GPG FILE#############################################
 			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
@@ -231,6 +333,8 @@ verify_signature(){
 			else
 				rm ${trx_to_verify} 2>/dev/null
 			fi
+			###############################################################
+
 			rm ${build_message} 2>/dev/null
 			rm ${script_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_quiery
@@ -240,30 +344,43 @@ check_input(){
 		rt_quiery=0
 		alnum_there=0
 		length_counter=0
+
+		###CHECK LENGTH OF INPUT STRING########################################
 		length_counter=`echo $input_string|wc -m|sed 's/ //g'`
+
+		###CHECK IF ALPHANUMERICAL CHARS ARE IN INPUT STRING###################
 		alnum_there=`echo $input_string|grep '[^[:alnum:]]'|wc -l`
+
+		###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
 		if [ $alnum_there -gt 0 ]
 		then
 			dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg1" 0 0
 			rt_quiery=1
 		fi
+		#######################################################################
+
+		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
 		if [ $length_counter -le 1 ]
                 then
                         dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg2" 0 0
                 	rt_quiery=1
 		fi
+		#######################################################################
+
+		###IF INPUT GREATER 30 CHARS DISPLAY NOTIFICATION######################
 		if [ $length_counter -gt 31 ]
 		then
 			dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg3" 0 0
 			rt_quiery=1
 		fi
+		#######################################################################
+
 		return $rt_quiery
 }
 build_ledger(){
-		#date_stamp=1577142000
 		date_stamp=1590962400
 
-		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED
+		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED#########
 		ls -1 ${script_path}/keys >${script_path}/accounts.tmp
 		cat ${script_path}/blacklisted_accounts.dat >>${script_path}/accounts.tmp
 		cat ${script_path}/accounts.tmp|sort -t . -k2 >${script_path}/accounts_sorted.tmp
@@ -410,10 +527,11 @@ build_ledger(){
 			cat ${script_path}/trxlist_formatted.tmp|grep " ${focus} " >${script_path}/trxlist_${focus}.tmp
 			###############################################
 
+			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
-				trx_filename=`echo $line|cut -d' ' -f3`
+			        trx_filename=`echo $line|cut -d' ' -f3`
 				trx_date_filename=`echo $trx_filename|cut -d'.' -f2`
 				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
 				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
@@ -437,6 +555,7 @@ build_ledger(){
 				done <${script_path}/friends.dat
 				##############################################################
 
+				###EXTRACT TRX DATA###########################################
 				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
 				trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
 				is_greater_one=`echo "${trx_fee}>=1"|bc`
@@ -446,15 +565,20 @@ build_ledger(){
                        	        fi
               	                trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
 				account_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d '=' -f2`
+				##############################################################
+
+				###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
                       	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
                               	enough_balance=`echo "${account_check_balance}>=0"|bc`
         	                if [ $enough_balance = 1 ]
                                 then
-					####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)####
+					####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
 					trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d' ' -f1`
                         		trx_path="trx/${trx_filename}"
                               		echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
+					##############################################################
 
+					###SET BALANCE FOR SENDER#####################################
                                       	account_balance=$account_check_balance
 					is_greater_one=`echo "${account_balance}>=1"|bc`
 				        if [ $is_greater_one = 0 ]
@@ -464,6 +588,9 @@ build_ledger(){
 					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d'=' -f2`
 					cat ${script_path}/ledger.tmp|sed "s/${trx_sender}.${trx_sender_hash}=${account_prev_balance}/${trx_sender}.${trx_sender_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+					##############################################################
+
+					###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
 					if [ $number_of_friends_trx -gt 0 ]
 					then
 						receiver_in_ledger=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|wc -l`
@@ -487,20 +614,29 @@ build_ledger(){
 							mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
 						fi
 					fi
+					##############################################################
         	                fi
+				##############################################################
 			done <${script_path}/trxlist_${focus}.tmp
+			##############################################################
+
+			###DELETE TRX LIST FOR THIS DAY###############################
 			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
 
+			###RAISE VARIABLES FOR NEXT RUN###############################
 			in_days=$(( $multi_next - $day_counter ))
 			date_stamp=$(( $date_stamp + 86400 ))
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
+			##############################################################
 		done
 		cd ${script_path}/
 }
 check_archive(){
 			path_to_tarfile=$1
 			touch ${script_path}/tar_check.tmp
+
+			###CHECK TARFILE CONTENT######################################
 			tar -tf $path_to_tarfile >${script_path}/tar_check.tmp
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
@@ -509,11 +645,15 @@ check_archive(){
 				files_not_homedir=0
 				files_to_fetch=""
 				files_to_fetch_display="${dialog_content}\n"
+
+				###GO THROUGH CONTENT LIST LINE BY LINE#######################
 				while read line
 				do
+					###CHECK IF ANY *.sh FILES ARE INCLUDED#######################
 					script_there=`echo $line|grep ".sh"|wc -l|sed 's/ //g'`
 					if [ $script_there = 0 ]
 					then
+						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 						files_not_homedir=`echo $line|cut -d'/' -f1`
              		   			case $files_not_homedir in
                         				"keys")		files_to_fetch="${files_to_fetch}$line "
@@ -531,12 +671,19 @@ check_archive(){
 							*)		rt_quiery=1
 									;;
                 				esac
+						##############################################################
 					else
 						rt_quiery=1
 					fi
+					##############################################################
 				done <${script_path}/tar_check.tmp
+				##############################################################
 			fi
+			##############################################################
+
+			###REMOVE THE LIST THAT CONTAINS THE CONTENT##################
 			rm ${script_path}/tar_check.tmp
+
 			return $rt_quiery
 }
 
@@ -1286,7 +1433,8 @@ do
 								do
 									line_extracted=`echo $line`
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f1|cut -d':' -f2`
-									trx_date=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
+									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
+									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f2`
 									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
 									is_greater_one=`echo "${trx_fee}>1"|bc`
@@ -1306,9 +1454,9 @@ do
 											then
 												if [ $sender = $handover_account ]
 												then
-													menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_ack_snd "
+													menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} $dialog_history_ack_snd "
 												else
-													menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_ack_rcv "
+													menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} $dialog_history_ack_rcv "
 												fi
 											else
 												if [ $sender = $handover_account ]
@@ -1349,7 +1497,9 @@ do
 									if [ $decision != $dialog_history_noresults ]
 									then
 										trx_sign=`echo $decision|cut -d':' -f2|cut -c 1`
-										trx_date=`echo $decision|cut -d':' -f1`
+										trx_date_extracted=`echo $decision|cut -d'|' -f1`
+										trx_time_extracted=`echo $decision|cut -d'|' -f2`
+										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`cat ${script_path}/my_trx.tmp|grep "${trx_date}"`
 										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f1|cut -d':' -f2`
 										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f3|cut -d':' -f2`
@@ -1392,7 +1542,7 @@ do
                                                                 	                then
                                                                         	                trx_fee="0${trx_fee}"
                                                                                 	fi
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date_extraced} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
 											trx_amount=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
@@ -1403,7 +1553,7 @@ do
                                                                 	                        trx_fee="0${trx_fee}"
                                                                         	        fi
 											trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_date>/${trx_date}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
