@@ -1,4 +1,4 @@
-#ucs_client_v0.0.1
+# ucs_client_v0.0.1
 
 This is the main repository for the UCS client pre-alpha version.
 
@@ -28,7 +28,7 @@ As already written in "Technologies used" the script was written on a Raspberry 
 * git		(used only to fetch the files from GitHub)
 
 To install these programs just type the following into command prompt:
-...
+```
 $ sudo apt-get install bc
 $ sudo apt-get install wget
 $ sudo apt-get install curl
@@ -37,39 +37,39 @@ $ sudo apt-get install gnupg2
 $ sudo apt-get install openssl
 $ sudo apt-get install dialog
 $ sudo apt-get install git
-...
+```
 
 Now create a directory with `mkdir` wherever you want and step into this directory with `cd`:
-...
+```
 $ mkdir ucs
 $ cd ucs
-...
+```
 
 Now clone the GitHub repository of UCS, in this case latest version is `ucs_client_v0.0.1`:
-...
+```
 $ git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
-...
+```
 
 Step into directory that contains the cloned repository:
-...
+```
 $ cd ucs_client_v0.0.1/
-...
+```
 
 You may need to change permissions to make the install script and the ucs client script executable:
-...
+```
 $ chmod +x install.sh
 $ chmod +x ucs_client.sh
-...
+```
 
 Now you can execute the install.sh script that creates required folders:
-...
+```
 $ ./install.sh
-...
+```
 
 Once the install script quits you can run the UCS Client just like you would executed any other script:
-...
+```
 $ ./ucs_client.sh
-...
+```
 
 ## Community
 We encourage you to join the [Community](https://forum.universal-credit-system.org). **If you have any questions, suggestions or critics you are welcome to post it on the community discourse forum.**
