@@ -20,9 +20,9 @@ login_account(){
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				keylist_name=`echo $line|cut -d'.' -f1`
-				keylist_stamp=`echo $line|cut -d'.' -f2`
-				keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d' ' -f1`
+				keylist_name=`echo $line|cut -d '.' -f1`
+				keylist_stamp=`echo $line|cut -d '.' -f2`
+				keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
 				#############################################################
 
 				###IF ACCOUNT MATCHES########################################
@@ -35,7 +35,7 @@ login_account(){
 					handover_account=$keylist_hash
 					handover_account_stamp=$keylist_stamp
 					account_file=$line
-					handover_account_hash=`cat ${script_path}/keys/${account_file}|shasum -a 256|cut -d' ' -f1`
+					handover_account_hash=`cat ${script_path}/keys/${account_file}|shasum -a 256|cut -d ' ' -f1`
 					#############################################################
 				fi
 				##############################################################
@@ -104,7 +104,7 @@ create_keys(){
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
 
 		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
-		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d' ' -f1`
+		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d ' ' -f1`
 
 		###DISPLAY PROGRESS BAR######################################
 		echo "0"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create1" 0 0 0
@@ -249,7 +249,7 @@ make_signature(){
 				while read line
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d' ' -f1`
+					key_hash=`cat ${script_path}/keys/${line}|shasum -a 512|cut -d ' ' -f1`
                                         key_path="keys/${line}"
                                         echo "${key_path} ${key_hash} ${trx_now}" >>${message_blank}
 					#################################################################
@@ -259,7 +259,7 @@ make_signature(){
 					if [ -s $freetsa_qfile ]
 					then
 						freetsa_qfile_path="proofs/$line/freetsa.tsq"
-						freetsa_qfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsq|shasum -a 512|cut -d' ' -f1`
+						freetsa_qfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsq|shasum -a 512|cut -d ' ' -f1`
 						echo "${freetsa_qfile_path} ${freetsa_qfile_hash} ${trx_now}" >>${message_blank}
 					fi
 					#################################################################
@@ -269,7 +269,7 @@ make_signature(){
 					if [ -s $freetsa_rfile ]
 					then
 						freetsa_rfile_path="proofs/$line/freetsa.tsr"
-						freetsa_rfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsr|shasum -a 512|cut -d' ' -f1`
+						freetsa_rfile_hash=`cat ${script_path}/proofs/$line/freetsa.tsr|shasum -a 512|cut -d ' ' -f1`
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash} ${trx_now}" >>${message_blank}
 					fi
 					#################################################################
@@ -394,7 +394,7 @@ build_ledger(){
 		cd ${script_path}
 		while read line
 		do
-			head -1 ${script_path}/trx/${line}|cut -d' ' -f3|cut -d':' -f2 >${script_path}/friends.tmp
+			head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
 		done <${script_path}/friends_trx.tmp
 		cat ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
 		rm ${script_path}/friends.tmp 2>/dev/null
@@ -442,9 +442,9 @@ build_ledger(){
 		rm ${script_path}/trxlist_full.tmp
 		while read line
 		do
-		     	stamp_to_convert=`echo $line|cut -d'.' -f1`
+		     	stamp_to_convert=`echo $line|cut -d '.' -f1`
 		       	stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
-		       	trx_sender=`echo $line|cut -d'.' -f2`
+		       	trx_sender=`echo $line|cut -d '.' -f2`
 		       	echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxlist_formatted.tmp
 		done <${script_path}/trxlist_full_sorted.tmp
 		rm {script_path}/trxlist_full_sorted.tmp 2>/dev/null
@@ -486,9 +486,9 @@ build_ledger(){
 			while read line
 			do
 				###EXTRACT ACCOUNT DATA FOR CHECK############################
-				account_name=`echo $line|cut -d'.' -f1`
-				account_hash=`cat ${script_path}/keys/${line}|shasum -a 256|cut -d' ' -f1`
-				account_date_unformatted=`echo $line|cut -d'.' -f2`
+				account_name=`echo $line|cut -d '.' -f1`
+				account_hash=`cat ${script_path}/keys/${line}|shasum -a 256|cut -d ' ' -f1`
+				account_date_unformatted=`echo $line|cut -d '.' -f2`
 				account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
 				#############################################################
 				
@@ -511,7 +511,7 @@ build_ledger(){
 					########################################################################
 
 					###GRANT COINLOAD#######################################################
-					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}.${account_hash}"|cut -d'=' -f2`
+					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}.${account_hash}"|cut -d '=' -f2`
 					account_balance=`echo "${account_prev_balance} + ${coinload}"|bc`
 					is_greater_one=`echo "${account_balance}>=1"|bc`
 					if [ $is_greater_one = 0 ]
@@ -531,14 +531,14 @@ build_ledger(){
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
-			        trx_filename=`echo $line|cut -d' ' -f3`
-				trx_date_filename=`echo $trx_filename|cut -d'.' -f2`
-				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f4`
-				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f1|cut -d':' -f2`
+			        trx_filename=`echo $line|cut -d ' ' -f3`
+				trx_date_filename=`echo $trx_filename|cut -d '.' -f2`
+				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f4`
+				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
 				trx_sender_file=`ls -1 ${script_path}/keys|grep "${trx_sender}"|head -1`
-				trx_sender_hash=`cat ${script_path}/keys/${trx_sender_file}|shasum -a 256|cut -d' ' -f1`
-				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f3|cut -d':' -f2`
-				trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f5`
+				trx_sender_hash=`cat ${script_path}/keys/${trx_sender_file}|shasum -a 256|cut -d ' ' -f1`
+				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
+				trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f5`
 				##############################################################
 
 				###CHECK IF FRIENDS KNOW OF THIS TRX##########################
@@ -556,7 +556,7 @@ build_ledger(){
 				##############################################################
 
 				###EXTRACT TRX DATA###########################################
-				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d' ' -f2`
+				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
 				trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
 				is_greater_one=`echo "${trx_fee}>=1"|bc`
                                	if [ $is_greater_one = 0 ]
@@ -573,7 +573,7 @@ build_ledger(){
         	                if [ $enough_balance = 1 ]
                                 then
 					####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
-					trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d' ' -f1`
+					trx_hash=`cat ${script_path}/trx/${trx_filename}|shasum -a 512|cut -d ' ' -f1`
                         		trx_path="trx/${trx_filename}"
                               		echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
 					##############################################################
@@ -585,7 +585,7 @@ build_ledger(){
         	                      	then
                 	              		account_balance="0${account_balance}"
                         	      	fi
-					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d'=' -f2`
+					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d '=' -f2`
 					cat ${script_path}/ledger.tmp|sed "s/${trx_sender}.${trx_sender_hash}=${account_prev_balance}/${trx_sender}.${trx_sender_hash}=${account_balance}/g" >${script_path}/ledger_mod.tmp
 					mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
 					##############################################################
@@ -598,7 +598,7 @@ build_ledger(){
 						then
 							echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
 						else
-							receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|cut -d'=' -f2`
+							receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|cut -d '=' -f2`
 							is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 							if [ $is_greater_one = 0 ]
 							then
@@ -654,7 +654,7 @@ check_archive(){
 					if [ $script_there = 0 ]
 					then
 						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
-						files_not_homedir=`echo $line|cut -d'/' -f1`
+						files_not_homedir=`echo $line|cut -d '/' -f1`
              		   			case $files_not_homedir in
                         				"keys")		files_to_fetch="${files_to_fetch}$line "
 									echo "$line" >>${script_path}/files_to_fetch.tmp
@@ -692,8 +692,6 @@ check_archive(){
 ##################
 script_name=${0}
 script_path=$(dirname $(readlink -f ${0}))
-script_name_extr=`echo $script_name|cut -d'/' -f2`
-script_hash=`cat ${script_path}/${script_name_extr}|shasum -a 512|cut -d' ' -f1`
 core_system_version="v0.0.1"
 current_fee="0.001"
 currency_symbol="UCC"
@@ -702,6 +700,10 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
+
+###MAKE CLEAN START#########
+rm ${script_path}/*.tmp 2>/dev/null
+rm ${script_path}/*.dat 2>/dev/null
 
 ###SOURCE LANGUAGE-SELECTION
 . ${script_path}/lang.conf
@@ -824,8 +826,8 @@ do
 							lang_to_display=""
 							while read line
 							do
-								lang_ex_short=`echo $line|cut -d'_' -f2`
-								lang_ex_full=`echo $line|cut -d'_' -f3|cut -d'.' -f1`
+								lang_ex_short=`echo $line|cut -d '_' -f2`
+								lang_ex_full=`echo $line|cut -d '_' -f3|cut -d '.' -f1`
 								lang_to_display="${lang_to_display}$lang_ex_short $lang_ex_full "
 							done <${script_path}/languages.tmp
 							lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "Universal Credit System" --menu "$dialog_lang" 0 0 0 ${lang_to_display} 3>&1 1>&2 2>&3`
@@ -901,7 +903,7 @@ do
 			ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
 			while read line
 			do
-				accountname_to_check=`echo $line|cut -d'.' -f1`
+				accountname_to_check=`echo $line|cut -d '.' -f1`
 				###FREETSA CHECK###############################
 				if [ $freetsa_available = 1 ]
 				then
@@ -919,7 +921,7 @@ do
 							then
 								date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
 								date_to_verify_converted=`date --date="${date_to_verify}" +%s`
-								accountdate_to_verify=`echo $line|cut -d'.' -f2`
+								accountdate_to_verify=`echo $line|cut -d '.' -f2`
 								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
 								if [ $creation_date_diff -gt 0 ]
 								then
@@ -951,7 +953,7 @@ do
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
   	              	while read line
   	              	do
-                        	key_uname=`echo $line|cut -d'.' -f1`
+                        	key_uname=`echo $line|cut -d '.' -f1`
  	                        key_imported=`cat ${script_path}/keylist_gpg.tmp|grep "${key_uname}"|wc -l`
         	                if [ $key_imported = 0 ]
                  		then
@@ -979,7 +981,7 @@ do
 			while read line
 			do
 				file_to_check=${script_path}/trx/${line}
-				user_to_check=`echo $line|cut -d'.' -f2`
+				user_to_check=`echo $line|cut -d '.' -f2`
 				usr_blacklisted=`cat ${script_path}/blacklisted_accounts.dat|grep "${user_to_check}"|wc -l`
 				if [ $usr_blacklisted = 0 ]
 				then
@@ -990,8 +992,8 @@ do
 					then
 						echo $file_to_check >>${script_path}/blacklisted_trx.dat
 					else
-						trx_date_filename=`echo $line|cut -d'.' -f1`
-						trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d' ' -f4`
+						trx_date_filename=`echo $line|cut -d '.' -f1`
+						trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
 						if [ $trx_date_filename != $trx_date_inside ]
 						then
 							echo $file_to_check >>${script_path}/blacklisted_trx.dat
@@ -1002,7 +1004,6 @@ do
 			####################################################################################
 			action_done=0
 		fi
-
 
 		now=`date +%s`
 		if [ $make_ledger = 1 ]
@@ -1023,7 +1024,7 @@ do
 			dialog_blacklisted_display=`echo $dialog_blacklisted|sed "s/<account_name>/${handover_account}/g"`
 			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_blacklisted_display" 0 0
 		fi
-		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}.${handover_account_hash}"|cut -d'=' -f2`
+		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}.${handover_account_hash}"|cut -d '=' -f2`
 		dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed "s/<account_name_chosen>/${account_name_chosen}/g"|sed "s/<handover_account>/${handover_account}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"`
 		user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
@@ -1046,7 +1047,7 @@ do
 								receiver_file=`cat ${script_path}/keylist.tmp|grep "${order_receipient}"|head -1`
 								if [ $key_there = 1 ]
 								then
-									receiver_hash=`cat ${script_path}/keys/${receiver_file}|shasum -a 256|cut -d' ' -f1`
+									receiver_hash=`cat ${script_path}/keys/${receiver_file}|shasum -a 256|cut -d ' ' -f1`
 									recipient_found=1
 									amount_selected=0
 								else
@@ -1121,14 +1122,14 @@ do
 									touch ${script_path}/dependencies.tmp
 									while read line
 									do
-										user_to_append_till_date=`echo $line|cut -d':' -f1|cut -d'.' -f1`
-										user_to_append=`echo $line|cut -d':' -f1|cut -d'.' -f2`
+										user_to_append_till_date=`echo $line|cut -d ':' -f1|cut -d '.' -f1`
+										user_to_append=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
 										already_in_tree=`cat ${script_path}/dependencies.tmp|grep "${user_to_append}="|wc -l`
 										if [ $already_in_tree = 0 ]
 										then
 											echo "${user_to_append}=${user_to_append_till_date}" >>${script_path}/dependencies.tmp
 										else
-											user_to_append_old_date=`cat ${script_path}/dependencies.tmp|grep "${user_to_append}="|cut -d'=' -f2`
+											user_to_append_old_date=`cat ${script_path}/dependencies.tmp|grep "${user_to_append}="|cut -d '=' -f2`
 											cat ${script_path}/dependencies.tmp|sed "s/${user_to_append}=${user_to_append_old_date}/${user_to_append}=${user_to_append_till_date}/g" >${script_path}/dependencies_mod.tmp
 											mv ${script_path}/dependencies_mod.tmp ${script_path}/dependencies.tmp
 										fi
@@ -1171,7 +1172,7 @@ do
 
 									while read line
 									do
-										user_to_append=`echo $line|cut -d'=' -f1`
+										user_to_append=`echo $line|cut -d '=' -f1`
 										user_to_append_key=`ls -1 ${script_path}/keys|grep "${user_to_append}"`
 										user_key_there=`grep "keys/${user_to_append_key}" ${script_path}/proofs/${order_receipient}.txt|wc -l` 2>/dev/null
 										if [ $small_trx = 1 ]
@@ -1203,7 +1204,7 @@ do
 										else
 											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
 										fi
-										user_to_append_till_date=`echo $line|cut -d'=' -f2`
+										user_to_append_till_date=`echo $line|cut -d '=' -f2`
 										ls -1 ${script_path}/trx|grep "${user_to_append}" >${script_path}/dep_user_trx.tmp
 										trx_till_line=`grep -n ${user_to_append_till_date} ${script_path}/dep_user_trx.tmp`
 										append_line_counter=1
@@ -1372,7 +1373,7 @@ do
 								while read line
 								do
 									echo "keys/$line" >>${script_path}/files_for_sync.tmp
-									user_extracted=`echo $line|cut -d'.' -f1`
+									user_extracted=`echo $line|cut -d '.' -f1`
 									freetsa_qfile="${script_path}/proofs/${user_extracted}/freetsa.tsq"
 									if [ -s $freetsa_qfile ]
 									then
@@ -1432,10 +1433,11 @@ do
 								while read line
 								do
 									line_extracted=`echo $line`
-									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f1|cut -d':' -f2`
-									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f4`
+									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
+									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2`
+									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-                              	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d' ' -f2`
+                              	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
 									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
 									is_greater_one=`echo "${trx_fee}>1"|bc`
 	                                                                if [ $is_greater_one = 0 ]
@@ -1443,45 +1445,16 @@ do
                 	                                                        trx_fee="0${trx_fee}"
                         	                                        fi
                                 	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-									is_user_sender_blacklisted=`grep "${sender}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
-									is_user_receiver_blacklisted=`grep "${handover_user}" ${script_path}/blacklisted_accounts.dat|wc -l|sed 's/ //g'`
-									is_trx_blacklisted=`grep "${line_extracted}" ${script_path}/blacklisted_trx.dat|wc -l|sed 's/ //g'`
-									if [ $is_user_sender_blacklisted = 0 ]
+									if [ $sender = $handover_account ]
 									then
-										if [ $is_user_receiver_blacklisted = 0 ]
-										then
-											if [ $is_trx_blacklisted = 0 ]
-											then
-												if [ $sender = $handover_account ]
-												then
-													menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} $dialog_history_ack_snd "
-												else
-													menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} $dialog_history_ack_rcv "
-												fi
-											else
-												if [ $sender = $handover_account ]
-												then
-													menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
-												else
-													menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
-												fi
-											fi
-										else
-											if [ $sender = $handover_account ]
-											then
-												menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
-											else
-												menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
-											fi
-										fi
-									else
-										if [ $sender = $handover_account ]
-										then
-											menu_display_text="${menu_display_text}${trx_date}:-${trx_amount_with_fee} $dialog_history_nack "
-										else
-											menu_display_text="${menu_display_text}${trx_date}:+${trx_amount} $dialog_history_nack "
-                                                	                        fi
+										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} $dialog_history_ack_snd "
 									fi
+									if [ $receiver = $handover_account ]
+									then
+										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} $dialog_history_ack_rcv "
+									fi
+
+
 								done <${script_path}/my_trx.tmp
 							else
 								menu_display_text="$dialog_history_noresult"
@@ -1493,16 +1466,15 @@ do
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									dialog_history_noresults=`echo $dialog_history_noresult|cut -d' ' -f1`
+									dialog_history_noresults=`echo $dialog_history_noresult|cut -d ' ' -f1`
 									if [ $decision != $dialog_history_noresults ]
 									then
-										trx_sign=`echo $decision|cut -d':' -f2|cut -c 1`
-										trx_date_extracted=`echo $decision|cut -d'|' -f1`
-										trx_time_extracted=`echo $decision|cut -d'|' -f2`
+										trx_date_extracted=`echo $decision|cut -d '|' -f1`
+										trx_time_extracted=`echo $decision|cut -d '|' -f2`
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`cat ${script_path}/my_trx.tmp|grep "${trx_date}"`
-										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f1|cut -d':' -f2`
-										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d' ' -f3|cut -d':' -f2`
+										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
+										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2`
 										trx_status=""
 										trx_confirmations=0
 										trx_blacklisted=`cat ${script_path}/blacklisted_trx.dat|grep "${trx_file}"|wc -l|sed 's/ //g'`
@@ -1534,7 +1506,7 @@ do
 										done <${script_path}/friends.dat
 										if [ $sender = $handover_account ]
 										then
-											trx_amount_with_fee=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
+											trx_amount_with_fee=`echo $decision|cut -d '|' -f3|sed 's/+//g'|sed 's/-//g'`
 											trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
 											trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
 											is_greater_one=`echo "${trx_fee}>1"|bc`
@@ -1542,10 +1514,10 @@ do
                                                                 	                then
                                                                         	                trx_fee="0${trx_fee}"
                                                                                 	fi
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date_extraced} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
-											trx_amount=`echo $decision|cut -d':' -f2|sed 's/+//g'|sed 's/-//g'|sed 's/IMP//g'`
+											trx_amount=`echo $decision|cut -d '|' -f3|sed 's/+//g'|sed 's/-//g'`
                                 	                                        	trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
                                         	                                	is_greater_one=`echo "${trx_fee}>1"|bc`
                                                 	                                if [ $is_greater_one = 0 ]
@@ -1563,6 +1535,7 @@ do
 									overview_quit=1
 								fi
 							done
+							rm ${script_path}/my_trx.tmp
 							;;
 				"$dialog_stats")	dialog_statistic_display=`echo $dialog_statistic|sed "s/<coinload>/${coinload}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<in_days>/${in_days}/g"|sed "s/<next_coinload>/${next_coinload}/g"`
 							dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
