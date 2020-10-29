@@ -5,7 +5,8 @@ This is the main repository for the UCS client pre-alpha version.
 ## Table of contents
 * [What is UCS](#what-is-ucs)
 * [Technologies used](#technologies-used)
-* [How to install](#how-to-install)
+* [How to install on X86/X64](#how-to-install-on-x86/x64)
+* [How to install on ARM](#how-to-install-on-arm)
 * [Community](#community)
 
 ## What is UCS
@@ -16,7 +17,7 @@ The UCS client was written as **linux basic shell** script. The following has be
 * Rasbperry Pi Model B (Raspberry Pi Model B V1.2)
 * Raspbian Buster 10 (Raspbian GNU/Linux 10 (buster))
 
-## How to install
+## How to install on X86/X64
 As already written in "Technologies used" the script was written on a Raspberry Pi 3 with Raspbian, but you can run it on any machine! You just have to make sure you have the following programs installed before running the UCS Client:
 * bc		(used for floating point calculations)
 * wget		(used to fetch certificate files of TSA from Internet)
@@ -27,7 +28,6 @@ As already written in "Technologies used" the script was written on a Raspberry 
 * dialog	(used for GUI)
 * git		(used only to fetch the files from GitHub)
 
-**IF YOU WOULD LIKE TO RUN THE SCRIPT ON ANDROID WE SUGGEST THAT YOU INSTALL TERMUX FIRST. YOU CAN FIND TERMUX IN THE PLAYSTORE.**
 
 To install these programs just type the following into command prompt:
 ```
@@ -57,9 +57,6 @@ Step into directory that contains the cloned repository:
 $ cd ucs_client_v0.0.1/
 ```
 
-**If you want to run the script on a x86/x64 system you must use METHOD 1**
-
-**METHOD 1**
 You may need to change permissions to make the install script and the ucs client script executable:
 ```
 $ chmod +x install.sh
@@ -71,9 +68,37 @@ Now you can execute the install.sh script that creates required folders:
 $ ./install.sh
 ```
 
-**If you want to run the script on a ARM system running TERMUX you must use METHOD 2**
+Once you have installed ucs you can run the UCS Client just like you would executed any other script:
+```
+$ ./ucs_client.sh
+```
 
-**METHOD 2**
+## How to install on ARM
+**IF YOU WOULD LIKE TO RUN THE UCS CLIENT ON ANDROID, FIRST DOWNLOAD AND INSTALL TERMUX. IT WILL SERVE AS SHELL THAT ANDROID CAN ACCESS TO RUN THE SCRIPT. YOU CAN FIND TERMUX AT THE PLAYSTORE. WHEN USING TERMUX ALL PKGS EXCEPT THE GITHUB PACKAGE WILL BE INSTALLED BY THE INSTALL SCRIPT INSTEAD OF MANUAL COMMANDS!**
+
+**START TERMUX**
+
+Install GitHub Repository:
+```
+$ pkginstall git
+```
+
+Now create a directory with `mkdir` wherever you want and step into this directory with `cd`:
+```
+$ mkdir ucs
+$ cd ucs
+```
+
+Now clone the GitHub repository of UCS, in this case latest version is `ucs_client_v0.0.1`:
+```
+$ git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
+```
+
+Step into directory that contains the cloned repository:
+```
+$ cd ucs_client_v0.0.1/
+```
+
 You may need to change permissions to make the install script and the ucs client script executable:
 ```
 $ chmod +x termux_install.sh
@@ -85,7 +110,7 @@ Now you can execute the install.sh script that creates required folders:
 $ ./termux_install.sh
 ```
 
-Once you have installed ucs accordingly to **METHOD 1 OR METHOD 2" you can run the UCS Client just like you would executed any other script:
+Once you have installed ucs you can run the UCS Client just like you would executed any other script:
 ```
 $ ./ucs_client.sh
 ```
