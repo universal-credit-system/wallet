@@ -27,6 +27,8 @@ As already written in "Technologies used" the script was written on a Raspberry 
 * dialog	(used for GUI)
 * git		(used only to fetch the files from GitHub)
 
+**IF YOU WOULD LIKE TO RUN THE SCRIPT ON ANDROID WE SUGGEST THAT YOU INSTALL TERMUX FIRST. YOU CAN FIND TERMUX IN THE PLAYSTORE.**
+
 To install these programs just type the following into command prompt:
 ```
 $ sudo apt-get install bc
@@ -55,6 +57,9 @@ Step into directory that contains the cloned repository:
 $ cd ucs_client_v0.0.1/
 ```
 
+**If you want to run the script on a x86/x64 system you must use METHOD 1**
+
+**METHOD 1**
 You may need to change permissions to make the install script and the ucs client script executable:
 ```
 $ chmod +x install.sh
@@ -66,7 +71,21 @@ Now you can execute the install.sh script that creates required folders:
 $ ./install.sh
 ```
 
-Once the install script quits you can run the UCS Client just like you would executed any other script:
+**If you want to run the script on a ARM system running TERMUX you must use METHOD 2**
+
+**METHOD 2**
+You may need to change permissions to make the install script and the ucs client script executable:
+```
+$ chmod +x termux_install.sh
+$ chmod +x ucs_client.sh
+```
+
+Now you can execute the install.sh script that creates required folders:
+```
+$ ./termux_install.sh
+```
+
+Once you have installed ucs accordingly to **METHOD 1 OR METHOD 2" you can run the UCS Client just like you would executed any other script:
 ```
 $ ./ucs_client.sh
 ```
