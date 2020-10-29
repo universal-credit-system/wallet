@@ -5,8 +5,8 @@ This is the main repository for the UCS client pre-alpha version.
 ## Table of contents
 * [What is UCS](#what-is-ucs)
 * [Technologies used](#technologies-used)
-* [How to install on X86/X64](#how-to-install-on-x86/x64)
-* [How to install on ARM](#how-to-install-on-arm)
+* [How to install on LINUX](#how-to-install-on-linux)
+* [How to install on ANDROID](#how-to-install-on-android)
 * [Community](#community)
 
 ## What is UCS
@@ -17,7 +17,7 @@ The UCS client was written as **linux basic shell** script. The following has be
 * Rasbperry Pi Model B (Raspberry Pi Model B V1.2)
 * Raspbian Buster 10 (Raspbian GNU/Linux 10 (buster))
 
-## How to install on X86/X64
+## How to install on LINUX
 As already written in "Technologies used" the script was written on a Raspberry Pi 3 with Raspbian, but you can run it on any machine! You just have to make sure you have the following programs installed before running the UCS Client:
 * bc		(used for floating point calculations)
 * wget		(used to fetch certificate files of TSA from Internet)
@@ -73,7 +73,7 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 $ ./ucs_client.sh
 ```
 
-## How to install on ARM
+## How to install on ANDROID
 **IF YOU WOULD LIKE TO RUN THE UCS CLIENT ON ANDROID, FIRST DOWNLOAD AND INSTALL TERMUX. IT WILL SERVE AS SHELL THAT ANDROID CAN ACCESS TO RUN THE SCRIPT. YOU CAN FIND TERMUX AT THE PLAYSTORE. WHEN USING TERMUX ALL PKGS EXCEPT THE GITHUB PACKAGE WILL BE INSTALLED BY THE INSTALL SCRIPT INSTEAD OF MANUAL COMMANDS!**
 
 **START TERMUX**
