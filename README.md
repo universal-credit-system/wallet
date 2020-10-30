@@ -31,7 +31,7 @@ The script **depends** on below programs that must be installed:
 * **git**     (used only to fetch the sourcecode from GitHub)
 
 ## How to install on LINUX
-**Assuming you use APT as packaging tool, the `apt-get install` command is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different from below used `apt-get install` command.This means you have the change the command `apt-get install` to the command your packaging tool is using!**
+**Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different from `apt-get install`. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
@@ -77,7 +77,7 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 ```
 
 ## How to install on ANDROID
-**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. We suggest that you use TERMUX for that, but of course you can use any other app that provides you a equal functionality. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are using any other app than TERMUX or if you are running a installed operating system in TERMUX from where you want to run the script the command for installing a package might be different from below `pkginstall` command. This means you have to change the command `pkginstall` to the command of the packaging tool your app/operating system is using!**
+**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. There are apps which allow you even to install a full linux within from where you can run the script. We suggest that you use TERMUX for a simple shell access without installing a operating system within, but of course you can use whatever provides you a equal functionality. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are using any other app OR if you are running a operating system that you have installed within the app/termux the command for installing a package might be different from `pkginstall`. This means you have to change `pkginstall` to the command of the packaging tool your app/operating system is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
