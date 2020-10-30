@@ -13,7 +13,7 @@ This is the main repository for the UCS client pre-alpha version.
 The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system client. Purpose of this document is to show how you can setup and run the client.
 
 ## Technologies used
-The UCS client was written as **linux basic shell** script. The following has been used:
+The UCS client was written as **linux basic shell (#!/bin/sh)** script. The following has been used:
 * **Rasbperry Pi Model B** (Raspberry Pi Model B V1.2)
 * **Raspbian Buster 10** (Raspbian GNU/Linux 10 (buster))
 
@@ -31,7 +31,7 @@ The script **depends** on below programs that must be installed:
 * **git**     (used only to fetch the sourcecode from GitHub)
 
 ## How to install on LINUX
-**Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different from `apt-get install`. This means you have the change `apt-get install` to the command your packaging tool is using!**
+**Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
@@ -77,7 +77,7 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 ```
 
 ## How to install on ANDROID
-**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. There are apps which allow you even to install a full linux within from where you can run the script. We suggest that you use TERMUX for a simple shell access without installing a operating system within, but of course you can use whatever provides you a equal functionality. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are using any other app OR if you are running a operating system that you have installed within the app/termux the command for installing a package might be different from `pkginstall`. This means you have to change `pkginstall` to the command of the packaging tool your app/operating system is using!**
+**If you would like to run the script on ANDROID, you need a shell that you can access from where you can install and run the script. There are apps which allow you even to install a full linux within. We suggest that you use TERMUX for a simple shell access without installing a operating system inside the app. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are using any other app the command for installing a package might be different from. The same applies if you have installed a linux operating system within one of the apps. This means that in both cases you have to change `pkginstall` to the command of the packaging tool your app/operating system is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
