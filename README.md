@@ -14,24 +14,24 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 
 ## Technologies used
 The UCS client was written as **linux basic shell** script. The following has been used:
-* Rasbperry Pi Model B (Raspberry Pi Model B V1.2)
-* Raspbian Buster 10 (Raspbian GNU/Linux 10 (buster))
+* **Rasbperry Pi Model B** (Raspberry Pi Model B V1.2)
+* **Raspbian Buster 10** (Raspbian GNU/Linux 10 (buster))
 
-Although the script was written on a Raspberry Pi 3 with Raspbian, you can run it on any machine if you follow the installation instructions!
+Although the script was written on a Raspberry Pi Model B with Raspbian 10, it's not limited to this setup. **You can run it on any machine if you follow the installation instructions!**
 
 The script **depends** on below programs that must be installed:
 
-* **bc**     (used for floating point calculations)
-* **wget**   (used to fetch certificate files of TSA from Internet)
-* **curl**   (used to send query to TSA and request response)
-* **shasum** (used to hash files)
-* **openssl**(used for TSA stamp verification)
-* **gpg**    (used for transaction signing)
-* **dialog** (used for GUI)
-* **git**    (used only to fetch the sourcecode from GitHub)
+* **bc**      (used for floating point calculations)
+* **wget**    (used to fetch certificate files of TSA from Internet)
+* **curl**    (used to send query to TSA and request response)
+* **shasum**  (used to hash files)
+* **openssl** (used for TSA stamp verification)
+* **gpg**     (used for transaction signing)
+* **dialog**  (used for GUI)
+* **git**     (used only to fetch the sourcecode from GitHub)
 
 ## How to install on LINUX
-**Assuming you use APT as packaging tool, the `apt-get install` command is used. Please note that if you are not using "APT" as packing tool the command for installing a package might be different from below used `apt-get install` command.This means you have the change the command `apt-get install` to the command you packaging tool is using!**
+**Assuming you use APT as packaging tool, the `apt-get install` command is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different from below used `apt-get install` command.This means you have the change the command `apt-get install` to the command your packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
@@ -77,7 +77,7 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 ```
 
 ## How to install on ANDROID
-**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. We suggest that you use TERMUX for that, but you can use any other app that provides you a equal functionality. You can find the TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are not using TERMUX the command for installing a package might be different from below `pkginstall` command. This means you have to change the command `pkginstall` to the command your packaging tool is using!**
+**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. We suggest that you use TERMUX for that, but of course you can use any other app that provides you a equal functionality. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are using any other app than TERMUX or if you are running a installed operating system in TERMUX from where you want to run the script the command for installing a package might be different from below `pkginstall` command. This means you have to change the command `pkginstall` to the command of the packaging tool your app/operating system is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
