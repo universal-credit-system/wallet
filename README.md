@@ -19,18 +19,19 @@ The UCS client was written as **linux basic shell** script. The following has be
 
 Although the script was written on a Raspberry Pi 3 with Raspbian, you can run it on any machine if you follow the installation instructions!
 
-The script itself uses below programs:
-* bc		used for floating point calculations
-* wget		used to fetch certificate files of TSA from Internet
-* curl		used to send query to TSA and request response
-* shasum	used to hash files
-* openssl	used for TSA stamp verification
-* gpg		used for transaction signing
-* dialog	used for GUI
-* git		used only to fetch the sourcecode from GitHub
+The script **depends** on below programs that must be installed:
+
+* **bc**     (used for floating point calculations)
+* **wget**   (used to fetch certificate files of TSA from Internet)
+* **curl**   (used to send query to TSA and request response)
+* **shasum** (used to hash files)
+* **openssl**(used for TSA stamp verification)
+* **gpg**    (used for transaction signing)
+* **dialog** (used for GUI)
+* **git**    (used only to fetch the sourcecode from GitHub)
 
 ## How to install on LINUX
-**Assuming you use APT as packaging tool, the `apt-get install` command is used. PLEASE NOTE, THAT IF YOU ARE NOT USING "APT" AS PACKAGING TOOL THE COMMAND FOR INSTALLING A PACKAGE MIGHT BE DIFFERENT FROM THE BELOW USED `apt-get install`.THIS MEANS YOU HAVE TO CHANGE THE COMMAND `apt-get install` TO THE COMMAND THAT YOUR PACKAGING TOOL USES!**
+**Assuming you use APT as packaging tool, the `apt-get install` command is used. Please note that if you are not using "APT" as packing tool the command for installing a package might be different from below used `apt-get install` command.This means you have the change the command `apt-get install` to the command you packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
@@ -76,7 +77,7 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 ```
 
 ## How to install on ANDROID
-**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. We suggest that you use TERMUX for that, but you can use any other app that provides you a equal functionality. You can find the TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. PLEASE NOTE, THAT IF YOU ARE NOT USING TERMUX THE COMMAND FOR INSTALLING A PACKAGE MIGHT BE DIFFERENT FROM THE BELOW USED `pkginstall`. THIS MEANS YOU HAVE TO CHANGE THE COMMAND `pkginstall` TO THE COMMAND THAT YOUR PACKAGING TOOL USES!**
+**If you would like to run the script on ANDROID, you need a shell that you can access from where you can execute the script. We suggest that you use TERMUX for that, but you can use any other app that provides you a equal functionality. You can find the TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation. Please note that if you are not using TERMUX the command for installing a package might be different from below `pkginstall` command. This means you have to change the command `pkginstall` to the command your packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
