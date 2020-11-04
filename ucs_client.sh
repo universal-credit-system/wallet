@@ -329,7 +329,7 @@ verify_signature(){
 			rt_quiery=$?
 			if [ $rt_quiery = 0 ]
 			then
-				signed_correct=`cat ${script_path}/gpg_verify.tmp|grep "GOODSIG"|grep "${user_signed}"|wc -l`
+				signed_correct=`grep "GOODSIG" ${script_path}/gpg_verify.tmp|grep -c "${user_signed}"`
 			else
 				rm ${trx_to_verify} 2>/dev/null
 			fi
@@ -383,8 +383,7 @@ build_ledger(){
 		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED#########
 		ls -1 ${script_path}/keys >${script_path}/accounts.tmp
 		cat ${script_path}/blacklisted_accounts.dat >>${script_path}/accounts.tmp
-		cat ${script_path}/accounts.tmp|sort -t . -k2 >${script_path}/accounts_sorted.tmp
-		cat ${script_path}/accounts_sorted.tmp|uniq >${script_path}/accounts_list.tmp
+		sort -t . -k2 ${script_path}/accounts.tmp|uniq >${script_path}/accounts_list.tmp
 
 		###CREATE FRIENDS LIST##############################
 		touch ${script_path}/friends_trx.tmp
@@ -396,7 +395,7 @@ build_ledger(){
 		do
 			head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
 		done <${script_path}/friends_trx.tmp
-		cat ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
+		uniq ${script_path}/friends.tmp >${script_path}/friends.dat
 		rm ${script_path}/friends.tmp 2>/dev/null
 		####################################################
 
@@ -437,7 +436,7 @@ build_ledger(){
 		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
 		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
 		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
-		cat ${script_path}/trxlist.tmp|sort -t . -k1 >${script_path}/trxlist_full_sorted.tmp
+		sort -t . -k1 ${script_path}/trxlist.tmp >${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist.tmp
 		rm ${script_path}/trxlist_full.tmp
 		while read line
@@ -511,7 +510,7 @@ build_ledger(){
 					########################################################################
 
 					###GRANT COINLOAD#######################################################
-					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${account_name}.${account_hash}"|cut -d '=' -f2`
+					account_prev_balance=`grep "${account_name}.${account_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 					account_balance=`echo "${account_prev_balance} + ${coinload}"|bc`
 					is_greater_one=`echo "${account_balance}>=1"|bc`
 					if [ $is_greater_one = 0 ]
@@ -523,7 +522,7 @@ build_ledger(){
 				fi
 			done <${script_path}/accounts_list.tmp
 
-			cat ${script_path}/trxlist_formatted.tmp|grep " ${focus} " >${script_path}/trxlist_${focus}.tmp
+			grep " ${focus} " ${script_path}/trxlist_formatted.tmp >${script_path}/trxlist_${focus}.tmp
 			###############################################
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
@@ -563,7 +562,7 @@ build_ledger(){
                	                	trx_fee="0${trx_fee}"
                        	        fi
               	                trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
-				account_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d '=' -f2`
+				account_balance=`grep "${trx_sender}.${trx_sender_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 				##############################################################
 
 				###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
@@ -584,7 +583,7 @@ build_ledger(){
         	                      	then
                 	              		account_balance="0${account_balance}"
                         	      	fi
-					account_prev_balance=`cat ${script_path}/ledger.tmp|grep "${trx_sender}.${trx_sender_hash}"|cut -d '=' -f2`
+					account_prev_balance=`grep "${trx_sender}.${trx_sender_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 					sed -i "s/${trx_sender}.${trx_sender_hash}=${account_prev_balance}/${trx_sender}.${trx_sender_hash}=${account_balance}/g" ${script_path}/ledger.tmp
 					##############################################################
 
@@ -596,7 +595,7 @@ build_ledger(){
 						then
 							echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
 						else
-							receiver_old_balance=`cat ${script_path}/ledger.tmp|grep "${trx_receiver}.${trx_receiver_hash}"|cut -d '=' -f2`
+							receiver_old_balance=`grep "${trx_receiver}.${trx_receiver_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 							is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 							if [ $is_greater_one = 0 ]
 							then
@@ -831,7 +830,7 @@ do
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								new_lang_file=`cat ${script_path}/languages.tmp|grep "lang_${lang_selection}_"`
+								new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
 								if [ $lang_file != $new_lang_file ]
 								then
 									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" >${script_path}/lang.conf
@@ -915,7 +914,7 @@ do
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
-								date_to_verify=`cat ${script_path}/timestamp_check.tmp|grep "Time stamp:"|cut -c 13-37`
+								date_to_verify=`grep "Time stamp:" ${script_path}/timestamp_check.tmp|cut -c 13-37`
 								date_to_verify_converted=`date --date="${date_to_verify}" +%s`
 								accountdate_to_verify=`echo $line|cut -d '.' -f2`
 								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
@@ -1020,7 +1019,7 @@ do
 			dialog_blacklisted_display=`echo $dialog_blacklisted|sed "s/<account_name>/${handover_account}/g"`
 			dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_blacklisted_display" 0 0
 		fi
-		account_my_balance=`cat ${script_path}/ledger.tmp|grep "${handover_account}.${handover_account_hash}"|cut -d '=' -f2`
+		account_my_balance=`grep "${handover_account}.${handover_account_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 		dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed "s/<account_name_chosen>/${account_name_chosen}/g"|sed "s/<handover_account>/${handover_account}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"`
 		user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "" 3>&1 1>&2 2>&3`
         	if [ $? != 0 ]
@@ -1125,7 +1124,7 @@ do
 										then
 											echo "${user_to_append}=${user_to_append_till_date}" >>${script_path}/dependencies.tmp
 										else
-											user_to_append_old_date=`cat ${script_path}/dependencies.tmp|grep "${user_to_append}="|cut -d '=' -f2`
+											user_to_append_old_date=`grep "${user_to_append}=" ${script_path}/dependencies.tmp|cut -d '=' -f2`
 											sed -i "s/${user_to_append}=${user_to_append_old_date}/${user_to_append}=${user_to_append_till_date}/g" >${script_path}/dependencies.tmp
 										fi
 									done <${script_path}/dependent_trx.tmp
@@ -1467,7 +1466,7 @@ do
 										trx_date_extracted=`echo $decision|cut -d '|' -f1`
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
-										trx_file=`cat ${script_path}/my_trx.tmp|grep "${trx_date}"`
+										trx_file=`grep "${trx_date}" ${script_path}/my_trx.tmp`
 										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
 										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2`
 										trx_status=""
