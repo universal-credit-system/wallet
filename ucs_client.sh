@@ -1103,7 +1103,7 @@ do
 									while read line
 									do
 										user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
-										user_trx=`ls -1 ${script_path}/trx|grep "$line"` >>${script_path}/dep_trx.tmp`
+										user_trx=`ls -1 ${script_path}/trx|grep "$line"` >>${script_path}/dep_trx.tmp
 										if [ $small_trx = 0 ]
 										then
 											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
