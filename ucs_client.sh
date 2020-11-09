@@ -455,8 +455,8 @@ build_ledger(){
 			###STATUS BAR####################################
 			#clear
 			dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<focus>/${focus}/g"`
-			echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
-			current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
+			echo "$current_percent_display"
+                        current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
 			#################################################
 
@@ -593,7 +593,7 @@ build_ledger(){
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done
+		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
 		cd ${script_path}/
 }
 check_archive(){
@@ -1086,7 +1086,7 @@ do
 											already_in_tree=`grep -c "${line}" ${script_path}/dep_users.tmp`
 											if [ $already_in_tree = 0 ]
 											then
-												echo "${user_to_append}" >>${script_path}/dep_users.tmp
+												echo "${line}" >>${script_path}/dep_users.tmp
 											fi
 
 										done <${script_path}/trx_r.tmp
@@ -1106,24 +1106,24 @@ do
 										user_trx=`ls -1 ${script_path}/trx|grep "$line"` >>${script_path}/dep_trx.tmp
 										if [ $small_trx = 0 ]
 										then
-											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
+											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 											if [ $user_key_there = 0 ]
 											then
 												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
 											fi
-											user_proofq_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
+											user_proofq_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 											if [ $user_proofq_there = 0 ]
 											then
 												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
 											fi
-											user_proofr_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
+											user_proofr_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 											if [ $user_proofr_there = 0 ]
 											then
 												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
 											fi
 											while read line
 											do
-												user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
+												user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 												if [ $user_trx_there = 0 ]
 												then
 													trx_to_append="${trx_to_append}trx/${line} "
