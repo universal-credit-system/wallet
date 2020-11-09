@@ -1069,124 +1069,78 @@ do
 							then
 								trx_now=`date +%s`
 								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now} ${receiver_hash}" ${trx_now} 0
-								last_trx=`ls -1 ${script_path}/trx/*.${handover_account}|tail -1`
+								last_trx=`ls -1 ${script_path}/trx/*.${handover_account}|sort -t . -k1|tail -1`
 								verify_signature ${last_trx} ${handover_account}
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
 									cd ${script_path}/trx/
-									last_trx=`ls -1 *.${handover_account}|tail -1`
-									cd ${script_path}
-									trx_to_append="trx/${last_trx} "
-									cd ${script_path}/trx/
-									touch ${script_path}/dependent_trx.tmp
-									grep "R:${handover_account}" *.* >${script_path}/dependent_trx.tmp 2>/dev/null
-									rm ${script_path}/dependencies.tmp 2>/dev/null
-									touch ${script_path}/dependencies.tmp
+									echo "${handover_account}" >${script_path}/dep_users.tmp
 									while read line
 									do
-										user_to_append_till_date=`echo $line|cut -d ':' -f1|cut -d '.' -f1`
-										user_to_append=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
-										already_in_tree=`grep -c "${user_to_append}=" ${script_path}/dependencies.tmp`
-										if [ $already_in_tree = 0 ]
-										then
-											echo "${user_to_append}=${user_to_append_till_date}" >>${script_path}/dependencies.tmp
-										else
-											user_to_append_old_date=`grep "${user_to_append}=" ${script_path}/dependencies.tmp|cut -d '=' -f2`
-											sed -i "s/${user_to_append}=${user_to_append_old_date}/${user_to_append}=${user_to_append_till_date}/g" >${script_path}/dependencies.tmp
-										fi
-									done <${script_path}/dependent_trx.tmp
+										user_to_search=$line
+										touch ${script_path}/trx_r.tmp
+										grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
+										while read line
+										do
+											already_in_tree=`grep -c "${line}" ${script_path}/dep_users.tmp`
+											if [ $already_in_tree = 0 ]
+											then
+												echo "${user_to_append}" >>${script_path}/dep_users.tmp
+											fi
+
+										done <${script_path}/trx_r.tmp
+										rm ${script_path}/trx_r.tmp 2>/dev/null
+									done <${script_path}/dep_users.tmp
+
 									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 									small_trx=$?
-									if [ $small_trx = 1 ]
-									then
-										me_key_there=`grep -c "keys/${handover_account}.${handover_account_stamp}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $me_key_there = 0 ]
-										then
-											keys_to_append="keys/${handover_account}.${handover_account_stamp} "
-										else
-											keys_to_append=""
-										fi
-									else
-										keys_to_append="keys/${handover_account}.${handover_account_stamp} "
-									fi
+
+									keys_to_append=""
 									proof_to_append=""
-									if [ $small_trx = 1 ]
-									then
-										me_proofq_there=`grep -c "proofs/${handover_account}/freetsa.tsq" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $me_proofq_there = 0 ]
-										then
-											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
-										fi
-									else
-										proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
-									fi
-									if [ $small_trx = 1 ]
-									then
-										me_proofr_there=`grep -c "proofs/${handover_account}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $me_proofr_there = 0 ]
-										then
-											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
-										fi
-									else
-										proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
-									fi
+									trx_to_append=""
 
 									while read line
 									do
-										user_to_append=`echo $line|cut -d '=' -f1`
-										user_to_append_key=`ls -1 ${script_path}/keys|grep "${user_to_append}"`
-										user_key_there=`grep -c "keys/${user_to_append_key}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $small_trx = 1 ]
+										user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
+										user_trx=`ls -1 ${script_path}/trx|grep "$line"` >>${script_path}/dep_trx.tmp`
+										if [ $small_trx = 0 ]
 										then
+											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
 											if [ $user_key_there = 0 ]
 											then
 												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
 											fi
-										else
-											keys_to_append="${keys_to_append}keys/${user_to_append_key} "
-										fi
-										user_proofq_there=`grep -c "proofs/${user_to_append}/freetsa.tsq" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $small_trx = 1 ]
-										then
+											user_proofq_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
 											if [ $user_proofq_there = 0 ]
 											then
-												proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
+												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
 											fi
-										else
-											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsq "
-										fi
-										user_proofr_there=`grep -c "proofs/${user_to_append}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
-										if [ $small_trx = 1 ]
-										then
+											user_proofr_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
 											if [ $user_proofr_there = 0 ]
 											then
-												proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
 											fi
+											while read line
+											do
+												user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null
+												if [ $user_trx_there = 0 ]
+												then
+													trx_to_append="${trx_to_append}trx/${line} "
+												fi
+											done <${script_path}/dep_trx.tmp
 										else
-											proof_to_append="${proof_to_append}proofs/${handover_account}/freetsa.tsr "
+											keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+											proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq proofs/${line}/freetsa.tsr "
+											while read line
+											do
+												trx_to_append="${trx_to_append}trx/${line} "
+											done <${script_path}/dep_trx.tmp
 										fi
-										user_to_append_till_date=`echo $line|cut -d '=' -f2`
-										ls -1 ${script_path}/trx|grep "${user_to_append}" >${script_path}/dep_user_trx.tmp
-										trx_till_line=`grep -n ${user_to_append_till_date} ${script_path}/dep_user_trx.tmp`
-										append_line_counter=1
-										while read line
-										do
-											if [ $append_line_counter -le $trx_till_line ]
-											then
-												if [ $small_trx = 1 ]											#
-												then													#
-													trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}.txt` 2>/dev/null	#
-													if [ $trx_there = 0 ]										#
-													then												#
-														trx_to_append="${trx_to_append}trx/${line} "
-													fi												#
-												else													#
-													trx_to_append="${trx_to_append}trx/${line} "							#
-												fi													#
-											fi
-										done <${script_path}/dep_user_trx.tmp
-									done <${script_path}/dependencies.tmp
+									done <${script_path}/dep_users.tmp
+									rm ${script_path}/dep_users.tmp 2>/dev/null
+									rm ${script_path}/dep_trx.tmp 2>/dev/null
+
 									build_ledger
 									make_signature "none" ${trx_now} 1
 									cd ${script_path}
