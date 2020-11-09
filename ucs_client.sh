@@ -460,7 +460,7 @@ build_ledger(){
 			current_percent_display=`echo "${current_percent} / 1"|bc`
 			#################################################
 
-			###CALCULATE CURRENT AND NEXT COINLOAD###########
+			###CALCULATE CURRENT COINLOAD####################
        			if [ $day_counter -eq $multi_next ]
 			then
 				multi=$(( $multi * 2 ))
@@ -472,60 +472,31 @@ build_ledger(){
 	        	then
 	                	coinload="0${coinload}"
 	                fi
-			next_coinload=`echo "${initial_coinload} / ${multi_next}"|bc`
-			is_greater_one=`echo "${next_coinload}>=1"|bc`
-		        if [ $is_greater_one = 0 ]
-	        	then
-	                	next_coinload="0${next_coinload}"
-	                fi
-			###################################################
+			
+			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp > ${script_path}/accounts.tmp
 
-
-			###GO TROUGH ACCOUNTS LINE BY LINE#####################
+			###GO TROUGH ACCOUNTS LINE BY LINE FOR FIRST ENTRY############
 			while read line
 			do
 				###EXTRACT ACCOUNT DATA FOR CHECK############################
 				account_name=`echo $line|cut -d '.' -f1`
-				account_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`
-				account_date_unformatted=`echo $line|cut -d '.' -f2`
-				account_date=`date +%Y%m%d --date=@${account_date_unformatted}`
-				#############################################################
-				
-				###IF FOCUS EQUAL TO DATE OF ACCOUNT CREATION GO AHEAD#######
-				if [ $focus -ge $account_date ]
-				then
-					###SET INITAL VALUES FOR ACCOUNT###############
-					account_balance=0
-					###############################################
+				account_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`		
 
-					###CHECK IF ACCOUNT ALREADY IN AND ADD ACCOUNT IF NOT###########
-					if [ $focus -eq $account_date ]
-					then
-						account_there=`grep -c "${account_name}.${account_hash}" ${script_path}/ledger.tmp`
-						if [ $account_there = 0 ]
-						then
-							echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
-						fi
-					fi
-					########################################################################
+				###WRITE FIRST ENTRY#########################################
+				echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
+			done <${script_path}/accounts.tmp
+			##############################################################
 
-					###GRANT COINLOAD#######################################################
-					account_prev_balance=`grep "${account_name}.${account_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-					account_balance=`echo "${account_prev_balance} + ${coinload}"|bc`
-					is_greater_one=`echo "${account_balance}>=1"|bc`
-					if [ $is_greater_one = 0 ]
-					then
-						account_balance="0${account_balance}"
-					fi
-					sed -i "s/${account_name}.${account_hash}=${account_prev_balance}/${account_name}.${account_hash}=${account_balance}/g" ${script_path}/ledger.tmp
-					########################################################################
-				fi
-			done <${script_path}/accounts_list.tmp
-
-			grep " ${focus} " ${script_path}/trxlist_formatted.tmp >${script_path}/trxlist_${focus}.tmp
-			###############################################
+			###GRANT COINLOAD OF THAT DAY#################################
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.10f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
+			if [ -s ${script_path}/ledger_mod.tmp ]
+			then
+				mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp
+			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
+			grep " ${focus} " ${script_path}/trxlist_formatted.tmp >${script_path}/trxlist_${focus}.tmp
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
@@ -614,9 +585,6 @@ build_ledger(){
         	                fi
 				##############################################################
 			done <${script_path}/trxlist_${focus}.tmp
-			##############################################################
-
-			###DELETE TRX LIST FOR THIS DAY###############################
 			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
@@ -1531,7 +1499,13 @@ do
 							done
 							rm ${script_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	dialog_statistic_display=`echo $dialog_statistic|sed "s/<coinload>/${coinload}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<in_days>/${in_days}/g"|sed "s/<next_coinload>/${next_coinload}/g"`
+				"$dialog_stats")	next_coinload=`echo "${initial_coinload} / ${multi_next}"|bc`
+							is_greater_one=`echo "${next_coinload}>=1"|bc`
+		        				if [ $is_greater_one = 0 ]
+	        					then
+	                					next_coinload="0${next_coinload}"
+	                				fi
+							dialog_statistic_display=`echo $dialog_statistic|sed "s/<coinload>/${coinload}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<in_days>/${in_days}/g"|sed "s/<next_coinload>/${next_coinload}/g"`
 							dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
 							;;
 				"Log out")		user_logged_in=0
