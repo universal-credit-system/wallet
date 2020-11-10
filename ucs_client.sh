@@ -453,8 +453,6 @@ build_ledger(){
 		while [ $focus -le $now ]
 		do
 			###STATUS BAR####################################
-			#clear
-			dialog_for_ledger_display=`echo $dialog_ledger|sed "s/<focus>/${focus}/g"`
 			echo "$current_percent_display"
                         current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
@@ -472,7 +470,9 @@ build_ledger(){
 	        	then
 	                	coinload="0${coinload}"
 	                fi
+			#################################################
 			
+			###GRANT COINLOAD################################
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp > ${script_path}/accounts.tmp
 
@@ -593,7 +593,7 @@ build_ledger(){
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_for_ledger_display" 0 0 0
+		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0
 		cd ${script_path}/
 }
 check_archive(){
@@ -1001,7 +1001,7 @@ do
 						order_aborted=0
               			        	while [ $recipient_found = 0 ]
                               		        do
-							order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "" 3>&1 1>&2 2>&3`
+							order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "c11f2dd1f42b19414671038945f06f1eab43fd8b326ddb82fa94b345708139cd" 3>&1 1>&2 2>&3`
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
@@ -1083,10 +1083,11 @@ do
 										grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
 										while read line
 										do
-											already_in_tree=`grep -c "${line}" ${script_path}/dep_users.tmp`
+											user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
+											already_in_tree=`grep -c "${user_name}" ${script_path}/dep_users.tmp`
 											if [ $already_in_tree = 0 ]
 											then
-												echo "${line}" >>${script_path}/dep_users.tmp
+												echo "${user_name}" >>${script_path}/dep_users.tmp
 											fi
 
 										done <${script_path}/trx_r.tmp
@@ -1103,24 +1104,16 @@ do
 									while read line
 									do
 										user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
-										user_trx=`ls -1 ${script_path}/trx|grep "$line"` >>${script_path}/dep_trx.tmp
+										ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
 										if [ $small_trx = 0 ]
 										then
+											user_name=`echo $line|cut -d '.' -f2`
 											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 											if [ $user_key_there = 0 ]
 											then
 												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
 											fi
-											user_proofq_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-											if [ $user_proofq_there = 0 ]
-											then
-												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
-											fi
-											user_proofr_there=`grep -c "proofs/${line}/freetsa.tsr" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-											if [ $user_proofr_there = 0 ]
-											then
-												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
-											fi
+											proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq ${proof_to_append}proofs/${line}/freetsa.tsr "
 											while read line
 											do
 												user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
@@ -1152,6 +1145,8 @@ do
 										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 									else
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
+										rm ${script_path}/${trx_now}.tar 2>/dev/null
+										rm ${last_trx} 2>/dev/null
 									fi
 									rm ${script_path}/manifest.txt 2>/dev/null
 								else
@@ -1341,6 +1336,8 @@ do
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
 							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
+							sort ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
+							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${script_path}/my_trx.tmp`
 							menu_display_text=""
