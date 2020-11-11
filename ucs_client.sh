@@ -1006,10 +1006,10 @@ do
 							if [ $rt_quiery = 0 ]
 							then
 								ls -1 ${script_path}/keys >${script_path}/keylist.tmp
-								key_there=`grep -c "${order_receipient}" ${script_path}/keylist.tmp`
-								receiver_file=`grep "${order_receipient}" ${script_path}/keylist.tmp|head -1`
+								key_there=`grep -c "${order_receipient}." ${script_path}/keylist.tmp`
 								if [ $key_there = 1 ]
 								then
+                                                                        receiver_file=`grep "${order_receipient}" ${script_path}/keylist.tmp|head -1`
 									receiver_hash=`shasum -a 256 <${script_path}/keys/${receiver_file}|cut -d ' ' -f1`
 									recipient_found=1
 									amount_selected=0
