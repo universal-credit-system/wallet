@@ -1001,7 +1001,7 @@ do
 						order_aborted=0
               			        	while [ $recipient_found = 0 ]
                               		        do
-							order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "c11f2dd1f42b19414671038945f06f1eab43fd8b326ddb82fa94b345708139cd" 3>&1 1>&2 2>&3`
+							order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "" 3>&1 1>&2 2>&3`
 							rt_quiery=$?
 							if [ $rt_quiery = 0 ]
 							then
@@ -1134,7 +1134,6 @@ do
 									rm ${script_path}/dep_users.tmp 2>/dev/null
 									rm ${script_path}/dep_trx.tmp 2>/dev/null
 
-									build_ledger
 									make_signature "none" ${trx_now} 1
 									cd ${script_path}
 									tar -cvf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
@@ -1143,10 +1142,12 @@ do
 									then
 										dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
 										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
+										build_ledger
 									else
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
 										rm ${script_path}/${trx_now}.tar 2>/dev/null
 										rm ${last_trx} 2>/dev/null
+										rm ${script_path}/${trx_now}.tar 2>/dev/null
 									fi
 									rm ${script_path}/manifest.txt 2>/dev/null
 								else
@@ -1176,7 +1177,6 @@ do
 												if [ $rt_quiery = 0 ]
 												then
 													dialog --title "$dialog_read" --backtitle "Universal Credit System" --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --msgbox "$files_to_fetch_display" 0 0
-													#dialog --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --title "$dialog_content" --backtitle "Universal Credit System" --prgbox "cat ${script_path}/files_to_fetch.tmp" 15 100
 													rt_quiery=$?
 												else
 													rt_quiery=0
