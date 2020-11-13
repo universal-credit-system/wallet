@@ -300,6 +300,7 @@ make_signature(){
 				rm ${message_blank}.asc 2>/dev/null
 			fi
 			#################################################################
+			return $rt_quiery
 }
 verify_signature(){
 			trx_to_verify=$1
@@ -874,7 +875,7 @@ do
 					rt_quiery=$?
 					if [ $rt_quiery = 0 ]
 					then
-						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
+						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 1>/dev/null 2>/dev/null
 						rt_quiery=$?
 						if [ $rt_quiery = 0 ]
 						then
@@ -1006,7 +1007,7 @@ do
 							if [ $rt_quiery = 0 ]
 							then
 								ls -1 ${script_path}/keys >${script_path}/keylist.tmp
-								key_there=`grep -c -w "${order_receipient}." ${script_path}/keylist.tmp`
+								key_there=`grep -c -w "${order_receipient}" ${script_path}/keylist.tmp`
 								if [ $key_there = 1 ]
 								then
                                                                         receiver_file=`grep "${order_receipient}" ${script_path}/keylist.tmp|head -1`
@@ -1069,87 +1070,98 @@ do
 							then
 								trx_now=`date +%s`
 								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now} ${receiver_hash}" ${trx_now} 0
-								last_trx=`ls -1 ${script_path}/trx/*.${handover_account}|sort -t . -k1|tail -1`
-								verify_signature ${last_trx} ${handover_account}
 								rt_quiery=$?
 								if [ $rt_quiery = 0 ]
 								then
-									cd ${script_path}/trx/
-									echo "${handover_account}" >${script_path}/dep_users.tmp
-									while read line
-									do
-										user_to_search=$line
-										touch ${script_path}/trx_r.tmp
-										grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
-										while read line
-										do
-											user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
-											already_in_tree=`grep -c "${user_name}" ${script_path}/dep_users.tmp`
-											if [ $already_in_tree = 0 ]
-											then
-												echo "${user_name}" >>${script_path}/dep_users.tmp
-											fi
-
-										done <${script_path}/trx_r.tmp
-										rm ${script_path}/trx_r.tmp 2>/dev/null
-									done <${script_path}/dep_users.tmp
-
-									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
-									small_trx=$?
-
-									keys_to_append=""
-									proof_to_append=""
-									trx_to_append=""
-
-									while read line
-									do
-										user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
-										ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
-										if [ $small_trx = 0 ]
-										then
-											user_name=`echo $line|cut -d '.' -f2`
-											user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-											if [ $user_key_there = 0 ]
-											then
-												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
-											fi
-											proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq ${proof_to_append}proofs/${line}/freetsa.tsr "
-											while read line
-											do
-												user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-												if [ $user_trx_there = 0 ]
-												then
-													trx_to_append="${trx_to_append}trx/${line} "
-												fi
-											done <${script_path}/dep_trx.tmp
-										else
-											keys_to_append="${keys_to_append}keys/${user_to_append_key} "
-											proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq proofs/${line}/freetsa.tsr "
-											while read line
-											do
-												trx_to_append="${trx_to_append}trx/${line} "
-											done <${script_path}/dep_trx.tmp
-										fi
-									done <${script_path}/dep_users.tmp
-									rm ${script_path}/dep_users.tmp 2>/dev/null
-									rm ${script_path}/dep_trx.tmp 2>/dev/null
-
-									make_signature "none" ${trx_now} 1
-									cd ${script_path}
-									tar -cvf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
+									last_trx="${script_path}/trx/${trx_now}.${handover_account}"
+									verify_signature ${last_trx} ${handover_account}
 									rt_quiery=$?
 									if [ $rt_quiery = 0 ]
 									then
-										dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
-										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
-										build_ledger
+										cd ${script_path}/trx/
+										echo "${handover_account}" >${script_path}/dep_users.tmp
+										while read line
+										do
+											user_to_search=$line
+											touch ${script_path}/trx_r.tmp
+											grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
+											while read line
+											do
+												user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
+												already_in_tree=`grep -c "${user_name}" ${script_path}/dep_users.tmp`
+												if [ $already_in_tree = 0 ]
+												then
+													echo "${user_name}" >>${script_path}/dep_users.tmp
+												fi
+											done <${script_path}/trx_r.tmp
+											rm ${script_path}/trx_r.tmp 2>/dev/null
+										done <${script_path}/dep_users.tmp
+
+										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
+										small_trx=$?
+
+										keys_to_append=""
+										proof_to_append=""
+										trx_to_append=""
+	
+										while read line
+										do
+											user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
+											ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
+											if [ $small_trx = 0 ]
+											then
+												user_name=`echo $line|cut -d '.' -f2`
+												user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
+												if [ $user_key_there = 0 ]
+												then
+													keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+												fi
+												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq ${proof_to_append}proofs/${line}/freetsa.tsr "
+												while read line
+												do
+													user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
+													if [ $user_trx_there = 0 ]
+													then
+														trx_to_append="${trx_to_append}trx/${line} "
+													fi
+												done <${script_path}/dep_trx.tmp
+											else
+												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
+												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq proofs/${line}/freetsa.tsr "
+												while read line
+												do
+													trx_to_append="${trx_to_append}trx/${line} "
+												done <${script_path}/dep_trx.tmp
+											fi
+										done <${script_path}/dep_users.tmp
+										rm ${script_path}/dep_users.tmp 2>/dev/null
+										rm ${script_path}/dep_trx.tmp 2>/dev/null
+	
+										make_signature "none" ${trx_now} 1
+										rt_quiery=$?
+										if [ $rt_quiery = 0 ]
+										then
+											cd ${script_path}
+											tar -cvf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
+											rt_quiery=$?
+											if [ $rt_quiery = 0 ]
+											then
+												dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
+												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
+												build_ledger
+											else
+												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
+												rm ${script_path}/${trx_now}.tar 2>/dev/null
+												rm ${last_trx} 2>/dev/null
+												rm ${script_path}/${trx_now}.tar 2>/dev/null
+											fi
+											rm ${script_path}/manifest.txt 2>/dev/null
+										else
+											dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
+										fi
 									else
-										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
-										rm ${script_path}/${trx_now}.tar 2>/dev/null
-										rm ${last_trx} 2>/dev/null
-										rm ${script_path}/${trx_now}.tar 2>/dev/null
+										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 									fi
-									rm ${script_path}/manifest.txt 2>/dev/null
 								else
 									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 								fi
