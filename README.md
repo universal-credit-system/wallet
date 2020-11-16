@@ -81,14 +81,14 @@ Once you have installed ucs you can run the UCS program just like you would exec
 
 To install the programs that are required for UCS just type the following into command prompt:
 ```
-pkginstall bc
-pkginstall wget
-pkginstall curl
-pkginstall perl
-pkginstall gnupg2
-pkginstall openssl
-pkginstall dialog
-pkginstall git
+pkg install bc
+pkg install wget
+pkg install curl
+pkg install perl
+pkg install gpg
+pkg install openssl
+pkg install dialog
+pkg install git
 ```
 
 Now create a directory with `mkdir` wherever you want and step into this directory with `cd`:
