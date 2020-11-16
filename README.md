@@ -85,7 +85,7 @@ pkg install bc
 pkg install wget
 pkg install curl
 pkg install perl
-pkg install gpg
+pkg install gnupg
 pkg install openssl
 pkg install dialog
 pkg install git
