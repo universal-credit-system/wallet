@@ -1,0 +1,40 @@
+COMMAND:
+
+./ucs_client.sh [OPTION]
+
+NOTE:	IF YOU WANT TO RUN UCS IN GUI-MODE JUST EXECUTE THE SCRIPT WITHOUT ANY PARAMETERS.
+
+OPTIONS (for CMD-MODE ONLY!!!):
+
+
+	Parameter:		Purpose:
+	
+	-action <ACTION>	Used to describe what to do. 
+				Possible actions are:	create_user	to create a user
+							create_trx	to create a transaction
+							read_trx	to read a transaction
+							create_sync	to create a syncronisation
+							read_sync	to read a syncronisation
+							show_stats	to display the statistics
+
+	-user <USER>		Name of the account	
+
+	-pin <PIN>		PIN of the account
+	
+	-password <PW>		Password of the account
+			
+	-target <ADRESS>	Receiver of transaction. Used only for create_trx
+			
+	-amount <AMOUNT>	Amount of transaction. Used only for create_trx
+			
+	-type <TYPE>		Possible values are "partial" or "full". 
+				When creating a transaction this value is used to specifiy wheter a big 
+				or small transaction should be created. When reading a transaction or reading 
+				a sync file this parameter is used to specify wheter only new files should be
+				extracted or all files should be extracted.
+			
+	-path <PATH>		Path where output is stored for create_trx and create_sync.
+				Path from where to read input for read_trx and read_sync.
+
+	-help			Display HELP
+
