@@ -469,7 +469,7 @@ build_ledger(){
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
-			progress_bar_redir="1"
+			progress_bar_redir="&1"
 		else
 			progress_bar_redir="/dev/null"
 		fi
@@ -498,6 +498,11 @@ build_ledger(){
 		###EMPTY LEDGER#####################################
 		rm ${script_path}/ledger.tmp 2>/dev/null
 		touch ${script_path}/ledger.tmp
+		####################################################
+
+		###EMPTY INDEX FILE#################################
+		rm ${script_path}/index_trx.tmp 2>/dev/null
+		touch ${script_path}/index_trx.tmp
 		####################################################
 
 		###SET FOCUS########################################
@@ -542,7 +547,7 @@ build_ledger(){
 		       	trx_sender=`echo $line|cut -d '.' -f2`
 		       	echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxlist_formatted.tmp
 		done <${script_path}/trxlist_full_sorted.tmp
-		rm {script_path}/trxlist_full_sorted.tmp 2>/dev/null
+		rm ${script_path}/trxlist_full_sorted.tmp 2>/dev/null
 		####################################################
 
 		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
@@ -692,7 +697,7 @@ build_ledger(){
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>&${progress_bar_redir}
+		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then	
 			show_balance=0
@@ -1278,7 +1283,7 @@ do
 		then
 			####GET COINS FOR ACCOUNT LOGGED IN
 			build_ledger
-			no_ack_trx=`wc -l <${script_path}/index.tmp`
+			no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
 			if [ $no_ack_trx -gt 0 ]
 			then
 				###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
@@ -1315,7 +1320,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "" 3>&1 1>&2 2>&3`
+								order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "983f0177298dcb9dc1032b493099cd2564b4d7658812c8e23a555266ba73155e" 3>&1 1>&2 2>&3`
 								rt_query=$?
 							else
 								rt_query=0
@@ -1621,7 +1626,7 @@ do
 														check_trx
 														now=`date +%s`
 														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index.tmp`
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
 														if [ $no_ack_trx -gt 0 ]
 														then
 															make_signature "none" $now 1
@@ -1762,7 +1767,7 @@ do
 														check_trx
 														now=`date +%s`
 														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index.tmp`
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
 														if [ $no_ack_trx -gt 0 ]
 														then
 															make_signature "none" $now 1
