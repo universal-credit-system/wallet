@@ -630,7 +630,7 @@ build_ledger(){
 
 				###EXTRACT TRX DATA###########################################
 				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
-				trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+				trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
 				is_greater_one=`echo "${trx_fee}>=1"|bc`
                                	if [ $is_greater_one = 0 ]
 				then
@@ -714,7 +714,7 @@ build_ledger(){
 			if [ $show_balance = 1 ]
 			then
 				cmd_output=`grep "${handover_account}.${handover_account_hash}" ${script_path}/ledger.tmp`
-				echo "BALANCE_AT_${now}:${cmd_output}"
+				echo "BALANCE_${now_stamp}:${cmd_output}"
 			fi
 		fi
 		cd ${script_path}/
@@ -1367,7 +1367,7 @@ do
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											trx_fee=`echo "${order_amount_formatted} * ${current_fee}"|bc`
+											trx_fee=`echo "scale=10;${order_amount_formatted} * ${current_fee}"|bc`
 											is_greater_one=`echo "${trx_fee}>=1"|bc`
 											if [ $is_greater_one = 0 ]
 											then
@@ -1496,7 +1496,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -cvf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
+											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -1514,6 +1514,8 @@ do
 														then
 															mv ${trx_now}.tar ${cmd_path}/${trx_now}.tar
 															echo "FILE:${cmd_path}/${trx_now}.tar"
+														else
+															echo "FILE:${script_path}/${trx_now}.tar"
 														fi
 													else
 														echo "FILE:${script_path}/${trx_now}.tar"
@@ -1858,7 +1860,7 @@ do
 							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -cf ${synch_now}.tar ${tar_string}
+							tar -cf ${synch_now}.tar ${tar_string} 
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -1906,7 +1908,7 @@ do
 									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
-									trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+									trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
 									is_greater_one=`echo "${trx_fee}>1"|bc`
 	                                                                if [ $is_greater_one = 0 ]
         	                                                        then
@@ -1986,7 +1988,7 @@ do
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
 											trx_amount=`echo $decision|cut -d '|' -f3|sed 's/+//g'|sed 's/-//g'`
-                                	                                        	trx_fee=`echo "${trx_amount} * ${current_fee}"|bc`
+                                	                                        	trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
                                         	                                	is_greater_one=`echo "${trx_fee}>1"|bc`
                                                 	                                if [ $is_greater_one = 0 ]
                                                         	                        then
