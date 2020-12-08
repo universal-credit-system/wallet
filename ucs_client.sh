@@ -136,7 +136,7 @@ create_keys(){
 		fi
 		
 		###GENERATE KEY##############################################
-		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none
+		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -172,7 +172,7 @@ create_keys(){
 					cd ${script_path}
 
 					###CREATE TSA QUIERY FILE####################################
-					openssl ts -query -data ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>&2
+					openssl ts -query -data ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -198,7 +198,7 @@ create_keys(){
 								then
 									mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 									mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-									openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>&2
+									openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -533,11 +533,12 @@ build_ledger(){
 		touch ${script_path}/trxlist_full.tmp
 		touch ${script_path}/trxlist.tmp
 		touch ${script_path}/trxlist_full_sorted.tmp
+		rm ${script_path}/trxlist_formatted.tmp 2>/dev/null
 		touch ${script_path}/trxlist_formatted.tmp
 		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
 		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
 		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
-		sort -t . -k1 ${script_path}/trxlist.tmp >${script_path}/trxlist_full_sorted.tmp
+		sort -t . -k1 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist.tmp
 		rm ${script_path}/trxlist_full.tmp
 		while read line
@@ -1092,7 +1093,7 @@ do
 			then
                 		clear
 			else
-				if [ $cmd_action != "user_create" ]
+				if [ $cmd_action != "create_user" ]
 				then
 					main_menu=$dialog_main_logon
 				fi
@@ -1491,6 +1492,7 @@ do
 										rm ${script_path}/dep_users.tmp 2>/dev/null
 										rm ${script_path}/dep_trx.tmp 2>/dev/null
 	
+										build_ledger
 										make_signature "none" ${trx_now} 1
 										rt_query=$?
 										if [ $rt_query = 0 ]
@@ -1504,10 +1506,7 @@ do
 												then
 													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
-												fi
-												build_ledger
-												if [ $gui_mode = 0 ]
-												then
+												else
 													if [ $cmd_path != "" ]
 													then
 														if [ $script_path != $cmd_path ]
