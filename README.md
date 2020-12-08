@@ -10,7 +10,7 @@ This is the main repository for the UCS client pre-alpha version.
 * [Community](#community)
 
 ## What is UCS
-The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program.
+The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program. This program is actually the wallet you need to receive, send and manage your universal credit coins.
 
 ## Technologies used
 The program was written as **linux standard shell (#!/bin/sh)** script. The following has been used:
@@ -123,6 +123,6 @@ Once you have installed ucs you can run the UCS Client just like you would execu
 ```
 
 ## Community
-**We have set up a [Forum](https://forum.universal-credit-system.org) for the community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are welcome to post it on the forum.**
+**Do you have problem? We have set up a [Forum](https://forum.universal-credit-system.org) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
 
 **NOW HAVE FUN!**
