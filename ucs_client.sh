@@ -1874,6 +1874,8 @@ do
 										then
 											mv ${synch_now}.tar ${cmd_path}/${synch_now}.tar
 											echo "FILE:${cmd_path}/${synch_now}.tar"
+										else
+											echo "FILE:${script_path}/${synch_now}.tar"
 										fi
 									else
 										echo "FILE:${script_path}/${synch_now}.tar"
