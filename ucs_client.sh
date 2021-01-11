@@ -469,7 +469,7 @@ build_ledger(){
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
-			progress_bar_redir="&1"
+			progress_bar_redir="1"
 		else
 			progress_bar_redir="/dev/null"
 		fi
@@ -698,7 +698,7 @@ build_ledger(){
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>${progress_bar_redir}
+		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then	
 			show_balance=0
@@ -1105,7 +1105,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
+									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
 									rt_query=$?
 								else
 									rt_query=0
@@ -1119,7 +1119,7 @@ do
 									then
 										if [ $gui_mode = 1 ]
 										then
-											account_rn=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "" 3>&1 1>&2 2>&3`
+											account_rn=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "" 3>&1 1>&2 2>&3`
                                                                                 	rt_query=$?
 										else
 											rt_query=0
@@ -1147,7 +1147,7 @@ do
 							then
 								if [ $gui_mode = 1 ]
 								then
-									password_chosen=`dialog --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_pw" 0 0 "" 3>&1 1>&2 2>&3`
+									password_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --insecure --passwordbox "$dialog_login_display_pw" 0 0 "" 3>&1 1>&2 2>&3`
                                                                 	rt_query=$?
 								else
 									rt_query=0
@@ -1164,7 +1164,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --title "$dialog_main_create" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
+									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "Universal Credit System" --inputbox "$dialog_login_display_account" 0 0 "" 3>&1 1>&2 2>&3`
 									rt_query=$?
 								else
 									account_chosen=$cmd_user
@@ -1180,7 +1180,7 @@ do
                									do
 											if [ $gui_mode = 1 ]
 											then
-                										password_first=`dialog --insecure --passwordbox "$dialog_keys_pw1" 0 0 3>&1 1>&2 2>&3`
+                										password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --insecure --passwordbox "$dialog_keys_pw1" 0 0 3>&1 1>&2 2>&3`
 												rt_query=$?
 											else
 												password_first=$cmd_pw
@@ -1195,7 +1195,7 @@ do
 													if [ $gui_mode = 1 ]
 													then
 														clear
-														password_second=`dialog --insecure --passwordbox "$dialog_keys_pw2" 0 0 3>&1 1>&2 2>&3`
+														password_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --insecure --passwordbox "$dialog_keys_pw2" 0 0 3>&1 1>&2 2>&3`
 														rt_query=$?
 													else
 														password_second=$cmd_pw
@@ -1321,7 +1321,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "983f0177298dcb9dc1032b493099cd2564b4d7658812c8e23a555266ba73155e" 3>&1 1>&2 2>&3`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "983f0177298dcb9dc1032b493099cd2564b4d7658812c8e23a555266ba73155e" 3>&1 1>&2 2>&3`
 								rt_query=$?
 							else
 								rt_query=0
@@ -1351,7 +1351,7 @@ do
 								do
 									if [ $gui_mode = 1 ]
 									then
-										order_amount=`dialog --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_amount" 0 0 "1.000000" 3>&1 1>&2 2>&3`
+										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_amount" 0 0 "1.000000" 3>&1 1>&2 2>&3`
 								        	rt_query=$?
 									else
 										rt_query=0
@@ -1368,21 +1368,33 @@ do
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											trx_fee=`echo "scale=10;${order_amount_formatted} * ${current_fee}"|bc`
-											is_greater_one=`echo "${trx_fee}>=1"|bc`
-											if [ $is_greater_one = 0 ]
+											is_amount_big_enough=`echo "scale=10;${order_amount}>=0.000001"|bc`
+											if [ $is_amount_big_enough = 1 ]
 											then
-												trx_fee="0${trx_fee}"
-											fi
-											order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
-											enough_balance=`echo "${account_my_balance} - ${order_amount_with_trx_fee}>0"|bc`
-											if [ $enough_balance = 1 ]
-											then
-												amount_selected=1
+												trx_fee=`echo "scale=10;${order_amount_formatted} * ${current_fee}"|bc`
+												is_greater_one=`echo "${trx_fee}>=1"|bc`
+												if [ $is_greater_one = 0 ]
+												then
+													trx_fee="0${trx_fee}"
+												fi
+												order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
+												enough_balance=`echo "${account_my_balance} - ${order_amount_with_trx_fee}>0"|bc`
+												if [ $enough_balance = 1 ]
+												then
+													amount_selected=1
+												else
+													if [ $gui_mode = 1 ]
+													then
+														dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_nobalance" 0 0
+													else
+														echo "ERROR!"
+														exit 1
+													fi
+												fi
 											else
 												if [ $gui_mode = 1 ]
 												then
-													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_nobalance" 0 0
+													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 												else
 													echo "ERROR!"
 													exit 1
@@ -1570,7 +1582,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									file_path=`dialog --title "$dialog_read" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
+									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "Universal Credit System" --fselect "$path_to_search" 20 48 3>&1 1>&2 2>&3`
 									rt_query=$?
 								else
 									rt_query=0
@@ -1703,7 +1715,7 @@ do
                         				do
 								if [ $gui_mode = 1 ]
 								then
-                                					file_path=`dialog --title "$dialog_read" --backtitle "Universal Credit System" --fselect $path_to_search 20 48 3>&1 1>&2 2>&3`
+                                					file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "Universal Credit System" --fselect "$path_to_search" 20 48 3>&1 1>&2 2>&3`
  			                               			rt_query=$?
 								else
 									rt_query=0
