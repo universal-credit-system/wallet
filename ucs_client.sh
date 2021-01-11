@@ -1425,7 +1425,7 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								dialog_send_overview_display=`echo $dialog_send_overview|sed "s/<order_receipient>/${order_receipient}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<order_amount_formatted>/${order_amount_formatted}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<order_amount_with_trx_fee>/${order_amount_with_trx_fee}/g"`
-								dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 30 120
+								dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 30 120
 								rt_query=$?
 							else
 								rt_query=0
@@ -1463,7 +1463,7 @@ do
 
 										if [ $gui_mode = 1 ]
 										then
-											dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
+											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 											small_trx=$?
 										fi
 
@@ -1600,7 +1600,7 @@ do
 											then
 												if [ $gui_mode = 1 ]
 												then
-													dialog --title "$dialog_read" --backtitle "Universal Credit System" --yes-label "$dialog_yes" --no-label "$dialog_no" --yesno "$dialog_file_check" 0 0
+													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_read" --backtitle "Universal Credit System" --yesno "$dialog_file_check" 0 0
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -1617,7 +1617,7 @@ do
 													cd ${script_path}
 													if [ $gui_mode = 1 ]
 													then
-														dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+														dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
 														rt_query=$?
 													else
 														rt_query=$extract_all
@@ -1694,7 +1694,7 @@ do
 							;;
 				"$dialog_sync")	if [ $gui_mode = 1 ]
 						then
-							dialog --title "$dialog_sync" --backtitle "Universal Credit System" --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --yesno "$dialog_sync_io" 0 0
+							dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_sync" --backtitle "Universal Credit System" --yesno "$dialog_sync_io" 0 0
 							rt_query=$?
 						else
 							case $cmd_action in
@@ -1733,7 +1733,7 @@ do
 											then
 												if [ $gui_mode = 1 ]
 												then
-													dialog --title "$dialog_read" --backtitle "Universal Credit System" --yes-label "$dialog_yes" --no-label "$dialog_no" --yesno "$dialog_file_check" 0 0
+													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_read" --backtitle "Universal Credit System" --yesno "$dialog_file_check" 0 0
    													rt_query=$?
 												else
 													rt_query=1
@@ -1750,7 +1750,7 @@ do
                                                 							cd ${script_path}
 													if [ $gui_mode = 1 ]
 													then
-                                         			       						dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+                                         			       						dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
                                         		        						rt_query=$?
 													else
 														case $cmd_type in
