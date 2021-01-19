@@ -968,6 +968,7 @@ files_to_fetch=""
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
 rm ${script_path}/*.dat 2>/dev/null
+rm ${script_path}/*.dat.gpg 2>/dev/null
 
 ###SOURCE LANGUAGE-SELECTION
 . ${script_path}/lang.conf
