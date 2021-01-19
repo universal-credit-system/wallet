@@ -301,7 +301,7 @@ make_signature(){
 			if [ $create_index_file = 0 ]
                         then
 				###IF NOT WRITE TRX MESSAGE TO FILE##############################
-				message=${script_path}/trx/${trx_now}.${handover_account}
+				message=${script_path}/trx/${handover_account}.${trx_now}
 				message_blank=${script_path}/message_blank.dat
 				touch ${message_blank}
 				echo $transaction_message >>${message_blank}
@@ -538,15 +538,15 @@ build_ledger(){
 		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
 		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
 		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
-		sort -t . -k1 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
+		sort -t . -k2 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist.tmp
 		rm ${script_path}/trxlist_full.tmp
 		while read line
 		do
-		     	stamp_to_convert=`echo $line|cut -d '.' -f1`
+		     	stamp_to_convert=`echo $line|cut -d '.' -f2`
 		       	stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
-		       	trx_sender=`echo $line|cut -d '.' -f2`
-		       	echo "${stamp_to_convert} ${stamp_converted} ${stamp_to_convert}.${trx_sender}" >>${script_path}/trxlist_formatted.tmp
+		       	trx_sender=`echo $line|cut -d '.' -f1`
+		       	echo "${stamp_to_convert} ${stamp_converted} ${trx_sender}.${stamp_to_convert}" >>${script_path}/trxlist_formatted.tmp
 		done <${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist_full_sorted.tmp 2>/dev/null
 		####################################################
@@ -915,7 +915,7 @@ check_trx(){
 		while read line
 		do
 			file_to_check=${script_path}/trx/${line}
-			user_to_check=`echo $line|cut -d '.' -f2`
+			user_to_check=`echo $line|cut -d '.' -f1`
 			usr_blacklisted=`grep -c "${user_to_check}" ${script_path}/blacklisted_accounts.dat`
 			if [ $usr_blacklisted = 0 ]
 			then
@@ -926,7 +926,7 @@ check_trx(){
 				then
 					echo $file_to_check >>${script_path}/blacklisted_trx.dat
 				else
-					trx_date_filename=`echo $line|cut -d '.' -f1`
+					trx_date_filename=`echo $line|cut -d '.' -f2`
 					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
 					if [ $trx_date_filename != $trx_date_inside ]
 					then
@@ -968,7 +968,6 @@ files_to_fetch=""
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
 rm ${script_path}/*.dat 2>/dev/null
-rm ${script_path}/*.dat.gpg 2>/dev/null
 
 ###SOURCE LANGUAGE-SELECTION
 . ${script_path}/lang.conf
@@ -1452,7 +1451,7 @@ do
 											grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
 											while read line
 											do
-												user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f2`
+												user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f1`
 												already_in_tree=`grep -c "${user_name}" ${script_path}/dep_users.tmp`
 												if [ $already_in_tree = 0 ]
 												then
@@ -1478,7 +1477,7 @@ do
 											ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
 											if [ $small_trx = 0 ]
 											then
-												user_name=`echo $line|cut -d '.' -f2`
+												#user_name=`echo $line|cut -d '.' -f2`
 												user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 												if [ $user_key_there = 0 ]
 												then
