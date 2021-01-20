@@ -45,7 +45,7 @@ login_account(){
 
 		###REMOVE CREATED KEY LIST###################################
 		rm ${script_path}/keylist.tmp
-		
+
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
@@ -116,10 +116,10 @@ create_keys(){
 		name_chosen=$1
 		name_passphrase=$2
 		name_cleared=$name_chosen
-	
+
 		###SET REMOVE TRIGGER TO 0###################################
 		key_remove=0
-		
+
 		###SET FILESTAMP TO NOW######################################
 		file_stamp=`date +%s`
 
@@ -134,7 +134,7 @@ create_keys(){
 			###DISPLAY PROGRESS BAR######################################
 			echo "0"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create1" 0 0 0
 		fi
-		
+
 		###GENERATE KEY##############################################
 		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
@@ -145,7 +145,7 @@ create_keys(){
 				###DISPLAY PROGRESS ON STATUS BAR############################
 				echo "33"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create2" 0 0 0
 			fi
-			
+
 			###EXPORT PUBLIC KEY#########################################
 			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
 			rt_query=$?
@@ -159,7 +159,7 @@ create_keys(){
 					###CLEAR SCREEN
 					clear
 				fi
-		
+
 				###EXPORT PRIVATE KEY########################################
 				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys $name_hashed
 				rt_query=$?
@@ -186,7 +186,7 @@ create_keys(){
 						then
 							###STEP INTO CERTS DIRECTORY#################################
 							cd ${script_path}/certs
-		
+
 							###DOWNLOAD LATEST TSA CERTIFICATES##########################
 							wget -q https://freetsa.org/files/tsa.crt
 							rt_query=$?
@@ -1438,7 +1438,7 @@ do
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									last_trx="${script_path}/trx/${trx_now}.${handover_account}"
+									last_trx="${script_path}/trx/${handover_account}.${trx_now}"
 									verify_signature ${last_trx} ${handover_account}
 									rt_query=$?
 									if [ $rt_query = 0 ]
@@ -1478,7 +1478,6 @@ do
 											ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
 											if [ $small_trx = 0 ]
 											then
-												#user_name=`echo $line|cut -d '.' -f2`
 												user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
 												if [ $user_key_there = 0 ]
 												then
