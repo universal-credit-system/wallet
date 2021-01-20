@@ -729,7 +729,6 @@ check_archive(){
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				script_there=0
 				files_not_homedir=0
 				files_to_fetch=""
 				files_to_fetch_display="${dialog_content}\n"
@@ -737,35 +736,35 @@ check_archive(){
 				###GO THROUGH CONTENT LIST LINE BY LINE#######################
 				while read line
 				do
-					###CHECK IF ANY *.sh FILES ARE INCLUDED#######################
-					script_there=`echo $line|grep -c ".sh"`
-					if [ $script_there = 0 ]
-					then
-						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
-						files_not_homedir=`echo $line|cut -d '/' -f1`
-             		   			case $files_not_homedir in
-                        				"keys")		files_to_fetch="${files_to_fetch}$line "
-									echo "$line" >>${script_path}/files_to_fetch.tmp
-									files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                                	        			;;
-                   		     			"proofs")	files_to_fetch="${files_to_fetch}$line "
-									echo "$line" >>${script_path}/files_to_fetch.tmp
-									files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                                        				;;
-                        				"trx")		files_to_fetch="${files_to_fetch}$line "
-									echo "$line" >>${script_path}/files_to_fetch.tmp
-									files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                                		        		;;
-							*)		rt_query=1
-									;;
-                				esac
-						##############################################################
-					else
-						rt_query=1
-					fi
+					###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
+					files_not_homedir=`echo $line|cut -d '/' -f1`
+             		   		case $files_not_homedir in
+                        			"keys")		files_to_fetch="${files_to_fetch}$line "
+								echo "$line" >>${script_path}/files_to_fetch.tmp
+								files_to_fetch_display="${files_to_fetch_display}${line}\n"
+                                	       			;;
+                   		     		"proofs")	files_to_fetch="${files_to_fetch}$line "
+								echo "$line" >>${script_path}/files_to_fetch.tmp
+								files_to_fetch_display="${files_to_fetch_display}${line}\n"
+                                       				;;
+                       				"trx")		files_to_fetch="${files_to_fetch}$line "
+								echo "$line" >>${script_path}/files_to_fetch.tmp
+								files_to_fetch_display="${files_to_fetch_display}${line}\n"
+                               		        		;;
+						*)		rt_query=1
+								;;
+                			esac
 					##############################################################
 				done <${script_path}/tar_check.tmp
 				##############################################################
+				if [ $rt_query = 0 ]
+				then
+					bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
+					if [ $bad_chars_there -gt 0 ]
+					then
+						rt_query=1
+					fi
+				fi
 			fi
 			##############################################################
 
@@ -1510,7 +1509,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt
+											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt --dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -1624,9 +1623,9 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-														tar -xkf $file_path 2>/dev/null
+														tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
 													else
-														tar -xf $file_path $files_to_fetch
+														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
 													fi
 													if [ $gui_mode = 1 ]
 													then
@@ -1765,9 +1764,9 @@ do
 													fi
                      		                           						if [ $rt_query = 0 ]
                                 	                						then
-                                        	               			 				tar -xkf $file_path 2>/dev/null
+                                        	               			 				tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
 		                                                					else
-                		                                 						tar -xf $file_path $files_to_fetch
+                		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
                                 		                					fi
 													if [ $gui_mode = 1 ]
 													then
@@ -1871,7 +1870,7 @@ do
 							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -cf ${synch_now}.tar ${tar_string} 
+							tar -cf ${synch_now}.tar ${tar_string} --dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
