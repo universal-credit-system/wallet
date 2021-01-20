@@ -51,14 +51,14 @@ login_account(){
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/${account_name_chosen}_account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
@@ -358,7 +358,7 @@ make_signature(){
 			total_blank=$(( $total_blank + 16 ))
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
-			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -393,7 +393,7 @@ verify_signature(){
 			##############################################################
 
 			###CHECK GPG FILE#############################################
-			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
+			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -890,7 +890,7 @@ check_keys(){
  	                key_imported=`grep -c "${key_uname}" ${script_path}/keylist_gpg.tmp`
                         if [ $key_imported = 0 ]
               		then
-                               	gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --import ${script_path}/keys/${line} 2>/dev/null
+                               	gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
               		        rt_query=$?
                                	if [ $rt_query -gt 0 ]
                                	then
@@ -1906,7 +1906,7 @@ do
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
 							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
-							sort ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
+							sort -r -t . -k2 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
 							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${script_path}/my_trx.tmp`
