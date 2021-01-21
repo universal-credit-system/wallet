@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 login_account(){
 		account_name_chosen=$1
 		account_key_rn=$2
@@ -747,7 +747,7 @@ check_archive(){
 						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 						files_not_homedir=`echo $line|cut -d '/' -f1`
 						case $files_not_homedir in
-                        				"keys")		file_full=`echo $files_not_homedir|cut -d '/' -f2`
+                        				"keys")		file_full=`echo $line|cut -d '/' -f2`
 									file_ext=`echo $file_full|cut -d '.' -f2`
 									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
 									if [ $file_ext_correct -gt 0 ]
@@ -759,7 +759,7 @@ check_archive(){
 										files_to_fetch_display="${files_to_fetch_display}${line}\n"
 									fi
                                 	       				;;
-                       					"trx")		file_full=`echo $files_not_homedir|cut -d '/' -f2`
+                       					"trx")		file_full=`echo $line|cut -d '/' -f2`
 									file_ext=`echo $file_full|cut -d '.' -f2`
 									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
 									if [ $file_ext_correct -gt 0 ]
@@ -787,17 +787,19 @@ check_archive(){
 			##############################################################
 
 			###CREATE LIST OF FILES THAT ARE ALREADY THERE FOR RESTORE####
-			if [ rt_query = 0 ]
+			if [ $rt_query = 0 ]
 			then
 				while read line
 				do
 					if [ -s ${script_path}/${line} ]
 					then
+						###COPY FILES TO BACKUP-FOLDER################################
 						cp ${script_path}/${line} ${script_path}/backup/${line}
 						echo $line >>${script_path}/files_to_keep.tmp
 					fi
 				done<${script_path}/tar_check.tmp
 			fi
+			##############################################################
 
 			###REMOVE THE LIST THAT CONTAINS THE CONTENT##################
 			rm ${script_path}/tar_check.tmp
@@ -988,7 +990,7 @@ restore_data(){
 			sort ${script_path}/file_list_unsorted.tmp|uniq >${script_path}/files_to_delete.tmp
 
 			###REMOVE TMP FILE########################################
-			rm {script_path}/file_list_unsorted.tmp
+			rm ${script_path}/file_list_unsorted.tmp
 
 			###GO THROUGH LIST AND DELETE NEW FILES###################
 			while read line
@@ -1322,6 +1324,7 @@ do
         	fi
 
 	else
+		###ON EACH START AND AFTER EACH ACTION...
 		if [ $action_done = 1 ]
 		then
 			###TSA CHECK###########################
@@ -1680,7 +1683,7 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-														tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
+														tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files
 														rt_query=$?
 													else
 														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
@@ -1830,7 +1833,7 @@ do
 													fi
                      		                           						if [ $rt_query = 0 ]
                                 	                						then
-                                        	               			 				tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
+                                        	               			 				tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files
 														rt_query=$?
 		                                                					else
                 		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
