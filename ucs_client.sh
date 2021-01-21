@@ -518,7 +518,7 @@ build_ledger(){
 		now_date_status=`date +%s --date=${now}`
 		no_seconds_total=$(( $now_date_status - $date_stamp ))
 		no_days_total=`expr $no_seconds_total / 86400`
-		percent_per_day=`echo "scale=2; 100 / ${no_days_total}"|bc`
+		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 		is_greater_one=`echo "${percent_per_day}>=1"|bc`
 		if [ $is_greater_one = 0 ]
 	        then
@@ -559,7 +559,7 @@ build_ledger(){
 			then
 				echo "$current_percent_display"
 			fi
-                        current_percent=`echo "${current_percent} + ${percent_per_day}"|bc`
+                        current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
 			#################################################
 
