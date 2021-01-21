@@ -1690,6 +1690,7 @@ do
 													then
 														restore_data
 													else
+														rm -r ${script_path}/backup/*
 														if [ $gui_mode = 1 ]
 														then
 															file_found=1
@@ -1839,6 +1840,7 @@ do
 													then
 														restore_data
 													else
+														rm -r ${script_path}/backup/*
 														if [ $gui_mode = 1 ]
 														then
 															action_done=1
