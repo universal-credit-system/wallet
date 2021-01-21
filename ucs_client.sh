@@ -1021,7 +1021,7 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
-umask 0133
+umask 0111
 
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
