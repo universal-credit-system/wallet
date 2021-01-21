@@ -1569,7 +1569,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt --dereference
+											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -1683,10 +1683,10 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-														tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files
+														tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 														rt_query=$?
 													else
-														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
+														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 														rt_query=$?
 													fi
 													if [ $rt_query -gt 0 ]
@@ -1833,10 +1833,10 @@ do
 													fi
                      		                           						if [ $rt_query = 0 ]
                                 	                						then
-                                        	               			 				tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files
+                                        	               			 				tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 														rt_query=$?
 		                                                					else
-                		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
+                		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                						rt_query=$?
 													fi
 													if [ $rt_query -gt 0 ]
@@ -1948,7 +1948,7 @@ do
 							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -cf ${synch_now}.tar ${tar_string} --dereference
+							tar -cf ${synch_now}.tar ${tar_string} --dereference --hard-dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
