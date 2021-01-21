@@ -214,7 +214,7 @@ create_keys(){
 
 										###COPY EXPORTED KEYS INTO KEYS-FOLDER#######################
 										cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
-                                                
+
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
@@ -296,7 +296,7 @@ make_signature(){
 			transaction_message=$1
 			trx_now=$2
 			create_index_file=$3
-			
+
 			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
 			if [ $create_index_file = 0 ]
                         then
@@ -341,7 +341,7 @@ make_signature(){
 					fi
 					#################################################################
 				done <${script_path}/index_keys.tmp
-				
+
 				###REMOVE KEYLIST################################################
 				rm ${script_path}/index_keys.tmp
 
@@ -352,9 +352,9 @@ make_signature(){
 				rm ${script_path}/index_trx.tmp
 			fi
 			#################################################################
-			
+
 			###CHECK SIZE OF FILE TO BE SIGNED###############################
-			total_blank=`wc -l <${message_blank}` 
+			total_blank=`wc -l <${message_blank}`
 			total_blank=$(( $total_blank + 16 ))
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
@@ -576,7 +576,7 @@ build_ledger(){
 	                	coinload="0${coinload}"
 	                fi
 			#################################################
-			
+
 			###GRANT COINLOAD################################
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp > ${script_path}/accounts.tmp
@@ -586,7 +586,7 @@ build_ledger(){
 			do
 				###EXTRACT ACCOUNT DATA FOR CHECK############################
 				account_name=`echo $line|cut -d '.' -f1`
-				account_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`		
+				account_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`
 
 				###WRITE FIRST ENTRY#########################################
 				echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
@@ -700,11 +700,11 @@ build_ledger(){
 			##############################################################
 		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
-		then	
+		then
 			show_balance=0
 			case $cmd_action in
 				"create_trx")	show_balance=1
-						;;		
+						;;
 				"read_trx")	show_balance=1
 						;;
 				"create_sync")	show_balance=1
@@ -723,50 +723,81 @@ build_ledger(){
 check_archive(){
 			path_to_tarfile=$1
 			touch ${script_path}/tar_check.tmp
+			touch ${script_path}/files_to_fetch.tmp
+			touch ${script_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
 			tar -tf $path_to_tarfile >${script_path}/tar_check.tmp
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				files_not_homedir=0
-				files_to_fetch=""
-				files_to_fetch_display="${dialog_content}\n"
-
-				###GO THROUGH CONTENT LIST LINE BY LINE#######################
-				while read line
-				do
-					###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
-					files_not_homedir=`echo $line|cut -d '/' -f1`
-             		   		case $files_not_homedir in
-                        			"keys")		files_to_fetch="${files_to_fetch}$line "
-								echo "$line" >>${script_path}/files_to_fetch.tmp
-								files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                                	       			;;
-                   		     		"proofs")	files_to_fetch="${files_to_fetch}$line "
-								echo "$line" >>${script_path}/files_to_fetch.tmp
-								files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                                       				;;
-                       				"trx")		files_to_fetch="${files_to_fetch}$line "
-								echo "$line" >>${script_path}/files_to_fetch.tmp
-								files_to_fetch_display="${files_to_fetch_display}${line}\n"
-                               		        		;;
-						*)		rt_query=1
-								;;
-                			esac
-					##############################################################
-				done <${script_path}/tar_check.tmp
-				##############################################################
-				if [ $rt_query = 0 ]
+				###CHECK FOR BAD CHARACTERS###################################
+				bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
+				if [ $bad_chars_there -gt 0 ]
 				then
-					bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
-					if [ $bad_chars_there -gt 0 ]
-					then
-						rt_query=1
-					fi
+					rt_query=1
+				else
+					files_not_homedir=""
+					files_to_fetch=""
+					files_to_fetch_display="${dialog_content}\n"
+
+					###GO THROUGH CONTENT LIST LINE BY LINE#######################
+					while read line
+					do
+						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
+						files_not_homedir=`echo $line|cut -d '/' -f1`
+						case $files_not_homedir in
+                        				"keys")		file_full=`echo $files_not_homedir|cut -d '/' -f2`
+									file_ext=`echo $file_full|cut -d '.' -f2`
+									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+									if [ $file_ext_correct -gt 0 ]
+									then
+										rt_query=1
+									else
+										files_to_fetch="${files_to_fetch}$line "
+										echo "$line" >>${script_path}/files_to_fetch.tmp
+										files_to_fetch_display="${files_to_fetch_display}${line}\n"
+									fi
+                                	       				;;
+                       					"trx")		file_full=`echo $files_not_homedir|cut -d '/' -f2`
+									file_ext=`echo $file_full|cut -d '.' -f2`
+									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+									if [ $file_ext_correct -gt 0 ]
+									then
+										rt_query=1
+									else
+										files_to_fetch="${files_to_fetch}$line "
+										echo "$line" >>${script_path}/files_to_fetch.tmp
+										files_to_fetch_display="${files_to_fetch_display}${line}\n"
+									fi
+                               			        		;;
+							"proofs")	files_to_fetch="${files_to_fetch}$line "
+									echo "$line" >>${script_path}/files_to_fetch.tmp
+									files_to_fetch_display="${files_to_fetch_display}${line}\n"
+                                       					;;
+							*)		rt_query=1
+									;;
+                				esac
+						##############################################################
+					done <${script_path}/tar_check.tmp
+					##############################################################
 				fi
+				##############################################################
 			fi
 			##############################################################
+
+			###CREATE LIST OF FILES THAT ARE ALREADY THERE FOR RESTORE####
+			if [ rt_query = 0 ]
+			then
+				while read line
+				do
+					if [ -s ${script_path}/${line} ]
+					then
+						cp ${script_path}/${line} ${script_path}/backup/${line}
+						echo $line >>${script_path}/files_to_keep.tmp
+					fi
+				done<${script_path}/tar_check.tmp
+			fi
 
 			###REMOVE THE LIST THAT CONTAINS THE CONTENT##################
 			rm ${script_path}/tar_check.tmp
@@ -950,6 +981,31 @@ check_blacklist(){
 				fi
 			fi
 }
+restore_data(){
+			###CREATE LIST WITH FILES THAT ARE NEW####################
+			cat ${script_path}/files_to_fetch.tmp >${script_path}/file_list_unsorted.tmp
+			cat ${script_path}/files_to_keep.tmp >>${script_path}/file_list_unsorted.tmp
+			sort ${script_path}/file_list_unsorted.tmp|uniq >${script_path}/files_to_delete.tmp
+
+			###REMOVE TMP FILE########################################
+			rm {script_path}/file_list_unsorted.tmp
+
+			###GO THROUGH LIST AND DELETE NEW FILES###################
+			while read line
+			do
+				rm ${script_path}/${line} 2>/dev/null
+			done <${script_path}/files_to_delete.tmp
+
+			###REMOVE LIST OF FILES TO BE DELETED#####################
+			rm ${script_path}/files_to_delete.tmp
+
+			###MOVE OLD FILES FROM BACKUP TO OLD DIRECTORIES##########
+			while read line
+			do
+				mv ${script_path}/backup/${line} ${script_path}/${line}
+			done <${script_path}/files_to_keep.tmp		
+
+}
 ##################
 #Main Menu Screen#
 ##################
@@ -963,6 +1019,7 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
+umask 0133
 
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
@@ -1470,7 +1527,7 @@ do
 										keys_to_append=""
 										proof_to_append=""
 										trx_to_append=""
-	
+
 										while read line
 										do
 											user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
@@ -1502,7 +1559,7 @@ do
 										done <${script_path}/dep_users.tmp
 										rm ${script_path}/dep_users.tmp 2>/dev/null
 										rm ${script_path}/dep_trx.tmp 2>/dev/null
-	
+
 										build_ledger
 										make_signature "none" ${trx_now} 1
 										rt_query=$?
@@ -1624,31 +1681,38 @@ do
 													if [ $rt_query = 0 ]
 													then
 														tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
+														rt_query=$?
 													else
 														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
+														rt_query=$?
 													fi
-													if [ $gui_mode = 1 ]
+													if [ $rt_query -gt 0 ]
 													then
-														file_found=1
-														action_done=1
-														make_ledger=1
+														restore_data
 													else
-														check_proofs
-														check_keys
-														check_trx
-														now=`date +%s`
-														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														if [ $gui_mode = 1 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
+															file_found=1
+															action_done=1
+															make_ledger=1
+														else
+															check_proofs
+															check_keys
+															check_trx
+															now=`date +%s`
+															build_ledger
+															no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+															if [ $no_ack_trx -gt 0 ]
 															then
-																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																exit 1
-															else
-																exit 0
+																make_signature "none" $now 1
+																rt_query=$?
+																if [ $rt_query -gt 0 ]
+																then
+																	echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+																	exit 1
+																else
+																	exit 0
+																fi
 															fi
 														fi
 													fi
@@ -1665,7 +1729,8 @@ do
 													exit 1
 												fi
 											fi
-											rm ${script_path}/files_to_fetch.tmp
+											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
+											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
 											if [ $gui_mode = 1 ]
 											then
@@ -1765,31 +1830,38 @@ do
                      		                           						if [ $rt_query = 0 ]
                                 	                						then
                                         	               			 				tar -xkf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink 2>/dev/null
+														rt_query=$?
 		                                                					else
                 		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink
-                                		                					fi
-													if [ $gui_mode = 1 ]
+                                		                						rt_query=$?
+													fi
+													if [ $rt_query -gt 0 ]
 													then
-														action_done=1
-														make_ledger=1
-														file_found=1
+														restore_data
 													else
-														check_proofs
-														check_keys
-														check_trx
-														now=`date +%s`
-														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														if [ $gui_mode = 1 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
+															action_done=1
+															make_ledger=1
+															file_found=1
+														else
+															check_proofs
+															check_keys
+															check_trx
+															now=`date +%s`
+															build_ledger
+															no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+															if [ $no_ack_trx -gt 0 ]
 															then
-																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																exit 1
-															else
-																exit 0
+																make_signature "none" $now 1
+																rt_query=$?
+																if [ $rt_query -gt 0 ]
+																then
+																	echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+																	exit 1
+																else
+																	exit 0
+																fi
 															fi
 														fi
 													fi
@@ -1807,6 +1879,7 @@ do
 												fi
 											fi
 											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
+											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
 											if [ $gui_mode = 1 ]
 											then
@@ -2044,7 +2117,7 @@ do
 	        					then
 	                					next_coinload="0${next_coinload}"
 	                				fi
-							
+
 							###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`ls -1 ${script_path}/keys|wc -l`
 							total_trx=`ls -1 ${script_path}/trx|wc -l`
