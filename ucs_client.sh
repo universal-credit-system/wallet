@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 login_account(){
 		account_name_chosen=$1
 		account_key_rn=$2
@@ -816,7 +816,7 @@ check_archive(){
 					###EXTENDED EXTRACT WHERE ALL FILES WILL BE KEPT##############
 					cd ${script_path}
 					touch ${script_path}/file_list.tmp
-					tar -cvf temp.tar keys/ trx/ proofs/ control/keyring.file >${script_path}/file_list.tmp
+					tar -cvf temp.tar keys/ trx/ proofs/ control/keyring.file --dereference --hard-dereference >${script_path}/file_list.tmp
 					rm ${script_path}/temp.tar
 					while read line
 					do
@@ -828,7 +828,6 @@ check_archive(){
 							then
 								mkdir ${full_file_temp}
 							fi
-							#chmod 755 ${full_file_temp}
 						else
 							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
 							echo $line >>${script_path}/files_to_keep.tmp
