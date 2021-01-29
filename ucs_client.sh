@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 login_account(){
 		account_name_chosen=$1
 		account_key_rn=$2
@@ -51,14 +51,14 @@ login_account(){
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
 			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/${account_name_chosen}_account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
@@ -136,7 +136,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -147,7 +147,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -161,7 +161,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys $name_hashed
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys $name_hashed
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -218,7 +218,7 @@ create_keys(){
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-											dialog_keys_final_display=`echo $dialog_keys_final|sed "s/<name_chosen>/${name_chosen}/g"|sed "s/<name_hashed>/${name_hashed}/g"|sed "s/<key_rn>/${key_rn}/g"|sed "s/<file_stamp>/${file_stamp}/g"`
+											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<name_chosen>/${name_chosen}/g" -e "s/<name_hashed>/${name_hashed}/g" -e "s/<key_rn>/${key_rn}/g" -e "s/<file_stamp>/${file_stamp}/g"`
 				                                                	dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final_display" 0 0
 											clear
 										else
@@ -278,12 +278,12 @@ create_keys(){
 					rmdir ${script_path}/proofs/${name_hashed} 2>/dev/null
 
 					###Remove created keys out of keyring########################
-					key_fp=`gpg --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-secret-keys ${key_fp}
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/keyring.file --delete-keys ${key_fp}
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp}
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp}
 					fi
 				fi
 				echo "ERROR!"
@@ -358,12 +358,12 @@ make_signature(){
 			total_blank=$(( $total_blank + 16 ))
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
-			gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
 				rm ${message_blank} 2>/dev/null
-				tail -$total_blank ${message_blank}.asc|sed 's/-----BEGIN PGP SIGNATURE-----//g'|sed 's/-----END PGP SIGNATURE-----//g' >${message}
+				tail -$total_blank ${message_blank}.asc|sed -e 's/-----BEGIN PGP SIGNATURE-----//g' -e 's/-----END PGP SIGNATURE-----//g' >${message}
 				rm ${message_blank}.asc 2>/dev/null
 			fi
 			#################################################################
@@ -393,7 +393,7 @@ verify_signature(){
 			##############################################################
 
 			###CHECK GPG FILE#############################################
-			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
+			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -722,6 +722,7 @@ build_ledger(){
 }
 check_archive(){
 			path_to_tarfile=$1
+			check_mode=$2
 			touch ${script_path}/tar_check.tmp
 			touch ${script_path}/files_to_fetch.tmp
 			touch ${script_path}/files_to_keep.tmp
@@ -747,6 +748,16 @@ check_archive(){
 						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 						files_not_homedir=`echo $line|cut -d '/' -f1`
 						case $files_not_homedir in
+							"control")	file_full=`echo $line|cut -d '/' -f2`
+									if [ $file_full = "keyring.file" ]
+									then
+										files_to_fetch="${files_to_fetch}$line "
+										echo "$line" >>${script_path}/files_to_fetch.tmp
+										files_to_fetch_display="${files_to_fetch_display}${line}\n"
+									else
+										rt_query=1
+									fi
+									;;
                         				"keys")		file_full=`echo $line|cut -d '/' -f2`
 									file_ext=`echo $file_full|cut -d '.' -f2`
 									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
@@ -789,15 +800,42 @@ check_archive(){
 			###CREATE LIST OF FILES THAT ARE ALREADY THERE FOR RESTORE####
 			if [ $rt_query = 0 ]
 			then
-				while read line
-				do
-					if [ -s ${script_path}/${line} ]
-					then
-						###COPY FILES TO BACKUP-FOLDER################################
-						cp ${script_path}/${line} ${script_path}/backup/${line}
-						echo $line >>${script_path}/files_to_keep.tmp
-					fi
-				done<${script_path}/tar_check.tmp
+				if [ $check_mode = 0 ]
+				then
+					###NORMAL EXTRACT WHERE ONLY CERTAIN FILES WILL BE KEPT######
+					while read line
+					do
+						if [ -s ${script_path}/${line} ]
+						then
+							###COPY FILES TO BACKUP-FOLDER################################
+							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
+							echo $line >>${script_path}/files_to_keep.tmp
+						fi
+					done<${script_path}/tar_check.tmp
+				else
+					###EXTENDED EXTRACT WHERE ALL FILES WILL BE KEPT##############
+					cd ${script_path}
+					touch ${script_path}/file_list.tmp
+					tar -cvf temp.tar keys/ trx/ proofs/ control/keyring.file >${script_path}/file_list.tmp
+					rm ${script_path}/temp.tar
+					while read line
+					do
+						full_file="${script_path}/${line}"
+						full_file_temp="${script_path}/backup/temp/${line}"
+						if [ -d $full_file ]
+						then
+							if [ ! -d $full_file_temp ]
+							then
+								mkdir ${full_file_temp}
+							fi
+							#chmod 755 ${full_file_temp}
+						else
+							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
+							echo $line >>${script_path}/files_to_keep.tmp
+						fi
+					done <${script_path}/file_list.tmp
+					rm ${script_path}/file_list.tmp
+				fi
 			fi
 			##############################################################
 
@@ -915,18 +953,18 @@ check_keys(){
 		touch ${script_path}/keys_import.tmp
 		touch ${script_path}/keylist_gpg.tmp
  	      	ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
-		gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
+		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
                        	key_uname=`echo $line|cut -d '.' -f1`
  	                key_imported=`grep -c "${key_uname}" ${script_path}/keylist_gpg.tmp`
                         if [ $key_imported = 0 ]
               		then
-                               	gpg --batch --no-default-keyring --keyring=${script_path}/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
+                               	gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
               		        rt_query=$?
                                	if [ $rt_query -gt 0 ]
                                	then
-					dialog_import_fail_display=`echo $dialog_import_fail|sed "s/<key_uname>/${key_uname}/g"|sed "s/<file>/${line}/g"`
+					dialog_import_fail_display=`echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g"`
                        			dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_import_fail_display" 0 0
                                        	key_already_blacklisted=`grep -c "${key_uname}" ${script_path}/blacklisted_accounts.dat`
                                        	if [ $key_already_blacklisted = 0 ]
@@ -984,6 +1022,11 @@ check_blacklist(){
 			fi
 }
 restore_data(){
+			chmod 755 ${script_path}/control/
+			chmod 755 ${script_path}/keys/
+			chmod 755 ${script_path}/trx/
+			chmod 755 ${script_path}/proofs/
+
 			###CREATE LIST WITH FILES THAT ARE NEW####################
 			cat ${script_path}/files_to_fetch.tmp >${script_path}/file_list_unsorted.tmp
 			cat ${script_path}/files_to_keep.tmp >>${script_path}/file_list_unsorted.tmp
@@ -1004,10 +1047,47 @@ restore_data(){
 			###MOVE OLD FILES FROM BACKUP TO OLD DIRECTORIES##########
 			while read line
 			do
-				mv ${script_path}/backup/${line} ${script_path}/${line}
-			done <${script_path}/files_to_keep.tmp		
+				mv ${script_path}/backup/temp/${line} ${script_path}/${line}
+			done <${script_path}/files_to_keep.tmp
+
+			###REMOVE LIST OF FILES TO KEEP###########################
+			rm ${script_path}/files_to_keep.tmp
+}
+set_permissions(){
+			###AVOID EXECUTABLES BY SETTING PERMISSIONS############### 
+			while read line
+			do
+				file_to_change="${script_path}/${line}"
+				if [ -s $file_to_change ]
+				then
+					chmod 644 ${script_path}/${line}
+				fi
+				if [ -d $file_to_change ]
+				then
+					chmod 755 ${script_path}/${line}
+				fi
+			done <${script_path}/files_to_fetch.tmp
+
+			###REMOVE FILE LIST#######################################
+			rm ${script_path}/files_to_fetch.tmp
 
 }
+purge_files(){
+			live_or_temp=$1
+			if [ $live_or_temp =  0 ]
+			then
+				rm -r ${script_path}/control/* 2>/dev/null
+				rm -r ${script_path}/keys/* 2>/dev/null
+				rm -r ${script_path}/trx/* 2>/dev/null
+				rm -r ${script_path}/proofs/* 2>/dev/null
+			else
+				rm -r ${script_path}/backup/temp/keys/* 2>/dev/null
+				rm -r ${script_path}/backup/temp/proofs/* 2>/dev/null
+				rm -r ${script_path}/backup/temp/trx/* 2>/dev/null
+				rm -r ${script_path}/backup/temp/control/* 2>/dev/null
+			fi
+}
+
 ##################
 #Main Menu Screen#
 ##################
@@ -1021,7 +1101,6 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
-umask 0111
 
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
@@ -1076,6 +1155,10 @@ then
 						"-action")	cmd_action=$1
 								case $cmd_action in
 									"create_user")		main_menu=$dialog_main_create
+												;;
+									"create_backup")	main_menu=$dialog_main_backup
+												;;
+									"restore_backup")	main_menu=$dialog_main_backup
 												;;
 									"create_trx")		user_menu=$dialog_send
 												;;		
@@ -1138,7 +1221,7 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_end" --title "UNIVERSAL CREDIT SYSTEM" --backtitle "Universal Credit System ${core_system_version}" --menu "MMMWMMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMWMWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMMWK0NMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMW0ONMMMMMMMMMMMMMMMMMWWX0xdllcloxOKWMMMMMMMMMMM\nMMW0xXMMMMMMMMMMMMMMMMXx:'..   .......,lONMMMMMMMM\nMMKokWMMMMMMMMMMMMMMXo.    .:xOKKXK0kdl,.,xNMMWMMM\nMMx:0MMMMMMMMMMMMMM0,      :0NMMMMMMMWWN0o,;OWMMMM\nMMo;KMMMMMMMMMMMMMX;        .,dXMMMMMMMMMWKl'dNMMM\nMMo'OMMMMMMMMMMMMMx.           ;KMMMMMMMMWWWx'oWMM\nMMk'lWMMMMMMMMMMMMd             oWMMMMMMMMMMWo'kMM\nMMWo.dWMMMMMMMMMMMO.            lWMMMMMMMMMMMX;cWM\nMMWXo'lXMMMMMMMMMMWk.          .OMMMMMMMMMMMMWlcXM\nMMMMNx;;xXWWMMWMMMMWKd;.      .xWMMMMMMMMMMMMWooWM\nMMMMMWXd,'cx0NWWMMMWWXx'    .;OWMMMMMMMMMMMMMXokMM\nMMMMMMMMXx:'.';clllc;.   .'cONMMMMMMMMMMMMMMWkxNMM\nMMMMMMMMMMWXOdl:;,,,,:ldOKNMMMMMMMMMMMMMMMMMKkXMMM\nMMMMMMMMMMMMMMMMMWWWMMMMMMMMMMMMMMMMMMMMMMWK0XMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWKKWWWMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWWMMMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n" 0 0 0 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_end" "" 3>&1 1>&2 2>&3`
+			main_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_end" --title "UNIVERSAL CREDIT SYSTEM" --backtitle "Universal Credit System ${core_system_version}" --menu "MMMWMMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMWMWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMMWK0NMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\nMMMW0ONMMMMMMMMMMMMMMMMMWWX0xdllcloxOKWMMMMMMMMMMM\nMMW0xXMMMMMMMMMMMMMMMMXx:'..   .......,lONMMMMMMMM\nMMKokWMMMMMMMMMMMMMMXo.    .:xOKKXK0kdl,.,xNMMWMMM\nMMx:0MMMMMMMMMMMMMM0,      :0NMMMMMMMWWN0o,;OWMMMM\nMMo;KMMMMMMMMMMMMMX;        .,dXMMMMMMMMMWKl'dNMMM\nMMo'OMMMMMMMMMMMMMx.           ;KMMMMMMMMWWWx'oWMM\nMMk'lWMMMMMMMMMMMMd             oWMMMMMMMMMMWo'kMM\nMMWo.dWMMMMMMMMMMMO.            lWMMMMMMMMMMMX;cWM\nMMWXo'lXMMMMMMMMMMWk.          .OMMMMMMMMMMMMWlcXM\nMMMMNx;;xXWWMMWMMMMWKd;.      .xWMMMMMMMMMMMMWooWM\nMMMMMWXd,'cx0NWWMMMWWXx'    .;OWMMMMMMMMMMMMMXokMM\nMMMMMMMMXx:'.';clllc;.   .'cONMMMMMMMMMMMMMMWkxNMM\nMMMMMMMMMMWXOdl:;,,,,:ldOKNMMMMMMMMMMMMMMMMMKkXMMM\nMMMMMMMMMMMMMMMMMWWWMMMMMMMMMMMMMMMMMMMMMMWK0XMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWKKWWWMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWWMMMMMM\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n" 0 0 0 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_backup" "" "$dialog_main_end" "" 3>&1 1>&2 2>&3`
 			rt_query=$?
 		else
 			rt_query=0
@@ -1315,6 +1398,134 @@ do
 							fi
 							rm ${script_path}/languages.tmp
 							;;
+				"$dialog_main_backup")	if [ $gui_mode = 1 ]
+							then
+								dialog --yes-label "$dialog_backup_create" --no-label "$dialog_backup_restore" --title "$dialog_main_backup" --backtitle "Universal Credit System" --yesno "$dialog_backup_text" 0 0
+								rt_query=$?
+							else
+								case $cmd_action in
+								 	"create_backup")	rt_query=0
+												;;
+									"restore_backup")	rt_query=1
+												;;
+								esac
+							fi
+							if [ $rt_query = 0 ]
+							then
+								cd ${script_path}
+								now=`date +%s`
+								tar -cf ${script_path}/backup/${now}.bcp control/keyring.file keys/ trx/ proofs/ --dereference --hard-dereference
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									cd ${script_path}/backup
+									backup_file=`find . -maxdepth 1 -type f|sed "s#./##g"|sort -t . -k1|tail -1`
+									if [ $gui_mode = 1 ]
+									then
+										dialog_backup_success_display=`echo $dialog_backup_create_success|sed "s/<backup_file>/${backup_file}/g"`
+										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_success_display" 0 0
+									else
+										echo "BACKUP_FILE:${backup_file}"
+										exit 0
+									fi
+								else
+									rm ${script_path}/backup/${now}.bcp 2>/dev/null
+									if [ $gui_mode = 1 ]
+									then
+										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_create_fail" 0 0
+									else
+										echo "ERROR!"
+										exit 1
+									fi
+								fi
+							else
+								if [ $gui_mode = 1 ]
+								then
+									cd ${script_path}/backup
+									touch ${script_path}/backup_list.tmp
+									find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backup_list.tmp
+									no_backups=`wc -l <${script_path}/backup_list.tmp`
+									if [ $no_backups -gt 0 ]
+									then
+										backup_display_text=""
+										while read line
+										do
+											backup_stamp=`echo $line|cut -d '.' -f1`
+											backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
+											backup_display_text="${backup_display_text}${backup_date} BACKUP "
+										done <${script_path}/backup_list.tmp
+									else
+										backup_display_text="${dialog_history_noresult}"
+									fi
+									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --menu "$dialog_history_text" 0 0 0 ${backup_display_text} 3>&1 1>&2 2>&3`
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										no_results=`echo $dialog_history_noresult|cut -d ' ' -f1`
+										if [ $backup_decision != $no_results ]
+										then
+											bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
+											bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
+											bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
+											bcp_file=`cat ${script_path}/backup_list.tmp|grep "${bcp_stamp}"`
+											file_path="${script_path}/backup/${bcp_file}"
+											check_archive $file_path 1
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												cd ${script_path}
+												purge_files 0
+												tar -xf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query -gt 0 ]
+												then
+													restore_data
+													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
+												else
+													set_permissions
+													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
+												fi
+												purge_files 1
+											else
+												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
+											fi
+										else
+											dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_fail" 0 0
+										fi
+									fi
+								else
+									if [ $cmd_path = "" ]
+									then
+										echo "ERROR!"
+										exit 1
+									else
+										check_archive $file_path 1
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											cd ${script_path}
+											purge_files 0
+											tar -xf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+											rt_query=$?
+											if [ $rt_query -gt 0 ]
+											then
+												restore_data
+												echo "ERROR!"
+												exit 1
+											else
+												set_permissions
+												echo "SUCCESS"
+												exit 0
+											fi
+											purge_files 1
+										else
+											echo "ERROR!"
+											exit 1
+										fi
+									fi
+								fi
+							fi
+							;;
                         	"$dialog_main_end")     unset user_logged_in
 							rm ${script_path}/*.tmp 2>/dev/null
 							rm ${script_path}/*.dat 2>/dev/null
@@ -1359,7 +1570,7 @@ do
 		account_my_balance=`grep "${handover_account}.${handover_account_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 		if [ $gui_mode = 1 ]
 		then
-			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed "s/<account_name_chosen>/${account_name_chosen}/g"|sed "s/<handover_account>/${handover_account}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"`
+			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 			user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "" 3>&1 1>&2 2>&3`
         		rt_query=$?
 		else
@@ -1422,7 +1633,7 @@ do
 										order_amount_alnum=`echo $order_amount|grep -c '[[:alpha:]]'`
 										if [ $order_amount_alnum = 0 ]
 										then
-											order_amount_formatted=`echo $order_amount|sed 's/,/./g'|sed 's/ //g'`
+											order_amount_formatted=`echo $order_amount|sed -e 's/,/./g' -e 's/ //g'`
 											is_greater_one=`echo "${order_amount_formatted}>=1"|bc`
 											if [ $is_greater_one = 0 ]
 											then
@@ -1484,7 +1695,7 @@ do
 						then
 							if [ $gui_mode = 1 ]
 							then
-								dialog_send_overview_display=`echo $dialog_send_overview|sed "s/<order_receipient>/${order_receipient}/g"|sed "s/<account_my_balance>/${account_my_balance}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<order_amount_formatted>/${order_amount_formatted}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<order_amount_with_trx_fee>/${order_amount_with_trx_fee}/g"`
+								dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g" -e "s/<trx_fee>/${trx_fee}/g" -e "s/<order_amount_with_trx_fee>/${order_amount_with_trx_fee}/g"`
 								dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 30 120
 								rt_query=$?
 							else
@@ -1653,7 +1864,7 @@ do
 									then
 										if [ ! -d $file_path ]
 										then
-											check_archive $file_path
+											check_archive $file_path 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -1693,7 +1904,7 @@ do
 													then
 														restore_data
 													else
-														rm -r ${script_path}/backup/*
+														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
 															file_found=1
@@ -1795,7 +2006,7 @@ do
                   		                                        then
                                 	                	                if [ ! -d $file_path ]
                                         	                		then
-											check_archive $file_path
+											check_archive $file_path 0
                               	  							rt_query=$?
 								                        if [ $rt_query = 0 ]
 											then
@@ -1843,7 +2054,7 @@ do
 													then
 														restore_data
 													else
-														rm -r ${script_path}/backup/*
+														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
 															action_done=1
@@ -2066,7 +2277,7 @@ do
 										done <${script_path}/friends.dat
 										if [ $sender = $handover_account ]
 										then
-											trx_amount_with_fee=`echo $decision|cut -d '|' -f3|sed 's/+//g'|sed 's/-//g'`
+											trx_amount_with_fee=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 											trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
 											trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
 											is_greater_one=`echo "${trx_fee}>1"|bc`
@@ -2074,10 +2285,10 @@ do
                                                                 	                then
                                                                         	                trx_fee="0${trx_fee}"
                                                                                 	fi
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed "s/<receiver>/${receiver}/g"|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_fee>/${trx_fee}/g"|sed "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g"|sed "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_fee>/${trx_fee}/g" -e "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
-											trx_amount=`echo $decision|cut -d '|' -f3|sed 's/+//g'|sed 's/-//g'`
+											trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
                                 	                                        	trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
                                         	                                	is_greater_one=`echo "${trx_fee}>1"|bc`
                                                 	                                if [ $is_greater_one = 0 ]
@@ -2085,7 +2296,7 @@ do
                                                                 	                        trx_fee="0${trx_fee}"
                                                                         	        fi
 											trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed "s/<trx_amount>/${trx_amount}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g"|sed "s/<trx_file>/${trx_file}/g"|sed "s/<trx_status>/${trx_status}/g"|sed "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
@@ -2134,7 +2345,7 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=`echo $dialog_statistic|sed "s/<total_keys>/${total_keys}/g"|sed "s/<total_trx>/${total_trx}/g"|sed "s/<total_user_blacklisted>/${total_user_blacklisted}/g"|sed "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g"|sed "s/<total_friends>/${total_friends}/g"|sed "s/<coinload>/${coinload}/g"|sed "s/<currency_symbol>/${currency_symbol}/g"|sed "s/<in_days>/${in_days}/g"|sed "s/<next_coinload>/${next_coinload}/g"`
+								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<in_days>/${in_days}/g" -e "s/<next_coinload>/${next_coinload}/g"`
 								dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
