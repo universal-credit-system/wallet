@@ -723,6 +723,8 @@ build_ledger(){
 check_archive(){
 			path_to_tarfile=$1
 			check_mode=$2
+
+			###TOUCH FILES TO AVOID NON EXISTENT FILES####################
 			touch ${script_path}/tar_check.tmp
 			touch ${script_path}/files_to_fetch.tmp
 			touch ${script_path}/files_to_keep.tmp
@@ -826,11 +828,16 @@ check_archive(){
 						then
 							if [ ! -d $full_file_temp ]
 							then
+								###IF DIRECTORY DOES NOT EXIST, CREATE IT FIRST###############
 								mkdir ${full_file_temp}
 							fi
 						else
-							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
-							echo $line >>${script_path}/files_to_keep.tmp
+							if [ -s $full_file ]
+							then
+								###WRITE FILES TO 
+								cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
+								echo $line >>${script_path}/files_to_keep.tmp
+							fi
 						fi
 					done <${script_path}/file_list.tmp
 					rm ${script_path}/file_list.tmp
@@ -1057,13 +1064,21 @@ set_permissions(){
 			while read line
 			do
 				file_to_change="${script_path}/${line}"
-				if [ -s $file_to_change ]
-				then
-					chmod 644 ${script_path}/${line}
-				fi
+				curr_permissions=`stat -c '%a' ${file_to_change}`
 				if [ -d $file_to_change ]
 				then
-					chmod 755 ${script_path}/${line}
+					if [ ! $curr_permissions = 755 ]
+					then
+						chmod 755 ${script_path}/${line}
+					fi
+				else
+					if [ -s $file_to_change ]
+					then
+						if [ ! $curr_permissions = 644 ]
+						then
+							chmod 644 ${script_path}/${line}
+						fi
+					fi
 				fi
 			done <${script_path}/files_to_fetch.tmp
 
@@ -1100,6 +1115,9 @@ user_logged_in=0
 action_done=1
 make_ledger=1
 files_to_fetch=""
+
+###SET UMASK TO 0022########
+umask 0022
 
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
@@ -1903,6 +1921,7 @@ do
 													then
 														restore_data
 													else
+														set_permissions
 														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
@@ -2053,6 +2072,7 @@ do
 													then
 														restore_data
 													else
+														set_permissions
 														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
