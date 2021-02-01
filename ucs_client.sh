@@ -809,6 +809,18 @@ check_archive(){
 					do
 						if [ -s ${script_path}/${line} ]
 						then
+							###CHECK FOR USER FOLDER IN TEMP/PROOFS AND CREATE############
+							in_dir=`echo $line|cut -d '/' -f1`
+							if [ $in_dir = "proofs" ]
+							then
+								user_dir=`echo $line|cut -d '/' -f2`
+								backup_proof_dir="${script_path}/backup/temp/proofs/${user_dir}"
+								if [ ! -d ${backup_proof_dir} ]
+								then
+									mkdir ${backup_proof_dir}
+								fi
+							fi
+
 							###COPY FILES TO BACKUP-FOLDER################################
 							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
 							echo $line >>${script_path}/files_to_keep.tmp
@@ -1877,9 +1889,9 @@ do
 								fi
 								if [ $rt_query = 0 ]
 								then
-									if [ -s $file_path ]
+									if [ ! -d $file_path ]
 									then
-										if [ ! -d $file_path ]
+										if [ -s $file_path ]
 										then
 											check_archive $file_path 0
 											rt_query=$?
@@ -2020,9 +2032,9 @@ do
 								fi
                         		        		if [ $rt_query = 0 ]
                                 				then
-									if [ -s $file_path ]
+									if [ ! -d $file_path ]
                   		                                        then
-                                	                	                if [ ! -d $file_path ]
+                                	                	                if [ -s $file_path ]
                                         	                		then
 											check_archive $file_path 0
                               	  							rt_query=$?
