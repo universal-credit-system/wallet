@@ -2003,7 +2003,7 @@ do
 							;;
 				"$dialog_sync")	if [ $gui_mode = 1 ]
 						then
-							dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_sync" --backtitle "Universal Credit System" --yesno "$dialog_sync_io" 0 0
+							dialog --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --title "$dialog_sync" --backtitle "Universal Credit System" --yesno "$dialog_sync_io" 0 0
 							rt_query=$?
 						else
 							case $cmd_action in
