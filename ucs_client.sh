@@ -1474,7 +1474,7 @@ do
 									else
 										backup_display_text="${dialog_history_noresult}"
 									fi
-									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --menu "$dialog_history_text" 0 0 0 ${backup_display_text} 3>&1 1>&2 2>&3`
+									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --menu "$dialog_backup_menu" 0 0 0 ${backup_display_text} 3>&1 1>&2 2>&3`
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
