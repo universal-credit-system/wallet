@@ -2242,7 +2242,7 @@ do
 				"$dialog_history")	cd ${script_path}/trx
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-							sortgrep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
+							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
 							sort -r -t . -k2 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
 							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
