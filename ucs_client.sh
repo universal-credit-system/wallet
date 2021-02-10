@@ -1742,25 +1742,6 @@ do
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										cd ${script_path}/trx/
-										echo "${handover_account}" >${script_path}/dep_users.tmp
-										while read line
-										do
-											user_to_search=$line
-											touch ${script_path}/trx_r.tmp
-											grep "R:${user_to_search}" *.* >${script_path}/trx_r.tmp
-											while read line
-											do
-												user_name=`echo $line|cut -d ':' -f1|cut -d '.' -f1`
-												already_in_tree=`grep -c "${user_name}" ${script_path}/dep_users.tmp`
-												if [ $already_in_tree = 0 ]
-												then
-													echo "${user_name}" >>${script_path}/dep_users.tmp
-												fi
-											done <${script_path}/trx_r.tmp
-											rm ${script_path}/trx_r.tmp 2>/dev/null
-										done <${script_path}/dep_users.tmp
-
 										if [ $gui_mode = 1 ]
 										then
 											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
@@ -1770,38 +1751,75 @@ do
 										keys_to_append=""
 										proof_to_append=""
 										trx_to_append=""
-
+										receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
+										touch ${script_path}/keys_for_trx.tmp
+										ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
 										while read line
 										do
-											user_to_append_key=`ls -1 ${script_path}/keys|grep "${line}"|sort -t . -k2|head -1`
-											ls -1 ${script_path}/trx|grep "$line" >>${script_path}/dep_trx.tmp
+											key_user=`echo $line|cut -d '.' -f1`
 											if [ $small_trx = 0 ]
 											then
-												user_key_there=`grep -c "keys/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-												if [ $user_key_there = 0 ]
+												if [ -s $receipient_index_file ]
 												then
-													keys_to_append="${keys_to_append}keys/${user_to_append_key} "
-												fi
-												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq ${proof_to_append}proofs/${line}/freetsa.tsr "
-												while read line
-												do
-													user_trx_there=`grep -c "trx/${line}" ${script_path}/proofs/${order_receipient}/${order_receipient}.txt` 2>/dev/null
-													if [ $user_trx_there = 0 ]
+													key_there=0
+													key_there=`grep -c "keys/${line}" $receipient_index_file`
+													if [ $key_there = 0 ]
 													then
-														trx_to_append="${trx_to_append}trx/${line} "
+														keys_to_append="${keys_to_append} keys/${line} "
 													fi
-												done <${script_path}/dep_trx.tmp
+													tsa_req_there=0
+													tsa_req_there=`grep -c "proofs/${key_user}/freetsa.tsq" $receipient_index_file`
+													if [ $tsa_req_there = 0 ]
+													then
+														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+													fi
+													tsa_res_there=0
+													tsa_res_there=`grep -c "proofs/${key_user}/freetsa.tsr" $receipient_index_file`
+													if [ $tsa_res_there = 0 ]
+													then
+														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+													fi
+												else 
+													keys_to_append="${keys_to_append} keys/${line} "
+													tsa_req_check="${script_path}/proofs/${key_user}/freetsa.tsq"
+													if [ -s $tsa_req_check ]
+													then
+														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+													fi
+													tsa_res_check="${script_path}/proofs/${key_user}/freetsa.tsr"
+													if [ -s $tsa_res_check ]
+													then
+														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+													fi
+												fi
 											else
-												keys_to_append="${keys_to_append}keys/${user_to_append_key} "
-												proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq proofs/${line}/freetsa.tsr "
-												while read line
-												do
-													trx_to_append="${trx_to_append}trx/${line} "
-												done <${script_path}/dep_trx.tmp
+												keys_to_append="${keys_to_append} keys/${line} "
+												tsa_req_check="${script_path}/proofs/${key_user}/freetsa.tsq"
+												if [ -s $tsa_req_check ]
+												then
+													proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+												fi
+												tsa_res_check="${script_path}/proofs/${key_user}/freetsa.tsr"
+												if [ -s $tsa_res_check ]
+												then
+													proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+												fi
 											fi
-										done <${script_path}/dep_users.tmp
-										rm ${script_path}/dep_users.tmp 2>/dev/null
-										rm ${script_path}/dep_trx.tmp 2>/dev/null
+										done <${script_path}/keys_for_trx.tmp
+										rm ${script_path}/keys_for_trx.tmp
+
+										touch ${script_path}/trx_for_trx.tmp
+										ls -1 ${script_path}/trx|sort -t . -k2 >${script_path}/trx_for_trx.tmp
+										while read line
+										do
+											trx_there=0
+											trx_there=`grep -c "trx/${line}" $receipient_index_file`
+											if [ $trx_there = 0 ]
+											then
+												trx_to_append="${trx_to_append} trx/${line} "
+											fi
+										done <${script_path}/trx_for_trx.tmp
+										rm ${script_path}/trx_for_trx.tmp
 
 										build_ledger
 										make_signature "none" ${trx_now} 1
@@ -2224,7 +2242,7 @@ do
 				"$dialog_history")	cd ${script_path}/trx
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
+							sortgrep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
 							sort -r -t . -k2 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
 							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
