@@ -1621,7 +1621,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "983f0177298dcb9dc1032b493099cd2564b4d7658812c8e23a555266ba73155e" 3>&1 1>&2 2>&3`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --inputbox "$dialog_send_address" 0 0 "" 3>&1 1>&2 2>&3`
 								rt_query=$?
 							else
 								rt_query=0
@@ -2252,6 +2252,7 @@ do
 							then
 								while read line
 								do
+									trx_confirmations=0
 									line_extracted=`echo $line`
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
 									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2`
@@ -2265,16 +2266,36 @@ do
                 	                                                        trx_fee="0${trx_fee}"
                         	                                        fi
                                 	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
+									while read line
+									do
+										trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
+										if [ $trx_confirmations_user = 1 ]
+										then
+											trx_confirmations=$(( $trx_confirmations + 1 ))
+										fi
+									done <${script_path}/friends.dat
+									if [ $trx_confirmations -gt 0 ]
+									then
+										trx_blacklisted=`grep -c "${line_extracted}" ${script_path}/blacklisted_trx.dat`
+										sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
+										receiver_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
+										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
+										then
+											trx_color="\Z2"
+										else
+											trx_color="\Z1"
+										fi
+									else
+										trx_color="\Z0"
+									fi
 									if [ $sender = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} $dialog_history_ack_snd "
+										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} ${trx_color}$dialog_history_ack_snd "
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} $dialog_history_ack_rcv "
+										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} ${trx_color}$dialog_history_ack_rcv "
 									fi
-
-
 								done <${script_path}/my_trx.tmp
 							else
 								menu_display_text="$dialog_history_noresult"
@@ -2282,7 +2303,7 @@ do
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=`dialog --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --menu "$dialog_history_text" 0 0 0 ${menu_display_text} 3>&1 1>&2 2>&3`
+								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --menu "$dialog_history_text" 0 0 0 ${menu_display_text} 3>&1 1>&2 2>&3`
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
