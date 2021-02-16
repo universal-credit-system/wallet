@@ -30,13 +30,10 @@ login_account(){
 				then
 					account_found=1
 					ignore_rest=1
-
-					###SET VARIABLES#############################################
-					handover_account=$keylist_hash
+					handover_account="${keylist_hash}.${keylist_stamp}"
 					handover_account_stamp=$keylist_stamp
 					account_file=$line
 					handover_account_hash=`shasum -a 256 <${script_path}/keys/${account_file}|cut -d ' ' -f1`
-					#############################################################
 				fi
 				##############################################################
 			fi
@@ -136,7 +133,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -147,7 +144,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export $name_hashed
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -161,12 +158,12 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys $name_hashed
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
 					###CREATE PROOFS DIRECTORY###################################
-					mkdir ${script_path}/proofs/${name_hashed}
+					mkdir ${script_path}/proofs/${name_hashed}.${file_stamp}
 
 					###STEP INTO THIS DIRECTORY##################################
 					cd ${script_path}
@@ -202,8 +199,8 @@ create_keys(){
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}/freetsa.tsq
-										mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}/freetsa.tsr
+										mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsq
+										mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsr
 
 										if [ $gui_mode = 1 ]
 										then
@@ -218,13 +215,13 @@ create_keys(){
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<name_chosen>/${name_chosen}/g" -e "s/<name_hashed>/${name_hashed}/g" -e "s/<key_rn>/${key_rn}/g" -e "s/<file_stamp>/${file_stamp}/g"`
+											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<name_chosen>/${name_chosen}/g" -e "s/<name_hashed>/${name_hashed}.${file_stamp}/g" -e "s/<key_rn>/${key_rn}/g" -e "s/<file_stamp>/${file_stamp}/g"`
 				                                                	dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_final_display" 0 0
 											clear
 										else
 											echo "USER:${name_cleared}"
 											echo "PIN:${key_rn}"
-											echo "ADRESS:${name_hashed}"
+											echo "ADRESS:${name_hashed}.${file_stamp}"
 											echo "KEY:${name_hashed}.${file_stamp}"
 											echo "KEY_PUB_HOME:${name_cleared}_${key_rn}_${file_stamp}_pub.asc"
 											echo "KEY_PRV_HOME:${name_cleared}_${key_rn}_${file_stamp}_priv.asc"
@@ -490,7 +487,7 @@ build_ledger(){
 		do
 			head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
 		done <${script_path}/friends_trx.tmp
-		uniq ${script_path}/friends.tmp >${script_path}/friends.dat
+		sort ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
 		rm ${script_path}/friends.tmp 2>/dev/null
 		rm ${script_path}/friends_trx.tmp 2>/dev/null
 		####################################################
@@ -538,14 +535,16 @@ build_ledger(){
 		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
 		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
 		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
-		sort -t . -k2 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
+		sort -t . -k3 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist.tmp
 		rm ${script_path}/trxlist_full.tmp
 		while read line
 		do
-		     	stamp_to_convert=`echo $line|cut -d '.' -f2`
+		     	stamp_to_convert=`echo $line|cut -d '.' -f3`
 		       	stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
-		       	trx_sender=`echo $line|cut -d '.' -f1`
+		       	trx_sender_name=`echo $line|cut -d '.' -f1`
+			trx_sender_stamp=`echo $line|cut -d '.' -f2`
+			trx_sender="${trx_sender_name}.${trx_sender_stamp}"
 		       	echo "${stamp_to_convert} ${stamp_converted} ${trx_sender}.${stamp_to_convert}" >>${script_path}/trxlist_formatted.tmp
 		done <${script_path}/trxlist_full_sorted.tmp
 		rm ${script_path}/trxlist_full_sorted.tmp 2>/dev/null
@@ -585,11 +584,10 @@ build_ledger(){
 			while read line
 			do
 				###EXTRACT ACCOUNT DATA FOR CHECK############################
-				account_name=`echo $line|cut -d '.' -f1`
-				account_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`
+				account_name=`echo $line`
 
 				###WRITE FIRST ENTRY#########################################
-				echo "${account_name}.${account_hash}=0" >>${script_path}/ledger.tmp
+				echo "${account_name}=0" >>${script_path}/ledger.tmp
 			done <${script_path}/accounts.tmp
 			##############################################################
 
@@ -606,13 +604,11 @@ build_ledger(){
 			do
 				###EXRACT DATA FOR CHECK######################################
 			        trx_filename=`echo $line|cut -d ' ' -f3`
-				trx_date_filename=`echo $trx_filename|cut -d '.' -f2`
+				trx_date_filename=`echo $trx_filename|cut -d '.' -f3`
 				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f4`
 				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
 				trx_sender_file=`ls -1 ${script_path}/keys|grep "${trx_sender}"|head -1`
-				trx_sender_hash=`shasum -a 256 <${script_path}/keys/${trx_sender_file}|cut -d ' ' -f1`
 				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
-				trx_receiver_hash=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f5`
 				##############################################################
 
 				###CHECK IF FRIENDS KNOW OF THIS TRX##########################
@@ -638,7 +634,7 @@ build_ledger(){
                	                	trx_fee="0${trx_fee}"
                        	        fi
               	                trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
-				account_balance=`grep "${trx_sender}.${trx_sender_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+				account_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 				##############################################################
 
 				###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
@@ -659,19 +655,19 @@ build_ledger(){
         	                      	then
                 	              		account_balance="0${account_balance}"
                         	      	fi
-					account_prev_balance=`grep "${trx_sender}.${trx_sender_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-					sed -i "s/${trx_sender}.${trx_sender_hash}=${account_prev_balance}/${trx_sender}.${trx_sender_hash}=${account_balance}/g" ${script_path}/ledger.tmp
+					account_prev_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+					sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${script_path}/ledger.tmp
 					##############################################################
 
 					###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
 					if [ $number_of_friends_trx -gt 0 ]
 					then
-						receiver_in_ledger=`grep -c "${trx_receiver}.${trx_receiver_hash}" ${script_path}/ledger.tmp`
+						receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
 						if [ $receiver_in_ledger = 0 ]
 						then
-							echo "${trx_receiver}.${trx_receiver_hash}=${trx_amount}" >>${script_path}/ledger.tmp
+							echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
 						else
-							receiver_old_balance=`grep "${trx_receiver}.${trx_receiver_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+							receiver_old_balance=`grep "${trx_receiver}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 							is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 							if [ $is_greater_one = 0 ]
 							then
@@ -683,7 +679,7 @@ build_ledger(){
 							then
 								receiver_new_balance="0${receiver_new_balance}"
 							fi
-							sed -i "s/${trx_receiver}.${trx_receiver_hash}=${receiver_old_balance}/${trx_receiver}.${trx_receiver_hash}=${receiver_new_balance}/g" ${script_path}/ledger.tmp
+							sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${script_path}/ledger.tmp
 						fi
 					fi
 					##############################################################
@@ -714,7 +710,7 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				cmd_output=`grep "${handover_account}.${handover_account_hash}" ${script_path}/ledger.tmp`
+				cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
 				echo "BALANCE_${now_stamp}:${cmd_output}"
 			fi
 		fi
@@ -919,35 +915,40 @@ check_proofs(){
 			ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
 			while read line
 			do
-				accountname_to_check=`echo $line|cut -d '.' -f1`
-
-				###FREETSA CHECK###############################
-				if [ $freetsa_available = 1 ]
+				accountname_key_name=`echo $line`
+				accountname_key_content=`gpg --with-colons --show-keys ${script_path}/keys/$line|grep "uid"|cut -d ':' -f10`
+				if [ $accountname_key_name = $accountname_key_content ]
 				then
-					###CHECK TSA QUERYFILE#########################
-					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_to_check}/freetsa.tsq -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
-					rt_query=$?
-					if [ $rt_query = 0 ]
+					###FREETSA CHECK###############################
+					if [ $freetsa_available = 1 ]
 					then
-						###WRITE OUTPUT OF RESPONSE TO FILE############
-						openssl ts -reply -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
+						###CHECK TSA QUERYFILE#########################
+						openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/freetsa.tsq -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###VERIFY TSA RESPONSE#########################
-							openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_to_check}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+							###WRITE OUTPUT OF RESPONSE TO FILE############
+							openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-								date_to_verify=`grep "Time stamp:" ${script_path}/timestamp_check.tmp|cut -c 13-37`
-								date_to_verify_converted=`date +%s --date="${date_to_verify}"`
-								accountdate_to_verify=`echo $line|cut -d '.' -f2`
-								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
-								if [ $creation_date_diff -ge 0 ]
+								###VERIFY TSA RESPONSE#########################
+								openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+								rt_query=$?
+								if [ $rt_query = 0 ]
 								then
-									if [ $creation_date_diff -gt 120 ]
+									###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
+									date_to_verify=`grep "Time stamp:" ${script_path}/timestamp_check.tmp|cut -c 13-37`
+									date_to_verify_converted=`date +%s --date="${date_to_verify}"`
+									accountdate_to_verify=`echo $line|cut -d '.' -f2`
+									creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+									if [ $creation_date_diff -ge 0 ]
 									then
+										if [ $creation_date_diff -gt 120 ]
+										then
+											echo $line >>${script_path}/blacklisted_accounts.dat
+										fi
+									else
 										echo $line >>${script_path}/blacklisted_accounts.dat
 									fi
 								else
@@ -956,15 +957,24 @@ check_proofs(){
 							else
 								echo $line >>${script_path}/blacklisted_accounts.dat
 							fi
+							rm ${script_path}/timestamp_check.tmp 2>/dev/null
 						else
 							echo $line >>${script_path}/blacklisted_accounts.dat
 						fi
-						rm ${script_path}/timestamp_check.tmp 2>/dev/null
-					else
-						echo $line >>${script_path}/blacklisted_accounts.dat
 					fi
+				else
+					echo $line >>${script_path}/blacklisted_accounts.dat
 				fi
 			done <${script_path}/all_accounts.tmp
+			while read line
+			do
+				if [ $line != $handover_account ]
+				then
+					rm -R ${script_path}/keys/${line} 2>/dev/null
+					rm -R ${script_path}/proofs/${line}/freetsa.tsq 2>/dev/null
+					rm -R ${script_path}/proofs/${line}/freetsa.tsr 2>/dev/null
+				fi
+			done <${script_path}/blacklisted_accounts.dat
 }
 check_keys(){
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
@@ -974,7 +984,7 @@ check_keys(){
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
-                       	key_uname=`echo $line|cut -d '.' -f1`
+                       	key_uname=$line
  	                key_imported=`grep -c "${key_uname}" ${script_path}/keylist_gpg.tmp`
                         if [ $key_imported = 0 ]
               		then
@@ -1014,7 +1024,7 @@ check_trx(){
 				then
 					echo $file_to_check >>${script_path}/blacklisted_trx.dat
 				else
-					trx_date_filename=`echo $line|cut -d '.' -f2`
+					trx_date_filename=`echo $line|cut -d '.' -f3`
 					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
 					if [ $trx_date_filename != $trx_date_inside ]
 					then
@@ -1596,7 +1606,7 @@ do
 		check_blacklist
 		###############################
 
-		account_my_balance=`grep "${handover_account}.${handover_account_hash}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+		account_my_balance=`grep "${handover_account}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
@@ -1634,7 +1644,6 @@ do
 								if [ $key_there = 1 ]
 								then
                                                                         receiver_file=`grep "${order_receipient}" ${script_path}/keylist.tmp|head -1`
-									receiver_hash=`shasum -a 256 <${script_path}/keys/${receiver_file}|cut -d ' ' -f1`
 									recipient_found=1
 									amount_selected=0
 								else
@@ -1733,7 +1742,7 @@ do
 							if [ $rt_query = 0 ]
 							then
 								trx_now=`date +%s`
-								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now} ${receiver_hash}" ${trx_now} 0
+								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now}" ${trx_now} 0
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -1768,52 +1777,55 @@ do
 														keys_to_append="${keys_to_append} keys/${line} "
 													fi
 													tsa_req_there=0
-													tsa_req_there=`grep -c "proofs/${key_user}/freetsa.tsq" $receipient_index_file`
+													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
 													if [ $tsa_req_there = 0 ]
 													then
-														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
 													fi
 													tsa_res_there=0
-													tsa_res_there=`grep -c "proofs/${key_user}/freetsa.tsr" $receipient_index_file`
+													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
 													if [ $tsa_res_there = 0 ]
 													then
-														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
 													fi
 												else 
 													keys_to_append="${keys_to_append} keys/${line} "
-													tsa_req_check="${script_path}/proofs/${key_user}/freetsa.tsq"
+													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 													if [ -s $tsa_req_check ]
 													then
-														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
 													fi
-													tsa_res_check="${script_path}/proofs/${key_user}/freetsa.tsr"
+													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
 													if [ -s $tsa_res_check ]
 													then
-														proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
 													fi
 												fi
 											else
 												keys_to_append="${keys_to_append} keys/${line} "
-												tsa_req_check="${script_path}/proofs/${key_user}/freetsa.tsq"
+												tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 												if [ -s $tsa_req_check ]
 												then
-													proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsq "
+													proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
 												fi
-												tsa_res_check="${script_path}/proofs/${key_user}/freetsa.tsr"
+												tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
 												if [ -s $tsa_res_check ]
 												then
-													proof_to_append="${proof_to_append} proofs/${key_user}/freetsa.tsr "
+													proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
 												fi
 											fi
 										done <${script_path}/keys_for_trx.tmp
 										rm ${script_path}/keys_for_trx.tmp
 
 										touch ${script_path}/trx_for_trx.tmp
-										ls -1 ${script_path}/trx|sort -t . -k2 >${script_path}/trx_for_trx.tmp
+										ls -1 ${script_path}/trx|sort -t . -k3 >${script_path}/trx_for_trx.tmp
 										while read line
 										do
 											trx_there=0
-											trx_there=`grep -c "trx/${line}" $receipient_index_file`
+											if [ -s $receipient_index_file ]
+											then
+												trx_there=`grep -c "trx/${line}" $receipient_index_file`
+											fi	
 											if [ $trx_there = 0 ]
 											then
 												trx_to_append="${trx_to_append} trx/${line} "
@@ -2175,21 +2187,20 @@ do
 							while read line
 							do
 								echo "keys/$line" >>${script_path}/files_for_sync.tmp
-								user_extracted=`echo $line|cut -d '.' -f1`
-								freetsa_qfile="${script_path}/proofs/${user_extracted}/freetsa.tsq"
+								freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
 								if [ -s $freetsa_qfile ]
 								then
-									echo "proofs/${user_extracted}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
+									echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
 								fi
-								freetsa_rfile="${script_path}/proofs/${user_extracted}/freetsa.tsr"
+								freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
 								if [ -s $freetsa_rfile ]
 								then
-									echo "proofs/${user_extracted}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+									echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
 								fi
-								index_file="${script_path}/proofs/${user_extracted}/${user_extracted}.txt"
+								index_file="${script_path}/proofs/${line}/${user_extracted}.txt"
 								if [ -s $index_file ]
 								then
-									echo "proofs/${user_extracted}/${user_extracted}.txt" >>${script_path}/files_for_sync.tmp
+									echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
 								fi
 							done <${script_path}/keys_sync.tmp
 
@@ -2242,8 +2253,8 @@ do
 				"$dialog_history")	cd ${script_path}/trx
 							touch ${script_path}/my_trx.tmp
 							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-							grep -l " R:${handover_account}" *.*|grep "${handover_hash}" >>${script_path}/my_trx.tmp 2>/dev/null
-							sort -r -t . -k2 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
+							grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
+							sort -r -t . -k3 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
 							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${script_path}/my_trx.tmp`
@@ -2268,18 +2279,22 @@ do
                                 	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 									while read line
 									do
-										trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
-										if [ $trx_confirmations_user = 1 ]
+										###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+										if [ $sender != $line -a $receiver != $line ]
 										then
-											trx_confirmations=$(( $trx_confirmations + 1 ))
+											trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
+											if [ $trx_confirmations_user = 1 ]
+											then
+												trx_confirmations=$(( $trx_confirmations + 1 ))
+											fi
 										fi
 									done <${script_path}/friends.dat
 									if [ $trx_confirmations -gt 0 ]
 									then
 										trx_blacklisted=`grep -c "${line_extracted}" ${script_path}/blacklisted_trx.dat`
 										sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
-										receiver_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
-										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
+										receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
+										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
 										then
 											trx_color="\Z2"
 										else
@@ -2290,11 +2305,11 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} ${trx_color}$dialog_history_ack_snd "
+										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} \Zb${trx_color}$dialog_history_ack_snd\ZB "
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} ${trx_color}$dialog_history_ack_rcv "
+										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} \Zb${trx_color}$dialog_history_ack_rcv\ZB "
 									fi
 								done <${script_path}/my_trx.tmp
 							else
@@ -2339,10 +2354,14 @@ do
 										fi
 										while read line
 										do
-											trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/$line/$line.txt`
-											if [ $trx_confirmations_user = 1 ]
+											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+											if [ $sender != $line -a $receiver != $line ]
 											then
-												trx_confirmations=$(( $trx_confirmations + 1 ))
+												trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/$line/$line.txt`
+												if [ $trx_confirmations_user = 1 ]
+												then
+													trx_confirmations=$(( $trx_confirmations + 1 ))
+												fi
 											fi
 										done <${script_path}/friends.dat
 										if [ $sender = $handover_account ]
