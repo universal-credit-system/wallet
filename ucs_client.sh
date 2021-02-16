@@ -2197,7 +2197,7 @@ do
 								then
 									echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
 								fi
-								index_file="${script_path}/proofs/${line}/${user_extracted}.txt"
+								index_file="${script_path}/proofs/${line}/${line}.txt"
 								if [ -s $index_file ]
 								then
 									echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
