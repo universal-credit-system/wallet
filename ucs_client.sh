@@ -395,6 +395,10 @@ verify_signature(){
 			if [ $rt_query = 0 ]
 			then
 				signed_correct=`grep "GOODSIG" ${script_path}/gpg_verify.tmp|grep -c "${user_signed}"`
+				if [ $signed_correct = 0 ]
+				then
+					rt_query=1
+				fi
 			else
 				rm ${trx_to_verify} 2>/dev/null
 			fi
@@ -619,8 +623,14 @@ build_ledger(){
 					###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
 					if [ $trx_sender != $line -a $trx_receiver != $line ]
 					then
-						number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt`
-						number_of_friends_trx=$(( $number_of_friends_trx + $number_of_friends_add ))
+						if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+						then
+							number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt`
+							if [ $number_of_friends_add -gt 0 ]
+							then
+								number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
+							fi
+						fi
 					fi
 				done <${script_path}/friends.dat
 				##############################################################
@@ -858,7 +868,7 @@ check_archive(){
 
 			return $rt_query
 }
-check_proofs(){
+check_tsa(){
 			###FREETSA CERTIFICATE DOWNLOAD###########
 			freetsa_available=0
 			freetsa_cert_available=0
@@ -1000,10 +1010,30 @@ check_keys(){
                                                	echo "${line}" >>${script_path}/blacklisted_accounts.dat
                                        	fi
                                	fi
+			else
+				index_file="${script_path}/proofs/${line}/${line}.txt"
+				if [ -s $index_file ]
+				then
+					verify_signature $index_file $line
+					rt_query=$?
+					if [ $rt_query -gt 0 ]
+					then
+						rm ${script_path}/proofs/${line}/${line}.txt
+					fi	
+				fi
                        	fi
                	done <${script_path}/keys_import.tmp
 		rm ${script_path}/keys_import.tmp
 		rm ${script_path}/keylist_gpg.tmp
+		while read line
+		do
+			if [ $line != $handover_account ]
+			then
+				rm -R ${script_path}/keys/${line} 2>/dev/null
+				rm -R ${script_path}/proofs/${line}/freetsa.tsq 2>/dev/null
+				rm -R ${script_path}/proofs/${line}/freetsa.tsr 2>/dev/null
+			fi
+		done <${script_path}/blacklisted_accounts.dat
                	##########################################################
 }
 check_trx(){
@@ -1578,7 +1608,7 @@ do
 		if [ $action_done = 1 ]
 		then
 			###TSA CHECK###########################
-			check_proofs
+			check_tsa
 
 			###CHECK KEYS##########################
 			check_keys
@@ -1874,7 +1904,6 @@ do
 													exit 1
 												fi
 											fi
-											rm ${script_path}/manifest.txt 2>/dev/null
 										else
 											if [ $gui_mode = 1 ]
 											then
@@ -1971,7 +2000,7 @@ do
 															action_done=1
 															make_ledger=1
 														else
-															check_proofs
+															check_tsa
 															check_keys
 															check_trx
 															now=`date +%s`
@@ -2122,7 +2151,7 @@ do
 															make_ledger=1
 															file_found=1
 														else
-															check_proofs
+															check_tsa
 															check_keys
 															check_trx
 															now=`date +%s`
@@ -2197,7 +2226,7 @@ do
 								then
 									echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
 								fi
-								index_file="${script_path}/proofs/${line}/${line}.txt"
+								index_file="${script_path}/proofs/${line}/${user_extracted}.txt"
 								if [ -s $index_file ]
 								then
 									echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
@@ -2282,10 +2311,13 @@ do
 										###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
 										if [ $sender != $line -a $receiver != $line ]
 										then
-											trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
-											if [ $trx_confirmations_user = 1 ]
+											if [ -s ${script_path}/proofs/$line/$line.txt ]
 											then
-												trx_confirmations=$(( $trx_confirmations + 1 ))
+												trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
+												if [ $trx_confirmations_user -gt 0 ]
+												then
+													trx_confirmations=$(( $trx_confirmations + 1 ))
+												fi
 											fi
 										fi
 									done <${script_path}/friends.dat
@@ -2343,7 +2375,7 @@ do
 										then
 										trx_status="${trx_status}SDR_BLACKLISTED "
 										fi
-										receiver_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
+										receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
 										if [ $receiver_blacklisted = 1 ]
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
@@ -2357,10 +2389,13 @@ do
 											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
 											if [ $sender != $line -a $receiver != $line ]
 											then
-												trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/$line/$line.txt`
-												if [ $trx_confirmations_user = 1 ]
+												if [ -s ${script_path}/proofs/$line/$line.txt ]
 												then
-													trx_confirmations=$(( $trx_confirmations + 1 ))
+													trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/$line/$line.txt`
+													if [ $trx_confirmations_user -gt 0 ]
+													then
+														trx_confirmations=$(( $trx_confirmations + 1 ))
+													fi
 												fi
 											fi
 										done <${script_path}/friends.dat
@@ -2385,7 +2420,7 @@ do
                                                                 	                        trx_fee="0${trx_fee}"
                                                                         	        fi
 											trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
