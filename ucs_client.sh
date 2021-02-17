@@ -1483,7 +1483,7 @@ do
 							then
 								cd ${script_path}
 								now=`date +%s`
-								tar -cf ${script_path}/backup/${now}.bcp control/keyring.file keys/ trx/ proofs/ --dereference --hard-dereference
+								tar -czf ${script_path}/backup/${now}.bcp control/keyring.file keys/ trx/ proofs/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -1544,7 +1544,7 @@ do
 											then
 												cd ${script_path}
 												purge_files 0
-												tar -xf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
 												then
