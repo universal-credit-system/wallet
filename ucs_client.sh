@@ -209,8 +209,11 @@ create_keys(){
 											clear
 										fi
 
-										###COPY EXPORTED KEYS INTO KEYS-FOLDER#######################
+										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
 										cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+
+										###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
+										cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
 
 										if [ $gui_mode = 1 ]
 										then
@@ -836,7 +839,7 @@ check_archive(){
 					###EXTENDED EXTRACT WHERE ALL FILES WILL BE KEPT##############
 					cd ${script_path}
 					touch ${script_path}/file_list.tmp
-					tar -cvf temp.tar keys/ trx/ proofs/ control/keyring.file --dereference --hard-dereference >${script_path}/file_list.tmp
+					tar -cvf temp.tar keys/ trx/ proofs/ control/ --dereference --hard-dereference >${script_path}/file_list.tmp
 					rm ${script_path}/temp.tar
 					while read line
 					do
@@ -1142,7 +1145,22 @@ purge_files(){
 			live_or_temp=$1
 			if [ $live_or_temp =  0 ]
 			then
-				rm -r ${script_path}/control/* 2>/dev/null
+				touch ${script_path}/keylist_gpg.tmp
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${script_path}/keylist_gpg.tmp 2>/dev/null
+				while read line
+				do
+					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+					rt_query=$?
+					if [ $rt_query = 0 ]
+					then
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp}
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp}
+					fi
+				done <${script_path}/keylist_gpg.tmp
+				rm ${script_path}/keylist_gpg.tmp
+				rm ${script_path}/control/keyring.file 2>/dev/null
+				rm ${script_path}/control/keyring.file~ 2>/dev/null
+				rm -r ${script_path}/control/keys/* 2>/dev/null
 				rm -r ${script_path}/keys/* 2>/dev/null
 				rm -r ${script_path}/trx/* 2>/dev/null
 				rm -r ${script_path}/proofs/* 2>/dev/null
@@ -1483,7 +1501,7 @@ do
 							then
 								cd ${script_path}
 								now=`date +%s`
-								tar -czf ${script_path}/backup/${now}.bcp control/keyring.file keys/ trx/ proofs/ --dereference --hard-dereference
+								tar -czf ${script_path}/backup/${now}.bcp control/ keys/ trx/ proofs/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -1551,6 +1569,15 @@ do
 													restore_data
 													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
 												else
+													cd ${script_path}/control/keys
+													touch ${script_path}/keys_to_import.tmp
+													ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
+													while read line
+													do
+														gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
+													done <${script_path}/keys_to_import.tmp
+													rm ${script_path}/keys_to_import.tmp
+													cd ${script_path}/
 													set_permissions
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
 												fi
