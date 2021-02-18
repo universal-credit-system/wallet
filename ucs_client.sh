@@ -787,32 +787,45 @@ check_archive(){
 										then
 											rt_query=1
 										else
-											files_to_fetch="${files_to_fetch}$line "
-											echo "$line" >>${script_path}/files_to_fetch.tmp
-											files_to_fetch_display="${files_to_fetch_display}${line}\n"
+											file_ext=`echo $file_full|cut -d '.' -f3`
+											file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+											if [ $file_ext_correct = 0 ]
+											then
+												files_to_fetch="${files_to_fetch}$line "
+												echo "$line" >>${script_path}/files_to_fetch.tmp
+												files_to_fetch_display="${files_to_fetch_display}${line}\n"
+											else
+												rt_query=1
+											fi
 										fi
 									fi
         	                       		        		;;
 							"proofs")	if [ ! -d $line ]
 									then
 										file_usr=`echo $line|cut -d '/' -f2`
-										file_full=`echo $line|cut -d '/' -f3`
-										case $file_full in
-											"freetsa.tsq")		files_to_fetch="${files_to_fetch}$line "
-														echo "$line" >>${script_path}/files_to_fetch.tmp
-														files_to_fetch_display="${files_to_fetch_display}${line}\n"
-														;;
-											"freetsa.tsr")		files_to_fetch="${files_to_fetch}$line "
-														echo "$line" >>${script_path}/files_to_fetch.tmp
-														files_to_fetch_display="${files_to_fetch_display}${line}\n"
-														;;
-											"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
-														echo "$line" >>${script_path}/files_to_fetch.tmp
-														files_to_fetch_display="${files_to_fetch_display}${line}\n"
-														;;
-											*)			rt_query=1
-														;;
-										esac
+										file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
+										if [ $file_usr_correct = 0 ]
+										then
+											file_full=`echo $line|cut -d '/' -f3`
+											case $file_full in
+												"freetsa.tsq")		files_to_fetch="${files_to_fetch}$line "
+															echo "$line" >>${script_path}/files_to_fetch.tmp
+															files_to_fetch_display="${files_to_fetch_display}${line}\n"
+															;;
+												"freetsa.tsr")		files_to_fetch="${files_to_fetch}$line "
+															echo "$line" >>${script_path}/files_to_fetch.tmp
+															files_to_fetch_display="${files_to_fetch_display}${line}\n"
+															;;
+												"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
+															echo "$line" >>${script_path}/files_to_fetch.tmp
+															files_to_fetch_display="${files_to_fetch_display}${line}\n"
+															;;
+												*)			rt_query=1
+															;;
+											esac
+										else
+											rt_query=1
+										fi
 									fi
                                        					;;
 							*)		rt_query=1
