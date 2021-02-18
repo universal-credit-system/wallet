@@ -2003,7 +2003,6 @@ do
 														restore_data
 													else
 														set_permissions
-														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
 															file_found=1
@@ -2030,6 +2029,7 @@ do
 															fi
 														fi
 													fi
+													purge_files 1
 												else
 													file_found=1
 												fi
@@ -2154,7 +2154,6 @@ do
 														restore_data
 													else
 														set_permissions
-														purge_files 1
 														if [ $gui_mode = 1 ]
 														then
 															action_done=1
@@ -2181,6 +2180,7 @@ do
 															fi
 														fi
 													fi
+													purge_files 1
                                         							else
                                                 							file_found=1
                                   			      					fi
