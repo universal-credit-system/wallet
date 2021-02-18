@@ -233,6 +233,7 @@ create_keys(){
 									else
 										rm ${script_path}/freetsa.tsq 2>/dev/null
 										rm ${script_path}/freetsa.tsr 2>/dev/null
+										key_remove=1
 									fi
 								else
 									###REMOVE CERTFILES##########################################
@@ -242,6 +243,7 @@ create_keys(){
 									###REMOVE QUIERY AND RESPONSE################################
 									rm ${script_path}/freetsa.tsq 2>/dev/null
 									rm ${script_path}/freetsa.tsr 2>/dev/null
+									key_remove=1
 								fi
 							else
 								###REMOVE CERTFILE###########################################
@@ -250,16 +252,19 @@ create_keys(){
 								###REMOVE QUIERY AND RESPONSE################################
 								rm ${script_path}/freetsa.tsq 2>/dev/null
 								rm ${script_path}/freetsa.tsr 2>/dev/null
+								key_remove=1
 							fi
 							#############################################################
 						else
 							###REMOVE QUIERY AND RESPONSE################################
 							rm ${script_path}/freetsa.tsq 2>/dev/null
 							rm ${script_path}/freetsa.tsr 2>/dev/null
+							key_remove=1
 						fi
 					else
 						###REMOVE TSA QUIERY FILE####################################
 						rm ${script_path}/freetsa.tsq 2>/dev/null
+						key_remove=1
 					fi
 				else
 					key_remove=1
@@ -731,7 +736,6 @@ build_ledger(){
 }
 check_archive(){
 			path_to_tarfile=$1
-			check_mode=$2
 
 			###TOUCH FILES TO AVOID NON EXISTENT FILES####################
 			touch ${script_path}/tar_check.tmp
@@ -759,47 +763,61 @@ check_archive(){
 						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 						files_not_homedir=`echo $line|cut -d '/' -f1`
 						case $files_not_homedir in
-							"control")	file_full=`echo $line|cut -d '/' -f2`
-									if [ $file_full = "keyring.file" ]
+                        				"keys")		if [ ! -d $line ]
 									then
-										files_to_fetch="${files_to_fetch}$line "
-										echo "$line" >>${script_path}/files_to_fetch.tmp
-										files_to_fetch_display="${files_to_fetch_display}${line}\n"
-									else
-										rt_query=1
+										file_full=`echo $line|cut -d '/' -f2`
+										file_ext=`echo $file_full|cut -d '.' -f2`
+										file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+										if [ $file_ext_correct -gt 0 ]
+										then
+											rt_query=1
+										else
+											files_to_fetch="${files_to_fetch}$line "
+											echo "$line" >>${script_path}/files_to_fetch.tmp
+											files_to_fetch_display="${files_to_fetch_display}${line}\n"
+										fi
 									fi
-									;;
-                        				"keys")		file_full=`echo $line|cut -d '/' -f2`
-									file_ext=`echo $file_full|cut -d '.' -f2`
-									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
-									if [ $file_ext_correct -gt 0 ]
+                                		      			;;
+                       					"trx")		if [ ! -d $line ]
 									then
-										rt_query=1
-									else
-										files_to_fetch="${files_to_fetch}$line "
-										echo "$line" >>${script_path}/files_to_fetch.tmp
-										files_to_fetch_display="${files_to_fetch_display}${line}\n"
+										file_full=`echo $line|cut -d '/' -f2`
+										file_ext=`echo $file_full|cut -d '.' -f2`
+										file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+										if [ $file_ext_correct -gt 0 ]
+										then
+											rt_query=1
+										else
+											files_to_fetch="${files_to_fetch}$line "
+											echo "$line" >>${script_path}/files_to_fetch.tmp
+											files_to_fetch_display="${files_to_fetch_display}${line}\n"
+										fi
 									fi
-                                	       				;;
-                       					"trx")		file_full=`echo $line|cut -d '/' -f2`
-									file_ext=`echo $file_full|cut -d '.' -f2`
-									file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
-									if [ $file_ext_correct -gt 0 ]
+        	                       		        		;;
+							"proofs")	if [ ! -d $line ]
 									then
-										rt_query=1
-									else
-										files_to_fetch="${files_to_fetch}$line "
-										echo "$line" >>${script_path}/files_to_fetch.tmp
-										files_to_fetch_display="${files_to_fetch_display}${line}\n"
+										file_usr=`echo $line|cut -d '/' -f2`
+										file_full=`echo $line|cut -d '/' -f3`
+										case $file_full in
+											"freetsa.tsq")		files_to_fetch="${files_to_fetch}$line "
+														echo "$line" >>${script_path}/files_to_fetch.tmp
+														files_to_fetch_display="${files_to_fetch_display}${line}\n"
+														;;
+											"freetsa.tsr")		files_to_fetch="${files_to_fetch}$line "
+														echo "$line" >>${script_path}/files_to_fetch.tmp
+														files_to_fetch_display="${files_to_fetch_display}${line}\n"
+														;;
+											"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
+														echo "$line" >>${script_path}/files_to_fetch.tmp
+														files_to_fetch_display="${files_to_fetch_display}${line}\n"
+														;;
+											*)			rt_query=1
+														;;
+										esac
 									fi
-                               			        		;;
-							"proofs")	files_to_fetch="${files_to_fetch}$line "
-									echo "$line" >>${script_path}/files_to_fetch.tmp
-									files_to_fetch_display="${files_to_fetch_display}${line}\n"
                                        					;;
 							*)		rt_query=1
 									;;
-                				esac
+						esac
 						##############################################################
 					done <${script_path}/tar_check.tmp
 					##############################################################
@@ -811,63 +829,38 @@ check_archive(){
 			###CREATE LIST OF FILES THAT ARE ALREADY THERE FOR RESTORE####
 			if [ $rt_query = 0 ]
 			then
-				if [ $check_mode = 0 ]
-				then
-					###NORMAL EXTRACT WHERE ONLY CERTAIN FILES WILL BE KEPT######
-					while read line
-					do
+				###NORMAL EXTRACT WHERE ONLY CERTAIN FILES WILL BE KEPT######
+				while read line
+				do
+					if [ ! -d ${script_path}/${line} ]
+					then
 						if [ -s ${script_path}/${line} ]
 						then
-							###CHECK FOR USER FOLDER IN TEMP/PROOFS AND CREATE############
-							in_dir=`echo $line|cut -d '/' -f1`
-							if [ $in_dir = "proofs" ]
-							then
-								user_dir=`echo $line|cut -d '/' -f2`
-								backup_proof_dir="${script_path}/backup/temp/proofs/${user_dir}"
-								if [ ! -d ${backup_proof_dir} ]
-								then
-									mkdir ${backup_proof_dir}
-								fi
-							fi
-
-							###COPY FILES TO BACKUP-FOLDER################################
-							cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
 							echo $line >>${script_path}/files_to_keep.tmp
 						fi
-					done<${script_path}/tar_check.tmp
-				else
-					###EXTENDED EXTRACT WHERE ALL FILES WILL BE KEPT##############
-					cd ${script_path}
-					touch ${script_path}/file_list.tmp
-					tar -cvf temp.tar keys/ trx/ proofs/ control/ --dereference --hard-dereference >${script_path}/file_list.tmp
-					rm ${script_path}/temp.tar
+					fi
+				done<${script_path}/tar_check.tmp
+
+				any_files_there=`wc -l <${script_path}/files_to_keep.tmp`
+				if [ $any_files_there -gt 0 ]
+				then
+					###CREATE STRING FOR BACKUP FILE##############################
+					files_to_backup=""
 					while read line
 					do
-						full_file="${script_path}/${line}"
-						full_file_temp="${script_path}/backup/temp/${line}"
-						if [ -d $full_file ]
-						then
-							if [ ! -d $full_file_temp ]
-							then
-								###IF DIRECTORY DOES NOT EXIST, CREATE IT FIRST###############
-								mkdir ${full_file_temp}
-							fi
-						else
-							if [ -s $full_file ]
-							then
-								###WRITE FILES TO 
-								cp -Rp ${script_path}/${line} ${script_path}/backup/temp/${line}
-								echo $line >>${script_path}/files_to_keep.tmp
-							fi
-						fi
-					done <${script_path}/file_list.tmp
-					rm ${script_path}/file_list.tmp
+						files_to_backup="${files_to_backup}${line} "
+					done <${script_path}/files_to_keep.tmp
+					##############################################################
+
+					###PACK BACKUP FILE###########################################
+					tar -czf ${script_path}/backup/temp/temp.bcp $files_to_backup --dereference --hard-dereference
+					rt_query=$?
 				fi
 			fi
 			##############################################################
-
+	
 			###REMOVE THE LIST THAT CONTAINS THE CONTENT##################
-			rm ${script_path}/tar_check.tmp
+			rm ${script_path}/tar_check.tmp	
 
 			return $rt_query
 }
@@ -983,9 +976,8 @@ check_tsa(){
 			do
 				if [ $line != $handover_account ]
 				then
-					rm -R ${script_path}/keys/${line} 2>/dev/null
-					rm -R ${script_path}/proofs/${line}/freetsa.tsq 2>/dev/null
-					rm -R ${script_path}/proofs/${line}/freetsa.tsr 2>/dev/null
+					rm ${script_path}/keys/${line} 2>/dev/null
+					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
 				fi
 			done <${script_path}/blacklisted_accounts.dat
 }
@@ -1032,9 +1024,8 @@ check_keys(){
 		do
 			if [ $line != $handover_account ]
 			then
-				rm -R ${script_path}/keys/${line} 2>/dev/null
-				rm -R ${script_path}/proofs/${line}/freetsa.tsq 2>/dev/null
-				rm -R ${script_path}/proofs/${line}/freetsa.tsr 2>/dev/null
+				rm ${script_path}/keys/${line} 2>/dev/null
+				rm -R ${script_path}/proofs/${line}/ 2>/dev/null
 			fi
 		done <${script_path}/blacklisted_accounts.dat
                	##########################################################
@@ -1083,6 +1074,7 @@ check_blacklist(){
 			fi
 }
 restore_data(){
+			###SET PERMISSIONS TO ENSURE ACCESS#######################
 			chmod 755 ${script_path}/control/
 			chmod 755 ${script_path}/keys/
 			chmod 755 ${script_path}/trx/
@@ -1104,15 +1096,11 @@ restore_data(){
 
 			###REMOVE LIST OF FILES TO BE DELETED#####################
 			rm ${script_path}/files_to_delete.tmp
-
-			###MOVE OLD FILES FROM BACKUP TO OLD DIRECTORIES##########
-			while read line
-			do
-				mv ${script_path}/backup/temp/${line} ${script_path}/${line}
-			done <${script_path}/files_to_keep.tmp
-
-			###REMOVE LIST OF FILES TO KEEP###########################
 			rm ${script_path}/files_to_keep.tmp
+
+			###UNPACK BACKUP FILE#####################################
+			cd ${script_path}/
+			tar -xzf ${script_path}/backup/temp/temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 }
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS############### 
@@ -1138,18 +1126,19 @@ set_permissions(){
 			done <${script_path}/files_to_fetch.tmp
 
 			###REMOVE FILE LIST#######################################
-			rm ${script_path}/files_to_fetch.tmp
-
+			rm ${script_path}/files_to_fetch.tmp 2>/dev/null
+			rm ${script_path}/files_to_keep.tmp 2>/dev/null
 }
 purge_files(){
 			live_or_temp=$1
 			if [ $live_or_temp =  0 ]
 			then
+				###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
 				touch ${script_path}/keylist_gpg.tmp
 				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${script_path}/keylist_gpg.tmp 2>/dev/null
 				while read line
 				do
-					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${line}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -1157,21 +1146,29 @@ purge_files(){
 						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp}
 					fi
 				done <${script_path}/keylist_gpg.tmp
-				rm ${script_path}/keylist_gpg.tmp
+				rm ${script_path}/keylist_gpg.tmp 2>/dev/null
+
+				###REMOVE KEYRING AND FILES########################################
 				rm ${script_path}/control/keyring.file 2>/dev/null
 				rm ${script_path}/control/keyring.file~ 2>/dev/null
-				rm -r ${script_path}/control/keys/* 2>/dev/null
 				rm -r ${script_path}/keys/* 2>/dev/null
 				rm -r ${script_path}/trx/* 2>/dev/null
 				rm -r ${script_path}/proofs/* 2>/dev/null
 			else
-				rm -r ${script_path}/backup/temp/keys/* 2>/dev/null
-				rm -r ${script_path}/backup/temp/proofs/* 2>/dev/null
-				rm -r ${script_path}/backup/temp/trx/* 2>/dev/null
-				rm -r ${script_path}/backup/temp/control/* 2>/dev/null
+				rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
 			fi
 }
-
+import_keys(){
+			cd ${script_path}/control/keys
+			touch ${script_path}/keys_to_import.tmp
+			ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
+			while read line
+			do
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
+			done <${script_path}/keys_to_import.tmp
+			rm ${script_path}/keys_to_import.tmp
+			cd ${script_path}/
+}
 ##################
 #Main Menu Screen#
 ##################
@@ -1556,35 +1553,20 @@ do
 											bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
 											bcp_file=`cat ${script_path}/backup_list.tmp|grep "${bcp_stamp}"`
 											file_path="${script_path}/backup/${bcp_file}"
-											check_archive $file_path 1
+											cd ${script_path}
+											purge_files 0
+											tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -gt 0 ]
 											then
-												cd ${script_path}
-												purge_files 0
-												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-												rt_query=$?
-												if [ $rt_query -gt 0 ]
-												then
-													restore_data
-													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
-												else
-													cd ${script_path}/control/keys
-													touch ${script_path}/keys_to_import.tmp
-													ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
-													while read line
-													do
-														gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
-													done <${script_path}/keys_to_import.tmp
-													rm ${script_path}/keys_to_import.tmp
-													cd ${script_path}/
-													set_permissions
-													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
-												fi
-												purge_files 1
-											else
+												restore_data
 												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
+											else
+												import_keys
+												set_permissions
+												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
 											fi
+											purge_files 1
 										else
 											dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_fail" 0 0
 										fi
@@ -1595,11 +1577,11 @@ do
 										echo "ERROR!"
 										exit 1
 									else
-										check_archive $file_path 1
+										cd ${script_path}
+										tar -tf $file_path >/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											cd ${script_path}
 											purge_files 0
 											tar -xf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 											rt_query=$?
@@ -1609,6 +1591,7 @@ do
 												echo "ERROR!"
 												exit 1
 											else
+												import_keys
 												set_permissions
 												echo "SUCCESS"
 												exit 0
@@ -1979,7 +1962,7 @@ do
 									then
 										if [ -s $file_path ]
 										then
-											check_archive $file_path 0
+											check_archive $file_path
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -2122,7 +2105,7 @@ do
                   		                                        then
                                 	                	                if [ -s $file_path ]
                                         	                		then
-											check_archive $file_path 0
+											check_archive $file_path
                               	  							rt_query=$?
 								                        if [ $rt_query = 0 ]
 											then
