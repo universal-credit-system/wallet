@@ -1504,8 +1504,8 @@ do
 								new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
 								if [ $lang_file != $new_lang_file ]
 								then
-									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/lang.conf
-									. ${script_path}/lang.conf
+									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/config.conf
+									. ${script_path}/config.conf
 									. ${script_path}/lang/${lang_file}
 								fi
 							fi
