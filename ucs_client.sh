@@ -494,10 +494,15 @@ build_ledger(){
 		touch ${script_path}/friends.dat
 		cd ${script_path}/trx
 		grep -l "S:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
+		grep -l "R:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
 		cd ${script_path}
 		while read line
 		do
-			head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
+			trx_blacklisted=`grep -c "${line}" ${script_path}/blacklisted_trx.dat`
+			if [ $trx_blacklisted = 0 ]
+			then
+				head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
+			fi
 		done <${script_path}/friends_trx.tmp
 		sort ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
 		rm ${script_path}/friends.tmp 2>/dev/null
@@ -678,7 +683,7 @@ build_ledger(){
 					##############################################################
 
 					###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
-					if [ $number_of_friends_trx -gt 0 ]
+					if [ $number_of_friends_trx -gt $confirmations_from_friends ]
 					then
 						receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
 						if [ $receiver_in_ledger = 0 ]
@@ -1204,8 +1209,10 @@ rm ${script_path}/*.tmp 2>/dev/null
 rm ${script_path}/*.dat 2>/dev/null
 rm ${script_path}/*.dat.gpg 2>/dev/null
 
-###SOURCE LANGUAGE-SELECTION
-. ${script_path}/lang.conf
+###SOURCE CONFIG FILE#######
+. ${script_path}/config.conf
+
+###SOURCE LANGUAGE FILE
 . ${script_path}/lang/${lang_file}
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
