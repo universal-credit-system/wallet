@@ -501,7 +501,16 @@ build_ledger(){
 			trx_blacklisted=`grep -c "${line}" ${script_path}/blacklisted_trx.dat`
 			if [ $trx_blacklisted = 0 ]
 			then
-				head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
+				is_sent=`head -1 ${script_path}/trx/${line}|grep -c "S:${handover_account}"`
+				if [ $is_sent -gt 0 ]
+				then
+					head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
+				fi
+				is_received=`head -1 ${script_path}/trx/${line}|grep -c "R:${handover_account}"`
+				if [ $is_received -gt 0 ]
+				then
+					head -1 ${script_path}/trx/${line}|cut -d ' ' -f1|cut -d ':' -f2 >${script_path}/friends.tmp
+				fi
 			fi
 		done <${script_path}/friends_trx.tmp
 		sort ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
