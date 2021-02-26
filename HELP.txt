@@ -42,8 +42,17 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				only new files should be extracted or all files 
 				should be extracted.
 			
-	-path <PATH>		Path where output is stored for create_trx and create_sync.
-				Path from where to read input for read_trx and read_sync.
+	-path <PATH>		Path where output is stored. Used for:
+
+				create_trx
+				create_sync
+				create_backup
+
+				Path from where to read input. Used for:
+ 
+				read_trx
+				read_sync
+				restore_backup
 
 	-help			Display HELP
 
