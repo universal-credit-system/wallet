@@ -38,9 +38,9 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				When creating a transaction this value is used to 
 				specifiy wheter a big or small transaction should 
 				be created. When reading a transaction or reading 
-				a sync file this parameter is used to specify wheter 
-				only new files should be extracted or all files 
-				should be extracted.
+				a sync file this parameter is used to specify 
+				wheter only new files should be extracted or 
+				all files should be extracted.
 			
 	-path <PATH>		Path where output is stored. Used for:
 
