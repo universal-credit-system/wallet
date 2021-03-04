@@ -757,10 +757,16 @@ check_archive(){
 			touch ${script_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
-			tar -tf $path_to_tarfile >${script_path}/tar_check.tmp
+			tar -tvf $path_to_tarfile >${script_path}/tar_check_full.tmp
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
+				###WRITE FILE LIST############################################
+				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
+
+				###WRITE FILE LIST############################################
+				awk '{print $3 " " $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check_detailed.tmp
+
 				###CHECK FOR BAD CHARACTERS###################################
 				bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
 				if [ $bad_chars_there -gt 0 ]
@@ -830,9 +836,21 @@ check_archive(){
 															echo "$line" >>${script_path}/files_to_fetch.tmp
 															files_to_fetch_display="${files_to_fetch_display}${line}\n"
 															;;
-												"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
-															echo "$line" >>${script_path}/files_to_fetch.tmp
-															files_to_fetch_display="${files_to_fetch_display}${line}\n"
+												"${file_usr}.txt")	if [ ! -s ${script_path}/$line ]
+															then
+																files_to_fetch="${files_to_fetch}$line "
+																echo "$line" >>${script_path}/files_to_fetch.tmp
+																files_to_fetch_display="${files_to_fetch_display}${line}\n"
+															else
+																size_old=`wc -c <${script_path}/$line`
+																size_new=`cat ${script_path}/tar_check_detailed.tmp|grep "${file_usr}.txt"|cut -d ' ' -f1`
+																if [ $size_old -lt $size_new ]
+																then
+																	files_to_fetch="${files_to_fetch}$line "
+																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																	files_to_fetch_display="${files_to_fetch_display}${line}\n"
+																fi
+															fi
 															;;
 												*)			rt_query=1
 															;;
@@ -886,8 +904,10 @@ check_archive(){
 			fi
 			##############################################################
 	
-			###REMOVE THE LIST THAT CONTAINS THE CONTENT##################
-			rm ${script_path}/tar_check.tmp	
+			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
+			rm ${script_path}/tar_check_full.tmp 2>/dev/null
+			rm ${script_path}/tar_check_detailed.tmp 2>/dev/null
+			rm ${script_path}/tar_check.tmp 2>/dev/null
 
 			return $rt_query
 }
@@ -1857,6 +1877,11 @@ do
 													then
 														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
 													fi
+													index_file="proofs/${line}/${line}.txt"
+													if [ -s ${script_path}/${index_file} ]
+													then
+														proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
+													fi
 												else 
 													keys_to_append="${keys_to_append} keys/${line} "
 													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
@@ -1868,6 +1893,11 @@ do
 													if [ -s $tsa_res_check ]
 													then
 														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
+													fi
+													index_file="proofs/${line}/${line}.txt"
+													if [ -s ${script_path}/${index_file} ]
+													then
+														proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
 													fi
 												fi
 											else
@@ -1881,6 +1911,11 @@ do
 												if [ -s $tsa_res_check ]
 												then
 													proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
+												fi
+												index_file="proofs/${line}/${line}.txt"
+												if [ -s ${script_path}/${index_file} ]
+												then
+													proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
 												fi
 											fi
 										done <${script_path}/keys_for_trx.tmp
@@ -2265,7 +2300,7 @@ do
 								then
 									echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
 								fi
-								index_file="${script_path}/proofs/${line}/${user_extracted}.txt"
+								index_file="${script_path}/proofs/${line}/${line}.txt"
 								if [ -s $index_file ]
 								then
 									echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
