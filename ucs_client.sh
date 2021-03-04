@@ -494,7 +494,6 @@ build_ledger(){
 		touch ${script_path}/friends.dat
 		cd ${script_path}/trx
 		grep -l "S:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
-		grep -l "R:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
 		cd ${script_path}
 		while read line
 		do
