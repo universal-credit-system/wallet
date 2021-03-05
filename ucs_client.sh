@@ -493,23 +493,19 @@ build_ledger(){
 		touch ${script_path}/friends.tmp
 		touch ${script_path}/friends.dat
 		cd ${script_path}/trx
-		grep -l "S:${handover_account}" *.* >${script_path}/friends_trx.tmp 2>/dev/null
+		grep -l "S:" *.* >${script_path}/friends_trx.tmp 2>/dev/null
 		cd ${script_path}
 		while read line
 		do
 			trx_blacklisted=`grep -c "${line}" ${script_path}/blacklisted_trx.dat`
 			if [ $trx_blacklisted = 0 ]
 			then
-				is_sent=`head -1 ${script_path}/trx/${line}|grep -c "S:${handover_account}"`
-				if [ $is_sent -gt 0 ]
+				sender=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f1|cut -d ':' -f2`
+				receiver=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+				if [ ! $sender = $receiver ]
 				then
-					head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2 >${script_path}/friends.tmp
-				fi
-				is_received=`head -1 ${script_path}/trx/${line}|grep -c "R:${handover_account}"`
-				if [ $is_received -gt 0 ]
-				then
-					head -1 ${script_path}/trx/${line}|cut -d ' ' -f1|cut -d ':' -f2 >${script_path}/friends.tmp
-				fi
+					echo "${sender}=${receiver}" >>${script_path}/friends.tmp
+				fi 
 			fi
 		done <${script_path}/friends_trx.tmp
 		sort ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
@@ -641,15 +637,23 @@ build_ledger(){
 				number_of_friends_add=0
 				while read line
 				do
-					###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-					if [ $trx_sender != $line -a $trx_receiver != $line ]
+					###EXTRACT DATA FROM FRIENDS LIST#########
+					friend_owner=`echo $line|cut -d '=' -f1`
+					friend_of_owner=`echo $line|cut -d '=' -f2`
+
+					###ONLY CONSIDER MY FRIENDS###############
+					if [ $friend_owner = $handover_account ]
 					then
-						if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+						###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+						if [ $trx_sender != $friend_of_owner -a $trx_receiver != $friend_of_owner ]
 						then
-							number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt`
-							if [ $number_of_friends_add -gt 0 ]
+							if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 							then
-								number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
+								number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
+								if [ $number_of_friends_add -gt 0 ]
+								then
+									number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
+								fi
 							fi
 						fi
 					fi
@@ -2366,6 +2370,7 @@ do
 								while read line
 								do
 									trx_confirmations=0
+									trx_confirmations_user=0
 									line_extracted=`echo $line`
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
 									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2`
@@ -2381,15 +2386,23 @@ do
                                 	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 									while read line
 									do
-										###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-										if [ $sender != $line -a $receiver != $line ]
+										###EXTRACT DATA FROM FRIENDS LIST#########
+										friend_owner=`echo $line|cut -d '=' -f1`
+										friend_of_owner=`echo $line|cut -d '=' -f2`
+
+										###ONLY CONSIDER MY FRIENDS###############
+										if [ $friend_owner = $handover_account ]
 										then
-											if [ -s ${script_path}/proofs/$line/$line.txt ]
+											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+											if [ $sender != $friend_of_owner -a $receiver != $friend_of_owner ]
 											then
-												trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/$line/$line.txt`
-												if [ $trx_confirmations_user -gt 0 ]
+												if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 												then
-													trx_confirmations=$(( $trx_confirmations + 1 ))
+													trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
+													if [ $trx_confirmations_user -gt 0 ]
+													then
+														trx_confirmations=$(( $trx_confirmations + 1 ))
+													fi
 												fi
 											fi
 										fi
@@ -2438,6 +2451,7 @@ do
 										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2`
 										trx_status=""
 										trx_confirmations=0
+										trx_confirmations_user=0
 										trx_blacklisted=`grep -c "${trx_file}" ${script_path}/blacklisted_trx.dat`
 										if [ $trx_blacklisted = 1 ]
 										then
@@ -2459,15 +2473,23 @@ do
 										fi
 										while read line
 										do
-											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-											if [ $sender != $line -a $receiver != $line ]
+											###EXTRACT DATA FROM FRIENDS LIST#########
+											friend_owner=`echo $line|cut -d '=' -f1`
+											friend_of_owner=`echo $line|cut -d '=' -f2`
+
+											###ONLY CONSIDER MY FRIENDS###############
+											if [ $friend_owner = $handover_account ]
 											then
-												if [ -s ${script_path}/proofs/$line/$line.txt ]
+												###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+												if [ $sender != $friend_of_owner -a $receiver != $friend_of_owner ]
 												then
-													trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/$line/$line.txt`
-													if [ $trx_confirmations_user -gt 0 ]
+													if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 													then
-														trx_confirmations=$(( $trx_confirmations + 1 ))
+														trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
+														if [ $trx_confirmations_user -gt 0 ]
+														then
+															trx_confirmations=$(( $trx_confirmations + 1 ))
+														fi
 													fi
 												fi
 											fi
@@ -2536,7 +2558,7 @@ do
 							total_trx=`ls -1 ${script_path}/trx|wc -l`
 							total_user_blacklisted=`wc -l <${script_path}/blacklisted_accounts.dat`
 							total_trx_blacklisted=`wc -l <${script_path}/blacklisted_trx.dat`
-							total_friends=`wc -l <${script_path}/friends.dat`
+							total_friends=`grep "${handover_account}=" ${script_path}/friends.dat|wc -l`
 							###############################################
 
 							if [ $gui_mode = 1 ]
@@ -2559,6 +2581,7 @@ do
 							;;
 				"Log out")		###LOG OUT USER###########
 							user_logged_in=0
+							make_ledger=1
 							;;
 			esac
 		fi
