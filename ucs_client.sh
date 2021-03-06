@@ -1630,6 +1630,7 @@ do
 										exit 1
 									else
 										cd ${script_path}
+										file_path=$cmd_path
 										tar -tf $file_path >/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
