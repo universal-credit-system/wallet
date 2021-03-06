@@ -2034,73 +2034,54 @@ do
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
+												cd ${script_path}
 												if [ $gui_mode = 1 ]
 												then
-													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_read" --backtitle "Universal Credit System" --yesno "$dialog_file_check" 0 0
+													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
 													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														dialog --title "$dialog_read" --backtitle "Universal Credit System" --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --msgbox "$files_to_fetch_display" 0 0
-														rt_query=$?
-													else
-														rt_query=0
-													fi
 												else
-													rt_query=0
+													rt_query=$extract_all
 												fi
 												if [ $rt_query = 0 ]
 												then
-													cd ${script_path}
+													tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													rt_query=$?
+												else
+													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													rt_query=$?
+												fi
+												if [ $rt_query -gt 0 ]
+												then
+													restore_data
+												else
+													set_permissions
 													if [ $gui_mode = 1 ]
 													then
-														dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
-														rt_query=$?
+														file_found=1
+														action_done=1
+														make_ledger=1
 													else
-														rt_query=$extract_all
-													fi
-													if [ $rt_query = 0 ]
-													then
-														tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
-														rt_query=$?
-													else
-														tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-														rt_query=$?
-													fi
-													if [ $rt_query -gt 0 ]
-													then
-														restore_data
-													else
-														set_permissions
-														if [ $gui_mode = 1 ]
+														check_tsa
+														check_keys
+														check_trx
+														now=`date +%s`
+														build_ledger
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+														if [ $no_ack_trx -gt 0 ]
 														then
-															file_found=1
-															action_done=1
-															make_ledger=1
-														else
-															check_tsa
-															check_keys
-															check_trx
-															now=`date +%s`
-															build_ledger
-															no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-															if [ $no_ack_trx -gt 0 ]
+															make_signature "none" $now 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
 															then
-																make_signature "none" $now 1
-																rt_query=$?
-																if [ $rt_query -gt 0 ]
-																then
-																	echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																	exit 1
-																else
-																	exit 0
-																fi
+																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+																exit 1
+															else
+																exit 0
 															fi
 														fi
 													fi
-													purge_files 1
-												else
-													file_found=1
 												fi
+												purge_files 1
 											else
 												if [ $gui_mode = 1 ]
 												then
@@ -2177,81 +2158,62 @@ do
                               	  							rt_query=$?
 								                        if [ $rt_query = 0 ]
 											then
+                                        							cd ${script_path}
 												if [ $gui_mode = 1 ]
 												then
-													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_read" --backtitle "Universal Credit System" --yesno "$dialog_file_check" 0 0
-   													rt_query=$?
+                                         			       					dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+                                        		        					rt_query=$?
 												else
-													rt_query=1
+													case $cmd_type in
+														"partial")	rt_query=0
+																;;
+														"full")		rt_query=1
+																;;
+														*)		echo "ERROR! MISSING VARIABLE FOR >TYPE<"
+																exit 1
+																;;
+													esac
 												fi
-												if [ $rt_query = 0 ]
+                     		                           					if [ $rt_query = 0 ]
+                                	                					then
+                                        	               			 			tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													rt_query=$?
+		                                                				else
+                		                                 					tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+                                		                					rt_query=$?
+												fi
+												if [ $rt_query -gt 0 ]
 												then
-													dialog --title "$dialog_read" --backtitle "Universal Credit System" --ok-label "$dialog_next" --extra-button --extra-label "$dialog_cancel" --msgbox "$files_to_fetch_display" 0 0
-	                              						       			rt_query=$?
+													restore_data
 												else
-													rt_query=0
-												fi
-                                        							if [ $rt_query = 0 ]
-                               			        	 				then
-                                                							cd ${script_path}
+													set_permissions
 													if [ $gui_mode = 1 ]
 													then
-                                         			       						dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
-                                        		        						rt_query=$?
+														action_done=1
+														make_ledger=1
+														file_found=1
 													else
-														case $cmd_type in
-															"partial")	rt_query=0
-																	;;
-															"full")		rt_query=1
-																	;;
-															*)		echo "ERROR! MISSING VARIABLE FOR >TYPE<"
-																	exit 1
-																	;;
-														esac
-													fi
-                     		                           						if [ $rt_query = 0 ]
-                                	                						then
-                                        	               			 				tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
-														rt_query=$?
-		                                                					else
-                		                                 						tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-                                		                						rt_query=$?
-													fi
-													if [ $rt_query -gt 0 ]
-													then
-														restore_data
-													else
-														set_permissions
-														if [ $gui_mode = 1 ]
+														check_tsa
+														check_keys
+														check_trx
+														now=`date +%s`
+														build_ledger
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+														if [ $no_ack_trx -gt 0 ]
 														then
-															action_done=1
-															make_ledger=1
-															file_found=1
-														else
-															check_tsa
-															check_keys
-															check_trx
-															now=`date +%s`
-															build_ledger
-															no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-															if [ $no_ack_trx -gt 0 ]
+															make_signature "none" $now 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
 															then
-																make_signature "none" $now 1
-																rt_query=$?
-																if [ $rt_query -gt 0 ]
-																then
-																	echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																	exit 1
-																else
-																	exit 0
-																fi
+																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+																exit 1
+															else
+																exit 0
 															fi
 														fi
 													fi
-													purge_files 1
-                                        							else
-                                                							file_found=1
-                                  			      					fi
+												fi
+												purge_files 1
 											else
 												if [ $gui_mode = 1 ]
 												then
