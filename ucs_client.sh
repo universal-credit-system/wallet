@@ -755,10 +755,13 @@ check_archive(){
 			touch ${script_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
-			tar -tvf $path_to_tarfile >${script_path}/tar_check_full.tmp
+			tar -tvf $path_to_tarfile >${script_path}/tar_check_temp.tmp
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
+				###REMOVE DOUBLE-ENTRIES IN TAR-FILE##########################
+				uniq ${script_path}/tar_check_temp.tmp >${script_path}/tar_check_full.tmp
+
 				###WRITE FILE LIST############################################
 				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
 
@@ -897,6 +900,7 @@ check_archive(){
 			##############################################################
 	
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
+			rm ${script_path}/tar_check_temp.tmp 2>/dev/null
 			rm ${script_path}/tar_check_full.tmp 2>/dev/null
 			rm ${script_path}/tar_check_detailed.tmp 2>/dev/null
 			rm ${script_path}/tar_check.tmp 2>/dev/null
@@ -1946,7 +1950,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} proofs/${handover_account}/${handover_account}.txt --dereference --hard-dereference
+											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
