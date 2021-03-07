@@ -760,7 +760,7 @@ check_archive(){
 			if [ $rt_query = 0 ]
 			then
 				###REMOVE DOUBLE-ENTRIES IN TAR-FILE##########################
-				uniq ${script_path}/tar_check_temp.tmp >${script_path}/tar_check_full.tmp
+				sort ${script_path}/tar_check_temp.tmp|uniq >${script_path}/tar_check_full.tmp
 
 				###WRITE FILE LIST############################################
 				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
