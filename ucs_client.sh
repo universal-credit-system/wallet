@@ -1245,7 +1245,7 @@ rm ${script_path}/*.dat 2>/dev/null
 rm ${script_path}/*.dat.gpg 2>/dev/null
 
 ###SOURCE CONFIG FILE#######
-. ${script_path}/config.conf
+. ${script_path}/control/config.conf
 
 ###SOURCE LANGUAGE FILE
 . ${script_path}/lang/${lang_file}
@@ -1530,8 +1530,8 @@ do
 								new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
 								if [ $lang_file != $new_lang_file ]
 								then
-									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/config.conf
-									. ${script_path}/config.conf
+									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/control/config.conf
+									. ${script_path}/control/config.conf
 									. ${script_path}/lang/${lang_file}
 								fi
 							fi
