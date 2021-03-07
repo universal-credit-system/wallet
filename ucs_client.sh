@@ -483,10 +483,8 @@ build_ledger(){
 			progress_bar_redir="/dev/null"
 		fi
 
-		###LOAD ALL ACCOUNTS AND IGNORE BLACKLISTED#########
-		ls -1 ${script_path}/keys >${script_path}/accounts.tmp
-		cat ${script_path}/blacklisted_accounts.dat >>${script_path}/accounts.tmp
-		sort -t . -k2 ${script_path}/accounts.tmp|uniq >${script_path}/accounts_list.tmp
+		###LOAD ALL ACCOUNTS################################
+		ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/accounts_list.tmp
 
 		###CREATE FRIENDS LIST##############################
 		touch ${script_path}/friends_trx.tmp
@@ -605,7 +603,7 @@ build_ledger(){
 			while read line
 			do
 				###EXTRACT ACCOUNT DATA FOR CHECK############################
-				account_name=`echo $line`
+				account_name=$line
 
 				###WRITE FIRST ENTRY#########################################
 				echo "${account_name}=0" >>${script_path}/ledger.tmp
@@ -625,10 +623,7 @@ build_ledger(){
 			do
 				###EXRACT DATA FOR CHECK######################################
 			        trx_filename=`echo $line|cut -d ' ' -f3`
-				trx_date_filename=`echo $trx_filename|cut -d '.' -f3`
-				trx_date_inside=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f4`
 				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
-				trx_sender_file=`ls -1 ${script_path}/keys|grep "${trx_sender}"|head -1`
 				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
 				##############################################################
 
@@ -778,7 +773,7 @@ check_archive(){
 				else
 					files_not_homedir=""
 					files_to_fetch=""
-					files_to_fetch_display="${dialog_content}\n"
+					indexes_to_fetch=""
 
 					###GO THROUGH CONTENT LIST LINE BY LINE#######################
 					while read line
@@ -797,7 +792,6 @@ check_archive(){
 										else
 											files_to_fetch="${files_to_fetch}$line "
 											echo "$line" >>${script_path}/files_to_fetch.tmp
-											files_to_fetch_display="${files_to_fetch_display}${line}\n"
 										fi
 									fi
                                 		      			;;
@@ -816,7 +810,6 @@ check_archive(){
 											then
 												files_to_fetch="${files_to_fetch}$line "
 												echo "$line" >>${script_path}/files_to_fetch.tmp
-												files_to_fetch_display="${files_to_fetch_display}${line}\n"
 											else
 												rt_query=1
 											fi
@@ -833,25 +826,21 @@ check_archive(){
 											case $file_full in
 												"freetsa.tsq")		files_to_fetch="${files_to_fetch}$line "
 															echo "$line" >>${script_path}/files_to_fetch.tmp
-															files_to_fetch_display="${files_to_fetch_display}${line}\n"
 															;;
 												"freetsa.tsr")		files_to_fetch="${files_to_fetch}$line "
 															echo "$line" >>${script_path}/files_to_fetch.tmp
-															files_to_fetch_display="${files_to_fetch_display}${line}\n"
 															;;
 												"${file_usr}.txt")	if [ ! -s ${script_path}/$line ]
 															then
-																files_to_fetch="${files_to_fetch}$line "
+																indexes_to_fetch="${indexes_to_fetch}$line "
 																echo "$line" >>${script_path}/files_to_fetch.tmp
-																files_to_fetch_display="${files_to_fetch_display}${line}\n"
 															else
 																size_old=`wc -c <${script_path}/$line`
 																size_new=`cat ${script_path}/tar_check_detailed.tmp|grep "${file_usr}.txt"|cut -d ' ' -f1`
 																if [ $size_old -lt $size_new ]
 																then
-																	files_to_fetch="${files_to_fetch}$line "
+																	indexes_to_fetch="${indexes_to_fetch}$line "
 																	echo "$line" >>${script_path}/files_to_fetch.tmp
-																	files_to_fetch_display="${files_to_fetch_display}${line}\n"
 																fi
 															fi
 															;;
@@ -1094,19 +1083,29 @@ check_trx(){
 				user_file=`ls -1 ${script_path}/keys/|grep "${user_to_check}"`
 				verify_signature $file_to_check $user_file
 				rt_query=$?
-				if [ $rt_query -gt 0 ]
+				if [ $rt_query = 0 ]
 				then
-					echo $file_to_check >>${script_path}/blacklisted_trx.dat
-				else
 					trx_date_filename=`echo $line|cut -d '.' -f3`
 					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
 					if [ $trx_date_filename != $trx_date_inside ]
 					then
 						echo $file_to_check >>${script_path}/blacklisted_trx.dat
 					fi
+				else
+					echo $file_to_check >>${script_path}/blacklisted_trx.dat			
 				fi
 			fi
 		done <${script_path}/all_trx.tmp
+		while read line
+		do
+			trx_account_name=`echo $line|cut -d '.' -f1`
+			trx_account_stamp=`echo $Line|cut -d '.' -f2`
+			trx_account="${trx_account_name}.${trx_account_stamp}"
+			if [ $trx_account != $handover_account ]
+			then
+				rm ${script_path}/trx/${line} 2>/dev/null
+			fi
+		done <${script_path}/blacklisted_trx.dat
 		####################################################################################
 }
 check_blacklist(){
@@ -2046,9 +2045,19 @@ do
 												then
 													tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														rt_query=$?
+													fi
 												else
 													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														rt_query=$?
+													fi
 												fi
 												if [ $rt_query -gt 0 ]
 												then
@@ -2178,9 +2187,19 @@ do
                                 	                					then
                                         	               			 			tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														rt_query=$?
+													fi
 		                                                				else
                 		                                 					tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                					rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														rt_query=$?
+													fi
 												fi
 												if [ $rt_query -gt 0 ]
 												then
