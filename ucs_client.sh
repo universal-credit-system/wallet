@@ -1614,11 +1614,9 @@ do
 											rt_query=$?
 											if [ $rt_query -gt 0 ]
 											then
-												restore_data
 												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
 											else
 												import_keys
-												set_permissions
 												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
 											fi
 											purge_files 1
@@ -1643,12 +1641,10 @@ do
 											rt_query=$?
 											if [ $rt_query -gt 0 ]
 											then
-												restore_data
 												echo "ERROR!"
 												exit 1
 											else
 												import_keys
-												set_permissions
 												echo "SUCCESS"
 												exit 0
 											fi
