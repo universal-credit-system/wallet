@@ -1195,8 +1195,8 @@ purge_files(){
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp}
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp}
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 					fi
 				done <${script_path}/keylist_gpg.tmp
 				rm ${script_path}/keylist_gpg.tmp 2>/dev/null
