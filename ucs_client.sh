@@ -1374,7 +1374,7 @@ do
 			then
                 		clear
 			else
-				if [ ! $cmd_action = "create_user" -a ! $cmd_action = "create_backup" -a $cmd_action = "restore_backup" ]
+				if [ ! $cmd_action = "create_user" -a ! $cmd_action = "create_backup" -a ! $cmd_action = "restore_backup" ]
 				then
 					main_menu=$dialog_main_logon
 				fi
