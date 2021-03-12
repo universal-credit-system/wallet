@@ -224,10 +224,11 @@ create_keys(){
 										else
 											echo "USER:${name_cleared}"
 											echo "PIN:${key_rn}"
+											echo "PASSWORD:>${name_passphrase}<"
 											echo "ADRESS:${name_hashed}.${file_stamp}"
 											echo "KEY:${name_hashed}.${file_stamp}"
-											echo "KEY_PUB_HOME:${name_cleared}_${key_rn}_${file_stamp}_pub.asc"
-											echo "KEY_PRV_HOME:${name_cleared}_${key_rn}_${file_stamp}_priv.asc"
+											echo "KEY_PUB:/keys/${name_hashed}.${file_stamp}"
+											echo "KEY_PRV:/control/keys/${name_hashed}.${file_stamp}"
 											exit 0
 										fi
 									else
