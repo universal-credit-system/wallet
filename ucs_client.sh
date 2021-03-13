@@ -749,6 +749,7 @@ build_ledger(){
 }
 check_archive(){
 			path_to_tarfile=$1
+			check_mode=$2
 
 			###TOUCH FILES TO AVOID NON EXISTENT FILES####################
 			touch ${script_path}/tar_check.tmp
@@ -766,9 +767,6 @@ check_archive(){
 				###WRITE FILE LIST############################################
 				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
 
-				###WRITE FILE LIST############################################
-				awk '{print $3 " " $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check_detailed.tmp
-
 				###CHECK FOR BAD CHARACTERS###################################
 				bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
 				if [ $bad_chars_there -gt 0 ]
@@ -777,7 +775,6 @@ check_archive(){
 				else
 					files_not_homedir=""
 					files_to_fetch=""
-					indexes_to_fetch=""
 
 					###GO THROUGH CONTENT LIST LINE BY LINE#######################
 					while read line
@@ -794,8 +791,17 @@ check_archive(){
 										then
 											rt_query=1
 										else
-											files_to_fetch="${files_to_fetch}$line "
-											echo "$line" >>${script_path}/files_to_fetch.tmp
+											if [ $check_mode = 0 ]
+											then
+												if [ ! -s $line ]
+												then
+													files_to_fetch="${files_to_fetch}$line "
+													echo "$line" >>${script_path}/files_to_fetch.tmp
+												fi
+											else
+												files_to_fetch="${files_to_fetch}$line "
+												echo "$line" >>${script_path}/files_to_fetch.tmp
+											fi
 										fi
 									fi
                                 		      			;;
@@ -812,8 +818,17 @@ check_archive(){
 											file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
 											if [ $file_ext_correct = 0 ]
 											then
-												files_to_fetch="${files_to_fetch}$line "
-												echo "$line" >>${script_path}/files_to_fetch.tmp
+												if [ $check_mode = 0 ]
+												then
+													if [ ! -s $line ]
+													then
+														files_to_fetch="${files_to_fetch}$line "
+														echo "$line" >>${script_path}/files_to_fetch.tmp
+													fi
+												else
+													files_to_fetch="${files_to_fetch}$line "
+													echo "$line" >>${script_path}/files_to_fetch.tmp
+												fi
 											else
 												rt_query=1
 											fi
@@ -828,25 +843,32 @@ check_archive(){
 										then
 											file_full=`echo $line|cut -d '/' -f3`
 											case $file_full in
-												"freetsa.tsq")		files_to_fetch="${files_to_fetch}$line "
-															echo "$line" >>${script_path}/files_to_fetch.tmp
-															;;
-												"freetsa.tsr")		files_to_fetch="${files_to_fetch}$line "
-															echo "$line" >>${script_path}/files_to_fetch.tmp
-															;;
-												"${file_usr}.txt")	if [ ! -s ${script_path}/$line ]
+												"freetsa.tsq")		if [ $check_mode = 0 ]
 															then
-																indexes_to_fetch="${indexes_to_fetch}$line "
-																echo "$line" >>${script_path}/files_to_fetch.tmp
-															else
-																size_old=`wc -c <${script_path}/$line`
-																size_new=`cat ${script_path}/tar_check_detailed.tmp|grep "${file_usr}.txt"|cut -d ' ' -f1`
-																if [ $size_old -lt $size_new ]
+																if [ ! -s $line ]
 																then
-																	indexes_to_fetch="${indexes_to_fetch}$line "
+																	files_to_fetch="${files_to_fetch}$line "
 																	echo "$line" >>${script_path}/files_to_fetch.tmp
 																fi
+															else
+																files_to_fetch="${files_to_fetch}$line "
+																echo "$line" >>${script_path}/files_to_fetch.tmp
 															fi
+															;;
+												"freetsa.tsr")		if [ $check_mode = 0 ]
+															then
+																if [ ! -s $line ]
+																then
+																	files_to_fetch="${files_to_fetch}$line "
+																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																fi
+															else
+																files_to_fetch="${files_to_fetch}$line "
+																echo "$line" >>${script_path}/files_to_fetch.tmp
+															fi
+															;;
+												"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
+															echo "$line" >>${script_path}/files_to_fetch.tmp
 															;;
 												*)			rt_query=1
 															;;
@@ -903,7 +925,6 @@ check_archive(){
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
 			rm ${script_path}/tar_check_temp.tmp 2>/dev/null
 			rm ${script_path}/tar_check_full.tmp 2>/dev/null
-			rm ${script_path}/tar_check_detailed.tmp 2>/dev/null
 			rm ${script_path}/tar_check.tmp 2>/dev/null
 
 			return $rt_query
@@ -1112,6 +1133,82 @@ check_trx(){
 			fi
 		done <${script_path}/blacklisted_trx.dat
 		####################################################################################
+}
+process_new_files(){
+			process_mode=$1
+			touch ${script_path}/new_index_filelist.tmp
+			touch ${script_path}/old_index_filelist.tmp
+			touch ${script_path}/remove_list.tmp
+			if [ $process_mode = 0 ]
+			then
+				grep "proofs/" ${script_path}/files_to_fetch.tmp|grep ".txt" >${script_path}/new_indexes.tmp
+				while read line
+				do
+					user_to_verify_name=`echo $line|cut -d '.' -f1`
+					user_to_verify_date=`echo $line|cut -d '.' -f2`
+					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
+					user_already_there=`ls -1 ${script_path}/keys|grep -c "${user_to_verify}"`
+					if [ $user_already_there = 1 ]
+					then
+						verify_signature ${script_path}/temp/${line} $user_to_verify
+						rt_query=$?
+						if [ $rt_query = 0 ]
+						then
+							grep "trx/${user_to_verify}" ${script_path}/temp/${line} >${script_path}/new_index_filelist.tmp
+							new_trx=`wc -l <${script_path}/new_index_filelist.tmp`
+							grep "trx/${user_to_verify}" ${script_path}/${line} >${script_path}/old_index_filelist.tmp
+							old_trx=`wc -l ${script_path}/old_index_filelist.tmp`
+							if [ $old_trx -le $new_trx ]
+							then
+								while read line
+								do
+									is_file_there=`grep -c "${line}" ${script_path}/new_index_filelist.tmp`
+									if [ $is_file_there = 0 ]
+									then
+										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+									fi
+								done <${script_path}/old_index_filelist.tmp
+							else
+								no_matches=0
+								while read line
+								do
+									is_file_there=`grep -c "${line}" ${script_path}/old_index_filelist.tmp`
+									if [ $is_file_there = 1 ]
+									then
+										no_matches=$(( $no_matches + 1 ))
+									fi
+								done <${script_path}/new_index_filelist.tmp
+								if [ $no_matches -lt old_trx ]
+								then
+									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+								fi
+							fi
+						fi
+					else
+						user_new=`ls -1 ${script_path}/temp/keys|grep -c "${user_to_verify}"`
+						if [ $user_new = 0 ]
+						then
+							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+						fi
+					fi
+				done <${script_path}/new_indexes.tmp
+				rm ${script_path}/new_indexes.tmp
+				rm ${script_path}/new_index_filelist.tmp
+				rm ${script_path}/old_index_filelist.tmp
+				cat ${script_path}/remove_list.tmp|sort|uniq >>${script_path}/temp_filelist.tmp
+				cat ${script_path}/files_to_fetch.tmp >>${script_path}/temp_filelist.tmp
+				cat ${script_path}/temp_filelist.tmp|sort|uniq -u >${script_path}/files_to_fetch.tmp
+			fi
+			while read line
+			do
+				if [ ! -h ${script_path}/temp/${line} ]
+				then
+					mv ${script_path}/temp/${line} ${script_path}/${line}
+				fi
+			done <${script_path}/files_to_fetch.tmp
+			rm -r ${script_path}/temp/keys/* 2>/dev/null
+			rm -r ${script_path}/temp/trx/* 2>/dev/null
+			rm -r ${script_path}/temp/proofs/* 2>/dev/null
 }
 check_blacklist(){
 			am_i_blacklisted=`grep -c "${handover_account}" ${script_path}/blacklisted_accounts.dat`
@@ -2030,78 +2127,94 @@ do
 									then
 										if [ -s $file_path ]
 										then
-											check_archive $file_path
-											rt_query=$?
+											cd ${script_path}
+											if [ $gui_mode = 1 ]
+											then
+												dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+												rt_query=$?
+											else
+												rt_query=$extract_all
+											fi
 											if [ $rt_query = 0 ]
 											then
-												cd ${script_path}
-												if [ $gui_mode = 1 ]
-												then
-													dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
-													rt_query=$?
-												else
-													rt_query=$extract_all
-												fi
+												check_archive $file_path 0
+												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
+													cd ${script_path}/temp
 													tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														process_new_files 0
 														rt_query=$?
 													fi
 												else
+													if [ $gui_mode = 1 ]
+													then
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
+													else
+														echo "ERROR!"
+														exit 1
+													fi
+												fi
+											else
+												check_archive $file_path 1
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													cd ${script_path}/temp
 													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														process_new_files 1
 														rt_query=$?
 													fi
-												fi
-												if [ $rt_query -gt 0 ]
-												then
-													restore_data
 												else
-													set_permissions
 													if [ $gui_mode = 1 ]
 													then
-														file_found=1
-														action_done=1
-														make_ledger=1
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														check_tsa
-														check_keys
-														check_trx
-														now=`date +%s`
-														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														echo "ERROR!"
+														exit 1
+													fi
+												fi
+											fi
+											if [ $rt_query -gt 0 ]
+											then
+												restore_data
+											else
+												set_permissions
+												if [ $gui_mode = 1 ]
+												then
+													file_found=1
+													action_done=1
+													make_ledger=1
+												else
+													check_tsa
+													check_keys
+													check_trx
+													now=`date +%s`
+													build_ledger
+													no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+													if [ $no_ack_trx -gt 0 ]
+													then
+														make_signature "none" $now 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																exit 1
-															else
-																exit 0
-															fi
+															echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+															exit 1
+														else
+															exit 0
 														fi
 													fi
 												fi
-												purge_files 1
-											else
-												if [ $gui_mode = 1 ]
-												then
-													dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
-												else
-													echo "ERROR!"
-													exit 1
-												fi
 											fi
+											purge_files 1
 											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
 											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
@@ -2164,86 +2277,102 @@ do
                   		                                        then
                                 	                	                if [ -s $file_path ]
                                         	                		then
-											check_archive $file_path
-                              	  							rt_query=$?
-								                        if [ $rt_query = 0 ]
+											cd ${script_path}
+											if [ $gui_mode = 1 ]
 											then
-                                        							cd ${script_path}
-												if [ $gui_mode = 1 ]
+                                         			       				dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+                                        		        				rt_query=$?
+											else
+												case $cmd_type in
+													"partial")	rt_query=0
+															;;
+													"full")		rt_query=1
+															;;
+													*)		echo "ERROR! MISSING VARIABLE FOR >TYPE<"
+															exit 1
+															;;
+												esac
+											fi
+                     		                           				if [ $rt_query = 0 ]
+                                	                				then
+												check_archive $file_path 0
+												rt_query=$?
+												if [ $rt_query = 0 ]
 												then
-                                         			       					dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
-                                        		        					rt_query=$?
-												else
-													case $cmd_type in
-														"partial")	rt_query=0
-																;;
-														"full")		rt_query=1
-																;;
-														*)		echo "ERROR! MISSING VARIABLE FOR >TYPE<"
-																exit 1
-																;;
-													esac
-												fi
-                     		                           					if [ $rt_query = 0 ]
-                                	                					then
+													cd ${script_path}/temp
                                         	               			 			tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														process_new_files 0
 														rt_query=$?
 													fi
-		                                                				else
-                		                                 					tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												else
+													if [ $gui_mode = 1 ]
+													then
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
+													else
+														echo "ERROR!"
+														exit 1
+													fi
+												fi
+		                                                			else
+                		                                 				check_archive $file_path 1
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													cd ${script_path}/temp
+													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                					rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														tar -xf $file_path $indexes_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														process_new_files 1
 														rt_query=$?
 													fi
-												fi
-												if [ $rt_query -gt 0 ]
-												then
-													restore_data
 												else
-													set_permissions
 													if [ $gui_mode = 1 ]
 													then
-														action_done=1
-														make_ledger=1
-														file_found=1
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														check_tsa
-														check_keys
-														check_trx
-														now=`date +%s`
-														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														echo "ERROR!"
+														exit 1
+													fi
+												fi
+											fi
+											if [ $rt_query -gt 0 ]
+											then
+												restore_data
+											else
+												set_permissions
+												if [ $gui_mode = 1 ]
+												then
+													action_done=1
+													make_ledger=1
+													file_found=1
+												else
+													check_tsa
+													check_keys
+													check_trx
+													now=`date +%s`
+													build_ledger
+													no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+													if [ $no_ack_trx -gt 0 ]
+													then
+														make_signature "none" $now 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-																exit 1
-															else
-																exit 0
-															fi
+															echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
+															exit 1
+														else
+															exit 0
 														fi
 													fi
 												fi
-												purge_files 1
-											else
-												if [ $gui_mode = 1 ]
-												then
-													dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
-												else
-													echo "ERROR!"
-													exit 1
-												fi
 											fi
+											purge_files 1
 											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
 											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
