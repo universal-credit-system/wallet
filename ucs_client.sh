@@ -628,93 +628,104 @@ build_ledger(){
 				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
 				##############################################################
 
-				###CHECK IF FRIENDS KNOW OF THIS TRX##########################
-				number_of_friends_trx=0
-				number_of_friends_add=0
-				while read line
-				do
-					###EXTRACT DATA FROM FRIENDS LIST#########
-					friend_owner=`echo $line|cut -d '=' -f1`
-					friend_of_owner=`echo $line|cut -d '=' -f2`
-
-					###ONLY CONSIDER MY FRIENDS###############
-					if [ $friend_owner = $handover_account ]
+				###CHECK IF INDEX-FILE EXISTS#################################
+				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ]
+				then
+					###CHECK IF TRX IS SIGNED BY USER#############################
+					is_signed=`grep -c "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
+					if [ $is_signed -gt 0 ]
 					then
-						###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-						if [ $trx_sender != $friend_of_owner -a $trx_receiver != $friend_of_owner ]
-						then
-							if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
+						###CHECK IF FRIENDS KNOW OF THIS TRX##########################
+						number_of_friends_trx=0
+						number_of_friends_add=0
+						while read line
+						do
+							###EXTRACT DATA FROM FRIENDS LIST#########
+							friend_owner=`echo $line|cut -d '=' -f1`
+							friend_of_owner=`echo $line|cut -d '=' -f2`
+
+							###ONLY CONSIDER MY FRIENDS###############
+							if [ $friend_owner = $handover_account ]
 							then
-								number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
-								if [ $number_of_friends_add -gt 0 ]
+								###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
+								if [ $trx_sender != $friend_of_owner -a $trx_receiver != $friend_of_owner ]
 								then
-									number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
+									if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
+									then
+										number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
+										if [ $number_of_friends_add -gt 0 ]
+										then
+											number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
+										fi
+									fi
 								fi
 							fi
-						fi
-					fi
-				done <${script_path}/friends.dat
-				##############################################################
+						done <${script_path}/friends.dat
+						##############################################################
 
-				###EXTRACT TRX DATA###########################################
-				trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
-				trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
-				is_greater_one=`echo "${trx_fee}>=1"|bc`
-                               	if [ $is_greater_one = 0 ]
-				then
-               	                	trx_fee="0${trx_fee}"
-                       	        fi
-              	                trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
-				account_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-				##############################################################
-
-				###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
-                      	        account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
-                              	enough_balance=`echo "${account_check_balance}>=0"|bc`
-        	                if [ $enough_balance = 1 ]
-                                then
-					####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
-					trx_hash=`shasum -a 512 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
-                        		trx_path="trx/${trx_filename}"
-                              		echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
-					##############################################################
-
-					###SET BALANCE FOR SENDER#####################################
-                                      	account_balance=$account_check_balance
-					is_greater_one=`echo "${account_balance}>=1"|bc`
-				        if [ $is_greater_one = 0 ]
-        	                      	then
-                	              		account_balance="0${account_balance}"
-                        	      	fi
-					account_prev_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-					sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${script_path}/ledger.tmp
-					##############################################################
-
-					###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
-					if [ $number_of_friends_trx -gt $confirmations_from_friends ]
-					then
-						receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
-						if [ $receiver_in_ledger = 0 ]
+						###EXTRACT TRX DATA###########################################
+						trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
+						trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
+						is_greater_one=`echo "${trx_fee}>=1"|bc`
+						if [ $is_greater_one = 0 ]
 						then
-							echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
-						else
-							receiver_old_balance=`grep "${trx_receiver}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-							is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
-							if [ $is_greater_one = 0 ]
-							then
-								receiver_old_balance="0${receiver_old_balance}"
-							fi
-							receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-							is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
-							if [ $is_greater_one = 0 ]
-							then
-								receiver_new_balance="0${receiver_new_balance}"
-							fi
-							sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${script_path}/ledger.tmp
+							trx_fee="0${trx_fee}"
 						fi
+						trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
+						account_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+						##############################################################
+
+						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
+						account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
+						enough_balance=`echo "${account_check_balance}>=0"|bc`
+						if [ $enough_balance = 1 ]
+						then
+							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
+							trx_hash=`shasum -a 512 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
+							trx_path="trx/${trx_filename}"
+							echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
+							##############################################################
+
+							###SET BALANCE FOR SENDER#####################################
+							account_balance=$account_check_balance
+							is_greater_one=`echo "${account_balance}>=1"|bc`
+							if [ $is_greater_one = 0 ]
+							then
+								account_balance="0${account_balance}"
+							fi
+							account_prev_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+							sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${script_path}/ledger.tmp
+							##############################################################
+
+							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
+							if [ $number_of_friends_trx -gt $confirmations_from_friends ]
+							then
+								receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
+								if [ $receiver_in_ledger = 0 ]
+								then
+									echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
+								else
+									receiver_old_balance=`grep "${trx_receiver}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
+									if [ $is_greater_one = 0 ]
+									then
+										receiver_old_balance="0${receiver_old_balance}"
+									fi
+									receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
+									is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
+									if [ $is_greater_one = 0 ]
+									then
+										receiver_new_balance="0${receiver_new_balance}"
+									fi
+									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${script_path}/ledger.tmp
+								fi
+							fi
+							##############################################################
+						fi
+						##############################################################
 					fi
 					##############################################################
-        	                fi
+				fi
 				##############################################################
 			done <${script_path}/trxlist_${focus}.tmp
 			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
