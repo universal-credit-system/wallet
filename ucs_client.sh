@@ -1155,8 +1155,8 @@ process_new_files(){
 				grep "proofs/" ${script_path}/files_to_fetch.tmp|grep ".txt" >${script_path}/new_indexes.tmp
 				while read line
 				do
-					user_to_verify_name=`echo $line|cut -d '.' -f1`
-					user_to_verify_date=`echo $line|cut -d '.' -f2`
+					user_to_verify_name=`echo $line|cut -d '/' -f2|cut -d '.' -f1`
+					user_to_verify_date=`echo $line|cut -d '/' -f2|cut -d '.' -f2`
 					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
 					user_already_there=`ls -1 ${script_path}/keys|grep -c "${user_to_verify}"`
 					if [ $user_already_there = 1 ]
