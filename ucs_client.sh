@@ -1209,6 +1209,8 @@ process_new_files(){
 				cat ${script_path}/remove_list.tmp|sort|uniq >>${script_path}/temp_filelist.tmp
 				cat ${script_path}/files_to_fetch.tmp >>${script_path}/temp_filelist.tmp
 				cat ${script_path}/temp_filelist.tmp|sort|uniq -u >${script_path}/files_to_fetch.tmp
+                                rm ${script_path}/temp_filelist.tmp
+                                rm ${script_path}/remove_list.tmp
 			fi
 			while read line
 			do
