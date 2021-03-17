@@ -8,4 +8,8 @@ mkdir ${script_path}/control/keys
 mkdir ${script_path}/keys
 mkdir ${script_path}/proofs
 mkdir ${script_path}/trx
+mkdir ${script_path}/temp
+mkdir ${script_path}/temp/keys
+mkdir ${script_path}/temp/proofs
+mkdir ${script_path}/temp/trx
 chmod +x ${script_path}/ucs_client.sh
