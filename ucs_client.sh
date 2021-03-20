@@ -1964,59 +1964,59 @@ do
 													key_there=`grep -c "keys/${line}" $receipient_index_file`
 													if [ $key_there = 0 ]
 													then
-														keys_to_append="${keys_to_append} keys/${line} "
+														keys_to_append="${keys_to_append}keys/${line} "
 													fi
 													tsa_req_there=0
 													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
 													if [ $tsa_req_there = 0 ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
+														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
 													fi
 													tsa_res_there=0
 													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
 													if [ $tsa_res_there = 0 ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
+														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
 													fi
 													index_file="proofs/${line}/${line}.txt"
 													if [ -s ${script_path}/${index_file} ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
+														proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
 													fi
 												else 
 													keys_to_append="${keys_to_append} keys/${line} "
 													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 													if [ -s $tsa_req_check ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
+														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
 													fi
 													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
 													if [ -s $tsa_res_check ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
+														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
 													fi
 													index_file="proofs/${line}/${line}.txt"
 													if [ -s ${script_path}/${index_file} ]
 													then
-														proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
+														proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
 													fi
 												fi
 											else
-												keys_to_append="${keys_to_append} keys/${line} "
+												keys_to_append="${keys_to_append}keys/${line} "
 												tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 												if [ -s $tsa_req_check ]
 												then
-													proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsq "
+													proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
 												fi
 												tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
 												if [ -s $tsa_res_check ]
 												then
-													proof_to_append="${proof_to_append} proofs/${line}/freetsa.tsr "
+													proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
 												fi
 												index_file="proofs/${line}/${line}.txt"
 												if [ -s ${script_path}/${index_file} ]
 												then
-													proof_to_append="${proof_to_append} proofs/${line}/${line}.txt "
+													proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
 												fi
 											fi
 										done <${script_path}/keys_for_trx.tmp
@@ -2033,7 +2033,7 @@ do
 											fi	
 											if [ $trx_there = 0 ]
 											then
-												trx_to_append="${trx_to_append} trx/${line} "
+												trx_to_append="${trx_to_append}trx/${line} "
 											fi
 										done <${script_path}/trx_for_trx.tmp
 										rm ${script_path}/trx_for_trx.tmp
