@@ -619,7 +619,7 @@ build_ledger(){
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
 					is_signed=`grep -c "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
-					if [ $is_signed -gt 0 ]
+					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###CHECK IF FRIENDS KNOW OF THIS TRX##########################
 						number_of_friends_trx=0
