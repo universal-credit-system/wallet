@@ -1984,7 +1984,7 @@ do
 														proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
 													fi
 												else 
-													keys_to_append="${keys_to_append} keys/${line} "
+													keys_to_append="${keys_to_append}keys/${line} "
 													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 													if [ -s $tsa_req_check ]
 													then
