@@ -232,39 +232,18 @@ create_keys(){
 											exit 0
 										fi
 									else
-										rm ${script_path}/freetsa.tsq 2>/dev/null
-										rm ${script_path}/freetsa.tsr 2>/dev/null
 										key_remove=1
 									fi
 								else
-									###REMOVE CERTFILES##########################################
-									rm ${script_path}/certs/tsa.crt 2>/dev/null
-									rm ${script_path}/certs/cacert.pem 2>/dev/null
-
-									###REMOVE QUIERY AND RESPONSE################################
-									rm ${script_path}/freetsa.tsq 2>/dev/null
-									rm ${script_path}/freetsa.tsr 2>/dev/null
 									key_remove=1
 								fi
 							else
-								###REMOVE CERTFILE###########################################
-								rm ${script_path}/certs/tsa.crt 2>/dev/null
-
-								###REMOVE QUIERY AND RESPONSE################################
-								rm ${script_path}/freetsa.tsq 2>/dev/null
-								rm ${script_path}/freetsa.tsr 2>/dev/null
 								key_remove=1
 							fi
-							#############################################################
 						else
-							###REMOVE QUIERY AND RESPONSE################################
-							rm ${script_path}/freetsa.tsq 2>/dev/null
-							rm ${script_path}/freetsa.tsr 2>/dev/null
 							key_remove=1
 						fi
 					else
-						###REMOVE TSA QUIERY FILE####################################
-						rm ${script_path}/freetsa.tsq 2>/dev/null
 						key_remove=1
 					fi
 				else
@@ -276,24 +255,28 @@ create_keys(){
 		fi
 		if [ $rt_query != 0 ]
 		then
-			if [ $gui_mode = 0 ]
+			if [ $key_remove = 1 ]
 			then
-				if [ $key_remove = 1 ]
-				then
-					###Remove Proofs-folder of Account that could not be created#
-					rmdir ${script_path}/proofs/${name_hashed} 2>/dev/null
+				###Remove Proofs-folder of Account that could not be created#
+				rm -R ${script_path}/proofs/${name_hashed} 2>/dev/null
 
-					###Remove created keys out of keyring########################
-					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
-					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
-					fi
+				###Remove keys###############################################
+				rm ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc 2>/dev/null
+				rm ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc 2>/dev/null
+
+				###Remove created keys out of keyring########################
+				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+				rt_query=$?
+				if [ $rt_query = 0 ]
+				then
+					gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
+					gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 				fi
-				echo "ERROR!"
-				exit 1
+				if [ $gui_mode = 0 ]
+				then
+					echo "ERROR!"
+					exit 1
+				fi
 			fi
 		fi
 		return $rt_query
@@ -1113,12 +1096,13 @@ check_trx(){
 		while read line
 		do
 			file_to_check=${script_path}/trx/${line}
-			user_to_check=`echo $line|cut -d '.' -f1`
+			user_to_check_name=`echo $line|cut -d '.' -f1`
+			user_to_check_stamp=`echo $line|cut -d '.' -f2`
+			user_to_check="${user_to_check_name}.${user_to_check_stamp}"
 			usr_blacklisted=`grep -c "${user_to_check}" ${script_path}/blacklisted_accounts.dat`
 			if [ $usr_blacklisted = 0 ]
 			then
-				user_file=`ls -1 ${script_path}/keys/|grep "${user_to_check}"`
-				verify_signature $file_to_check $user_file
+				verify_signature $file_to_check $user_to_check
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
