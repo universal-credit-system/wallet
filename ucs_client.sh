@@ -257,6 +257,9 @@ create_keys(){
 		then
 			if [ $key_remove = 1 ]
 			then
+                                ###Remove TSA files
+                                rm ${script_path}/freetsa.* 2>/dev/null
+
 				###Remove Proofs-folder of Account that could not be created#
 				rm -R ${script_path}/proofs/${name_hashed} 2>/dev/null
 
