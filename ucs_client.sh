@@ -1736,7 +1736,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											purge_files 0
-											tar -xf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+											tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query -gt 0 ]
 											then
@@ -2045,7 +2045,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -cf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
+											tar -czf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -2143,7 +2143,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													tar -xzf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2166,7 +2166,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													tar -xzf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2301,7 +2301,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-                                        	               			 			tar -xf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+                                        	               			 			tar -xzf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2324,7 +2324,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													tar -xzf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                					rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2438,7 +2438,7 @@ do
 							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -cf ${synch_now}.tar ${tar_string} --dereference --hard-dereference
+							tar -czf ${synch_now}.tar ${tar_string} --dereference --hard-dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
