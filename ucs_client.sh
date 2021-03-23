@@ -2045,7 +2045,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -czf ${trx_now}.tar ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
+											tar -czf ${trx_now}.trx ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -2438,7 +2438,7 @@ do
 							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -czf ${synch_now}.tar ${tar_string} --dereference --hard-dereference
+							tar -czf ${synch_now}.sync ${tar_string} --dereference --hard-dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
