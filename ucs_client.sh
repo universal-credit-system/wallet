@@ -2051,27 +2051,27 @@ do
 											then
 												if [ $gui_mode = 1 ]
 												then
-													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.tar#g"`
+													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 												else
 													if [ $cmd_path != "" ]
 													then
 														if [ $script_path != $cmd_path ]
 														then
-															mv ${trx_now}.tar ${cmd_path}/${trx_now}.tar
-															echo "FILE:${cmd_path}/${trx_now}.tar"
+															mv ${trx_now}.trx ${cmd_path}/${trx_now}.trx
+															echo "FILE:${cmd_path}/${trx_now}.trx"
 														else
-															echo "FILE:${script_path}/${trx_now}.tar"
+															echo "FILE:${script_path}/${trx_now}.trx"
 														fi
 													else
-														echo "FILE:${script_path}/${trx_now}.tar"
+														echo "FILE:${script_path}/${trx_now}.trx"
 													fi
 													exit 0
 												fi
 											else
-												rm ${script_path}/${trx_now}.tar 2>/dev/null
+												rm ${script_path}/${trx_now}.trx 2>/dev/null
 												rm ${last_trx} 2>/dev/null
-												rm ${script_path}/${trx_now}.tar 2>/dev/null
+												rm ${script_path}/${trx_now}.trx 2>/dev/null
 												if [ $gui_mode = 1 ]
 												then
 													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
@@ -2444,25 +2444,25 @@ do
 							then
 								if [ $gui_mode = 1 ]
 								then
-									dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.tar#g"`
+									dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
 									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
 								else
 									if [ $cmd_path != "" ]
 									then
 										if [ $script_path != $cmd_path ]
 										then
-											mv ${synch_now}.tar ${cmd_path}/${synch_now}.tar
-											echo "FILE:${cmd_path}/${synch_now}.tar"
+											mv ${synch_now}.sync ${cmd_path}/${synch_now}.sync
+											echo "FILE:${cmd_path}/${synch_now}.sync"
 										else
-											echo "FILE:${script_path}/${synch_now}.tar"
+											echo "FILE:${script_path}/${synch_now}.sync"
 										fi
 									else
-										echo "FILE:${script_path}/${synch_now}.tar"
+										echo "FILE:${script_path}/${synch_now}.sync"
 									fi
 									exit 0
 								fi
                        					else
-								dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.tar#g"`
+								dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
 								dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_fail_display" 0 0
 							fi
 							rm ${script_path}/keys_sync.tmp 2>/dev/null
