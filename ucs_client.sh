@@ -468,7 +468,7 @@ build_ledger(){
 		then
 			progress_bar_redir="1"
 		else
-			progress_bar_redir="/dev/null"
+			progress_bar_redir="2"
 		fi
 
 		###LOAD ALL ACCOUNTS################################
@@ -723,7 +723,7 @@ build_ledger(){
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 1>&${progress_bar_redir}
+		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then
 			show_balance=0
