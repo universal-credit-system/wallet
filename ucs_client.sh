@@ -2131,8 +2131,7 @@ do
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-												dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
-												rt_query=$?
+												rt_query=1
 											else
 												rt_query=$extract_all
 											fi
@@ -2281,7 +2280,7 @@ do
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-                                         			       				dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
+                                         			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_sync_add" 0 0
                                         		        				rt_query=$?
 											else
 												case $cmd_type in
