@@ -4,8 +4,7 @@ login_account(){
 		account_key_rn=$2
 		account_password=$3
 		account_found=0
-		handover_user=""
-		account_file=""
+		handover_account=""
 		touch ${script_path}/keylist.tmp
 
 		###WRITE LIST OF KEYS TO FILE################################
@@ -20,9 +19,14 @@ login_account(){
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				keylist_name=`echo $line|cut -d '.' -f1`
-				keylist_stamp=`echo $line|cut -d '.' -f2`
-				keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
+				if [ $gui_mode = 0 -a $cmd_sender != "" ]
+				then
+					keylist_hash=$cmd_sender
+				else
+					keylist_name=`echo $line|cut -d '.' -f1`
+					keylist_stamp=`echo $line|cut -d '.' -f2`
+					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
+				fi
 				#############################################################
 
 				###IF ACCOUNT MATCHES########################################
@@ -30,10 +34,7 @@ login_account(){
 				then
 					account_found=1
 					ignore_rest=1
-					handover_account="${keylist_hash}.${keylist_stamp}"
-					handover_account_stamp=$keylist_stamp
-					account_file=$line
-					handover_account_hash=`shasum -a 256 <${script_path}/keys/${account_file}|cut -d ' ' -f1`
+					handover_account=$line
 				fi
 				##############################################################
 			fi
@@ -1359,7 +1360,8 @@ then
 	cmd_user=""
 	cmd_pin=""
 	cmd_pw=""
-	cmd_target=""
+	cmd_sender=""
+	cmd_receiver=""
 	cmd_amount=""
 	cmd_type=""
 	cmd_path=""
@@ -1377,7 +1379,9 @@ then
 					;;
 			"-password")	cmd_var=$1
 					;;
-			"-target")	cmd_var=$1
+			"-sender")	cmd_var=$1
+					;;
+			"-receiver")	cmd_var=$1
 					;;
 			"-amount")	cmd_var=$1
 					;;
@@ -1420,7 +1424,9 @@ then
 								;;
 						"-password")	cmd_pw=$1
 								;;
-						"-target")	cmd_target=$1
+						"-sender")	cmd_sender=$1
+								;;
+						"-receiver")	cmd_receiver=$1
 								;;
 						"-amount")	cmd_amount=$1
 								;;
@@ -1826,7 +1832,7 @@ do
 								rt_query=$?
 							else
 								rt_query=0
-								order_receipient=$cmd_target
+								order_receipient=$cmd_receiver
 							fi
 							if [ $rt_query = 0 ]
 							then
