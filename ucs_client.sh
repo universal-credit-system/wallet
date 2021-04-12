@@ -19,7 +19,7 @@ login_account(){
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				if [ $gui_mode = 0 -a $cmd_sender != "" ]
+				if [ $gui_mode = 0 -a ! $cmd_sender = "" ]
 				then
 					keylist_hash=$cmd_sender
 				else
