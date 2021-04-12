@@ -19,9 +19,15 @@ login_account(){
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				if [ $gui_mode = 0 -a ! $cmd_sender = "" ]
+				if [ $gui_mode = 0 ]
 				then
-					keylist_hash=$cmd_sender
+					if [ ! $cmd_sender = ""  ]
+					then
+						keylist_hash=$cmd_sender
+					else
+						echo "ERROR! -sender IS EMPTY!"
+						exit 1
+					fi
 				else
 					keylist_name=`echo $line|cut -d '.' -f1`
 					keylist_stamp=`echo $line|cut -d '.' -f2`
