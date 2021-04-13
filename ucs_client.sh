@@ -526,6 +526,7 @@ build_ledger(){
 
 		###INIT STATUS BAR##################################
 		now_date_status=`date +%s --date=${now}`
+                now_date_status=$(( $now_date_status + 86400 ))
 		no_seconds_total=$(( $now_date_status - $date_stamp ))
 		no_days_total=`expr $no_seconds_total / 86400`
 		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
