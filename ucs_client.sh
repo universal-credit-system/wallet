@@ -522,6 +522,7 @@ build_ledger(){
 		now_stamp=`date +%s`
 		now=`date +%Y%m%d`
 		day_counter=1
+                coinload=0
 		####################################################
 
 		###INIT STATUS BAR##################################
