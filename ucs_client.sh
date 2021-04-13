@@ -2642,15 +2642,9 @@ do
 							rm ${script_path}/my_trx.tmp
 							;;
 				"$dialog_stats")	###CALCULATE CURRENT COINLOAD####################
-							in_days=1
 							next_day=$(( $day_counter + 1 ))
 							next_multi=`echo "scale=10;${next_day} / 30"|bc`
 							next_coinload_month=`echo "scale=10;${initial_coinload} / ${next_multi}"|bc`
-							is_greater_one=`echo "${next_coinload_month}>=1"|bc`
-		        				if [ $is_greater_one = 0 ]
-	        					then
-	                					next_coinload_month="0${next_coinload_month}"
-	                				fi
 							next_coinload=`echo "scale=10;${next_coinload_month} / 30"|bc`
 							is_greater_one=`echo "${next_coinload}>=1"|bc`
 		       					if [ $is_greater_one = 0 ]
@@ -2670,7 +2664,7 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<in_days>/${in_days}/g" -e "s/<next_coinload>/${next_coinload}/g"`
+								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g"`
 								dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
