@@ -522,7 +522,6 @@ build_ledger(){
 		now_stamp=`date +%s`
 		now=`date +%Y%m%d`
 		day_counter=1
-                coinload=0
 		####################################################
 
 		###INIT STATUS BAR##################################
@@ -2644,7 +2643,15 @@ do
 							rm ${script_path}/my_trx.tmp
 							;;
 				"$dialog_stats")	###CALCULATE CURRENT COINLOAD####################
-							next_day=$(( $day_counter + 1 ))
+							multi=`echo "scale=10;${no_days_total} / 30"|bc`
+							coinload_month=`echo "scale=10;${initial_coinload} / ${multi}"|bc`
+							coinload=`echo "scale=10;${coinload_month} / 30"|bc`
+							is_greater_one=`echo "${coinload}>=1"|bc`
+		       					if [ $is_greater_one = 0 ]
+	        					then
+	                					coinload="0${coinload}"
+	                				fi
+                                                        next_day=$(( $no_days_total + 1 ))
 							next_multi=`echo "scale=10;${next_day} / 30"|bc`
 							next_coinload_month=`echo "scale=10;${initial_coinload} / ${next_multi}"|bc`
 							next_coinload=`echo "scale=10;${next_coinload_month} / 30"|bc`
