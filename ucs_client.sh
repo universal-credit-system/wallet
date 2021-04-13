@@ -468,7 +468,8 @@ check_input(){
 		return $rt_query
 }
 build_ledger(){
-		date_stamp=1590962400
+		start_date="20210216"
+		date_stamp=`date +%s --date="${start_date}"`
 
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
@@ -519,9 +520,7 @@ build_ledger(){
 		###SET FOCUS########################################
 		focus=`date +%Y%m%d --date=@${date_stamp}`
 		now_stamp=`date +%s`
-		now=`date +%Y%m%d --date=@${now_stamp}`
-		multi=1
-		multi_next=$(( $multi * 2 ))
+		now=`date +%Y%m%d`
 		day_counter=1
 		####################################################
 
@@ -530,11 +529,6 @@ build_ledger(){
 		no_seconds_total=$(( $now_date_status - $date_stamp ))
 		no_days_total=`expr $no_seconds_total / 86400`
 		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
-		is_greater_one=`echo "${percent_per_day}>=1"|bc`
-		if [ $is_greater_one = 0 ]
-	        then
-	               	percent_per_day="0${percent_per_day}"
-	        fi
 		current_percent=0
 		current_percent_display=0
 		####################################################
@@ -577,12 +571,9 @@ build_ledger(){
 			#################################################
 
 			###CALCULATE CURRENT COINLOAD####################
-       			if [ $day_counter -eq $multi_next ]
-			then
-				multi=$(( $multi * 2 ))
-				multi_next=$(( $multi * 2 ))
-			fi
-			coinload=`echo "scale=10;${initial_coinload} / ${multi}"|bc`
+			multi=`echo "scale=10;${day_counter} / 30"|bc`
+			coinload_month=`echo "scale=10;${initial_coinload} / ${multi}"|bc`
+			coinload=`echo "scale=10;${coinload_month} / 30"|bc`
 			is_greater_one=`echo "${coinload}>=1"|bc`
 		        if [ $is_greater_one = 0 ]
 	        	then
@@ -725,7 +716,6 @@ build_ledger(){
 			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
-			in_days=$(( $multi_next - $day_counter ))
 			date_stamp=$(( $date_stamp + 86400 ))
 			focus=`date +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
@@ -2651,31 +2641,23 @@ do
 							done
 							rm ${script_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	###GET NEXT COINLOAD###########################
-							now=`date +%s`
-							today_unformatted=`date +%Y%m%d --date=@${now}`
-							today_formatted=`date +%s --date=${today_unformatted}`
-							seconds_since_start=$(( $today_formatted - 1590962400 ))
-							days_since_start=`expr ${seconds_since_start} / 86400`
-							days_since_start=$(( $days_since_start + 1 ))
-							multi_unformatted=`echo "scale=2;l(${days_since_start})/l(2)"|bc -l`
-							multi_formatted=`echo "${multi_unformatted} / 1"|bc`
-							multi=`echo "2^${multi_formatted}"|bc`
-							coinload=`echo "scale=10;${initial_coinload} / ${multi}"|bc` 
-							is_greater_one=`echo "${coinload}>=1"|bc`
+				"$dialog_stats")	###CALCULATE CURRENT COINLOAD####################
+							in_days=1
+							next_day=$(( $day_counter + 1 ))
+							next_multi=`echo "scale=10;${next_day} / 30"|bc`
+							next_coinload_month=`echo "scale=10;${initial_coinload} / ${next_multi}"|bc`
+							is_greater_one=`echo "${next_coinload_month}>=1"|bc`
 		        				if [ $is_greater_one = 0 ]
 	        					then
-	                					coinload="0${coinload}"
+	                					next_coinload_month="0${next_coinload_month}"
 	                				fi
-							next_multi_formatted=$(( $multi_formatted + 1 ))
-							next_multi=`echo "2^${next_multi_formatted}"|bc`
-							in_days=$(( $next_multi - $days_since_start ))
-							next_coinload=`echo "scale=10;${coinload} / 2"|bc`
+							next_coinload=`echo "scale=10;${next_coinload_month} / 30"|bc`
 							is_greater_one=`echo "${next_coinload}>=1"|bc`
-		        				if [ $is_greater_one = 0 ]
+		       					if [ $is_greater_one = 0 ]
 	        					then
 	                					next_coinload="0${next_coinload}"
 	                				fi
+							#################################################
 
 							###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`ls -1 ${script_path}/keys|wc -l`
@@ -2699,7 +2681,6 @@ do
 								echo "FRIENDS_TOTAL:${total_friends}"
 								echo "CURRENT_COINLOAD:${coinload}"
 								echo "NEXT_COINLOAD:${next_coinload}"
-								echo "IN_DAYS:${in_days}"
 								exit 0
 							fi
 							;;
