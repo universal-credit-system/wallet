@@ -24,9 +24,6 @@ login_account(){
 					if [ ! $cmd_sender = ""  ]
 					then
 						keylist_hash=$cmd_sender
-					else
-						echo "ERROR! -sender IS EMPTY!"
-						exit 1
 					fi
 				else
 					keylist_name=`echo $line|cut -d '.' -f1`
@@ -522,6 +519,7 @@ build_ledger(){
 		now_stamp=`date +%s`
 		now=`date +%Y%m%d`
 		day_counter=1
+		months=0
 		####################################################
 
 		###INIT STATUS BAR##################################
@@ -572,9 +570,8 @@ build_ledger(){
 			#################################################
 
 			###CALCULATE CURRENT COINLOAD####################
-			multi=`echo "scale=10;${day_counter} / 30"|bc`
-			coinload_month=`echo "scale=10;${initial_coinload} / ${multi}"|bc`
-			coinload=`echo "scale=10;${coinload_month} / 30"|bc`
+			months=`echo "scale=0;${day_counter} / 30"|bc`
+			coinload=`echo "scale=10;0.97^$months*$initial_coinload/30"|bc`
 			is_greater_one=`echo "${coinload}>=1"|bc`
 		        if [ $is_greater_one = 0 ]
 	        	then
@@ -2642,25 +2639,25 @@ do
 							done
 							rm ${script_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	###CALCULATE CURRENT COINLOAD####################
-							multi=`echo "scale=10;${no_days_total} / 30"|bc`
-							coinload_month=`echo "scale=10;${initial_coinload} / ${multi}"|bc`
-							coinload=`echo "scale=10;${coinload_month} / 30"|bc`
+				"$dialog_stats")	###CALCULATE COINLOAD AND NEXT COINLOAD########
+							months=`echo "scale=0;${no_days_total} / 30"|bc`
+							coinload=`echo "scale=10;0.97^$months*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${coinload}>=1"|bc`
-		       					if [ $is_greater_one = 0 ]
+		        				if [ $is_greater_one = 0 ]
 	        					then
 	                					coinload="0${coinload}"
 	                				fi
-                                                        next_day=$(( $no_days_total + 1 ))
-							next_multi=`echo "scale=10;${next_day} / 30"|bc`
-							next_coinload_month=`echo "scale=10;${initial_coinload} / ${next_multi}"|bc`
-							next_coinload=`echo "scale=10;${next_coinload_month} / 30"|bc`
+                                                        next_month=$(( $months + 1 ))
+							next_coinload=`echo "scale=10;0.97^$next_month*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${next_coinload}>=1"|bc`
-		       					if [ $is_greater_one = 0 ]
+		        				if [ $is_greater_one = 0 ]
 	        					then
 	                					next_coinload="0${next_coinload}"
 	                				fi
-							#################################################
+							days_in_month=`expr $no_days_total % 30`
+							days_in_month=$(( $days_in_month - 1 ))
+							in_days=$(( 30 - $days_in_month ))
+							###############################################
 
 							###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`ls -1 ${script_path}/keys|wc -l`
@@ -2673,7 +2670,7 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g"`
+								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g" -e "s/<in_days>/${in_days}/g"`
 								dialog --title "$dialog_stats" --backtitle "Universal Credit System" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
@@ -2684,6 +2681,7 @@ do
 								echo "FRIENDS_TOTAL:${total_friends}"
 								echo "CURRENT_COINLOAD:${coinload}"
 								echo "NEXT_COINLOAD:${next_coinload}"
+								echo "IN_DAYS:${in_days}"
 								exit 0
 							fi
 							;;
