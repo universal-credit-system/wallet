@@ -19,15 +19,15 @@ login_account(){
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				if [ $gui_mode = 0 ]
+				keylist_name=`echo $line|cut -d '.' -f1`
+		                keylist_stamp=`echo $line|cut -d '.' -f2`	
+                                if [ $gui_mode = 0 ]
 				then
 					if [ ! $cmd_sender = ""  ]
 					then
-						keylist_hash=$cmd_sender
+                                            keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 					fi
 				else
-					keylist_name=`echo $line|cut -d '.' -f1`
-					keylist_stamp=`echo $line|cut -d '.' -f2`
 					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
 				fi
 				#############################################################
