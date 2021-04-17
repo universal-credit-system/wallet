@@ -258,7 +258,7 @@ create_keys(){
 				key_remove=1
 			fi
 		fi
-		if [ $rt_query != 0 ]
+		if [ ! $rt_query = 0 ]
 		then
 			if [ $key_remove = 1 ]
 			then
@@ -631,7 +631,7 @@ build_ledger(){
 							if [ $friend_owner = $handover_account ]
 							then
 								###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-								if [ $trx_sender != $friend_of_owner -a $trx_receiver != $friend_of_owner ]
+								if [ ! $trx_sender = $friend_of_owner -a ! $trx_receiver = $friend_of_owner ]
 								then
 									if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 									then
@@ -1032,7 +1032,7 @@ check_tsa(){
 			done <${script_path}/all_accounts.tmp
 			while read line
 			do
-				if [ $line != $handover_account ]
+				if [ ! $line = $handover_account ]
 				then
 					rm ${script_path}/keys/${line} 2>/dev/null
 					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
@@ -1080,7 +1080,7 @@ check_keys(){
 		rm ${script_path}/keylist_gpg.tmp
 		while read line
 		do
-			if [ $line != $handover_account ]
+			if [ ! $line = $handover_account ]
 			then
 				rm ${script_path}/keys/${line} 2>/dev/null
 				rm -R ${script_path}/proofs/${line}/ 2>/dev/null
@@ -1107,7 +1107,7 @@ check_trx(){
 				then
 					trx_date_filename=`echo $line|cut -d '.' -f3`
 					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
-					if [ $trx_date_filename != $trx_date_inside ]
+					if [ ! $trx_date_filename = $trx_date_inside ]
 					then
 						echo $file_to_check >>${script_path}/blacklisted_trx.dat
 					fi
@@ -1121,7 +1121,7 @@ check_trx(){
 			trx_account_name=`echo $line|cut -d '.' -f1`
 			trx_account_stamp=`echo $Line|cut -d '.' -f2`
 			trx_account="${trx_account_name}.${trx_account_stamp}"
-			if [ $trx_account != $handover_account ]
+			if [ ! $trx_account = $handover_account ]
 			then
 				rm ${script_path}/trx/${line} 2>/dev/null
 			fi
@@ -1453,7 +1453,7 @@ else
 	gui_mode=1
 fi
 
-while [ 1 != 2 ]
+while [ ! 1 = 2 ]
 do
 	if [ $user_logged_in = 0 ]
 	then
@@ -1464,7 +1464,7 @@ do
 		else
 			rt_query=0
 		fi
-		if [ $rt_query != 0 ]
+		if [ ! $rt_query = 0 ]
         	then
                 	clear
                 	exit
@@ -1593,7 +1593,7 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-                                       										if [ $password_first != $password_second ]
+                                       										if [ ! $password_first = $password_second ]
                         											then
 															clear
 															dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_keys_pwmatch" 0 0
@@ -1637,7 +1637,7 @@ do
 							if [ $rt_query = 0 ]
 							then
 								new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
-								if [ $lang_file != $new_lang_file ]
+								if [ ! $lang_file = $new_lang_file ]
 								then
 									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/control/config.conf
 									. ${script_path}/control/config.conf
@@ -1710,7 +1710,7 @@ do
 									if [ $rt_query = 0 ]
 									then
 										no_results=`echo $dialog_history_noresult|cut -d ' ' -f1`
-										if [ $backup_decision != $no_results ]
+										if [ ! $backup_decision = $no_results ]
 										then
 											bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
 											bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
@@ -1816,7 +1816,7 @@ do
 		else
 			rt_query=0
 		fi
-		if [ $rt_query != 0 ]
+		if [ ! $rt_query = 0 ]
 		then
 			user_logged_in=0
 			clear
@@ -2064,7 +2064,7 @@ do
 												else
 													if [ ! $cmd_path = "" ]
 													then
-														if [ $script_path != $cmd_path ]
+														if [ ! $script_path = $cmd_path ]
 														then
 															mv ${trx_now}.trx ${cmd_path}/${trx_now}.trx
 															echo "FILE:${cmd_path}/${trx_now}.trx"
@@ -2514,7 +2514,7 @@ do
 										if [ $friend_owner = $handover_account ]
 										then
 											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-											if [ $sender != $friend_of_owner -a $receiver != $friend_of_owner ]
+											if [ ! $sender = $friend_of_owner -a ! $receiver = $friend_of_owner ]
 											then
 												if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 												then
@@ -2561,7 +2561,7 @@ do
 								if [ $rt_query = 0 ]
 								then
 									dialog_history_noresults=`echo $dialog_history_noresult|cut -d ' ' -f1`
-									if [ $decision != $dialog_history_noresults ]
+									if [ ! $decision = $dialog_history_noresults ]
 									then
 										trx_date_extracted=`echo $decision|cut -d '|' -f1`
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
@@ -2601,7 +2601,7 @@ do
 											if [ $friend_owner = $handover_account ]
 											then
 												###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-												if [ $sender != $friend_of_owner -a $receiver != $friend_of_owner ]
+												if [ ! $sender = $friend_of_owner -a ! $receiver = $friend_of_owner ]
 												then
 													if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
 													then
@@ -2663,7 +2663,6 @@ do
 	                					next_coinload="0${next_coinload}"
 	                				fi
 							days_in_month=`expr $no_days_total % 30`
-							days_in_month=$(( $days_in_month - 1 ))
 							in_days=$(( 30 - $days_in_month ))
 							###############################################
 
