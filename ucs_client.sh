@@ -8,7 +8,7 @@ login_account(){
 		touch ${script_path}/keylist.tmp
 
 		###WRITE LIST OF KEYS TO FILE################################
-		ls -1 ${script_path}/keys/ >${script_path}/keylist.tmp
+		ls -1 ${script_path}/keys/|sort -t. -k2 >${script_path}/keylist.tmp
 
 		###SET TRIGGER THAT ACCOUND WAS FOUND TO 0###################
 		ignore_rest=0
@@ -1426,10 +1426,10 @@ then
 								;;
 						"-type")	cmd_type=$1
 								case $cmd_type in
-									"partial")	small_trx=1
+									"partial")	small_trx=0
 											extract_all=0
 											;;	
-									"full")		small_trx=0
+									"full")		small_trx=1
 											extract_all=1
 											;;
 									*)		echo "ERROR! TRY THIS:"
@@ -1479,8 +1479,18 @@ do
 				fi
 			fi
                 	case $main_menu in
-                        	"$dialog_main_logon")   account_entered_correct=0
+                        	"$dialog_main_logon")   account_chosen="blank"
+							account_rn="blank"
+							password_chosen="blank"
+							account_entered_correct=0
 							account_entered_aborted=0
+							if [ $gui_mode = 0 ]
+							then
+								if [ ! $cmd_sender = "" ]
+								then
+									account_entered_correct=1
+								fi
+							fi
 							while [ $account_entered_correct = 0 ]
 							do
 								if [ $gui_mode = 1 ]
@@ -1947,7 +1957,6 @@ do
 											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 											small_trx=$?
 										fi
-
 										keys_to_append=""
 										proof_to_append=""
 										trx_to_append=""
@@ -1956,7 +1965,6 @@ do
 										ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
 										while read line
 										do
-											key_user=`echo $line|cut -d '.' -f1`
 											if [ $small_trx = 0 ]
 											then
 												if [ -s $receipient_index_file ]
@@ -2054,7 +2062,7 @@ do
 													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 												else
-													if [ $cmd_path != "" ]
+													if [ ! $cmd_path = "" ]
 													then
 														if [ $script_path != $cmd_path ]
 														then
@@ -2446,9 +2454,9 @@ do
 									dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
 									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
 								else
-									if [ $cmd_path != "" ]
+									if [ ! $cmd_path = "" ]
 									then
-										if [ $script_path != $cmd_path ]
+										if [ ! $script_path = $cmd_path ]
 										then
 											mv ${synch_now}.sync ${cmd_path}/${synch_now}.sync
 											echo "FILE:${cmd_path}/${synch_now}.sync"
