@@ -1551,7 +1551,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "Universal Credit System" --stdout --inputbox "$dialog_login_display_account" 0 0 ""`
+									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "Universal Credit System" --stdout --inputbox "$dialog_keys_account" 0 0 ""`
 									rt_query=$?
 								else
 									account_chosen=$cmd_user
@@ -2553,7 +2553,7 @@ do
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --stdout --menu "$dialog_history_text" 0 0 0 ${menu_display_text}`
+								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --stdout --menu "$dialog_history_menu" 0 0 0 ${menu_display_text}`
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
