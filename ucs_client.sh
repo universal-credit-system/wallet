@@ -21,12 +21,9 @@ login_account(){
 				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $line|cut -d '.' -f1`
 		                keylist_stamp=`echo $line|cut -d '.' -f2`	
-                                if [ $gui_mode = 0 ]
+                                if [ ! $cmd_sender = ""  ]
 				then
-					if [ ! $cmd_sender = ""  ]
-					then
-                                            keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
-					fi
+                                        keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
 					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
 				fi
