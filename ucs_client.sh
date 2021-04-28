@@ -2136,7 +2136,7 @@ do
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-												rt_query=1
+												rt_query=0
 											else
 												rt_query=$extract_all
 											fi
