@@ -2569,10 +2569,20 @@ do
 										trx_status=""
 										trx_confirmations=0
 										trx_confirmations_user=0
+										if [ -s ${script_path}/proofs/${sender}.txt ]
+										then
+											trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}.txt`
+											if [ $trx_signed = 0 ]
+											then
+												trx_status="TRX_NOT_SIGNED "
+											fi
+										else
+											trx_status="TRX_NOT_SIGNED "
+										fi
 										trx_blacklisted=`grep -c "${trx_file}" ${script_path}/blacklisted_trx.dat`
 										if [ $trx_blacklisted = 1 ]
 										then
-											trx_status="TRX_BLACKLISTED "
+											trx_status="${trx_status}TRX_BLACKLISTED "
 										fi
 										sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
 										if [ $sender_blacklisted = 1 ]
