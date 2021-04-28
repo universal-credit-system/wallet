@@ -1148,7 +1148,7 @@ process_new_files(){
 							grep "trx/${user_to_verify}" ${script_path}/temp/${line} >${script_path}/new_index_filelist.tmp
 							new_trx=`wc -l <${script_path}/new_index_filelist.tmp`
 							grep "trx/${user_to_verify}" ${script_path}/${line} >${script_path}/old_index_filelist.tmp
-							old_trx=`wc -l ${script_path}/old_index_filelist.tmp`
+							old_trx=`wc -l <${script_path}/old_index_filelist.tmp`
 							if [ $old_trx -le $new_trx ]
 							then
 								while read line
