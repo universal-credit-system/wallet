@@ -1169,7 +1169,7 @@ process_new_files(){
 										no_matches=$(( $no_matches + 1 ))
 									fi
 								done <${script_path}/new_index_filelist.tmp
-								if [ $no_matches -lt old_trx ]
+								if [ $no_matches -lt $old_trx ]
 								then
 									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
 								fi
