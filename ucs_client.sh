@@ -2524,19 +2524,30 @@ do
 											fi
 										fi
 									done <${script_path}/friends.dat
-									if [ $trx_confirmations -gt 0 ]
+									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
-										trx_blacklisted=`grep -c "${line_extracted}" ${script_path}/blacklisted_trx.dat`
-										sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
-										receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
-										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
+										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
+									else
+										trx_signed=0
+									fi
+									if [ $trx_signed -gt 0 ]
+									then
+										if [ $trx_confirmations -gt 0 ]
 										then
-											trx_color="\Z2"
+											trx_blacklisted=`grep -c "${line_extracted}" ${script_path}/blacklisted_trx.dat`
+											sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
+											receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
+											if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
+											then
+												trx_color="\Z2"
+											else
+												trx_color="\Z1"
+											fi
 										else
-											trx_color="\Z1"
+											trx_color="\Z0"
 										fi
 									else
-										trx_color="\Z0"
+										trx_color="\Z1"
 									fi
 									if [ $sender = $handover_account ]
 									then
@@ -2569,15 +2580,15 @@ do
 										trx_status=""
 										trx_confirmations=0
 										trx_confirmations_user=0
-										if [ -s ${script_path}/proofs/${sender}.txt ]
+										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
-											trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}.txt`
-											if [ $trx_signed = 0 ]
-											then
-												trx_status="TRX_NOT_SIGNED "
-											fi
+											trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
 										else
-											trx_status="TRX_NOT_SIGNED "
+											trx_signed=0
+										fi
+										if [ $trx_signed = 0 ]
+										then
+											trx_status="TRX_IGNORED "
 										fi
 										trx_blacklisted=`grep -c "${trx_file}" ${script_path}/blacklisted_trx.dat`
 										if [ $trx_blacklisted = 1 ]
@@ -2594,7 +2605,7 @@ do
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
 										fi
-										if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
+										if [ $trx_signed = 1 -a $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
 										then
 											trx_status="OK"
 										fi
