@@ -1107,6 +1107,20 @@ check_trx(){
 					if [ ! $trx_date_filename = $trx_date_inside ]
 					then
 						echo $file_to_check >>${script_path}/blacklisted_trx.dat
+					else
+						if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+						then
+							is_trx_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
+							if [ $is_trx_indexed = 0 -a $delete_trx_not_indexed = 1 ]
+							then
+								rm $file_to_check 2>/dev/null
+							fi
+						else
+							if [ $delete_trx_not_indexed = 1 ]
+							then
+								rm $file_to_check 2>/dev/null
+							fi
+						fi
 					fi
 				else
 					echo $file_to_check >>${script_path}/blacklisted_trx.dat			
