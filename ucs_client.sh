@@ -1307,8 +1307,8 @@ purge_files(){
 				###REMOVE KEYRING AND FILES########################################
 				rm ${script_path}/control/keyring.file 2>/dev/null
 				rm ${script_path}/control/keyring.file~ 2>/dev/null
-				rm -r ${script_path}/keys/* 2>/dev/null
-				rm -r ${script_path}/trx/* 2>/dev/null
+				rm ${script_path}/keys/* 2>/dev/null
+				rm ${script_path}/trx/* 2>/dev/null
 				rm -r ${script_path}/proofs/* 2>/dev/null
 			else
 				rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
