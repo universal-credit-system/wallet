@@ -1254,16 +1254,16 @@ set_permissions(){
 				curr_permissions=`stat -c '%a' ${file_to_change}`
 				if [ -d $file_to_change ]
 				then
-					if [ ! $curr_permissions = 755 ]
+					if [ ! $curr_permissions = $permissions_directories ]
 					then
-						chmod 755 ${script_path}/${line}
+						chmod $permissions_directories ${script_path}/${line}
 					fi
 				else
 					if [ -s $file_to_change ]
 					then
-						if [ ! $curr_permissions = 644 ]
+						if [ ! $curr_permissions = $permissions_files ]
 						then
-							chmod 644 ${script_path}/${line}
+							chmod $permissions_files ${script_path}/${line}
 						fi
 					fi
 				fi
@@ -1318,17 +1318,6 @@ import_keys(){
 ##################
 script_name=${0}
 script_path=$(dirname $(readlink -f ${0}))
-core_system_version="v0.0.1"
-current_fee="0.001"
-currency_symbol="UCC"
-initial_coinload=10000
-user_logged_in=0
-action_done=1
-make_ledger=1
-files_to_fetch=""
-
-###SET UMASK TO 0022########
-umask 0022
 
 ###MAKE CLEAN START#########
 rm ${script_path}/*.tmp 2>/dev/null
@@ -1338,8 +1327,17 @@ rm ${script_path}/*.dat.gpg 2>/dev/null
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
 
-###SOURCE LANGUAGE FILE
+###SET UMASK AS DEFINED IN CONFI########
+umask $ucs_umask
+
+###SOURCE LANGUAGE FILE#####
 . ${script_path}/lang/${lang_file}
+
+###SET INITIAL VARIABLES####
+user_logged_in=0
+action_done=1
+make_ledger=1
+files_to_fetch=""
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
