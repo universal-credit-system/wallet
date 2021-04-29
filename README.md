@@ -61,11 +61,6 @@ Step into directory that contains the cloned repository:
 cd ucs_client_v0.0.1/
 ```
 
-You may need to change permissions to make the install script executable:
-```
-chmod +x install.sh
-```
-
 Now you can execute the install.sh script that creates required folders:
 ```
 ./install.sh
