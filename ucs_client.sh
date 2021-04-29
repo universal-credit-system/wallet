@@ -1174,6 +1174,8 @@ process_new_files(){
 									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
 								fi
 							fi
+						else
+							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
 						fi
 					else
 						user_new=`ls -1 ${script_path}/temp/keys|grep -c "${user_to_verify}"`
@@ -1219,10 +1221,10 @@ check_blacklist(){
 }
 restore_data(){
 			###SET PERMISSIONS TO ENSURE ACCESS#######################
-			chmod 755 ${script_path}/control/
-			chmod 755 ${script_path}/keys/
-			chmod 755 ${script_path}/trx/
-			chmod 755 ${script_path}/proofs/
+			chmod $permissions_directories ${script_path}/control/
+			chmod $permissions_directories ${script_path}/keys/
+			chmod $permissions_directories ${script_path}/trx/
+			chmod $permissions_directories ${script_path}/proofs/
 
 			###CREATE LIST WITH FILES THAT ARE NEW####################
 			cat ${script_path}/files_to_fetch.tmp >${script_path}/file_list_unsorted.tmp
@@ -1235,7 +1237,17 @@ restore_data(){
 			###GO THROUGH LIST AND DELETE NEW FILES###################
 			while read line
 			do
-				rm ${script_path}/${line} 2>/dev/null
+				is_proof=`echo $line|grep -c "proof/"`
+				if [ is_proof = 1 ]
+				then
+					proof_user=`echo $line|cut -d '/' -f2`
+					if [ -d ${script_path}/proofs/${proof_user}/ ]
+					then
+						rm -R ${script_path}/proofs/${proof_user} 2>/dev/null
+					fi
+				else
+					rm ${script_path}/${line} 2>/dev/null
+				fi
 			done <${script_path}/files_to_delete.tmp
 
 			###REMOVE LIST OF FILES TO BE DELETED#####################
@@ -2150,7 +2162,6 @@ do
 													if [ $rt_query = 0 ]
 													then
 														process_new_files 0
-														rt_query=$?
 													fi
 												else
 													if [ $gui_mode = 1 ]
@@ -2173,7 +2184,6 @@ do
 													if [ $rt_query = 0 ]
 													then
 														process_new_files 1
-														rt_query=$?
 													fi
 												else
 													if [ $gui_mode = 1 ]
@@ -2308,7 +2318,6 @@ do
 													if [ $rt_query = 0 ]
 													then
 														process_new_files 0
-														rt_query=$?
 													fi
 												else
 													if [ $gui_mode = 1 ]
@@ -2331,7 +2340,6 @@ do
 													if [ $rt_query = 0 ]
 													then
 														process_new_files 1
-														rt_query=$?
 													fi
 												else
 													if [ $gui_mode = 1 ]
