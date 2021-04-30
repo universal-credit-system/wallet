@@ -1350,11 +1350,13 @@ rm ${script_path}/*.tmp 2>/dev/null
 rm ${script_path}/*.dat 2>/dev/null
 rm ${script_path}/*.dat.gpg 2>/dev/null
 
+###DEF PERMISSIONS BY UMASK########
+user_umask=`umask`
+permissions_directories=`echo "777 - ${user_umask}"|bc`
+permissions_files=`echo "666 - ${user_umask}"|bc`
+
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
-
-###SET UMASK AS DEFINED IN CONFI########
-umask $ucs_umask
 
 ###SOURCE LANGUAGE FILE#####
 . ${script_path}/lang/${lang_file}

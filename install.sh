@@ -1,7 +1,6 @@
 #!/bin/sh
 script_name=${0}
 script_path=$(dirname $(readlink -f ${0}))
-umask 0022
 mkdir ${script_path}/backup
 mkdir ${script_path}/backup/temp
 mkdir ${script_path}/control/keys
