@@ -20,7 +20,7 @@ login_account(){
 			then
 				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $line|cut -d '.' -f1`
-		                keylist_stamp=`echo $line|cut -d '.' -f2`	
+		                keylist_stamp=`echo $line|cut -d '.' -f2`
                                 if [ ! $cmd_sender = ""  ]
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
@@ -413,13 +413,13 @@ check_input(){
 		length_counter=0
 
 		###CHECK LENGTH OF INPUT STRING########################################
-		length_counter=`echo "${input_string}"|wc -m|sed 's/ //g'`
+		length_counter=`echo "${input_string}"|wc -m`
 
 		if [ $check_mode = 1 ]
 		then
 			###CHECK IF ALPHANUMERICAL CHARS ARE IN INPUT STRING###################
 			nodigit_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
-	
+
 			###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
 			if [ $nodigit_check = 1 ]
 			then
@@ -433,7 +433,7 @@ check_input(){
 				fi
 			fi
 			#######################################################################
-		fi	
+		fi
 
 		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
 		if [ $length_counter -le 1 ]
@@ -588,7 +588,7 @@ build_ledger(){
 				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_path}"`
+					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_hash}"`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###CHECK IF FRIENDS KNOW OF THIS TRX##########################
@@ -885,7 +885,7 @@ check_archive(){
 				fi
 			fi
 			##############################################################
-	
+
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
 			rm ${script_path}/tar_check_temp.tmp 2>/dev/null
 			rm ${script_path}/tar_check_full.tmp 2>/dev/null
@@ -1043,7 +1043,7 @@ check_keys(){
 					if [ $rt_query -gt 0 ]
 					then
 						rm ${script_path}/proofs/${line}/${line}.txt
-					fi	
+					fi
 				fi
                        	fi
                	done <${script_path}/keys_import.tmp
@@ -1097,7 +1097,7 @@ check_trx(){
 						fi
 					fi
 				else
-					echo $file_to_check >>${script_path}/blacklisted_trx.dat			
+					echo $file_to_check >>${script_path}/blacklisted_trx.dat
 				fi
 			fi
 		done <${script_path}/all_trx.tmp
@@ -1247,7 +1247,7 @@ restore_data(){
 			tar -xzf ${script_path}/backup/temp/temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 }
 set_permissions(){
-			###AVOID EXECUTABLES BY SETTING PERMISSIONS############### 
+			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
 			while read line
 			do
 				file_to_change="${script_path}/${line}"
@@ -1395,7 +1395,7 @@ then
 									"restore_backup")	main_menu=$dialog_main_backup
 												;;
 									"create_trx")		user_menu=$dialog_send
-												;;		
+												;;
 									"read_trx")		user_menu=$dialog_receive
 												;;
 									"create_sync")		user_menu=$dialog_sync
@@ -1426,7 +1426,7 @@ then
 								case $cmd_type in
 									"partial")	small_trx=0
 											extract_all=0
-											;;	
+											;;
 									"full")		small_trx=1
 											extract_all=1
 											;;
@@ -2043,7 +2043,7 @@ do
 											if [ -s $receipient_index_file ]
 											then
 												trx_there=`grep -c "trx/${line}" $receipient_index_file`
-											fi	
+											fi
 											if [ $trx_there = 0 ]
 											then
 												trx_to_append="${trx_to_append}trx/${line} "
