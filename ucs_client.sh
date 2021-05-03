@@ -48,19 +48,19 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo "${account_name_chosen}" >${script_path}/${account_name_chosen}_account.dat
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase "${account_password}" --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
+			echo "${account_name_chosen}" >${script_path}/account.dat
+			echo "${account_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
-				rm ${script_path}/${account_name_chosen}_account.dat
+				rm ${script_path}/account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${account_password}" --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
+				echo "${account_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
-					extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat`
+					extracted_name=`cat ${script_path}/account.dat`
 					if [ "${extracted_name}" = "${account_name_chosen}" ]
 					then
 						if [ $gui_mode = 1 ]
@@ -108,8 +108,8 @@ login_account(){
 		#############################################################
 
 		###REMOVE TEMPORARY FILES####################################
-                rm ${script_path}/${account_name_chosen}_account.dat.gpg 2>/dev/null
-	        rm ${script_path}/${account_name_chosen}_account.dat 2>/dev/null
+                rm ${script_path}/account.dat.gpg 2>/dev/null
+	        rm ${script_path}/account.dat 2>/dev/null
 }
 create_keys(){
 		name_chosen=$1
@@ -135,7 +135,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		echo "${name_passphrase}"|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -146,7 +146,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export ${name_hashed}.${file_stamp}
+			echo "${name_passphrase}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -160,7 +160,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys ${name_hashed}.${file_stamp}
+				echo "${name_passphrase}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -171,7 +171,7 @@ create_keys(){
 					cd ${script_path}
 
 					###CREATE TSA QUIERY FILE####################################
-					openssl ts -query -data ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>/dev/null 2>/dev/null
+					openssl ts -query -data ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -212,10 +212,10 @@ create_keys(){
 										fi
 
 										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
-										cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+										cp ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
 
 										###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-										cp ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
+										cp ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
 
 										if [ $gui_mode = 1 ]
 										then
@@ -266,8 +266,8 @@ create_keys(){
 				rm -R ${script_path}/proofs/${name_hashed} 2>/dev/null
 
 				###Remove keys###############################################
-				rm ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc 2>/dev/null
-				rm ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc 2>/dev/null
+				rm ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc 2>/dev/null
+				rm ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc 2>/dev/null
 
 				###Remove created keys out of keyring########################
 				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
