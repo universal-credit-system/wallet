@@ -48,20 +48,20 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo $account_name_chosen >${script_path}/${account_name_chosen}_account.dat
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
+			echo "${account_name_chosen}" >${script_path}/${account_name_chosen}_account.dat
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase "${account_password}" --pinentry-mode loopback --encrypt --sign ${script_path}/${account_name_chosen}_account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/${account_name_chosen}_account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${account_password}" --output ${script_path}/${account_name_chosen}_account.dat --decrypt ${script_path}/${account_name_chosen}_account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
-					extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat|sed 's/ //g'`
-					if [ $extracted_name = $account_name_chosen ]
+					extracted_name=`cat ${script_path}/${account_name_chosen}_account.dat`
+					if [ "${extracted_name}" = "${account_name_chosen}" ]
 					then
 						if [ $gui_mode = 1 ]
 						then
@@ -135,7 +135,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -146,7 +146,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export ${name_hashed}.${file_stamp}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_pub.asc --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -160,7 +160,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys ${name_hashed}.${file_stamp}
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase "${name_passphrase}" --output ${script_path}/${name_cleared}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -312,7 +312,7 @@ make_signature(){
 					###WRITE KEYFILE TO INDEX FILE###################################
 					key_hash=`shasum -a 512 <${script_path}/keys/${line}|cut -d ' ' -f1`
                                         key_path="keys/${line}"
-                                        echo "${key_path} ${key_hash} ${trx_now}" >>${message_blank}
+                                        echo "${key_path} ${key_hash}" >>${message_blank}
 					#################################################################
 
 					###IF TSA QUIERY FILE IS AVAILABLE ADD TO INDEX FILE#############
@@ -321,7 +321,7 @@ make_signature(){
 					then
 						freetsa_qfile_path="proofs/$line/freetsa.tsq"
 						freetsa_qfile_hash=`shasum -a 512 <${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
-						echo "${freetsa_qfile_path} ${freetsa_qfile_hash} ${trx_now}" >>${message_blank}
+						echo "${freetsa_qfile_path} ${freetsa_qfile_hash}" >>${message_blank}
 					fi
 					#################################################################
 
@@ -331,7 +331,7 @@ make_signature(){
 					then
 						freetsa_rfile_path="proofs/$line/freetsa.tsr"
 						freetsa_rfile_hash=`shasum -a 512 <${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
-						echo "${freetsa_rfile_path} ${freetsa_rfile_hash} ${trx_now}" >>${message_blank}
+						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
 					fi
 					#################################################################
 				done <${script_path}/index_keys.tmp
@@ -407,29 +407,33 @@ verify_signature(){
 }
 check_input(){
 		input_string=$1
+		check_mode=$2
 		rt_query=0
-		alnum_there=0
+		no_digit_check=0
 		length_counter=0
 
 		###CHECK LENGTH OF INPUT STRING########################################
-		length_counter=`echo $input_string|wc -m|sed 's/ //g'`
+		length_counter=`echo "${input_string}"|wc -m|sed 's/ //g'`
 
-		###CHECK IF ALPHANUMERICAL CHARS ARE IN INPUT STRING###################
-		alnum_there=`echo $input_string|grep -c '[^[:alnum:]]'`
-
-		###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
-		if [ $alnum_there -gt 0 ]
+		if [ $check_mode = 1 ]
 		then
-			if [ $gui_mode = 1 ]
+			###CHECK IF ALPHANUMERICAL CHARS ARE IN INPUT STRING###################
+			nodigit_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
+	
+			###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
+			if [ $nodigit_check = 1 ]
 			then
-				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg1" 0 0
-				rt_query=1
-			else
-				echo "ERROR!"
-				exit 1
+				if [ $gui_mode = 1 ]
+				then
+					dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg1" 0 0
+					rt_query=1
+				else
+					echo "ERROR!"
+					exit 1
+				fi
 			fi
-		fi
-		#######################################################################
+			#######################################################################
+		fi	
 
 		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
 		if [ $length_counter -le 1 ]
@@ -438,20 +442,6 @@ check_input(){
 			then
                         	dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg2" 0 0
                 		rt_query=1
-			else
-				echo "ERROR!"
-				exit 1
-			fi
-		fi
-		#######################################################################
-
-		###IF INPUT GREATER 30 CHARS DISPLAY NOTIFICATION######################
-		if [ $length_counter -gt 31 ]
-		then
-			if [ $gui_mode = 1 ]
-			then
-				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg3" 0 0
-				rt_query=1
 			else
 				echo "ERROR!"
 				exit 1
@@ -530,28 +520,12 @@ build_ledger(){
 		####################################################
 
 		###LOAD ALL PREVIOUS TRANSACTIONS###################
-		cd ${script_path}/trx
-		touch ${script_path}/trxlist_full.tmp
-		touch ${script_path}/trxlist.tmp
-		touch ${script_path}/trxlist_full_sorted.tmp
-		rm ${script_path}/trxlist_formatted.tmp 2>/dev/null
-		touch ${script_path}/trxlist_formatted.tmp
-		grep -l "S:" *.* >${script_path}/trxlist_full.tmp 2>/dev/null
-		cat ${script_path}/trxlist_full.tmp >${script_path}/trxlist.tmp 2>/dev/null
-		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trxlist.tmp 2>/dev/null
-		sort -t . -k3 ${script_path}/trxlist.tmp|uniq >${script_path}/trxlist_full_sorted.tmp
-		rm ${script_path}/trxlist.tmp
-		rm ${script_path}/trxlist_full.tmp
-		while read line
-		do
-		     	stamp_to_convert=`echo $line|cut -d '.' -f3`
-		       	stamp_converted=`date +%Y%m%d --date=@${stamp_to_convert}`
-		       	trx_sender_name=`echo $line|cut -d '.' -f1`
-			trx_sender_stamp=`echo $line|cut -d '.' -f2`
-			trx_sender="${trx_sender_name}.${trx_sender_stamp}"
-		       	echo "${stamp_to_convert} ${stamp_converted} ${trx_sender}.${stamp_to_convert}" >>${script_path}/trxlist_formatted.tmp
-		done <${script_path}/trxlist_full_sorted.tmp
-		rm ${script_path}/trxlist_full_sorted.tmp 2>/dev/null
+		touch ${script_path}/trx_list_full.tmp
+		touch ${script_path}/trx_list.tmp
+		ls -1 ${script_path}/trx >${script_path}/trx_list_full.tmp 2>/dev/null
+		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trx_list_full.tmp 2>/dev/null
+		cat ${script_path}/trx_list_full.tmp|sort -t . -k2|uniq >${script_path}/trx_list.tmp
+		rm ${script_path}/trx_list_full.tmp 2>/dev/null
 		####################################################
 
 		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
@@ -599,20 +573,22 @@ build_ledger(){
 			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			grep " ${focus} " ${script_path}/trxlist_formatted.tmp >${script_path}/trxlist_${focus}.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${script_path}/trx_list.tmp > ${script_path}/trxlist_${focus}.tmp
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
 			        trx_filename=`echo $line|cut -d ' ' -f3`
 				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
 				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
+				trx_hash=`shasum -a 512 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
+				trx_path="trx/${trx_filename}"
 				##############################################################
 
 				###CHECK IF INDEX-FILE EXISTS#################################
 				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=`grep -c "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
+					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_path}"`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###CHECK IF FRIENDS KNOW OF THIS TRX##########################
@@ -661,9 +637,7 @@ build_ledger(){
 						if [ $enough_balance = 1 ]
 						then
 							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
-							trx_hash=`shasum -a 512 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
-							trx_path="trx/${trx_filename}"
-							echo "${trx_path} ${trx_hash} ${trx_now}" >>${script_path}/index_trx.tmp
+							echo "${trx_path} ${trx_hash}" >>${script_path}/index_trx.tmp
 							##############################################################
 
 							###SET BALANCE FOR SENDER#####################################
@@ -1367,6 +1341,7 @@ action_done=1
 make_ledger=1
 files_to_fetch=""
 
+
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
 then
@@ -1518,21 +1493,21 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --stdout --inputbox "$dialog_login_display_account" 0 0 ""`
+									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --stdout --max-input 30 --inputbox "$dialog_login_display_account" 0 0 ""`
 									rt_query=$?
 								else
 									rt_query=0
-									account_chosen=$cmd_user
+									account_chosen="${cmd_user}"
 								fi
 								if [ $rt_query = 0 ]
 								then
-									check_input $account_chosen
+									check_input "${account_chosen}" 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
 										if [ $gui_mode = 1 ]
 										then
-											account_rn=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --stdout --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
+											account_rn=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --stdout --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
                                                                                 	rt_query=$?
 										else
 											rt_query=0
@@ -1540,7 +1515,7 @@ do
 										fi
                                                                                 if [ $rt_query = 0 ]
                                                                                 then
-                                                                                        check_input $account_rn
+                                                                                        check_input "${account_rn}" 1
                                                                                         rt_query=$?
                                                                                         if [ $rt_query = 0 ]
                                                                                         then
@@ -1560,7 +1535,7 @@ do
 							then
 								if [ $gui_mode = 1 ]
 								then
-									password_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --stdout --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
+									password_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "Universal Credit System" --max-input 30 --stdout --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
                                                                 	rt_query=$?
 								else
 									rt_query=0
@@ -1568,23 +1543,24 @@ do
 								fi
                                                                 if [ $rt_query = 0 ]
                                                                 then
-									login_account $account_chosen $account_rn $password_chosen
+									login_account "${account_chosen}" "${account_rn}" "${password_chosen}"
 								fi
 							fi
 							;;
                         	"$dialog_main_create")  account_entered_correct=0
+							account_chosen_inputbox=""
 							while [ $account_entered_correct = 0 ]
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "Universal Credit System" --stdout --inputbox "$dialog_keys_account" 0 0 ""`
+									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "Universal Credit System" --max-input 30 --stdout --inputbox "$dialog_keys_account" 0 0 "${account_chosen_inputbox}"`
 									rt_query=$?
 								else
 									account_chosen=$cmd_user
 								fi
 								if [ $rt_query = 0 ]
 								then
-									check_input $account_chosen
+									check_input "${account_chosen}" 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -1593,7 +1569,7 @@ do
                									do
 											if [ $gui_mode = 1 ]
 											then
-                										password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --stdout --insecure --passwordbox "$dialog_keys_pw1" 0 0`
+                										password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --stdout --insecure --passwordbox "$dialog_keys_pw1" 0 0`
 												rt_query=$?
 											else
 												password_first=$cmd_pw
@@ -1601,14 +1577,14 @@ do
 											fi
 											if [ $rt_query = 0 ]
 											then
-               											check_input $password_first
+               											check_input "${password_first}" 0
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
 													if [ $gui_mode = 1 ]
 													then
 														clear
-														password_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --stdout --insecure --passwordbox "$dialog_keys_pw2" 0 0`
+														password_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --stdout --insecure --passwordbox "$dialog_keys_pw2" 0 0`
 														rt_query=$?
 													else
 														password_second=$cmd_pw
@@ -1643,7 +1619,12 @@ do
 										done
 									fi
 								else
-									account_entered_correct=1
+									if [ $rt_query = 3 ]
+									then
+										account_chosen_inputbox=`tr -dc A-Za-z0-9 </dev/urandom|head -c 20`
+									else
+										account_entered_correct=1
+									fi
 								fi
 							done
 							;;
@@ -1855,7 +1836,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --stdout --inputbox "$dialog_send_address" 0 0 ""`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --max-input 75 --stdout --inputbox "$dialog_send_address" 0 0 ""`
 								rt_query=$?
 							else
 								rt_query=0
