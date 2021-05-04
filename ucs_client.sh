@@ -48,15 +48,15 @@ login_account(){
 		if [ $account_found = 1 ]
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo "${account_name_chosen}" >${script_path}/account.dat
-			echo "${account_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
+			echo $account_name_chosen >${script_path}/account.dat
+			echo $account_password|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				echo "${account_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
+				echo $account_password|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
@@ -135,7 +135,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		echo "${name_passphrase}"|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		echo $name_passphrase|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -146,7 +146,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			echo "${name_passphrase}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
+			echo $name_passphrase|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -160,7 +160,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				echo "${name_passphrase}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${name_hashed}.${file_stamp}
+				echo $name_passphrase|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -260,7 +260,8 @@ create_keys(){
 			if [ $key_remove = 1 ]
 			then
                                 ###Remove TSA files
-                                rm ${script_path}/freetsa.* 2>/dev/null
+                                rm ${script_path}/freetsa.tsq 2>/dev/null
+				rm ${script_path}/freetsa.tsr 2>/dev/null
 
 				###Remove Proofs-folder of Account that could not be created#
 				rm -R ${script_path}/proofs/${name_hashed} 2>/dev/null
@@ -270,7 +271,7 @@ create_keys(){
 				rm ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc 2>/dev/null
 
 				###Remove created keys out of keyring########################
-				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_cleared}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_hashed}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -405,7 +406,7 @@ verify_signature(){
 			rm ${script_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_query
 }
-check_input(){
+check_input(){ 
 		input_string=$1
 		check_mode=$2
 		rt_query=0
@@ -417,7 +418,7 @@ check_input(){
 
 		if [ $check_mode = 1 ]
 		then
-			###CHECK IF ALPHANUMERICAL CHARS ARE IN INPUT STRING###################
+			###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
 			nodigit_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
 
 			###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
@@ -449,6 +450,21 @@ check_input(){
 		fi
 		#######################################################################
 
+		###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
+		alnum_check=`echo "${input_string}"|grep -c '[^[:alnum:]]'`
+
+		###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
+		if [ $alnum_check = 1 ]
+		then
+			if [ $gui_mode = 1 ]
+			then
+				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg3" 0 0
+				rt_query=1
+			else
+				echo "ERROR!"
+				exit 1
+			fi
+		fi
 		return $rt_query
 }
 build_ledger(){
@@ -1477,7 +1493,8 @@ do
 				fi
 			fi
                 	case $main_menu in
-                        	"$dialog_main_logon")   account_chosen="blank"
+                        	"$dialog_main_logon")   set -f
+							account_chosen="blank"
 							account_rn="blank"
 							password_chosen="blank"
 							account_entered_correct=0
@@ -1546,8 +1563,10 @@ do
 									login_account "${account_chosen}" "${account_rn}" "${password_chosen}"
 								fi
 							fi
+							set +f
 							;;
-                        	"$dialog_main_create")  account_entered_correct=0
+                        	"$dialog_main_create")  set -f
+							account_entered_correct=0
 							account_chosen_inputbox=""
 							while [ $account_entered_correct = 0 ]
 							do
@@ -1627,6 +1646,7 @@ do
 									fi
 								fi
 							done
+							set +f
 							;;
 				"$dialog_main_lang")	ls -1 ${script_path}/lang/ >${script_path}/languages.tmp
 							lang_to_display=""
