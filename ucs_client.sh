@@ -754,7 +754,6 @@ check_archive(){
 					rt_query=1
 				else
 					files_not_homedir=""
-					files_to_fetch=""
 
 					###GO THROUGH CONTENT LIST LINE BY LINE#######################
 					while read line
@@ -775,11 +774,9 @@ check_archive(){
 											then
 												if [ ! -s $line ]
 												then
-													files_to_fetch="${files_to_fetch}$line "
 													echo "$line" >>${script_path}/files_to_fetch.tmp
 												fi
 											else
-												files_to_fetch="${files_to_fetch}$line "
 												echo "$line" >>${script_path}/files_to_fetch.tmp
 											fi
 										fi
@@ -802,11 +799,9 @@ check_archive(){
 												then
 													if [ ! -s $line ]
 													then
-														files_to_fetch="${files_to_fetch}$line "
 														echo "$line" >>${script_path}/files_to_fetch.tmp
 													fi
 												else
-													files_to_fetch="${files_to_fetch}$line "
 													echo "$line" >>${script_path}/files_to_fetch.tmp
 												fi
 											else
@@ -827,11 +822,9 @@ check_archive(){
 															then
 																if [ ! -s $line ]
 																then
-																	files_to_fetch="${files_to_fetch}$line "
 																	echo "$line" >>${script_path}/files_to_fetch.tmp
 																fi
 															else
-																files_to_fetch="${files_to_fetch}$line "
 																echo "$line" >>${script_path}/files_to_fetch.tmp
 															fi
 															;;
@@ -839,16 +832,13 @@ check_archive(){
 															then
 																if [ ! -s $line ]
 																then
-																	files_to_fetch="${files_to_fetch}$line "
 																	echo "$line" >>${script_path}/files_to_fetch.tmp
 																fi
 															else
-																files_to_fetch="${files_to_fetch}$line "
 																echo "$line" >>${script_path}/files_to_fetch.tmp
 															fi
 															;;
-												"${file_usr}.txt")	files_to_fetch="${files_to_fetch}$line "
-															echo "$line" >>${script_path}/files_to_fetch.tmp
+												"${file_usr}.txt")	echo "$line" >>${script_path}/files_to_fetch.tmp
 															;;
 												*)			rt_query=1
 															;;
@@ -887,16 +877,8 @@ check_archive(){
 				any_files_there=`wc -l <${script_path}/files_to_keep.tmp`
 				if [ $any_files_there -gt 0 ]
 				then
-					###CREATE STRING FOR BACKUP FILE##############################
-					files_to_backup=""
-					while read line
-					do
-						files_to_backup="${files_to_backup}${line} "
-					done <${script_path}/files_to_keep.tmp
-					##############################################################
-
 					###PACK BACKUP FILE###########################################
-					tar -czf ${script_path}/backup/temp/temp.bcp $files_to_backup --dereference --hard-dereference
+					tar -czf ${script_path}/backup/temp/temp.bcp -T ${script_path}/files_to_keep.tmp --dereference --hard-dereference
 					rt_query=$?
 				fi
 			fi
@@ -1355,7 +1337,6 @@ permissions_files=`echo "666 - ${user_umask}"|bc`
 user_logged_in=0
 action_done=1
 make_ledger=1
-files_to_fetch=""
 
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
@@ -1649,14 +1630,13 @@ do
 							set +f
 							;;
 				"$dialog_main_lang")	ls -1 ${script_path}/lang/ >${script_path}/languages.tmp
-							lang_to_display=""
 							while read line
 							do
 								lang_ex_short=`echo $line|cut -d '_' -f2`
 								lang_ex_full=`echo $line|cut -d '_' -f3|cut -d '.' -f1`
-								lang_to_display="${lang_to_display}$lang_ex_short $lang_ex_full "
+								printf "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
 							done <${script_path}/languages.tmp
-							lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_lang" 0 0 0 ${lang_to_display}`
+							lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -1669,6 +1649,7 @@ do
 								fi
 							fi
 							rm ${script_path}/languages.tmp
+							rm ${script_path}/lang_list.tmp
 							;;
 				"$dialog_main_backup")	if [ $gui_mode = 1 ]
 							then
@@ -1714,9 +1695,9 @@ do
 								if [ $gui_mode = 1 ]
 								then
 									cd ${script_path}/backup
-									touch ${script_path}/backup_list.tmp
-									find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backup_list.tmp
-									no_backups=`wc -l <${script_path}/backup_list.tmp`
+									touch ${script_path}/backups_list.tmp
+									find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
+									no_backups=`wc -l <${script_path}/backups_list.tmp`
 									if [ $no_backups -gt 0 ]
 									then
 										backup_display_text=""
@@ -1724,12 +1705,12 @@ do
 										do
 											backup_stamp=`echo $line|cut -d '.' -f1`
 											backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
-											backup_display_text="${backup_display_text}${backup_date} BACKUP "
-										done <${script_path}/backup_list.tmp
+											printf "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
+										done <${script_path}/backups_list.tmp
 									else
-										backup_display_text="${dialog_history_noresult}"
+										printf "${dialog_history_noresult}" >${script_path}/backup_list.tmp
 									fi
-									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 ${backup_display_text}`
+									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -1739,7 +1720,7 @@ do
 											bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
 											bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
 											bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
-											bcp_file=`cat ${script_path}/backup_list.tmp|grep "${bcp_stamp}"`
+											bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
 											file_path="${script_path}/backup/${bcp_file}"
 											cd ${script_path}
 											purge_files 0
@@ -1789,6 +1770,7 @@ do
 									fi
 								fi
 							fi
+							rm ${script_path}/backup_list.tmp
 							;;
                         	"$dialog_main_end")     unset user_logged_in
 							rm ${script_path}/*.tmp 2>/dev/null
@@ -1981,75 +1963,52 @@ do
 											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 											small_trx=$?
 										fi
-										keys_to_append=""
-										proof_to_append=""
-										trx_to_append=""
 										receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
 										touch ${script_path}/keys_for_trx.tmp
 										ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
 										while read line
 										do
-											if [ $small_trx = 0 ]
+											if [ $small_trx = 0 -a -s $receipient_index_file ]
 											then
-												if [ -s $receipient_index_file ]
+												key_there=0
+												key_there=`grep -c "keys/${line}" $receipient_index_file`
+												if [ $key_there = 0 ]
 												then
-													key_there=0
-													key_there=`grep -c "keys/${line}" $receipient_index_file`
-													if [ $key_there = 0 ]
-													then
-														keys_to_append="${keys_to_append}keys/${line} "
-													fi
-													tsa_req_there=0
-													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
-													if [ $tsa_req_there = 0 ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
-													fi
-													tsa_res_there=0
-													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
-													if [ $tsa_res_there = 0 ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
-													fi
-													index_file="proofs/${line}/${line}.txt"
-													if [ -s ${script_path}/${index_file} ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
-													fi
-												else 
-													keys_to_append="${keys_to_append}keys/${line} "
-													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
-													if [ -s $tsa_req_check ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
-													fi
-													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
-													if [ -s $tsa_res_check ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
-													fi
-													index_file="proofs/${line}/${line}.txt"
-													if [ -s ${script_path}/${index_file} ]
-													then
-														proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
-													fi
+													echo "keys/${line}" >>${script_path}/files_list.tmp
 												fi
-											else
-												keys_to_append="${keys_to_append}keys/${line} "
-												tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
-												if [ -s $tsa_req_check ]
+												tsa_req_there=0
+												tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
+												if [ $tsa_req_there = 0 ]
 												then
-													proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsq "
+													echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
 												fi
-												tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
-												if [ -s $tsa_res_check ]
+												tsa_res_there=0
+												tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
+												if [ $tsa_res_there = 0 ]
 												then
-													proof_to_append="${proof_to_append}proofs/${line}/freetsa.tsr "
+													echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
 												fi
 												index_file="proofs/${line}/${line}.txt"
 												if [ -s ${script_path}/${index_file} ]
 												then
-													proof_to_append="${proof_to_append}proofs/${line}/${line}.txt "
+													echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
+												fi
+											else
+												echo "keys/${line}" >>${script_path}/files_list.tmp
+												tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
+												if [ -s $tsa_req_check ]
+												then
+													echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
+												fi
+												tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
+												if [ -s $tsa_res_check ]
+												then
+													echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
+												fi
+												index_file="proofs/${line}/${line}.txt"
+												if [ -s ${script_path}/${index_file} ]
+												then
+													echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
 												fi
 											fi
 										done <${script_path}/keys_for_trx.tmp
@@ -2066,7 +2025,7 @@ do
 											fi
 											if [ $trx_there = 0 ]
 											then
-												trx_to_append="${trx_to_append}trx/${line} "
+												echo "trx/${line}" >>${script_path}/files_list.tmp
 											fi
 										done <${script_path}/trx_for_trx.tmp
 										rm ${script_path}/trx_for_trx.tmp
@@ -2077,10 +2036,11 @@ do
 										if [ $rt_query = 0 ]
 										then
 											cd ${script_path}
-											tar -czf ${trx_now}.trx ${keys_to_append} ${proof_to_append} ${trx_to_append} --dereference --hard-dereference
+											tar -czf ${trx_now}.trx -T ${script_path}/files_list.tmp --dereference --hard-dereference
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
+												rm ${script_path}/files_list.tmp
 												if [ $gui_mode = 1 ]
 												then
 													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
@@ -2174,7 +2134,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xzf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2196,7 +2156,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xzf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2330,7 +2290,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-                                        	               			 			tar -xzf $file_path $files_to_fetch --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+                                        	               			 			tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2352,7 +2312,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/temp
-													tar -xzf $file_path $files_to_fetch --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                					rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2457,15 +2417,9 @@ do
 								echo "trx/$line" >>${script_path}/files_for_sync.tmp
 							done <${script_path}/trx_sync.tmp
 
-							###Build string for tar-operation
-							tar_string=""
-							while read line
-							do
-								tar_string="${tar_string}$line "
-							done <${script_path}/files_for_sync.tmp
 							synch_now=`date +%s`
 							cd ${script_path}
-							tar -czf ${synch_now}.sync ${tar_string} --dereference --hard-dereference
+							tar -czf ${synch_now}.sync -T ${script_path}/files_for_sync.tmp --dereference --hard-dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -2504,7 +2458,6 @@ do
 							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${script_path}/my_trx.tmp`
-							menu_display_text=""
 							if [ $no_trx -gt 0 ]
 							then
 								while read line
@@ -2574,20 +2527,20 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|-${trx_amount_with_fee} \Zb${trx_color}$dialog_history_ack_snd\ZB "
+										printf "${trx_date}|-${trx_amount_with_fee} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${script_path}/history_list.tmp
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										menu_display_text="${menu_display_text}${trx_date}|+${trx_amount} \Zb${trx_color}$dialog_history_ack_rcv\ZB "
+										printf "${trx_date}|+${trx_amount} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${script_path}/history_list.tmp
 									fi
 								done <${script_path}/my_trx.tmp
 							else
-								menu_display_text="$dialog_history_noresult"
+								printf "${dialog_history_noresult}" >${script_path}/history_list.tmp
 							fi
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_history_menu" 0 0 0 ${menu_display_text}`
+								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_history_menu" 0 0 0 --file ${script_path}/history_list.tmp`
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -2684,6 +2637,7 @@ do
 									fi
 								else
 									overview_quit=1
+									rm ${script_path}/history_list.tmp 2>/dev/null
 								fi
 							done
 							rm ${script_path}/my_trx.tmp
