@@ -49,14 +49,14 @@ login_account(){
 		then
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
 			echo $account_name_chosen >${script_path}/account.dat
-			echo $account_password|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
 			if [ $? = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				echo $account_password|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
 				encrypt_rt=$?
 				if [ $encrypt_rt = 0 ]
 				then
@@ -135,7 +135,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		echo $name_passphrase|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -146,7 +146,7 @@ create_keys(){
 			fi
 
 			###EXPORT PUBLIC KEY#########################################
-			echo $name_passphrase|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase ${name_passphrase} --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -160,7 +160,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				echo $name_passphrase|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${name_hashed}.${file_stamp}
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${name_passphrase} --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -747,54 +747,31 @@ check_archive(){
 				###WRITE FILE LIST############################################
 				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
 
-				###CHECK FOR BAD CHARACTERS###################################
-				bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
-				if [ $bad_chars_there -gt 0 ]
+				###CHECK FOR EXECUTABLES######################################
+				executables_there=`awk '{print $1}' ${script_path}/tar_check_full.tmp|grep -v "d"|grep -c "x"`
+				if [ $executables_there -eq 0 ]
 				then
-					rt_query=1
-				else
-					files_not_homedir=""
+					###CHECK FOR BAD CHARACTERS###################################
+					bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
+					if [ $bad_chars_there -eq 0 ]
+					then
+						files_not_homedir=""
 
-					###GO THROUGH CONTENT LIST LINE BY LINE#######################
-					while read line
-					do
-						###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
-						files_not_homedir=`echo $line|cut -d '/' -f1`
-						case $files_not_homedir in
-                        				"keys")		if [ ! -d $line ]
-									then
-										file_full=`echo $line|cut -d '/' -f2`
-										file_ext=`echo $file_full|cut -d '.' -f2`
-										file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
-										if [ $file_ext_correct -gt 0 ]
+						###GO THROUGH CONTENT LIST LINE BY LINE#######################
+						while read line
+						do
+							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
+							files_not_homedir=`echo $line|cut -d '/' -f1`
+							case $files_not_homedir in
+		                				"keys")		if [ ! -d $line ]
 										then
-											rt_query=1
-										else
-											if [ $check_mode = 0 ]
-											then
-												if [ ! -s $line ]
-												then
-													echo "$line" >>${script_path}/files_to_fetch.tmp
-												fi
-											else
-												echo "$line" >>${script_path}/files_to_fetch.tmp
-											fi
-										fi
-									fi
-                                		      			;;
-                       					"trx")		if [ ! -d $line ]
-									then
-										file_full=`echo $line|cut -d '/' -f2`
-										file_ext=`echo $file_full|cut -d '.' -f2`
-										file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
-										if [ $file_ext_correct -gt 0 ]
-										then
-											rt_query=1
-										else
-											file_ext=`echo $file_full|cut -d '.' -f3`
+											file_full=`echo $line|cut -d '/' -f2`
+											file_ext=`echo $file_full|cut -d '.' -f2`
 											file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
-											if [ $file_ext_correct = 0 ]
+											if [ $file_ext_correct -gt 0 ]
 											then
+												rt_query=1
+											else
 												if [ $check_mode = 0 ]
 												then
 													if [ ! -s $line ]
@@ -804,56 +781,87 @@ check_archive(){
 												else
 													echo "$line" >>${script_path}/files_to_fetch.tmp
 												fi
+											fi
+										fi
+		                        		      			;;
+		               					"trx")		if [ ! -d $line ]
+										then
+											file_full=`echo $line|cut -d '/' -f2`
+											file_ext=`echo $file_full|cut -d '.' -f2`
+											file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+											if [ $file_ext_correct -gt 0 ]
+											then
+												rt_query=1
+											else
+												file_ext=`echo $file_full|cut -d '.' -f3`
+												file_ext_correct=`echo $file_ext|grep -c '[^[:digit:]]'`
+												if [ $file_ext_correct = 0 ]
+												then
+													if [ $check_mode = 0 ]
+													then
+														if [ ! -s $line ]
+														then
+															echo "$line" >>${script_path}/files_to_fetch.tmp
+														fi
+													else
+														echo "$line" >>${script_path}/files_to_fetch.tmp
+													fi
+												else
+													rt_query=1
+												fi
+											fi
+										fi
+			                       		        		;;
+								"proofs")	if [ ! -d $line ]
+										then
+											file_usr=`echo $line|cut -d '/' -f2`
+											file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
+											if [ $file_usr_correct = 0 ]
+											then
+												file_full=`echo $line|cut -d '/' -f3`
+												case $file_full in
+													"freetsa.tsq")		if [ $check_mode = 0 ]
+																then
+																	if [ ! -s $line ]
+																	then
+																		echo "$line" >>${script_path}/files_to_fetch.tmp
+																	fi
+																else
+																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																fi
+																;;
+													"freetsa.tsr")		if [ $check_mode = 0 ]
+																then
+																	if [ ! -s $line ]
+																	then
+																		echo "$line" >>${script_path}/files_to_fetch.tmp
+																	fi
+																else
+																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																fi
+																;;
+													"${file_usr}.txt")	echo "$line" >>${script_path}/files_to_fetch.tmp
+																;;
+													*)			rt_query=1
+																;;
+												esac
 											else
 												rt_query=1
 											fi
 										fi
-									fi
-        	                       		        		;;
-							"proofs")	if [ ! -d $line ]
-									then
-										file_usr=`echo $line|cut -d '/' -f2`
-										file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
-										if [ $file_usr_correct = 0 ]
-										then
-											file_full=`echo $line|cut -d '/' -f3`
-											case $file_full in
-												"freetsa.tsq")		if [ $check_mode = 0 ]
-															then
-																if [ ! -s $line ]
-																then
-																	echo "$line" >>${script_path}/files_to_fetch.tmp
-																fi
-															else
-																echo "$line" >>${script_path}/files_to_fetch.tmp
-															fi
-															;;
-												"freetsa.tsr")		if [ $check_mode = 0 ]
-															then
-																if [ ! -s $line ]
-																then
-																	echo "$line" >>${script_path}/files_to_fetch.tmp
-																fi
-															else
-																echo "$line" >>${script_path}/files_to_fetch.tmp
-															fi
-															;;
-												"${file_usr}.txt")	echo "$line" >>${script_path}/files_to_fetch.tmp
-															;;
-												*)			rt_query=1
-															;;
-											esac
-										else
-											rt_query=1
-										fi
-									fi
-                                       					;;
-							*)		rt_query=1
-									;;
-						esac
+		                               					;;
+								*)		rt_query=1
+										;;
+							esac
+							##############################################################
+						done <${script_path}/tar_check.tmp
 						##############################################################
-					done <${script_path}/tar_check.tmp
+					else
+						rt_query=1
+					fi
 					##############################################################
+				else
+					rt_query=1
 				fi
 				##############################################################
 			fi
@@ -1325,7 +1333,9 @@ rm ${script_path}/*.dat.gpg 2>/dev/null
 ###DEF PERMISSIONS BY UMASK########
 user_umask=`umask`
 permissions_directories=`echo "777 - ${user_umask}"|bc`
-permissions_files=`echo "666 - ${user_umask}"|bc`
+touch ${script_path}/test.tmp
+permissions_files=`stat -c '%a' ${script_path}/test.tmp`
+rm ${script_path}/test.tmp
 
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
