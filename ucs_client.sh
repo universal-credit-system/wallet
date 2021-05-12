@@ -342,9 +342,6 @@ make_signature(){
 
 				####WRITE TRX LIST TO INDEX FILE#################################
                                 cat ${script_path}/index_trx.tmp >>${message_blank}
-
-				###REMOVE TRXLIST################################################
-				rm ${script_path}/index_trx.tmp
 			fi
 			#################################################################
 
@@ -558,7 +555,7 @@ build_ledger(){
 
 			###CALCULATE CURRENT COINLOAD####################
 			months=`echo "scale=0;${day_counter} / 30"|bc`
-			coinload=`echo "scale=10;0.97^$months*$initial_coinload/30"|bc`
+			coinload=`echo "scale=6;0.97^$months*$initial_coinload/30"|bc`
 			is_greater_one=`echo "${coinload}>=1"|bc`
 		        if [ $is_greater_one = 0 ]
 	        	then
@@ -582,7 +579,7 @@ build_ledger(){
 			##############################################################
 
 			###GRANT COINLOAD OF THAT DAY#################################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.10f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
 			if [ -s ${script_path}/ledger_mod.tmp ]
 			then
 				mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp 2>/dev/null
@@ -1887,7 +1884,7 @@ do
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											is_amount_big_enough=`echo "scale=10;${order_amount_formatted}>=0.000001"|bc`
+											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000001"|bc`
 											if [ $is_amount_big_enough = 1 ]
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
@@ -2026,7 +2023,16 @@ do
 										done <${script_path}/trx_for_trx.tmp
 										rm ${script_path}/trx_for_trx.tmp
 
-										build_ledger
+										###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+										account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
+										is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
+										if [ $is_greater_one = 1 ]
+										then
+											account_new_balance="0${account_new_balance}"
+										fi
+										sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${script_path}/ledger.tmp
+										echo "trx/${handover_account}.${trx_now}" >>${script_path}/index_trx.tmp
+										#############################################################################
 										make_signature "none" ${trx_now} 1
 										rt_query=$?
 										if [ $rt_query = 0 ]
@@ -2042,6 +2048,8 @@ do
 													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 												else
+													cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
+													echo "BALANCE_${trx_now}:${cmd_output}"
 													if [ ! $cmd_path = "" ]
 													then
 														if [ ! $script_path = $cmd_path ]
@@ -2618,14 +2626,14 @@ do
 							;;
 				"$dialog_stats")	###CALCULATE COINLOAD AND NEXT COINLOAD########
 							months=`echo "scale=0;${no_days_total} / 30"|bc`
-							coinload=`echo "scale=10;0.97^$months*$initial_coinload/30"|bc`
+							coinload=`echo "scale=6;0.97^$months*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${coinload}>=1"|bc`
 		        				if [ $is_greater_one = 0 ]
 	        					then
 	                					coinload="0${coinload}"
 	                				fi
                                                         next_month=$(( $months + 1 ))
-							next_coinload=`echo "scale=10;0.97^$next_month*$initial_coinload/30"|bc`
+							next_coinload=`echo "scale=6;0.97^$next_month*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${next_coinload}>=1"|bc`
 		        				if [ $is_greater_one = 0 ]
 	        					then
