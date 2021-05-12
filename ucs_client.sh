@@ -637,18 +637,11 @@ build_ledger(){
 
 						###EXTRACT TRX DATA###########################################
 						trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
-						trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
-						is_greater_one=`echo "${trx_fee}>=1"|bc`
-						if [ $is_greater_one = 0 ]
-						then
-							trx_fee="0${trx_fee}"
-						fi
-						trx_total=`echo "${trx_amount} + ${trx_fee}"|bc`
 						account_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 						##############################################################
 
 						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
-						account_check_balance=`echo "${account_balance} - ${trx_total}"|bc`
+						account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc`
 						enough_balance=`echo "${account_check_balance}>=0"|bc`
 						if [ $enough_balance = 1 ]
 						then
@@ -1894,17 +1887,10 @@ do
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											is_amount_big_enough=`echo "scale=10;${order_amount}>=0.000001"|bc`
+											is_amount_big_enough=`echo "scale=10;${order_amount_formatted}>=0.000001"|bc`
 											if [ $is_amount_big_enough = 1 ]
 											then
-												trx_fee=`echo "scale=10;${order_amount_formatted} * ${current_fee}"|bc`
-												is_greater_one=`echo "${trx_fee}>=1"|bc`
-												if [ $is_greater_one = 0 ]
-												then
-													trx_fee="0${trx_fee}"
-												fi
-												order_amount_with_trx_fee=`echo "${order_amount_formatted} + ${trx_fee}"|bc`
-												enough_balance=`echo "${account_my_balance} - ${order_amount_with_trx_fee}>0"|bc`
+												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
 												if [ $enough_balance = 1 ]
 												then
 													amount_selected=1
@@ -1950,8 +1936,8 @@ do
 						then
 							if [ $gui_mode = 1 ]
 							then
-								dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g" -e "s/<trx_fee>/${trx_fee}/g" -e "s/<order_amount_with_trx_fee>/${order_amount_with_trx_fee}/g"`
-								dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 30 120
+								dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g"`
+								dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_overview_display" 0 0
 								rt_query=$?
 							else
 								rt_query=0
@@ -2480,13 +2466,6 @@ do
 									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
-									trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
-									is_greater_one=`echo "${trx_fee}>1"|bc`
-	                                                                if [ $is_greater_one = 0 ]
-        	                                                        then
-                	                                                        trx_fee="0${trx_fee}"
-                        	                                        fi
-                                	                               	trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 									while read line
 									do
 										###EXTRACT DATA FROM FRIENDS LIST#########
@@ -2537,7 +2516,7 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										printf "${trx_date}|-${trx_amount_with_fee} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${script_path}/history_list.tmp
+										printf "${trx_date}|-${trx_amount} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${script_path}/history_list.tmp
 									fi
 									if [ $receiver = $handover_account ]
 									then
@@ -2561,6 +2540,7 @@ do
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`grep "${trx_date}" ${script_path}/my_trx.tmp`
+										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
 										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2`
 										trx_status=""
@@ -2620,25 +2600,9 @@ do
 										done <${script_path}/friends.dat
 										if [ $sender = $handover_account ]
 										then
-											trx_amount_with_fee=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
-											trx_amount=`echo "${trx_amount_with_fee} / 1.001"|bc`
-											trx_fee=`echo "${trx_amount_with_fee} - ${trx_amount}"|bc`
-											is_greater_one=`echo "${trx_fee}>1"|bc`
-                                                        	                        if [ $is_greater_one = 0 ]
-                                                                	                then
-                                                                        	                trx_fee="0${trx_fee}"
-                                                                                	fi
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_fee>/${trx_fee}/g" -e "s/<trx_amount_with_fee>/${trx_amount_with_fee}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
-											trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
-                                	                                        	trx_fee=`echo "scale=10;${trx_amount} * ${current_fee}"|bc`
-                                        	                                	is_greater_one=`echo "${trx_fee}>1"|bc`
-                                                	                                if [ $is_greater_one = 0 ]
-                                                        	                        then
-                                                                	                        trx_fee="0${trx_fee}"
-                                                                        	        fi
-											trx_amount_with_fee=`echo "${trx_amount} + ${trx_fee}"|bc`
 											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "Universal Credit System" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
