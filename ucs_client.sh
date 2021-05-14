@@ -50,15 +50,16 @@ login_account(){
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
 			echo $account_name_chosen >${script_path}/account.dat
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
-			if [ $? = 0 ]
+			rt_query=$?
+			if [ $rt_query = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
 				rm ${script_path}/account.dat
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
 				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
-				encrypt_rt=$?
-				if [ $encrypt_rt = 0 ]
+				rt_query=$?
+				if [ $rt_query = 0 ]
 				then
 					extracted_name=`cat ${script_path}/account.dat`
 					if [ "${extracted_name}" = "${account_name_chosen}" ]
@@ -1692,85 +1693,88 @@ do
 									fi
 								fi
 							else
-								if [ $gui_mode = 1 ]
+								if [ ! $rt_query = 255 ]
 								then
-									cd ${script_path}/backup
-									touch ${script_path}/backups_list.tmp
-									find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
-									no_backups=`wc -l <${script_path}/backups_list.tmp`
-									if [ $no_backups -gt 0 ]
+									if [ $gui_mode = 1 ]
 									then
-										backup_display_text=""
-										while read line
-										do
-											backup_stamp=`echo $line|cut -d '.' -f1`
-											backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
-											printf "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
-										done <${script_path}/backups_list.tmp
-									else
-										printf "${dialog_history_noresult}" >${script_path}/backup_list.tmp
-									fi
-									backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
-									rt_query=$?
-									if [ $rt_query = 0 ]
-									then
-										no_results=`echo $dialog_history_noresult|cut -d ' ' -f1`
-										if [ ! $backup_decision = $no_results ]
+										cd ${script_path}/backup
+										touch ${script_path}/backups_list.tmp
+										find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
+										no_backups=`wc -l <${script_path}/backups_list.tmp`
+										if [ $no_backups -gt 0 ]
 										then
-											bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
-											bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
-											bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
-											bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
-											file_path="${script_path}/backup/${bcp_file}"
-											cd ${script_path}
-											purge_files 0
-											tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-											rt_query=$?
-											if [ $rt_query -gt 0 ]
-											then
-												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
-											else
-												import_keys
-												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
-											fi
-											purge_files 1
+											backup_display_text=""
+											while read line
+											do
+												backup_stamp=`echo $line|cut -d '.' -f1`
+												backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
+												printf "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
+											done <${script_path}/backups_list.tmp
 										else
-											dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_fail" 0 0
+											printf "${dialog_history_noresult}" >${script_path}/backup_list.tmp
 										fi
-									fi
-								else
-									if [ $cmd_path = "" ]
-									then
-										echo "ERROR!"
-										exit 1
-									else
-										cd ${script_path}
-										file_path=$cmd_path
-										tar -tf $file_path >/dev/null
+										backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											purge_files 0
-											tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-											rt_query=$?
-											if [ $rt_query -gt 0 ]
+											no_results=`echo $dialog_history_noresult|cut -d ' ' -f1`
+											if [ ! $backup_decision = $no_results ]
 											then
-												echo "ERROR!"
-												exit 1
+												bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
+												bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
+													bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
+												bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
+												file_path="${script_path}/backup/${bcp_file}"
+												cd ${script_path}
+												purge_files 0
+												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query -gt 0 ]
+												then
+													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_fail" 0 0
+												else
+													import_keys
+													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
+												fi
+												purge_files 1
 											else
-												import_keys
-												echo "SUCCESS"
-												exit 0
-											fi
-											purge_files 1
-										else
+												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_fail" 0 0
+											fi	
+										fi	
+									else
+										if [ $cmd_path = "" ]
+										then
 											echo "ERROR!"
 											exit 1
+										else
+											cd ${script_path}
+											file_path=$cmd_path
+											tar -tf $file_path >/dev/null
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												purge_files 0
+												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query -gt 0 ]
+												then
+													echo "ERROR!"
+													exit 1
+												else
+													import_keys
+													echo "SUCCESS"
+													exit 0
+												fi
+												purge_files 1
+											else
+												echo "ERROR!"
+												exit 1
+											fi
 										fi
 									fi
 								fi
 							fi
-							rm ${script_path}/backup_list.tmp
+							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
                         	"$dialog_main_end")     unset user_logged_in
 							rm ${script_path}/*.tmp 2>/dev/null
@@ -1817,7 +1821,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --title "$dialog_main_menu" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -1825,6 +1829,7 @@ do
 		if [ ! $rt_query = 0 ]
 		then
 			user_logged_in=0
+			make_ledger=1
 			clear
 		else
 			if [ $gui_mode = 1 ]
@@ -1838,7 +1843,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 ""`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "9d8c98a97b2c3e689afef90310a35130bde86fd6f43ef6764b391c40ba37f8dd.1613477808"`
 								rt_query=$?
 							else
 								rt_query=0
@@ -1956,133 +1961,136 @@ do
 											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --yesno "$dialog_send_trx" 0 0
 											small_trx=$?
 										fi
-										receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-										touch ${script_path}/keys_for_trx.tmp
-										ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
-										while read line
-										do
-											if [ $small_trx = 0 -a -s $receipient_index_file ]
-											then
-												key_there=0
-												key_there=`grep -c "keys/${line}" $receipient_index_file`
-												if [ $key_there = 0 ]
+										if [ ! $small_trx = 255 ]
+										then
+											receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
+											touch ${script_path}/keys_for_trx.tmp
+											ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
+											while read line
+											do
+												if [ $small_trx = 0 -a -s $receipient_index_file ]
 												then
+													key_there=0
+													key_there=`grep -c "keys/${line}" $receipient_index_file`
+													if [ $key_there = 0 ]
+													then
+														echo "keys/${line}" >>${script_path}/files_list.tmp
+													fi
+													tsa_req_there=0
+													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
+													if [ $tsa_req_there = 0 ]
+													then
+														echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
+													fi
+													tsa_res_there=0
+													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
+													if [ $tsa_res_there = 0 ]
+													then
+														echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
+													fi
+													index_file="proofs/${line}/${line}.txt"
+													if [ -s ${script_path}/${index_file} ]
+													then
+														echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
+													fi
+												else
 													echo "keys/${line}" >>${script_path}/files_list.tmp
+													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
+													if [ -s $tsa_req_check ]
+													then
+														echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
+													fi
+													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
+													if [ -s $tsa_res_check ]
+													then
+														echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
+													fi
+													index_file="proofs/${line}/${line}.txt"
+													if [ -s ${script_path}/${index_file} ]
+													then
+														echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
+													fi
 												fi
-												tsa_req_there=0
-												tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
-												if [ $tsa_req_there = 0 ]
-												then
-													echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
-												fi
-												tsa_res_there=0
-												tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
-												if [ $tsa_res_there = 0 ]
-												then
-													echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
-												fi
-												index_file="proofs/${line}/${line}.txt"
-												if [ -s ${script_path}/${index_file} ]
-												then
-													echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
-												fi
-											else
-												echo "keys/${line}" >>${script_path}/files_list.tmp
-												tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
-												if [ -s $tsa_req_check ]
-												then
-													echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
-												fi
-												tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
-												if [ -s $tsa_res_check ]
-												then
-													echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
-												fi
-												index_file="proofs/${line}/${line}.txt"
-												if [ -s ${script_path}/${index_file} ]
-												then
-													echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
-												fi
-											fi
-										done <${script_path}/keys_for_trx.tmp
-										rm ${script_path}/keys_for_trx.tmp
+											done <${script_path}/keys_for_trx.tmp
+											rm ${script_path}/keys_for_trx.tmp
 
-										touch ${script_path}/trx_for_trx.tmp
-										ls -1 ${script_path}/trx|sort -t . -k3 >${script_path}/trx_for_trx.tmp
-										while read line
-										do
-											trx_there=0
-											if [ -s $receipient_index_file ]
-											then
-												trx_there=`grep -c "trx/${line}" $receipient_index_file`
-											fi
-											if [ $trx_there = 0 ]
-											then
-												echo "trx/${line}" >>${script_path}/files_list.tmp
-											fi
-										done <${script_path}/trx_for_trx.tmp
-										rm ${script_path}/trx_for_trx.tmp
+											touch ${script_path}/trx_for_trx.tmp
+											ls -1 ${script_path}/trx|sort -t . -k3 >${script_path}/trx_for_trx.tmp
+											while read line
+											do
+												trx_there=0
+												if [ -s $receipient_index_file ]
+												then
+													trx_there=`grep -c "trx/${line}" $receipient_index_file`
+												fi
+												if [ $trx_there = 0 ]
+												then
+													echo "trx/${line}" >>${script_path}/files_list.tmp
+												fi
+											done <${script_path}/trx_for_trx.tmp
+											rm ${script_path}/trx_for_trx.tmp
 
-										###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-										account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
-										is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
-										if [ $is_greater_one = 1 ]
-										then
-											account_new_balance="0${account_new_balance}"
-										fi
-										sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${script_path}/ledger.tmp
-										echo "trx/${handover_account}.${trx_now}" >>${script_path}/index_trx.tmp
-										#############################################################################
-										make_signature "none" ${trx_now} 1
-										rt_query=$?
-										if [ $rt_query = 0 ]
-										then
-											cd ${script_path}
-											tar -czf ${trx_now}.trx -T ${script_path}/files_list.tmp --dereference --hard-dereference
+											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+											account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
+											is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
+											if [ $is_greater_one = 1 ]
+											then
+												account_new_balance="0${account_new_balance}"
+											fi
+											sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${script_path}/ledger.tmp
+											echo "trx/${handover_account}.${trx_now}" >>${script_path}/index_trx.tmp
+											#############################################################################
+											make_signature "none" ${trx_now} 1
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												rm ${script_path}/files_list.tmp
-												if [ $gui_mode = 1 ]
+												cd ${script_path}
+												tar -czf ${trx_now}.trx -T ${script_path}/files_list.tmp --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query = 0 ]
 												then
-													dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
-													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
-												else
-													cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
-													echo "BALANCE_${trx_now}:${cmd_output}"
-													if [ ! $cmd_path = "" ]
+													rm ${script_path}/files_list.tmp
+													if [ $gui_mode = 1 ]
 													then
-														if [ ! $script_path = $cmd_path ]
+														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
+														dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
+													else
+														cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
+														echo "BALANCE_${trx_now}:${cmd_output}"
+														if [ ! $cmd_path = "" ]
 														then
-															mv ${trx_now}.trx ${cmd_path}/${trx_now}.trx
-															echo "FILE:${cmd_path}/${trx_now}.trx"
+															if [ ! $script_path = $cmd_path ]
+															then
+																mv ${trx_now}.trx ${cmd_path}/${trx_now}.trx
+																echo "FILE:${cmd_path}/${trx_now}.trx"
+															else
+																echo "FILE:${script_path}/${trx_now}.trx"
+															fi
 														else
 															echo "FILE:${script_path}/${trx_now}.trx"
 														fi
-													else
-														echo "FILE:${script_path}/${trx_now}.trx"
+														exit 0
 													fi
-													exit 0
+												else
+													rm ${script_path}/${trx_now}.trx 2>/dev/null
+													rm ${last_trx} 2>/dev/null
+													rm ${script_path}/${trx_now}.trx 2>/dev/null
+													if [ $gui_mode = 1 ]
+													then
+														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
+													else
+														echo "ERROR!"
+														exit 1
+													fi
 												fi
 											else
-												rm ${script_path}/${trx_now}.trx 2>/dev/null
-												rm ${last_trx} 2>/dev/null
-												rm ${script_path}/${trx_now}.trx 2>/dev/null
 												if [ $gui_mode = 1 ]
 												then
-													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
+													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 												else
 													echo "ERROR!"
 													exit 1
 												fi
-											fi
-										else
-											if [ $gui_mode = 1 ]
-											then
-												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
-											else
-												echo "ERROR!"
-												exit 1
 											fi
 										fi
 									else
@@ -2392,63 +2400,66 @@ do
                                					fi
                         				done
 						else
-							###Get list of keys and related proofs with path
-							ls -1 ${script_path}/keys >${script_path}/keys_sync.tmp
-							while read line
-							do
-								echo "keys/$line" >>${script_path}/files_for_sync.tmp
-								freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
-								if [ -s $freetsa_qfile ]
-								then
-									echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
-								fi
-								freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
-								if [ -s $freetsa_rfile ]
-								then
-									echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
-								fi
-								index_file="${script_path}/proofs/${line}/${line}.txt"
-								if [ -s $index_file ]
-								then
-									echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
-								fi
-							done <${script_path}/keys_sync.tmp
-
-							###Get list of trx with path
-							ls -1 ${script_path}/trx >${script_path}/trx_sync.tmp
-							while read line
-							do
-								echo "trx/$line" >>${script_path}/files_for_sync.tmp
-							done <${script_path}/trx_sync.tmp
-
-							synch_now=`date +%s`
-							cd ${script_path}
-							tar -czf ${synch_now}.sync -T ${script_path}/files_for_sync.tmp --dereference --hard-dereference
-							rt_query=$?
-							if [ $rt_query = 0 ]
+							if [ ! $rt_query = 255 ]
 							then
-								if [ $gui_mode = 1 ]
-								then
-									dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
-									dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
-								else
-									if [ ! $cmd_path = "" ]
+								###Get list of keys and related proofs with path
+								ls -1 ${script_path}/keys >${script_path}/keys_sync.tmp
+								while read line
+								do
+									echo "keys/$line" >>${script_path}/files_for_sync.tmp
+									freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
+									if [ -s $freetsa_qfile ]
 									then
-										if [ ! $script_path = $cmd_path ]
+										echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
+									fi
+									freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
+									if [ -s $freetsa_rfile ]
+									then
+										echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+									fi
+									index_file="${script_path}/proofs/${line}/${line}.txt"
+									if [ -s $index_file ]
+									then
+										echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
+									fi
+								done <${script_path}/keys_sync.tmp
+
+								###Get list of trx with path
+								ls -1 ${script_path}/trx >${script_path}/trx_sync.tmp
+								while read line
+								do
+									echo "trx/$line" >>${script_path}/files_for_sync.tmp
+								done <${script_path}/trx_sync.tmp
+
+								synch_now=`date +%s`
+								cd ${script_path}
+								tar -czf ${synch_now}.sync -T ${script_path}/files_for_sync.tmp --dereference --hard-dereference
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									if [ $gui_mode = 1 ]
+									then
+										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
+										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
+									else
+										if [ ! $cmd_path = "" ]
 										then
-											mv ${synch_now}.sync ${cmd_path}/${synch_now}.sync
-											echo "FILE:${cmd_path}/${synch_now}.sync"
+											if [ ! $script_path = $cmd_path ]
+											then
+												mv ${synch_now}.sync ${cmd_path}/${synch_now}.sync
+												echo "FILE:${cmd_path}/${synch_now}.sync"
+											else
+												echo "FILE:${script_path}/${synch_now}.sync"
+											fi
 										else
 											echo "FILE:${script_path}/${synch_now}.sync"
 										fi
-									else
-										echo "FILE:${script_path}/${synch_now}.sync"
+										exit 0
 									fi
-									exit 0
+                       						else
+									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
+									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
-                       					else
-								dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
-								dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_fail_display" 0 0
 							fi
 							rm ${script_path}/keys_sync.tmp 2>/dev/null
 							rm ${script_path}/files_for_sync.tmp 2>/dev/null
