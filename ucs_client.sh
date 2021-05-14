@@ -481,28 +481,15 @@ build_ledger(){
 		ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/accounts_list.tmp
 
 		###CREATE FRIENDS LIST##############################
-		touch ${script_path}/friends_trx.tmp
-		touch ${script_path}/friends.tmp
+		rm ${script_path}/friends.dat 2>/dev/null
 		touch ${script_path}/friends.dat
-		cd ${script_path}/trx
-		grep -l "S:" *.* >${script_path}/friends_trx.tmp 2>/dev/null
-		cd ${script_path}
-		while read line
-		do
-			trx_blacklisted=`grep -c "${line}" ${script_path}/blacklisted_trx.dat`
-			if [ $trx_blacklisted = 0 ]
-			then
-				sender=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f1|cut -d ':' -f2`
-				receiver=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-				if [ ! $sender = $receiver ]
-				then
-					echo "${sender}=${receiver}" >>${script_path}/friends.tmp
-				fi 
-			fi
-		done <${script_path}/friends_trx.tmp
-		sort ${script_path}/friends.tmp|uniq >${script_path}/friends.dat
-		rm ${script_path}/friends.tmp 2>/dev/null
-		rm ${script_path}/friends_trx.tmp 2>/dev/null
+		own_trx_there=`ls -1 ${script_path}/trx|grep -c "${handover_account}"`
+		if [ $own_trx_there -gt 0 ]
+		then
+			cd ${script_path}/trx
+			grep -v "R:${handover_account}" ${handover_account}.*|grep "S:"|cut -d ':' -f3|cut -d ' ' -f1|sort|uniq >${script_path}/friends.dat
+			cd ${script_path}/
+		fi
 		####################################################
 
 		###EMPTY LEDGER#####################################
@@ -564,22 +551,14 @@ build_ledger(){
 	                fi
 			#################################################
 
-			###GRANT COINLOAD################################
+			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp > ${script_path}/accounts.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp >${script_path}/accounts.tmp
 
-			###GO TROUGH ACCOUNTS LINE BY LINE FOR FIRST ENTRY############
-			while read line
-			do
-				###EXTRACT ACCOUNT DATA FOR CHECK############################
-				account_name=$line
+			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
+			awk -F. '{print $1"."$2"=0"}' ${script_path}/accounts.tmp >>${script_path}/ledger.tmp
 
-				###WRITE FIRST ENTRY#########################################
-				echo "${account_name}=0" >>${script_path}/ledger.tmp
-			done <${script_path}/accounts.tmp
-			##############################################################
-
-			###GRANT COINLOAD OF THAT DAY#################################
+			###GRANT COINLOAD OF THAT DAY####################
 			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
 			if [ -s ${script_path}/ledger_mod.tmp ]
 			then
@@ -587,7 +566,7 @@ build_ledger(){
 			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${script_path}/trx_list.tmp > ${script_path}/trxlist_${focus}.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${script_path}/trx_list.tmp >${script_path}/trxlist_${focus}.tmp
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
@@ -610,24 +589,12 @@ build_ledger(){
 						number_of_friends_add=0
 						while read line
 						do
-							###EXTRACT DATA FROM FRIENDS LIST#########
-							friend_owner=`echo $line|cut -d '=' -f1`
-							friend_of_owner=`echo $line|cut -d '=' -f2`
-
-							###ONLY CONSIDER MY FRIENDS###############
-							if [ $friend_owner = $handover_account ]
+							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 							then
-								###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-								if [ ! $trx_sender = $friend_of_owner -a ! $trx_receiver = $friend_of_owner ]
+								number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt`
+								if [ $number_of_friends_add -gt 0 ]
 								then
-									if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
-									then
-										number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
-										if [ $number_of_friends_add -gt 0 ]
-										then
-											number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
-										fi
-									fi
+									number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
 								fi
 							fi
 						done <${script_path}/friends.dat
@@ -662,10 +629,8 @@ build_ledger(){
 							if [ $number_of_friends_trx -gt $confirmations_from_friends ]
 							then
 								receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
-								if [ $receiver_in_ledger = 0 ]
+								if [  $receiver_in_ledger = 1 ]
 								then
-									echo "${trx_receiver}=${trx_amount}" >>${script_path}/ledger.tmp
-								else
 									receiver_old_balance=`grep "${trx_receiver}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 									if [ $is_greater_one = 0 ]
@@ -1455,13 +1420,15 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_end" --backtitle "Universal Credit System ${core_system_version}" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
+			main_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "Universal Credit System ${core_system_version}" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
 			rt_query=$?
 		else
 			rt_query=0
 		fi
 		if [ ! $rt_query = 0 ]
         	then
+			rm ${script_path}/*.tmp 2>/dev/null
+			rm ${script_path}/*.dat 2>/dev/null
                 	clear
                 	exit
         	else
@@ -1776,8 +1743,7 @@ do
 							fi
 							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
-                        	"$dialog_main_end")     unset user_logged_in
-							rm ${script_path}/*.tmp 2>/dev/null
+                        	"$dialog_main_end")     rm ${script_path}/*.tmp 2>/dev/null
 							rm ${script_path}/*.dat 2>/dev/null
 							exit
 							;;
@@ -2487,24 +2453,12 @@ do
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
 									while read line
 									do
-										###EXTRACT DATA FROM FRIENDS LIST#########
-										friend_owner=`echo $line|cut -d '=' -f1`
-										friend_of_owner=`echo $line|cut -d '=' -f2`
-
-										###ONLY CONSIDER MY FRIENDS###############
-										if [ $friend_owner = $handover_account ]
+										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 										then
-											###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-											if [ ! $sender = $friend_of_owner -a ! $receiver = $friend_of_owner ]
+											trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/${line}/${line}.txt`
+											if [ $trx_confirmations_user -gt 0 ]
 											then
-												if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
-												then
-													trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
-													if [ $trx_confirmations_user -gt 0 ]
-													then
-														trx_confirmations=$(( $trx_confirmations + 1 ))
-													fi
-												fi
+												trx_confirmations=$(( $trx_confirmations + 1 ))
 											fi
 										fi
 									done <${script_path}/friends.dat
@@ -2596,24 +2550,12 @@ do
 										fi
 										while read line
 										do
-											###EXTRACT DATA FROM FRIENDS LIST#########
-											friend_owner=`echo $line|cut -d '=' -f1`
-											friend_of_owner=`echo $line|cut -d '=' -f2`
-
-											###ONLY CONSIDER MY FRIENDS###############
-											if [ $friend_owner = $handover_account ]
+											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
-												###IGNORE CONFIRMATIONS OF TRX PARTICIPANTS
-												if [ ! $sender = $friend_of_owner -a ! $receiver = $friend_of_owner ]
+												trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/${line}/${line}.txt`
+												if [ $trx_confirmations_user -gt 0 ]
 												then
-													if [ -s ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt ]
-													then
-														trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/${friend_of_owner}/${friend_of_owner}.txt`
-														if [ $trx_confirmations_user -gt 0 ]
-														then
-															trx_confirmations=$(( $trx_confirmations + 1 ))
-														fi
-													fi
+													trx_confirmations=$(( $trx_confirmations + 1 ))
 												fi
 											fi
 										done <${script_path}/friends.dat
