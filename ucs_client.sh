@@ -1843,7 +1843,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "9d8c98a97b2c3e689afef90310a35130bde86fd6f43ef6764b391c40ba37f8dd.1613477808"`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "Universal Credit System" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 ""`
 								rt_query=$?
 							else
 								rt_query=0
