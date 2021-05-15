@@ -2601,7 +2601,7 @@ do
 							total_trx=`ls -1 ${script_path}/trx|wc -l`
 							total_user_blacklisted=`wc -l <${script_path}/blacklisted_accounts.dat`
 							total_trx_blacklisted=`wc -l <${script_path}/blacklisted_trx.dat`
-							total_friends=`grep "${handover_account}=" ${script_path}/friends.dat|wc -l`
+							total_friends=`wc -l <${script_path}/friends.dat`
 							###############################################
 
 							if [ $gui_mode = 1 ]
