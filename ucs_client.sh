@@ -78,7 +78,6 @@ login_account(){
 					then
 						dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_wrongpw" 0 0
 					else
-						echo "ERROR! WRONG PW!"
 						exit 1
 					fi
 				fi
@@ -90,7 +89,6 @@ login_account(){
 					dialog_login_nokey_display="${dialog_login_nokey} (-> ${account_name_chosen})!"
 					dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey_display" 0 0
 				else
-					echo "ERROR! KEY MISMATCH!"
 					exit 1
 				fi
 			fi
@@ -102,7 +100,6 @@ login_account(){
 				dialog --title "$dialog_type_title_warning" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2_display" 0 0
 				clear
 			else
-				echo "ERROR! NO KEY!"
 				exit 1
 			fi
 		fi
@@ -281,7 +278,6 @@ create_keys(){
 				fi
 				if [ $gui_mode = 0 ]
 				then
-					echo "ERROR!"
 					exit 1
 				fi
 			fi
@@ -427,7 +423,6 @@ check_input(){
 					dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg1" 0 0
 					rt_query=1
 				else
-					echo "ERROR!"
 					exit 1
 				fi
 			fi
@@ -442,7 +437,6 @@ check_input(){
                         	dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg2" 0 0
                 		rt_query=1
 			else
-				echo "ERROR!"
 				exit 1
 			fi
 		fi
@@ -459,7 +453,6 @@ check_input(){
 				dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_check_msg3" 0 0
 				rt_query=1
 			else
-				echo "ERROR!"
 				exit 1
 			fi
 		fi
@@ -1077,11 +1070,11 @@ check_trx(){
 }
 process_new_files(){
 			process_mode=$1
-			touch ${script_path}/new_index_filelist.tmp
-			touch ${script_path}/old_index_filelist.tmp
-			touch ${script_path}/remove_list.tmp
 			if [ $process_mode = 0 ]
 			then
+				touch ${script_path}/new_index_filelist.tmp
+				touch ${script_path}/old_index_filelist.tmp
+				touch ${script_path}/remove_list.tmp
 				grep "proofs/" ${script_path}/files_to_fetch.tmp|grep ".txt" >${script_path}/new_indexes.tmp
 				while read line
 				do
@@ -1200,13 +1193,17 @@ restore_data(){
 				fi
 			done <${script_path}/files_to_delete.tmp
 
-			###REMOVE LIST OF FILES TO BE DELETED#####################
-			rm ${script_path}/files_to_delete.tmp
-			rm ${script_path}/files_to_keep.tmp
-
 			###UNPACK BACKUP FILE#####################################
 			cd ${script_path}/
 			tar -xzf ${script_path}/backup/temp/temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+			
+			###REMOVE TEMP BACKUP FILE################################
+			rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
+			
+			###REMOVE FILE LIST#######################################
+			rm ${script_path}/files_to_delete.tmp
+			rm ${script_path}/files_to_fetch.tmp 2>/dev/null
+			rm ${script_path}/files_to_keep.tmp 2>/dev/null
 }
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
@@ -1231,49 +1228,46 @@ set_permissions(){
 				fi
 			done <${script_path}/files_to_fetch.tmp
 
+			###REMOVE TEMP BACKUP FILE################################
+			rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
+
 			###REMOVE FILE LIST#######################################
 			rm ${script_path}/files_to_fetch.tmp 2>/dev/null
 			rm ${script_path}/files_to_keep.tmp 2>/dev/null
 }
 purge_files(){
-			live_or_temp=$1
-			if [ $live_or_temp =  0 ]
+		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
+		touch ${script_path}/keylist_gpg.tmp
+		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${script_path}/keylist_gpg.tmp 2>/dev/null
+		while read line
+		do
+			key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${line}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+			rt_query=$?
+			if [ $rt_query = 0 ]
 			then
-				###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
-				touch ${script_path}/keylist_gpg.tmp
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${script_path}/keylist_gpg.tmp 2>/dev/null
-				while read line
-				do
-					key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${line}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
-					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
-						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
-					fi
-				done <${script_path}/keylist_gpg.tmp
-				rm ${script_path}/keylist_gpg.tmp 2>/dev/null
-
-				###REMOVE KEYRING AND FILES########################################
-				rm ${script_path}/control/keyring.file 2>/dev/null
-				rm ${script_path}/control/keyring.file~ 2>/dev/null
-				rm ${script_path}/keys/* 2>/dev/null
-				rm ${script_path}/trx/* 2>/dev/null
-				rm -r ${script_path}/proofs/* 2>/dev/null
-			else
-				rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
+				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
+				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 			fi
+		done <${script_path}/keylist_gpg.tmp
+		rm ${script_path}/keylist_gpg.tmp 2>/dev/null
+
+		###REMOVE KEYRING AND FILES########################################
+		rm ${script_path}/control/keyring.file 2>/dev/null
+		rm ${script_path}/control/keyring.file~ 2>/dev/null
+		rm ${script_path}/keys/* 2>/dev/null
+		rm ${script_path}/trx/* 2>/dev/null
+		rm -r ${script_path}/proofs/* 2>/dev/null
 }
 import_keys(){
-			cd ${script_path}/control/keys
-			touch ${script_path}/keys_to_import.tmp
-			ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
-			while read line
-			do
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
-			done <${script_path}/keys_to_import.tmp
-			rm ${script_path}/keys_to_import.tmp
-			cd ${script_path}/
+		cd ${script_path}/control/keys
+		touch ${script_path}/keys_to_import.tmp
+		ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
+		while read line
+		do
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
+		done <${script_path}/keys_to_import.tmp
+		rm ${script_path}/keys_to_import.tmp
+		cd ${script_path}/
 }
 ##################
 #Main Menu Screen#
@@ -1300,6 +1294,7 @@ rm ${script_path}/test.tmp
 . ${script_path}/lang/${lang_file}
 
 ###SET INITIAL VARIABLES####
+no_ledger=0
 user_logged_in=0
 action_done=1
 make_ledger=1
@@ -1326,6 +1321,8 @@ then
 	do
 		###GET TARGET VARIABLES########################################
 		case $1 in
+			"-no_ledger")	no_ledger=1
+					;;
 			"-action")	cmd_var=$1
 					;;
 			"-user")	cmd_var=$1
@@ -1406,14 +1403,29 @@ then
 								exit 1
 								;;
 					esac
+					cmd_var=""
 					;;
 		esac
 		shift
 	done
+	if [ $no_ledger = 1 ]
+	then
+		case $cmd_action in
+			"create_trx")		no_ledger=0
+						;;
+			"read_trx")		user_logged_in=1
+						;;
+			"create_sync")		user_logged_in=1
+						;;
+			"read_sync")		user_logged_in=1
+						;;
+			"show_stats")		no_ledger=0
+						;;
+		esac
+	fi
 else
 	gui_mode=1
 fi
-
 while [ ! 1 = 2 ]
 do
 	if [ $user_logged_in = 0 ]
@@ -1655,7 +1667,6 @@ do
 									then
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_create_fail" 0 0
 									else
-										echo "ERROR!"
 										exit 1
 									fi
 								fi
@@ -1693,7 +1704,7 @@ do
 												bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
 												file_path="${script_path}/backup/${bcp_file}"
 												cd ${script_path}
-												purge_files 0
+												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
@@ -1703,7 +1714,6 @@ do
 													import_keys
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_backup_restore_success" 0 0
 												fi
-												purge_files 1
 											else
 												dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_fail" 0 0
 											fi	
@@ -1711,7 +1721,6 @@ do
 									else
 										if [ $cmd_path = "" ]
 										then
-											echo "ERROR!"
 											exit 1
 										else
 											cd ${script_path}
@@ -1720,21 +1729,18 @@ do
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												purge_files 0
+												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
 												then
-													echo "ERROR!"
 													exit 1
 												else
 													import_keys
 													echo "SUCCESS"
 													exit 0
 												fi
-												purge_files 1
 											else
-												echo "ERROR!"
 												exit 1
 											fi
 										fi
@@ -1745,7 +1751,7 @@ do
 							;;
                         	"$dialog_main_end")     rm ${script_path}/*.tmp 2>/dev/null
 							rm ${script_path}/*.dat 2>/dev/null
-							exit
+							exit 0
 							;;
                 	esac
         	fi
@@ -1754,36 +1760,28 @@ do
 		###ON EACH START AND AFTER EACH ACTION...
 		if [ $action_done = 1 ]
 		then
-			###TSA CHECK###########################
 			check_tsa
-
-			###CHECK KEYS##########################
 			check_keys
-
-			###CKECK TRX###########################
 			check_trx
-
 			action_done=0
 		fi
-
-		now=`date +%s`
-		if [ $make_ledger = 1 ]
+		if [ $no_ledger = 0 ]
 		then
-			####GET COINS FOR ACCOUNT LOGGED IN
-			build_ledger
-			no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-			if [ $no_ack_trx -gt 0 ]
+			now=`date +%s`
+			if [ $make_ledger = 1 ]
 			then
-				###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
-				make_signature "none" $now 1
+				build_ledger
+				no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+				if [ $no_ack_trx -gt 0 ]
+				then
+					###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
+					make_signature "none" $now 1
+				fi
+				make_ledger=0
 			fi
-			make_ledger=0
+			check_blacklist
+			account_my_balance=`grep "${handover_account}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 		fi
-		###CHECK BLACKLIST#############
-		check_blacklist
-		###############################
-
-		account_my_balance=`grep "${handover_account}" ${script_path}/ledger.tmp|cut -d '=' -f2`
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
@@ -1830,7 +1828,6 @@ do
 										dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${order_receipient}/g"`
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_login_nokey2_display" 0 0
 									else
-										echo "ERROR!"
 										exit 1
 									fi
 								fi
@@ -1867,7 +1864,6 @@ do
 													then
 														dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_nobalance" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -1876,7 +1872,6 @@ do
 												then
 													dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 												else
-													echo "ERROR!"
 													exit 1
 												fi
 											fi
@@ -1885,7 +1880,6 @@ do
 											then
 												dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail_amount" 0 0
 											else
-												echo "ERROR!"
 												exit 1
 											fi
 										fi
@@ -2045,7 +2039,6 @@ do
 													then
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -2054,7 +2047,6 @@ do
 												then
 													dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 												else
-													echo "ERROR!"
 													exit 1
 												fi
 											fi
@@ -2064,7 +2056,6 @@ do
 										then
 											dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 										else
-											echo "ERROR!"
 											exit 1
 										fi
 									fi
@@ -2073,7 +2064,6 @@ do
 									then
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail2" 0 0
 									else
-										echo "ERROR!"
 										exit 1
 									fi
 								fi
@@ -2124,7 +2114,6 @@ do
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -2146,7 +2135,6 @@ do
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -2154,6 +2142,10 @@ do
 											if [ $rt_query -gt 0 ]
 											then
 												restore_data
+												if [ $gui_mode = 0 ]
+												then
+													exit 1
+												fi
 											else
 												set_permissions
 												if [ $gui_mode = 1 ]
@@ -2165,33 +2157,33 @@ do
 													check_tsa
 													check_keys
 													check_trx
-													now=`date +%s`
-													build_ledger
-													no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-													if [ $no_ack_trx -gt 0 ]
+													if [ $no_ledger = 0 ]
 													then
-														make_signature "none" $now 1
-														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														now=`date +%s`
+														build_ledger
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+														if [ $no_ack_trx -gt 0 ]
 														then
-															echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-															exit 1
-														else
-															exit 0
+															make_signature "none" $now 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
 														fi
+													else
+														exit 0
 													fi
 												fi
 											fi
-											purge_files 1
-											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
-											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
                                 								dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
-												echo "ERROR!"
 												exit 1
 											fi
 										fi
@@ -2201,7 +2193,6 @@ do
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
                         								dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
-											echo "ERROR!"
 											exit 1
 										fi
 									fi
@@ -2220,8 +2211,7 @@ do
 										;;
 								"read_sync")	rt_query=0
 										;;
-								*)		echo "ERROR!"
-										exit 1
+								*)		exit 1
 										;;
 							esac
 						fi
@@ -2256,8 +2246,7 @@ do
 															;;
 													"full")		rt_query=1
 															;;
-													*)		echo "ERROR! MISSING VARIABLE FOR >TYPE<"
-															exit 1
+													*)		exit 1
 															;;
 												esac
 											fi
@@ -2280,7 +2269,6 @@ do
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -2302,7 +2290,6 @@ do
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														echo "ERROR!"
 														exit 1
 													fi
 												fi
@@ -2310,6 +2297,10 @@ do
 											if [ $rt_query -gt 0 ]
 											then
 												restore_data
+												if [ $gui_mode = 0 ]
+												then
+													exit 1
+												fi
 											else
 												set_permissions
 												if [ $gui_mode = 1 ]
@@ -2321,33 +2312,33 @@ do
 													check_tsa
 													check_keys
 													check_trx
-													now=`date +%s`
-													build_ledger
-													no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-													if [ $no_ack_trx -gt 0 ]
+													if [ $no_ledger = 0 ]
 													then
-														make_signature "none" $now 1
-														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														now=`date +%s`
+														build_ledger
+														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
+														if [ $no_ack_trx -gt 0 ]
 														then
-															echo "ERROR! INDEX-FILE COULD NOT BE CREATED!"
-															exit 1
-														else
-															exit 0
+															make_signature "none" $now 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
 														fi
+													else
+														exit 0
 													fi
 												fi
 											fi
-											purge_files 1
-											rm ${script_path}/files_to_fetch.tmp 2>/dev/null
-											rm ${script_path}/files_to_keep.tmp 2>/dev/null
 										else
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
     								                        	dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
-												echo "ERROR!"
 												exit 1
 											fi
 										fi
@@ -2357,7 +2348,6 @@ do
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
                                								dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
-											echo "ERROR!"
 											exit 1
 										fi
 									fi
