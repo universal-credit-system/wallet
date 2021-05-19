@@ -2423,10 +2423,7 @@ do
 						;;
 				"$dialog_history")	cd ${script_path}/trx
 							touch ${script_path}/my_trx.tmp
-							grep -l "S:${handover_account}" *.* >${script_path}/my_trx.tmp 2>/dev/null
-							grep -l " R:${handover_account}" *.* >>${script_path}/my_trx.tmp 2>/dev/null
-							sort -r -t . -k3 ${script_path}/my_trx.tmp|uniq >${script_path}/my_trx_sort.tmp
-							mv ${script_path}/my_trx_sort.tmp ${script_path}/my_trx.tmp
+							grep -l ":${handover_account}" *.*|sort -r -t . -k3 >${script_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${script_path}/my_trx.tmp`
 							if [ $no_trx -gt 0 ]
@@ -2435,7 +2432,7 @@ do
 								do
 									trx_confirmations=0
 									trx_confirmations_user=0
-									line_extracted=`echo $line`
+									line_extracted=$line
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
 									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2`
 									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
