@@ -308,7 +308,7 @@ make_signature(){
 				while read line
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=`shasum -a 512 <${script_path}/keys/${line}|cut -d ' ' -f1`
+					key_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`
                                         key_path="keys/${line}"
                                         echo "${key_path} ${key_hash}" >>${message_blank}
 					#################################################################
@@ -318,7 +318,7 @@ make_signature(){
 					if [ -s $freetsa_qfile ]
 					then
 						freetsa_qfile_path="proofs/$line/freetsa.tsq"
-						freetsa_qfile_hash=`shasum -a 512 <${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
+						freetsa_qfile_hash=`shasum -a 256 <${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
 						echo "${freetsa_qfile_path} ${freetsa_qfile_hash}" >>${message_blank}
 					fi
 					#################################################################
@@ -328,7 +328,7 @@ make_signature(){
 					if [ -s $freetsa_rfile ]
 					then
 						freetsa_rfile_path="proofs/$line/freetsa.tsr"
-						freetsa_rfile_hash=`shasum -a 512 <${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
+						freetsa_rfile_hash=`shasum -a 256 <${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
 					fi
 					#################################################################
@@ -550,6 +550,7 @@ build_ledger(){
 
 			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
 			awk -F. '{print $1"."$2"=0"}' ${script_path}/accounts.tmp >>${script_path}/ledger.tmp
+			rm ${script_path}/accounts.tmp 2>/dev/null
 
 			###GRANT COINLOAD OF THAT DAY####################
 			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
@@ -566,7 +567,7 @@ build_ledger(){
 			        trx_filename=`echo $line|cut -d ' ' -f3`
 				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
 				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
-				trx_hash=`shasum -a 512 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
+				trx_hash=`shasum -a 256 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
 				trx_path="trx/${trx_filename}"
 				##############################################################
 
@@ -965,6 +966,7 @@ check_tsa(){
 					rm ${script_path}/trx/${line}.* 2>/dev/null
 				fi
 			done <${script_path}/blacklisted_accounts.dat
+			rm ${script_path}/all_accounts.tmp 2>/dev/null
 }
 check_keys(){
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
@@ -1066,6 +1068,7 @@ check_trx(){
 				rm ${script_path}/trx/${line} 2>/dev/null
 			fi
 		done <${script_path}/blacklisted_trx.dat
+		rm ${script_path}/all_trx.tmp 2>/dev/null
 		####################################################################################
 }
 process_new_files(){
@@ -1815,6 +1818,7 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
+								touch ${script_path}/keylist.tmp
 								ls -1 ${script_path}/keys >${script_path}/keylist.tmp
 								key_there=`grep -c -w "${order_receipient}" ${script_path}/keylist.tmp`
 								if [ $key_there = 1 ]
@@ -1831,6 +1835,7 @@ do
 										exit 1
 									fi
 								fi
+								rm ${script_path}/keylist.tmp
 								while [ $amount_selected = 0 ]
 								do
 									if [ $gui_mode = 1 ]
@@ -1989,7 +1994,6 @@ do
 												fi
 											done <${script_path}/trx_for_trx.tmp
 											rm ${script_path}/trx_for_trx.tmp
-
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 											account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
 											is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
@@ -1998,12 +2002,14 @@ do
 												account_new_balance="0${account_new_balance}"
 											fi
 											sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${script_path}/ledger.tmp
-											echo "trx/${handover_account}.${trx_now}" >>${script_path}/index_trx.tmp
+											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
+											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${script_path}/index_trx.tmp
 											#############################################################################
 											make_signature "none" ${trx_now} 1
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
+												rm ${script_path}/index_trx.tmp
 												cd ${script_path}
 												tar -czf ${trx_now}.trx -T ${script_path}/files_list.tmp --dereference --hard-dereference
 												rt_query=$?
