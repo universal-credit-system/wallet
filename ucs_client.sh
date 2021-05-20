@@ -1010,6 +1010,7 @@ check_keys(){
 			then
 				rm ${script_path}/keys/${line} 2>/dev/null
 				rm -R ${script_path}/proofs/${line}/ 2>/dev/null
+				rm ${script_path}/trx/${line}.* 2>/dev/null
 			fi
 		done <${script_path}/blacklisted_accounts.dat
                	##########################################################
@@ -1024,8 +1025,8 @@ check_trx(){
 			user_to_check_name=`echo $line|cut -d '.' -f1`
 			user_to_check_stamp=`echo $line|cut -d '.' -f2`
 			user_to_check="${user_to_check_name}.${user_to_check_stamp}"
-			usr_blacklisted=`grep -c "${user_to_check}" ${script_path}/blacklisted_accounts.dat`
-			if [ $usr_blacklisted = 0 ]
+			user_to_check_sender=`head -1 $file_to_check|cut -d ' ' -f1|cut -d ':' -f2`
+			if [ $user_to_check = $user_to_check_sender ]
 			then
 				verify_signature $file_to_check $user_to_check
 				rt_query=$?
@@ -1033,10 +1034,8 @@ check_trx(){
 				then
 					trx_date_filename=`echo $line|cut -d '.' -f3`
 					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
-					if [ ! $trx_date_filename = $trx_date_inside ]
+					if [ $trx_date_filename = $trx_date_inside ]
 					then
-						echo $file_to_check >>${script_path}/blacklisted_trx.dat
-					else
 						if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 						then
 							is_trx_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
@@ -1050,10 +1049,14 @@ check_trx(){
 								rm $file_to_check 2>/dev/null
 							fi
 						fi
+					else
+						echo $file_to_check >>${script_path}/blacklisted_trx.dat
 					fi
 				else
 					echo $file_to_check >>${script_path}/blacklisted_trx.dat
 				fi
+			else
+				echo $file_to_check >>${script_path}/blacklisted_trx.dat
 			fi
 		done <${script_path}/all_trx.tmp
 		while read line
