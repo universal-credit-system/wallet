@@ -962,6 +962,7 @@ check_tsa(){
 				then
 					rm ${script_path}/keys/${line} 2>/dev/null
 					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
+					rm ${script_path}/trx/${line}.* 2>/dev/null
 				fi
 			done <${script_path}/blacklisted_accounts.dat
 }
@@ -1022,9 +1023,7 @@ check_trx(){
 		while read line
 		do
 			file_to_check=${script_path}/trx/${line}
-			user_to_check_name=`echo $line|cut -d '.' -f1`
-			user_to_check_stamp=`echo $line|cut -d '.' -f2`
-			user_to_check="${user_to_check_name}.${user_to_check_stamp}"
+			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
 			user_to_check_sender=`head -1 $file_to_check|cut -d ' ' -f1|cut -d ':' -f2`
 			if [ $user_to_check = $user_to_check_sender ]
 			then
@@ -1061,9 +1060,7 @@ check_trx(){
 		done <${script_path}/all_trx.tmp
 		while read line
 		do
-			trx_account_name=`echo $line|cut -d '.' -f1`
-			trx_account_stamp=`echo $Line|cut -d '.' -f2`
-			trx_account="${trx_account_name}.${trx_account_stamp}"
+			trx_account=`echo $line|awk -F. '{print $1"."$2}'`
 			if [ ! $trx_account = $handover_account ]
 			then
 				rm ${script_path}/trx/${line} 2>/dev/null
