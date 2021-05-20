@@ -9,7 +9,7 @@ NOTE:	IF YOU WANT TO RUN UCS IN GUI-MODE JUST EXECUTE THE SCRIPT WITHOUT
 OPTIONS (for CMD-MODE ONLY!!!):
 
 	Parameter:		Purpose:
-	
+
 	-action <ACTION>	Used to describe what to do.
  
 				Possible actions are:	
@@ -57,6 +57,20 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				read_trx
 				read_sync
 				restore_backup
+
+	-no_ledger		Don't build a ledger. When set ucs won't create a
+				ledger and only perform basic integrity checks on 
+				files which will result in better performance. 
+				When this is set index-file will not be created.
+				The no_ledger parameter will only be considered
+				for following actions:
+
+				create_trx
+				create_sync
+				create_backup
+
+				For all other actions no_ledger may be set, but 
+				will be ignored.
 
 	-help			Display HELP
 
