@@ -5,16 +5,12 @@ login_account(){
 		account_password=$3
 		account_found=0
 		handover_account=""
-		touch ${script_path}/keylist.tmp
-
-		###WRITE LIST OF KEYS TO FILE################################
-		ls -1 ${script_path}/keys/|sort -t. -k2 >${script_path}/keylist.tmp
 
 		###SET TRIGGER THAT ACCOUND WAS FOUND TO 0###################
 		ignore_rest=0
 
 		###READ LIST OF KEYS LINE BY LINE############################
-		while read line
+		for line in `ls -1 ${script_path}/keys/|sort -t. -k2`
 		do
 			if [ $ignore_rest = 0 ]
 			then
@@ -38,30 +34,40 @@ login_account(){
 				fi
 				##############################################################
 			fi
-		done <${script_path}/keylist.tmp
+		done
 		#############################################################
-
-		###REMOVE CREATED KEY LIST###################################
-		rm ${script_path}/keylist.tmp
 
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
+			if [ ! -d ${script_path}/userdata/${handover_account} ]
+			then
+				mkdir ${script_path}/userdata/${handover_account}
+				mkdir ${script_path}/userdata/${handover_account}/temp
+				mkdir ${script_path}/userdata/${handover_account}/temp/keys
+				mkdir ${script_path}/userdata/${handover_account}/temp/proofs
+				mkdir ${script_path}/userdata/${handover_account}/temp/trx
+			else
+               	 		rm ${user_path}/account.acc.gpg 2>/dev/null
+	        		rm ${user_path}/account.acc 2>/dev/null
+			fi
+			user_path="${script_path}/userdata/${handover_account}"
+
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo $account_name_chosen >${script_path}/account.dat
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${script_path}/account.dat 1>/dev/null 2>/dev/null
+			echo $account_name_chosen >${user_path}/account.acc
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
 				###REMOVE ENCRYPTION SOURCE FILE#############################
-				rm ${script_path}/account.dat
+				rm ${user_path}/account.acc
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --pinentry-mode loopback --output ${script_path}/account.dat --decrypt ${script_path}/account.dat.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					extracted_name=`cat ${script_path}/account.dat`
+					extracted_name=`cat ${user_path}/account.acc`
 					if [ "${extracted_name}" = "${account_name_chosen}" ]
 					then
 						if [ $gui_mode = 1 ]
@@ -81,7 +87,6 @@ login_account(){
 						exit 1
 					fi
 				fi
-				##############################################################
 			else
 				if [ $gui_mode = 1 ]
 				then
@@ -103,11 +108,10 @@ login_account(){
 				exit 1
 			fi
 		fi
-		#############################################################
-
-		###REMOVE TEMPORARY FILES####################################
-                rm ${script_path}/account.dat.gpg 2>/dev/null
-	        rm ${script_path}/account.dat 2>/dev/null
+                rm ${user_path}/account.acc.gpg 2>/dev/null
+	        rm ${user_path}/account.acc 2>/dev/null
+		action_done=1
+		make_ledger=1
 }
 create_keys(){
 		name_chosen=$1
@@ -143,8 +147,16 @@ create_keys(){
 				echo "33"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create2" 0 0 0
 			fi
 
+			###CREATE USER DIRECTORY AND SET USER_PATH###########
+			mkdir ${script_path}/userdata/${handover_account}
+			mkdir ${script_path}/userdata/${handover_account}/temp
+			mkdir ${script_path}/userdata/${handover_account}/temp/keys
+			mkdir ${script_path}/userdata/${handover_account}/temp/proofs
+			mkdir ${script_path}/userdata/${handover_account}/temp/trx
+			user_path="${script_path}/userdata/${handover_account}"
+
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase ${name_passphrase} --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase ${name_passphrase} --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -158,26 +170,20 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${name_passphrase} --export-secret-keys ${name_hashed}.${file_stamp}
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${name_passphrase} --export-secret-keys ${name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					###CREATE PROOFS DIRECTORY###################################
-					mkdir ${script_path}/proofs/${name_hashed}.${file_stamp}
-
-					###STEP INTO THIS DIRECTORY##################################
-					cd ${script_path}
+					###STEP INTO USER DIRECTORY##################################
+					cd ${user_path}
 
 					###CREATE TSA QUIERY FILE####################################
-					openssl ts -query -data ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${script_path}/freetsa.tsq 1>/dev/null 2>/dev/null
+					openssl ts -query -data ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/freetsa.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###STEP BACK INTO UCS HOME DIR###############################
-						cd ${script_path}
-
 						###SET QUIERY TO TSA#########################################
-						curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${script_path}/freetsa.tsr
+						curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${user_path}/freetsa.tsr
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
@@ -195,25 +201,26 @@ create_keys(){
 								then
 									mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
 									mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-									openssl ts -verify -queryfile ${script_path}/freetsa.tsq -in ${script_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+									openssl ts -verify -queryfile ${user_path}/freetsa.tsq -in ${user_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										mv ${script_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsq
-										mv ${script_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsr
-
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY PROGRESS ON STATUS BAR############################
 											echo "100"|dialog --title "$dialog_keys_title" --backtitle "Universal Credit System" --gauge "$dialog_keys_create4" 0 0 0
 											clear
 										fi
+										###CREATE PROOFS DIRECTORY AND COPY TSA FILES###################
+										mkdir ${script_path}/proofs/${name_hashed}.${file_stamp}
+										mv ${user_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsq
+										mv ${user_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsr
 
 										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
-										cp ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+										cp ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
 
 										###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-										cp ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
+										cp ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
 
 										if [ $gui_mode = 1 ]
 										then
@@ -257,18 +264,13 @@ create_keys(){
 		then
 			if [ $key_remove = 1 ]
 			then
-                                ###Remove TSA files
-                                rm ${script_path}/freetsa.tsq 2>/dev/null
-				rm ${script_path}/freetsa.tsr 2>/dev/null
+                                ###REMOVE PROOFS DIRECTORY OF USER###########################
+				rm -r ${script_path}/proofs/${name_hashed}.${file_stamp} 2>/dev/null
 
-				###Remove Proofs-folder of Account that could not be created#
-				rm -R ${script_path}/proofs/${name_hashed}.${file_stamp} 2>/dev/null
+				###REMOVE USERDATA DIRECTORY OF USER#########################
+				rm -r ${script_path}/userdata/${name_hashed}.${file_stamp} 2>/dev/null
 
-				###Remove keys###############################################
-				rm ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc 2>/dev/null
-				rm ${script_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc 2>/dev/null
-
-				###Remove created keys out of keyring########################
+				###REMOVE KEYS FROM KEYRING##################################
 				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_hashed}.${file_stamp}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 				rt_query=$?
 				if [ $rt_query = 0 ]
@@ -294,17 +296,17 @@ make_signature(){
                         then
 				###IF NOT WRITE TRX MESSAGE TO FILE##############################
 				message=${script_path}/trx/${handover_account}.${trx_now}
-				message_blank=${script_path}/message_blank.dat
+				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
 				echo $transaction_message >>${message_blank}
 				#################################################################
 			else
 				###IF YES.....###################################################
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
-                                message_blank=${script_path}/message_blank.dat
+                                message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
-				touch ${script_path}/index_keys.tmp
-				ls -1 ${script_path}/keys >${script_path}/index_keys.tmp
+				touch ${user_path}/index_keys.tmp
+				cat ${user_path}/all_accounts.dat >${user_path}/index_keys.tmp
 				while read line
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
@@ -332,13 +334,13 @@ make_signature(){
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
 					fi
 					#################################################################
-				done <${script_path}/index_keys.tmp
+				done <${user_path}/index_keys.tmp
 
 				###REMOVE KEYLIST################################################
-				rm ${script_path}/index_keys.tmp
+				rm ${user_path}/index_keys.tmp
 
 				####WRITE TRX LIST TO INDEX FILE#################################
-                                cat ${script_path}/index_trx.tmp >>${message_blank}
+                                cat ${user_path}/index_trx.dat >>${message_blank}
 			fi
 			#################################################################
 
@@ -359,13 +361,13 @@ make_signature(){
 			return $rt_query
 }
 verify_signature(){
-			trx_to_verify=$1
+			file_to_verify=$1
 			user_signed=$2
 			signed_correct=0
-			build_message=${script_path}/verify_trx.tmp
+			build_message=${user_path}/verify_trx.tmp
 
 			###CHECK NO OF LINES OF THE TRX TO VERIFY#####################
-			no_lines_trx=`wc -l < ${trx_to_verify}`
+			no_lines_trx=`wc -l < ${file_to_verify}`
 
 			###CALCULATE SIZE OF MESSAGE##################################
 			till_sign=$(( $no_lines_trx - 16 ))	#-16
@@ -374,30 +376,30 @@ verify_signature(){
 			echo "-----BEGIN PGP SIGNED MESSAGE-----" >${build_message}
 			echo "Hash: SHA512" >>${build_message}
 			echo "" >>${build_message}
-			head -${till_sign} ${trx_to_verify} >>${build_message}
+			head -${till_sign} ${file_to_verify} >>${build_message}
 			echo "-----BEGIN PGP SIGNATURE-----" >>${build_message}
 			echo "" >>${build_message}
-			tail -14 ${trx_to_verify}|head -13 >>${build_message}
+			tail -14 ${file_to_verify}|head -13 >>${build_message}
 			echo "-----END PGP SIGNATURE-----" >>${build_message}
 			##############################################################
 
 			###CHECK GPG FILE#############################################
-			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${build_message} >${script_path}/gpg_verify.tmp 2>/dev/null
+			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${build_message} >${user_path}/gpg_verify.tmp 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				signed_correct=`grep "GOODSIG" ${script_path}/gpg_verify.tmp|grep -c "${user_signed}"`
+				signed_correct=`grep "GOODSIG" ${user_path}/gpg_verify.tmp|grep -c "${user_signed}"`
 				if [ $signed_correct = 0 ]
 				then
 					rt_query=1
 				fi
 			else
-				rm ${trx_to_verify} 2>/dev/null
+				rm ${file_to_verify} 2>/dev/null
 			fi
 			###############################################################
 
 			rm ${build_message} 2>/dev/null
-			rm ${script_path}/gpg_verify.tmp 2>/dev/null
+			rm ${user_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_query
 }
 check_input(){ 
@@ -459,9 +461,6 @@ check_input(){
 		return $rt_query
 }
 build_ledger(){
-		start_date="20210216"
-		date_stamp=`date +%s --date="${start_date}"`
-
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
@@ -469,39 +468,58 @@ build_ledger(){
 		else
 			progress_bar_redir="2"
 		fi
+		
+		###GET TODAYS DATE##################################
+		now=`date +%Y%m%d`
 
-		###LOAD ALL ACCOUNTS################################
-		ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/accounts_list.tmp
-
-		###CREATE FRIENDS LIST##############################
-		rm ${script_path}/friends.dat 2>/dev/null
-		touch ${script_path}/friends.dat
-		own_trx_there=`ls -1 ${script_path}/trx|grep -c "${handover_account}"`
-		if [ $own_trx_there -gt 0 ]
+		###CHECK IF OLD LEDGER THERE########################
+		start_date="20210216"
+		old_ledger_there=`ls -1 ${user_path}/|grep -c "ledger.dat"`
+		if [ $old_ledger_there -gt 0 ]
 		then
-			cd ${script_path}/trx
-			grep -v "R:${handover_account}" ${handover_account}.*|grep "S:"|cut -d ':' -f3|cut -d ' ' -f1|sort|uniq >${script_path}/friends.dat
-			cd ${script_path}/
+			###GET LATEST LEDGER AND EXTRACT DATE###############
+			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t_ -k1|tail -1`
+			last_ledger_date=`echo $last_ledger|cut -d '_' -f1`
+			last_ledger_date_stamp=`date +%s --date="${last_ledger_date}"`
+
+			###SET DATESTAMP TO NEXTDAY OF LAST LEDGER##########
+			date_stamp=$(( $last_ledger_date_stamp + 86400 ))
+
+			###MOVE LEDGER######################################
+			mv ${user_path}/${last_ledger_date}_ledger.dat ${user_path}/${now}_ledger.dat
+
+			###CALCULATE DAY COUNTER############################
+			date_stamp_last=`date +%s --date="${start_date}"`
+			no_seconds_last=$(( $date_stamp - $date_stamp_last ))
+			day_counter=`expr $no_seconds_last / 86400`
+		else
+			###
+			date_stamp=`date +%s --date="${start_date}"`
+
+			###EMPTY LEDGER#####################################
+			rm ${user_path}/*_ledger.dat 2>/dev/null
+			touch ${user_path}/${now}_ledger.dat
+			####################################################
+
+			###EMPTY INDEX FILE#################################
+			rm ${user_path}/index_trx.dat 2>/dev/null
+			touch ${user_path}/index_trx.dat
+			####################################################
+
+			###EMPTY IGNORE TRX#################################
+			rm ${user_path}/ignored_trx.dat 2>/dev/null
+			####################################################
+
+			###SET DAYCOUNTER FOR NORMAL LEDGER RUN#############
+			day_counter=1
 		fi
-		####################################################
-
-		###EMPTY LEDGER#####################################
-		rm ${script_path}/ledger.tmp 2>/dev/null
-		touch ${script_path}/ledger.tmp
-		####################################################
-
-		###EMPTY INDEX FILE#################################
-		rm ${script_path}/index_trx.tmp 2>/dev/null
-		touch ${script_path}/index_trx.tmp
 		####################################################
 
 		###SET FOCUS########################################
 		focus=`date +%Y%m%d --date=@${date_stamp}`
 		now_stamp=`date +%s`
-		now=`date +%Y%m%d`
-		day_counter=1
 		months=0
-		####################################################
+		####################################################		
 
 		###INIT STATUS BAR##################################
 		now_date_status=`date +%s --date=${now}`
@@ -511,15 +529,6 @@ build_ledger(){
 		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 		current_percent=0
 		current_percent_display=0
-		####################################################
-
-		###LOAD ALL PREVIOUS TRANSACTIONS###################
-		touch ${script_path}/trx_list_full.tmp
-		touch ${script_path}/trx_list.tmp
-		ls -1 ${script_path}/trx >${script_path}/trx_list_full.tmp 2>/dev/null
-		cat ${script_path}/blacklisted_trx.dat >>${script_path}/trx_list_full.tmp 2>/dev/null
-		cat ${script_path}/trx_list_full.tmp|sort -t . -k2|uniq >${script_path}/trx_list.tmp
-		rm ${script_path}/trx_list_full.tmp 2>/dev/null
 		####################################################
 
 		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
@@ -546,21 +555,21 @@ build_ledger(){
 
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${script_path}/accounts_list.tmp >${script_path}/accounts.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_accounts.dat >${user_path}/accounts.tmp
 
 			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
-			awk -F. '{print $1"."$2"=0"}' ${script_path}/accounts.tmp >>${script_path}/ledger.tmp
-			rm ${script_path}/accounts.tmp 2>/dev/null
+			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
+			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GRANT COINLOAD OF THAT DAY####################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${script_path}/ledger.tmp >${script_path}/ledger_mod.tmp
-			if [ -s ${script_path}/ledger_mod.tmp ]
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
+			if [ -s ${user_path}/${now}_ledger.tmp ]
 			then
-				mv ${script_path}/ledger_mod.tmp ${script_path}/ledger.tmp 2>/dev/null
+				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
 			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${script_path}/trx_list.tmp >${script_path}/trxlist_${focus}.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/all_trx.dat >${user_path}/trxlist_${focus}.tmp
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
@@ -572,7 +581,7 @@ build_ledger(){
 				##############################################################
 
 				###CHECK IF INDEX-FILE EXISTS#################################
-				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ]
+				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt -o $trx_sender = ${handover_account} ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
 					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_hash}"`
@@ -591,12 +600,12 @@ build_ledger(){
 									number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
 								fi
 							fi
-						done <${script_path}/friends.dat
+						done <${user_path}/friends.dat
 						##############################################################
 
 						###EXTRACT TRX DATA###########################################
 						trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
-						account_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+						account_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 						##############################################################
 
 						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
@@ -605,7 +614,7 @@ build_ledger(){
 						if [ $enough_balance = 1 ]
 						then
 							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
-							echo "${trx_path} ${trx_hash}" >>${script_path}/index_trx.tmp
+							echo "${trx_path} ${trx_hash}" >>${user_path}/index_trx.dat
 							##############################################################
 
 							###SET BALANCE FOR SENDER#####################################
@@ -615,17 +624,17 @@ build_ledger(){
 							then
 								account_balance="0${account_balance}"
 							fi
-							account_prev_balance=`grep "${trx_sender}" ${script_path}/ledger.tmp|cut -d '=' -f2`
-							sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${script_path}/ledger.tmp
+							account_prev_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+							sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${user_path}/${now}_ledger.dat
 							##############################################################
 
 							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
 							if [ $number_of_friends_trx -gt $confirmations_from_friends ]
 							then
-								receiver_in_ledger=`grep -c "${trx_receiver}" ${script_path}/ledger.tmp`
+								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
 								if [  $receiver_in_ledger = 1 ]
 								then
-									receiver_old_balance=`grep "${trx_receiver}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 									if [ $is_greater_one = 0 ]
 									then
@@ -637,18 +646,20 @@ build_ledger(){
 									then
 										receiver_new_balance="0${receiver_new_balance}"
 									fi
-									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${script_path}/ledger.tmp
+									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
 								fi
 							fi
 							##############################################################
+						else
+							echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 						fi
 						##############################################################
 					fi
 					##############################################################
 				fi
 				##############################################################
-			done <${script_path}/trxlist_${focus}.tmp
-			rm ${script_path}/trxlist_${focus}.tmp 2>/dev/null
+			done <${user_path}/trxlist_${focus}.tmp
+			rm ${user_path}/trxlist_${focus}.tmp 2>/dev/null
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
 			date_stamp=$(( $date_stamp + 86400 ))
@@ -658,6 +669,7 @@ build_ledger(){
 		done|dialog --title "$dialog_ledger_title" --backtitle "Universal Credit System" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then
+			###CHECK IF BALANCE NEED TO BE DISPLAYED######################
 			show_balance=0
 			case $cmd_action in
 				"create_trx")	show_balance=1
@@ -671,38 +683,38 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
+				cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 				echo "BALANCE_${now_stamp}:${cmd_output}"
 			fi
+			##############################################################
 		fi
-		cd ${script_path}/
 }
 check_archive(){
 			path_to_tarfile=$1
 			check_mode=$2
 
 			###TOUCH FILES TO AVOID NON EXISTENT FILES####################
-			touch ${script_path}/tar_check.tmp
-			touch ${script_path}/files_to_fetch.tmp
-			touch ${script_path}/files_to_keep.tmp
+			touch ${user_path}/tar_check.tmp
+			touch ${user_path}/files_to_fetch.tmp
+			touch ${user_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
-			tar -tvf $path_to_tarfile >${script_path}/tar_check_temp.tmp
+			tar -tvf $path_to_tarfile >${user_path}/tar_check_temp.tmp
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
 				###REMOVE DOUBLE-ENTRIES IN TAR-FILE##########################
-				sort ${script_path}/tar_check_temp.tmp|uniq >${script_path}/tar_check_full.tmp
+				sort ${user_path}/tar_check_temp.tmp|uniq >${user_path}/tar_check_full.tmp
 
 				###WRITE FILE LIST############################################
-				awk '{print $6}' ${script_path}/tar_check_full.tmp >${script_path}/tar_check.tmp
+				awk '{print $6}' ${user_path}/tar_check_full.tmp >${user_path}/tar_check.tmp
 
 				###CHECK FOR EXECUTABLES######################################
-				executables_there=`awk '{print $1}' ${script_path}/tar_check_full.tmp|grep -v "d"|grep -c "x"`
+				executables_there=`awk '{print $1}' ${user_path}/tar_check_full.tmp|grep -v "d"|grep -c "x"`
 				if [ $executables_there -eq 0 ]
 				then
 					###CHECK FOR BAD CHARACTERS###################################
-					bad_chars_there=`cat ${script_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
+					bad_chars_there=`cat ${user_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]'`
 					if [ $bad_chars_there -eq 0 ]
 					then
 						files_not_homedir=""
@@ -726,10 +738,10 @@ check_archive(){
 												then
 													if [ ! -s $line ]
 													then
-														echo "$line" >>${script_path}/files_to_fetch.tmp
+														echo "$line" >>${user_path}/files_to_fetch.tmp
 													fi
 												else
-													echo "$line" >>${script_path}/files_to_fetch.tmp
+													echo "$line" >>${user_path}/files_to_fetch.tmp
 												fi
 											fi
 										fi
@@ -751,10 +763,10 @@ check_archive(){
 													then
 														if [ ! -s $line ]
 														then
-															echo "$line" >>${script_path}/files_to_fetch.tmp
+															echo "$line" >>${user_path}/files_to_fetch.tmp
 														fi
 													else
-														echo "$line" >>${script_path}/files_to_fetch.tmp
+														echo "$line" >>${user_path}/files_to_fetch.tmp
 													fi
 												else
 													rt_query=1
@@ -774,23 +786,23 @@ check_archive(){
 																then
 																	if [ ! -s $line ]
 																	then
-																		echo "$line" >>${script_path}/files_to_fetch.tmp
+																		echo "$line" >>${user_path}/files_to_fetch.tmp
 																	fi
 																else
-																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																	echo "$line" >>${user_path}/files_to_fetch.tmp
 																fi
 																;;
 													"freetsa.tsr")		if [ $check_mode = 0 ]
 																then
 																	if [ ! -s $line ]
 																	then
-																		echo "$line" >>${script_path}/files_to_fetch.tmp
+																		echo "$line" >>${user_path}/files_to_fetch.tmp
 																	fi
 																else
-																	echo "$line" >>${script_path}/files_to_fetch.tmp
+																	echo "$line" >>${user_path}/files_to_fetch.tmp
 																fi
 																;;
-													"${file_usr}.txt")	echo "$line" >>${script_path}/files_to_fetch.tmp
+													"${file_usr}.txt")	echo "$line" >>${user_path}/files_to_fetch.tmp
 																;;
 													*)			rt_query=1
 																;;
@@ -804,7 +816,7 @@ check_archive(){
 										;;
 							esac
 							##############################################################
-						done <${script_path}/tar_check.tmp
+						done <${user_path}/tar_check.tmp
 						##############################################################
 					else
 						rt_query=1
@@ -827,25 +839,26 @@ check_archive(){
 					then
 						if [ -s ${script_path}/${line} ]
 						then
-							echo $line >>${script_path}/files_to_keep.tmp
+							echo $line >>${user_path}/files_to_keep.tmp
 						fi
 					fi
-				done<${script_path}/tar_check.tmp
+				done<${user_path}/tar_check.tmp
 
-				any_files_there=`wc -l <${script_path}/files_to_keep.tmp`
+				any_files_there=`wc -l <${user_path}/files_to_keep.tmp`
 				if [ $any_files_there -gt 0 ]
 				then
 					###PACK BACKUP FILE###########################################
-					tar -czf ${script_path}/backup/temp/temp.bcp -T ${script_path}/files_to_keep.tmp --dereference --hard-dereference
+					cd ${script_path}/
+					tar -czf ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp -T ${user_path}/files_to_keep.tmp --dereference --hard-dereference
 					rt_query=$?
 				fi
 			fi
 			##############################################################
 
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
-			rm ${script_path}/tar_check_temp.tmp 2>/dev/null
-			rm ${script_path}/tar_check_full.tmp 2>/dev/null
-			rm ${script_path}/tar_check.tmp 2>/dev/null
+			rm ${user_path}/tar_check_temp.tmp 2>/dev/null
+			rm ${user_path}/tar_check_full.tmp 2>/dev/null
+			rm ${user_path}/tar_check.tmp 2>/dev/null
 
 			return $rt_query
 }
@@ -900,10 +913,10 @@ check_tsa(){
 			######################################
 
 			###VERIFY USERS AND THEIR TSA STAMPS###
-			touch ${script_path}/blacklisted_accounts.dat
-			touch ${script_path}/blacklisted_trx.dat
-			touch ${script_path}/all_accounts.tmp
-			ls -1 ${script_path}/keys >${script_path}/all_accounts.tmp
+			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
+			touch ${user_path}/blacklisted_accounts.dat
+			touch ${user_path}/all_accounts.dat
+			ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
 			while read line
 			do
 				accountname_key_name=`echo $line`
@@ -919,7 +932,7 @@ check_tsa(){
 						if [ $rt_query = 0 ]
 						then
 							###WRITE OUTPUT OF RESPONSE TO FILE############
-							openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -text >${script_path}/timestamp_check.tmp 2>/dev/null
+							openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -929,7 +942,7 @@ check_tsa(){
 								if [ $rt_query = 0 ]
 								then
 									###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-									date_to_verify=`grep "Time stamp:" ${script_path}/timestamp_check.tmp|cut -c 13-37`
+									date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
 									date_to_verify_converted=`date +%s --date="${date_to_verify}"`
 									accountdate_to_verify=`echo $line|cut -d '.' -f2`
 									creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
@@ -937,26 +950,28 @@ check_tsa(){
 									then
 										if [ $creation_date_diff -gt 120 ]
 										then
-											echo $line >>${script_path}/blacklisted_accounts.dat
+											echo $line >>${user_path}/blacklisted_accounts.dat
 										fi
 									else
-										echo $line >>${script_path}/blacklisted_accounts.dat
+										echo $line >>${user_path}/blacklisted_accounts.dat
 									fi
 								else
-									echo $line >>${script_path}/blacklisted_accounts.dat
+									echo $line >>${user_path}/blacklisted_accounts.dat
 								fi
 							else
-								echo $line >>${script_path}/blacklisted_accounts.dat
+								echo $line >>${user_path}/blacklisted_accounts.dat
 							fi
-							rm ${script_path}/timestamp_check.tmp 2>/dev/null
+							rm ${user_path}/timestamp_check.tmp 2>/dev/null
 						else
-							echo $line >>${script_path}/blacklisted_accounts.dat
+							echo $line >>${user_path}/blacklisted_accounts.dat
 						fi
 					fi
 				else
-					echo $line >>${script_path}/blacklisted_accounts.dat
+					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
-			done <${script_path}/all_accounts.tmp
+			done <${user_path}/all_accounts.dat
+
+			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 			while read line
 			do
 				if [ ! $line = $handover_account ]
@@ -965,19 +980,25 @@ check_tsa(){
 					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
 					rm ${script_path}/trx/${line}.* 2>/dev/null
 				fi
-			done <${script_path}/blacklisted_accounts.dat
-			rm ${script_path}/all_accounts.tmp 2>/dev/null
+			done <${user_path}/blacklisted_accounts.dat
+			#####################################################################################
+
+			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
+			cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
+			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
+			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
+			rm ${user_path}/all_accounts.tmp 2>/dev/null
 }
 check_keys(){
-		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT
-		touch ${script_path}/keys_import.tmp
-		touch ${script_path}/keylist_gpg.tmp
- 	      	ls -1 ${script_path}/keys >${script_path}/keys_import.tmp
-		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${script_path}/keylist_gpg.tmp 2>/dev/null
+		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
+		rm ${user_path}/blacklisted_trx.dat 2>/dev/null
+		touch ${user_path}/blacklisted_trx.dat
+		touch ${user_path}/keylist_gpg.tmp
+		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
                        	key_uname=$line
- 	                key_imported=`grep -c "${key_uname}" ${script_path}/keylist_gpg.tmp`
+ 	                key_imported=`grep -c "${key_uname}" ${user_path}/keylist_gpg.tmp`
                         if [ $key_imported = 0 ]
               		then
                                	gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
@@ -986,10 +1007,10 @@ check_keys(){
                                	then
 					dialog_import_fail_display=`echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g"`
                        			dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_import_fail_display" 0 0
-                                       	key_already_blacklisted=`grep -c "${key_uname}" ${script_path}/blacklisted_accounts.dat`
+                                       	key_already_blacklisted=`grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat`
                                        	if [ $key_already_blacklisted = 0 ]
                                        	then
-                                               	echo "${line}" >>${script_path}/blacklisted_accounts.dat
+                                               	echo "${line}" >>${user_path}/blacklisted_accounts.dat
                                        	fi
                                	fi
 			else
@@ -1004,9 +1025,10 @@ check_keys(){
 					fi
 				fi
                        	fi
-               	done <${script_path}/keys_import.tmp
-		rm ${script_path}/keys_import.tmp
-		rm ${script_path}/keylist_gpg.tmp
+               	done <${user_path}/all_accounts.dat
+		rm ${user_path}/keylist_gpg.tmp
+		
+		###REMOVE FILES OF ACCOUNTS THAT HAVE BEEN BLACKLISTED#############
 		while read line
 		do
 			if [ ! $line = $handover_account ]
@@ -1015,51 +1037,150 @@ check_keys(){
 				rm -R ${script_path}/proofs/${line}/ 2>/dev/null
 				rm ${script_path}/trx/${line}.* 2>/dev/null
 			fi
-		done <${script_path}/blacklisted_accounts.dat
-               	##########################################################
+		done <${user_path}/blacklisted_accounts.dat
+		###################################################################
+
+		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
+               	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
+		cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
+		cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
+		rm ${user_path}/all_accounts.tmp 2>/dev/null
 }
 check_trx(){
-		###VERIFY TRX AT THE BEGINNING AND MOVE TRX THAT HAVE NOT BEEN SIGNED BY THE OWNER TO BLACKLISTED
-		touch ${script_path}/all_trx.tmp
-		ls -1 ${script_path}/trx >${script_path}/all_trx.tmp
+		###REMOVE OLD FILES AND RECREATE THEM##############################
+		rm ${user_path}/all_trx.dat 2>/dev/null
+		rm ${user_path}/all_trx.tmp 2>/dev/null
+		rm ${user_path}/trx_list_all.tmp 2>/dev/null
+		touch ${user_path}/all_trx.dat
+		touch ${user_path}/all_trx.tmp
+		touch ${user_path}/trx_list_all.tmp
+
+		###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE###########
+		index_there=1
+		ignore_there=0
+		ledger_needed=0
+		if [ ! -s ${user_path}/${now}_ledger.dat ]
+		then
+			ledger_needed=1
+		fi
+		if [ ! -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
+		then
+			ledger_needed=1
+			index_there=0
+		else
+			if [ -s ${user_path}/ignored_trx.dat ]
+			then
+				ignore_there=1
+			fi
+		fi
+		###################################################################
+
+		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE######################
+		ls -1 ${script_path}/trx >${user_path}/trx_list_all.tmp
 		while read line
 		do
+			grep "${line}" ${user_path}/trx_list_all.tmp >>${user_path}/all_trx.dat
+		done <${user_path}/all_accounts.dat
+		rm ${user_path}/trx_list_all.tmp 2>/dev/null
+		###################################################################
+
+		###SORT LIST OF TRANSACTION PER DATE###############################
+		cat ${user_path}/all_trx.dat|sort -t . -k3 >${user_path}/all_trx.tmp
+		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
+
+		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
+		while read line
+		do
+			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
-			user_to_check_sender=`head -1 $file_to_check|cut -d ' ' -f1|cut -d ':' -f2`
+			trx_header=`head -1 $file_to_check`
+			user_to_check_sender=`echo $trx_header|cut -d ' ' -f1|cut -d ':' -f2`
 			if [ $user_to_check = $user_to_check_sender ]
 			then
+				###VERIFY SIGNATURE OF TRANSACTION#################################
 				verify_signature $file_to_check $user_to_check
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
+					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME################
 					trx_date_filename=`echo $line|cut -d '.' -f3`
-					trx_date_inside=`head -1 ${script_path}/trx/${line}|cut -d ' ' -f4`
+					trx_date_inside=`echo $trx_header|cut -d ' ' -f4`
 					if [ $trx_date_filename = $trx_date_inside ]
 					then
-						if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+						###CHECK IF TRANSACTION WAS CREATED BEFORE RECEIVER EXISTED##############
+						user_to_check_receiver_date=`echo $trx_header|cut -d ' ' -f3|cut -d ':' -f2|cut -d '.' -f2`
+						if [ $trx_date_inside -gt $user_to_check_receiver_date ]
 						then
-							is_trx_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
-							if [ $is_trx_indexed = 0 -a $delete_trx_not_indexed = 1 ]
+							###CHECK IF USER HAS CREATED A INDEX FILE################################
+							if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 							then
-								rm $file_to_check 2>/dev/null
+								####CHECK IF USER HAS INDEXED THE TRANSACTION############################
+								is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
+								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 ]
+								then
+									###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
+									rm $file_to_check 2>/dev/null
+								else
+									if [ $is_trx_signed = 1 ]
+									then
+										if [ $index_there = 1 ]
+										then
+											is_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${handover_account}/${handover_account}.txt`
+										else
+											is_indexed=0
+										fi
+										if [ $is_indexed = 0 ]
+										then
+											if [ $ignore_there = 1 ]
+											then
+												is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
+												if [ $is_ignored = 0 ]
+												then
+													ledger_needed=1
+													echo $line >>${user_path}/all_trx.tmp
+												fi
+											else
+												ledger_needed=1
+												echo $line >>${user_path}/all_trx.tmp
+											fi
+										else
+											echo $line >>${user_path}/all_trx.tmp
+										fi
+									fi 
+								fi
+							else
+								if [ $delete_trx_not_indexed = 1 ]
+								then
+									rm $file_to_check 2>/dev/null
+								fi
 							fi
 						else
-							if [ $delete_trx_not_indexed = 1 ]
-							then
-								rm $file_to_check 2>/dev/null
-							fi
+							echo $file_to_check >>${user_path}/blacklisted_trx.dat
 						fi
 					else
-						echo $file_to_check >>${script_path}/blacklisted_trx.dat
+						echo $file_to_check >>${user_path}/blacklisted_trx.dat
 					fi
 				else
-					echo $file_to_check >>${script_path}/blacklisted_trx.dat
+					echo $file_to_check >>${user_path}/blacklisted_trx.dat
 				fi
 			else
-				echo $file_to_check >>${script_path}/blacklisted_trx.dat
+				echo $file_to_check >>${user_path}/blacklisted_trx.dat
 			fi
-		done <${script_path}/all_trx.tmp
+		done <${user_path}/all_trx.dat
+		
+		if [ -s ${user_path}/all_trx.tmp ]
+		then
+			mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
+		fi
+
+		###IF NO LEDGER IS NEEDED SET MAKE_LEDGER TO 0#####################
+		if [ $ledger_needed = 0 ]
+		then
+			make_ledger=0
+		fi
+
+		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
 		while read line
 		do
 			trx_account=`echo $line|awk -F. '{print $1"."$2}'`
@@ -1067,92 +1188,102 @@ check_trx(){
 			then
 				rm ${script_path}/trx/${line} 2>/dev/null
 			fi
-		done <${script_path}/blacklisted_trx.dat
-		rm ${script_path}/all_trx.tmp 2>/dev/null
-		####################################################################################
+		done <${user_path}/blacklisted_trx.dat
+		###################################################################
+
+		###REMOVE BLACKLISTED TRX FROM LIST OF TRANSACTIONS################
+		touch ${user_path}/all_trx.tmp
+		cat ${user_path}/all_trx.dat >${user_path}/all_trx.tmp
+		cat ${user_path}/blacklisted_trx.dat >>${user_path}/all_trx.tmp
+		cat ${user_path}/all_trx.tmp|sort|uniq -u >${user_path}/all_trx.dat
+		rm ${user_path}/all_trx.tmp 2>/dev/null
+		cd ${script_path}/
 }
 process_new_files(){
 			process_mode=$1
 			if [ $process_mode = 0 ]
 			then
-				touch ${script_path}/new_index_filelist.tmp
-				touch ${script_path}/old_index_filelist.tmp
-				touch ${script_path}/remove_list.tmp
-				grep "proofs/" ${script_path}/files_to_fetch.tmp|grep ".txt" >${script_path}/new_indexes.tmp
+				touch ${user_path}/new_index_filelist.tmp
+				touch ${user_path}/old_index_filelist.tmp
+				touch ${user_path}/remove_list.tmp
+				touch ${user_path}/temp_filelist.tmp
+				touch ${user_path}/new_indexes.tmp
+				grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt" >${user_path}/new_indexes.tmp
 				while read line
 				do
 					user_to_verify_name=`echo $line|cut -d '/' -f2|cut -d '.' -f1`
 					user_to_verify_date=`echo $line|cut -d '/' -f2|cut -d '.' -f2`
 					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
-					user_already_there=`ls -1 ${script_path}/keys|grep -c "${user_to_verify}"`
+					user_already_there=`cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}"`
 					if [ $user_already_there = 1 ]
 					then
-						verify_signature ${script_path}/temp/${line} $user_to_verify
+						verify_signature ${user_path}/temp/${line} $user_to_verify
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							grep "trx/${user_to_verify}" ${script_path}/temp/${line} >${script_path}/new_index_filelist.tmp
-							new_trx=`wc -l <${script_path}/new_index_filelist.tmp`
-							grep "trx/${user_to_verify}" ${script_path}/${line} >${script_path}/old_index_filelist.tmp
-							old_trx=`wc -l <${script_path}/old_index_filelist.tmp`
+							grep "trx/${user_to_verify}" ${user_path}/temp/${line} >${user_path}/new_index_filelist.tmp
+							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
+							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
+							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
 							if [ $old_trx -le $new_trx ]
 							then
 								while read line
 								do
-									is_file_there=`grep -c "${line}" ${script_path}/new_index_filelist.tmp`
+									is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 									if [ $is_file_there = 0 ]
 									then
-										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 									fi
-								done <${script_path}/old_index_filelist.tmp
+								done <${user_path}/old_index_filelist.tmp
 							else
 								no_matches=0
 								while read line
 								do
-									is_file_there=`grep -c "${line}" ${script_path}/old_index_filelist.tmp`
+									is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
 									if [ $is_file_there = 1 ]
 									then
 										no_matches=$(( $no_matches + 1 ))
 									fi
-								done <${script_path}/new_index_filelist.tmp
+								done <${user_path}/new_index_filelist.tmp
 								if [ $no_matches -lt $old_trx ]
 								then
-									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 								fi
 							fi
 						else
-							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 						fi
 					else
-						user_new=`ls -1 ${script_path}/temp/keys|grep -c "${user_to_verify}"`
+						user_new=`ls -1 ${user_path}/temp/keys|grep -c "${user_to_verify}"`
 						if [ $user_new = 0 ]
 						then
-							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${script_path}/remove_list.tmp
+							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 						fi
 					fi
-				done <${script_path}/new_indexes.tmp
-				rm ${script_path}/new_indexes.tmp
-				rm ${script_path}/new_index_filelist.tmp
-				rm ${script_path}/old_index_filelist.tmp
-				cat ${script_path}/remove_list.tmp|sort|uniq >>${script_path}/temp_filelist.tmp
-				cat ${script_path}/files_to_fetch.tmp >>${script_path}/temp_filelist.tmp
-				cat ${script_path}/temp_filelist.tmp|sort|uniq -u >${script_path}/files_to_fetch.tmp
-                                rm ${script_path}/temp_filelist.tmp
-                                rm ${script_path}/remove_list.tmp
+				done <${user_path}/new_indexes.tmp
+				rm ${user_path}/new_indexes.tmp
+				rm ${user_path}/new_index_filelist.tmp
+				rm ${user_path}/old_index_filelist.tmp
+				cat ${user_path}/remove_list.tmp|sort|uniq >${user_path}/temp_filelist.tmp
+				cat ${user_path}/files_to_fetch.tmp >>${user_path}/temp_filelist.tmp
+				cat ${user_path}/temp_filelist.tmp|sort|uniq -u >${user_path}/files_to_fetch.tmp
+                                rm ${user_path}/temp_filelist.tmp
+                                rm ${user_path}/remove_list.tmp
 			fi
 			while read line
 			do
-				if [ ! -h ${script_path}/temp/${line} ]
+				if [ ! -h ${user_path}/temp/${line} ]
 				then
-					mv ${script_path}/temp/${line} ${script_path}/${line}
+					mv ${user_path}/temp/${line} ${script_path}/${line}
 				fi
-			done <${script_path}/files_to_fetch.tmp
-			rm -r ${script_path}/temp/keys/* 2>/dev/null
-			rm -r ${script_path}/temp/trx/* 2>/dev/null
-			rm -r ${script_path}/temp/proofs/* 2>/dev/null
+			done <${user_path}/files_to_fetch.tmp
+			rm -r ${user_path}/temp/keys/* 2>/dev/null
+			rm -r ${user_path}/temp/trx/* 2>/dev/null
+			rm -r ${user_path}/temp/proofs/* 2>/dev/null
 }
 check_blacklist(){
-			am_i_blacklisted=`grep -c "${handover_account}" ${script_path}/blacklisted_accounts.dat`
+			###CHECK IF USER HAS BEEN BLACKLISTED AND IF SO WARN HIM##
+			am_i_blacklisted=`grep -c "${handover_account}" ${user_path}/blacklisted_accounts.dat`
 			if [ $am_i_blacklisted -gt 0 ]
 			then
 				if [ $gui_mode = 1 ]
@@ -1173,12 +1304,12 @@ restore_data(){
 			chmod $permissions_directories ${script_path}/proofs/
 
 			###CREATE LIST WITH FILES THAT ARE NEW####################
-			cat ${script_path}/files_to_fetch.tmp >${script_path}/file_list_unsorted.tmp
-			cat ${script_path}/files_to_keep.tmp >>${script_path}/file_list_unsorted.tmp
-			sort ${script_path}/file_list_unsorted.tmp|uniq >${script_path}/files_to_delete.tmp
+			cat ${user_path}/files_to_fetch.tmp >${user_path}/file_list_unsorted.tmp
+			cat ${user_path}/files_to_keep.tmp >>${user_path}/file_list_unsorted.tmp
+			sort ${user_path}/file_list_unsorted.tmp|uniq >${user_path}/files_to_delete.tmp
 
 			###REMOVE TMP FILE########################################
-			rm ${script_path}/file_list_unsorted.tmp
+			rm ${user_path}/file_list_unsorted.tmp
 
 			###GO THROUGH LIST AND DELETE NEW FILES###################
 			while read line
@@ -1194,19 +1325,19 @@ restore_data(){
 				else
 					rm ${script_path}/${line} 2>/dev/null
 				fi
-			done <${script_path}/files_to_delete.tmp
+			done <${user_path}/files_to_delete.tmp
 
 			###UNPACK BACKUP FILE#####################################
 			cd ${script_path}/
-			tar -xzf ${script_path}/backup/temp/temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+			tar -xzf ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 			
 			###REMOVE TEMP BACKUP FILE################################
-			rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
+			rm ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp 2>/dev/null
 			
 			###REMOVE FILE LIST#######################################
-			rm ${script_path}/files_to_delete.tmp
-			rm ${script_path}/files_to_fetch.tmp 2>/dev/null
-			rm ${script_path}/files_to_keep.tmp 2>/dev/null
+			rm ${user_path}/files_to_delete.tmp
+			rm ${user_path}/files_to_fetch.tmp 2>/dev/null
+			rm ${user_path}/files_to_keep.tmp 2>/dev/null
 }
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
@@ -1229,19 +1360,19 @@ set_permissions(){
 						fi
 					fi
 				fi
-			done <${script_path}/files_to_fetch.tmp
+			done <${user_path}/files_to_fetch.tmp
 
 			###REMOVE TEMP BACKUP FILE################################
-			rm ${script_path}/backup/temp/temp.bcp 2>/dev/null
+			rm ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp 2>/dev/null
 
 			###REMOVE FILE LIST#######################################
-			rm ${script_path}/files_to_fetch.tmp 2>/dev/null
-			rm ${script_path}/files_to_keep.tmp 2>/dev/null
+			rm ${user_path}/files_to_fetch.tmp 2>/dev/null
+			rm ${user_path}/files_to_keep.tmp 2>/dev/null
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
-		touch ${script_path}/keylist_gpg.tmp
-		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${script_path}/keylist_gpg.tmp 2>/dev/null
+		touch ${user_path}/keylist_gpg.tmp
+		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${user_path}/keylist_gpg.tmp 2>/dev/null
 		while read line
 		do
 			key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${line}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
@@ -1251,8 +1382,8 @@ purge_files(){
 				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
 				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 			fi
-		done <${script_path}/keylist_gpg.tmp
-		rm ${script_path}/keylist_gpg.tmp 2>/dev/null
+		done <${user_path}/keylist_gpg.tmp
+		rm ${user_path}/keylist_gpg.tmp 2>/dev/null
 
 		###REMOVE KEYRING AND FILES########################################
 		rm ${script_path}/control/keyring.file 2>/dev/null
@@ -1260,35 +1391,63 @@ purge_files(){
 		rm ${script_path}/keys/* 2>/dev/null
 		rm ${script_path}/trx/* 2>/dev/null
 		rm -r ${script_path}/proofs/* 2>/dev/null
+		rm -r ${script_path}/userdata/* 2>/dev/null
 }
 import_keys(){
 		cd ${script_path}/control/keys
-		touch ${script_path}/keys_to_import.tmp
-		ls -1 ${script_path}/control/keys >${script_path}/keys_to_import.tmp
+		touch ${user_path}/keys_to_import.tmp
+		ls -1 ${script_path}/control/keys >${user_path}/keys_to_import.tmp
 		while read line
 		do
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
-		done <${script_path}/keys_to_import.tmp
-		rm ${script_path}/keys_to_import.tmp
+		done <${user_path}/keys_to_import.tmp
+		rm ${user_path}/keys_to_import.tmp
 		cd ${script_path}/
+}
+get_dependencies(){
+			cd ${script_path}/trx
+			echo "${handover_account}" >${user_path}/depend_accounts.dat
+			grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+			while read line
+			do
+				touch ${user_path}/depend_user_list.tmp
+				user=$line
+				grep -l "R:${line}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
+				grep "S:${line}" $(cat ${user_path}/all_trx.dat)|cut -d ' ' -f3|cut -d ':' -f2|sort|uniq >>${user_path}/depend_user_list.tmp
+				cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
+				mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
+				while read line
+				do
+					already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
+					if [ $already_there = 0 ]
+					then
+						echo $line >>${user_path}/depend_accounts.dat
+						grep $line ${user_path}/all_trx.dat >>${user_path}/depend_trx.dat
+					fi
+				done <${user_path}/depend_user_list.tmp
+				rm ${user_path}/depend_user_list.tmp 2>/dev/null
+			done <${user_path}/depend_accounts.dat
+
+			###SORT DEPENDENCIE LISTS#####################################################
+			sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
+			mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
+			sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
+			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
+
+			###CREATE FRIENDS LIST##############################
+			own_trx_there=`grep -c "${handover_account}" ${user_path}/depend_trx.dat`
+			if [ $own_trx_there -gt 0 ]
+			then
+				grep -v "R:${handover_account}" ${handover_account}.*|grep "S:"|cut -d ':' -f4|cut -d ' ' -f1|sort|uniq >${user_path}/friends.dat
+			fi
+			####################################################
+			cd ${script_path}/
 }
 ##################
 #Main Menu Screen#
 ##################
-script_name=${0}
+###GET SCRIPT PATH##########
 script_path=$(dirname $(readlink -f ${0}))
-
-###MAKE CLEAN START#########
-rm ${script_path}/*.tmp 2>/dev/null
-rm ${script_path}/*.dat 2>/dev/null
-rm ${script_path}/*.dat.gpg 2>/dev/null
-
-###DEF PERMISSIONS BY UMASK########
-user_umask=`umask`
-permissions_directories=`echo "777 - ${user_umask}"|bc`
-touch ${script_path}/test.tmp
-permissions_files=`stat -c '%a' ${script_path}/test.tmp`
-rm ${script_path}/test.tmp
 
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
@@ -1297,11 +1456,11 @@ rm ${script_path}/test.tmp
 . ${script_path}/lang/${lang_file}
 
 ###SET INITIAL VARIABLES####
+now=`date +%Y%m%d`
 no_ledger=0
 user_logged_in=0
 action_done=1
 make_ledger=1
-
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
@@ -1357,15 +1516,20 @@ then
 												;;
 									"restore_backup")	main_menu=$dialog_main_backup
 												;;
-									"create_trx")		user_menu=$dialog_send
+									"create_trx")		main_menu=$dialog_main_logon
+												user_menu=$dialog_send
 												;;
-									"read_trx")		user_menu=$dialog_receive
+									"read_trx")		main_menu=$dialog_main_logon
+												user_menu=$dialog_receive
 												;;
-									"create_sync")		user_menu=$dialog_sync
+									"create_sync")		main_menu=$dialog_main_logon
+												user_menu=$dialog_sync
 												;;
-									"read_sync")		user_menu=$dialog_sync
+									"read_sync")		main_menu=$dialog_main_logon
+												user_menu=$dialog_sync
 												;;
-									"show_stats")		user_menu=$dialog_stats
+									"show_stats")		main_menu=$dialog_main_logon
+												user_menu=$dialog_stats
 												;;
 									*)			echo "ERROR! TRY THIS:"
 												echo "./ucs_client.sh -help"
@@ -1413,18 +1577,10 @@ then
 	done
 	if [ $no_ledger = 1 ]
 	then
-		case $cmd_action in
-			"create_trx")		no_ledger=0
-						;;
-			"read_trx")		user_logged_in=1
-						;;
-			"create_sync")		user_logged_in=1
-						;;
-			"read_sync")		user_logged_in=1
-						;;
-			"show_stats")		no_ledger=0
-						;;
-		esac
+		if [ $cmd_action = "create_trx" -o $cmd_action = "show_stats" ]
+		then
+			no_ledger=0
+		fi
 	fi
 else
 	gui_mode=1
@@ -1442,9 +1598,6 @@ do
 		fi
 		if [ ! $rt_query = 0 ]
         	then
-			rm ${script_path}/*.tmp 2>/dev/null
-			rm ${script_path}/*.dat 2>/dev/null
-                	clear
                 	exit
         	else
 			if [ $gui_mode = 1 ]
@@ -1649,8 +1802,8 @@ do
 							if [ $rt_query = 0 ]
 							then
 								cd ${script_path}
-								now=`date +%s`
-								tar -czf ${script_path}/backup/${now}.bcp control/ keys/ trx/ proofs/ --dereference --hard-dereference
+								now_stamp=`date +%s`
+								tar -czf ${script_path}/backup/${now_stamp}.bcp control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -1665,7 +1818,7 @@ do
 										exit 0
 									fi
 								else
-									rm ${script_path}/backup/${now}.bcp 2>/dev/null
+									rm ${script_path}/backup/${now_stamp}.bcp 2>/dev/null
 									if [ $gui_mode = 1 ]
 									then
 										dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_backup_create_fail" 0 0
@@ -1752,9 +1905,7 @@ do
 							fi
 							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
-                        	"$dialog_main_end")     rm ${script_path}/*.tmp 2>/dev/null
-							rm ${script_path}/*.dat 2>/dev/null
-							exit 0
+                        	"$dialog_main_end")     exit 0
 							;;
                 	esac
         	fi
@@ -1766,24 +1917,20 @@ do
 			check_tsa
 			check_keys
 			check_trx
+			get_dependencies
 			action_done=0
 		fi
 		if [ $no_ledger = 0 ]
 		then
-			now=`date +%s`
+			now_stamp=`date +%s`
 			if [ $make_ledger = 1 ]
 			then
 				build_ledger
-				no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-				if [ $no_ack_trx -gt 0 ]
-				then
-					###CREATE INDEX FILE CONTAINING ALL KNOWN TRX
-					make_signature "none" $now 1
-				fi
+				make_signature "none" $now_stamp 1
 				make_ledger=0
 			fi
 			check_blacklist
-			account_my_balance=`grep "${handover_account}" ${script_path}/ledger.tmp|cut -d '=' -f2`
+			account_my_balance=`grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 		fi
 		if [ $gui_mode = 1 ]
 		then
@@ -1796,6 +1943,7 @@ do
 		if [ ! $rt_query = 0 ]
 		then
 			user_logged_in=0
+			action_done=1
 			make_ledger=1
 			clear
 		else
@@ -1818,12 +1966,12 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
-								touch ${script_path}/keylist.tmp
-								ls -1 ${script_path}/keys >${script_path}/keylist.tmp
-								key_there=`grep -c -w "${order_receipient}" ${script_path}/keylist.tmp`
+								touch ${user_path}/keylist.tmp
+								cat ${user_path}/all_accounts.dat >${user_path}/keylist.tmp
+								key_there=`grep -c -w "${order_receipient}" ${user_path}/keylist.tmp`
 								if [ $key_there = 1 ]
 								then
-                                                                        receiver_file=`grep "${order_receipient}" ${script_path}/keylist.tmp|head -1`
+                                                                        receiver_file=`grep "${order_receipient}" ${user_path}/keylist.tmp|head -1`
 									recipient_found=1
 									amount_selected=0
 								else
@@ -1835,7 +1983,7 @@ do
 										exit 1
 									fi
 								fi
-								rm ${script_path}/keylist.tmp
+								rm ${user_path}/keylist.tmp
 								while [ $amount_selected = 0 ]
 								do
 									if [ $gui_mode = 1 ]
@@ -1929,8 +2077,8 @@ do
 										if [ ! $small_trx = 255 ]
 										then
 											receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-											touch ${script_path}/keys_for_trx.tmp
-											ls -1 ${script_path}/keys|sort -t . -k2 >${script_path}/keys_for_trx.tmp
+											touch ${user_path}/keys_for_trx.tmp
+											cat ${user_path}/all_accounts.dat >${user_path}/keys_for_trx.tmp
 											while read line
 											do
 												if [ $small_trx = 0 -a -s $receipient_index_file ]
@@ -1939,48 +2087,48 @@ do
 													key_there=`grep -c "keys/${line}" $receipient_index_file`
 													if [ $key_there = 0 ]
 													then
-														echo "keys/${line}" >>${script_path}/files_list.tmp
+														echo "keys/${line}" >>${user_path}/files_list.tmp
 													fi
 													tsa_req_there=0
 													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
 													if [ $tsa_req_there = 0 ]
 													then
-														echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
 													fi
 													tsa_res_there=0
 													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
 													if [ $tsa_res_there = 0 ]
 													then
-														echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
 													fi
 													index_file="proofs/${line}/${line}.txt"
 													if [ -s ${script_path}/${index_file} ]
 													then
-														echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 													fi
 												else
-													echo "keys/${line}" >>${script_path}/files_list.tmp
+													echo "keys/${line}" >>${user_path}/files_list.tmp
 													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
 													if [ -s $tsa_req_check ]
 													then
-														echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
 													fi
 													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
 													if [ -s $tsa_res_check ]
 													then
-														echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
 													fi
 													index_file="proofs/${line}/${line}.txt"
 													if [ -s ${script_path}/${index_file} ]
 													then
-														echo "proofs/${line}/${line}.txt" >>${script_path}/files_list.tmp
+														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 													fi
 												fi
-											done <${script_path}/keys_for_trx.tmp
-											rm ${script_path}/keys_for_trx.tmp
+											done <${user_path}/keys_for_trx.tmp
+											rm ${user_path}/keys_for_trx.tmp
 
-											touch ${script_path}/trx_for_trx.tmp
-											ls -1 ${script_path}/trx|sort -t . -k3 >${script_path}/trx_for_trx.tmp
+											touch ${user_path}/trx_for_trx.tmp
+											cat ${user_path}/all_trx.dat >${user_path}/trx_for_trx.tmp
 											while read line
 											do
 												trx_there=0
@@ -1990,57 +2138,64 @@ do
 												fi
 												if [ $trx_there = 0 ]
 												then
-													echo "trx/${line}" >>${script_path}/files_list.tmp
+													echo "trx/${line}" >>${user_path}/files_list.tmp
 												fi
-											done <${script_path}/trx_for_trx.tmp
-											rm ${script_path}/trx_for_trx.tmp
+											done <${user_path}/trx_for_trx.tmp
+											rm ${user_path}/trx_for_trx.tmp
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-											account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
-											is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
-											if [ $is_greater_one = 1 ]
-											then
-												account_new_balance="0${account_new_balance}"
-											fi
-											sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${script_path}/ledger.tmp
 											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
-											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${script_path}/index_trx.tmp
+											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
 											#############################################################################
 											make_signature "none" ${trx_now} 1
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												rm ${script_path}/index_trx.tmp
-												cd ${script_path}
-												tar -czf ${trx_now}.trx -T ${script_path}/files_list.tmp --dereference --hard-dereference
+												cd ${script_path}/
+												tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													rm ${script_path}/files_list.tmp
+													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+													account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
+													is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
+													if [ $is_greater_one = 1 ]
+													then
+														account_new_balance="0${account_new_balance}"
+													fi
+													sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
+													echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
+													friend_already_there=`grep -c "${order_receipient}" ${user_path}/friends.dat`
+													if [ $friend_already_there = 0 ]
+													then
+														echo "${order_receipient}" >>${user_path}/friends.dat
+													fi
+													#############################################################################
+													rm ${user_path}/files_list.tmp
 													if [ $gui_mode = 1 ]
 													then
-														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${trx_now}.trx#g"`
+														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${handover_account}_${trx_now}.trx#g"`
 														dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_send_success_display" 0 0
 													else
-														cmd_output=`grep "${handover_account}" ${script_path}/ledger.tmp`
+														cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
+														cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 														echo "BALANCE_${trx_now}:${cmd_output}"
 														if [ ! $cmd_path = "" ]
 														then
 															if [ ! $script_path = $cmd_path ]
-															then
-																mv ${trx_now}.trx ${cmd_path}/${trx_now}.trx
-																echo "FILE:${cmd_path}/${trx_now}.trx"
+															then 
+																mv ${script_path}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
+																echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
 															else
-																echo "FILE:${script_path}/${trx_now}.trx"
+																echo "FILE:${script_path}/${handover_account}_${trx_now}.trx"
 															fi
 														else
-															echo "FILE:${script_path}/${trx_now}.trx"
+															echo "FILE:${script_path}/${handover_account}_${trx_now}.trx"
 														fi
 														exit 0
 													fi
 												else
-													rm ${script_path}/${trx_now}.trx 2>/dev/null
+													rm ${script_path}/${handover_account}_${trx_now}.trx 2>/dev/null
 													rm ${last_trx} 2>/dev/null
-													rm ${script_path}/${trx_now}.trx 2>/dev/null
 													if [ $gui_mode = 1 ]
 													then
 														dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_send_fail" 0 0
@@ -2107,8 +2262,8 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${script_path}/temp
-													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													cd ${user_path}/temp
+													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2128,8 +2283,8 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${script_path}/temp
-													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													cd ${user_path}/temp
+													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2165,19 +2320,15 @@ do
 													check_trx
 													if [ $no_ledger = 0 ]
 													then
-														now=`date +%s`
+														now_stamp=`date +%s`
 														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														make_signature "none" $now_stamp 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																exit 1
-															else
-																exit 0
-															fi
+															exit 1
+														else
+															exit 0
 														fi
 													else
 														exit 0
@@ -2262,8 +2413,8 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${script_path}/temp
-                                        	               			 			tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													cd ${user_path}/temp
+                                        	               			 			tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2283,8 +2434,8 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${script_path}/temp
-													tar -xzf $file_path -T ${script_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+													cd ${user_path}/temp
+													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
                                 		                					rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2311,28 +2462,24 @@ do
 												set_permissions
 												if [ $gui_mode = 1 ]
 												then
+													file_found=1
 													action_done=1
 													make_ledger=1
-													file_found=1
 												else
 													check_tsa
 													check_keys
 													check_trx
 													if [ $no_ledger = 0 ]
 													then
-														now=`date +%s`
+														now_stamp=`date +%s`
 														build_ledger
-														no_ack_trx=`wc -l <${script_path}/index_trx.tmp`
-														if [ $no_ack_trx -gt 0 ]
+														make_signature "none" $now_stamp 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																exit 1
-															else
-																exit 0
-															fi
+															exit 1
+														else
+															exit 0
 														fi
 													else
 														exit 0
@@ -2365,73 +2512,80 @@ do
 							if [ ! $rt_query = 255 ]
 							then
 								###Get list of keys and related proofs with path
-								ls -1 ${script_path}/keys >${script_path}/keys_sync.tmp
+								cat ${user_path}/all_accounts.dat >${user_path}/keys_sync.tmp
 								while read line
 								do
-									echo "keys/$line" >>${script_path}/files_for_sync.tmp
+									echo "keys/$line" >>${user_path}/files_for_sync.tmp
 									freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
 									if [ -s $freetsa_qfile ]
 									then
-										echo "proofs/${line}/freetsa.tsq" >>${script_path}/files_for_sync.tmp
+										echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_for_sync.tmp
 									fi
 									freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
 									if [ -s $freetsa_rfile ]
 									then
-										echo "proofs/${line}/freetsa.tsr" >>${script_path}/files_for_sync.tmp
+										echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_for_sync.tmp
 									fi
 									index_file="${script_path}/proofs/${line}/${line}.txt"
 									if [ -s $index_file ]
 									then
-										echo "proofs/${line}/${line}.txt" >>${script_path}/files_for_sync.tmp
+										echo "proofs/${line}/${line}.txt" >>${user_path}/files_for_sync.tmp
 									fi
-								done <${script_path}/keys_sync.tmp
+								done <${user_path}/keys_sync.tmp
 
 								###Get list of trx with path
-								ls -1 ${script_path}/trx >${script_path}/trx_sync.tmp
+								cat ${user_path}/all_trx.dat >${user_path}/trx_sync.tmp
 								while read line
 								do
-									echo "trx/$line" >>${script_path}/files_for_sync.tmp
-								done <${script_path}/trx_sync.tmp
+									echo "trx/$line" >>${user_path}/files_for_sync.tmp
+								done <${user_path}/trx_sync.tmp
 
 								synch_now=`date +%s`
-								cd ${script_path}
-								tar -czf ${synch_now}.sync -T ${script_path}/files_for_sync.tmp --dereference --hard-dereference
+								cd ${script_path}/
+								tar -czf ${handover_account}_${synch_now}.sync -T ${user_path}/files_for_sync.tmp --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
 									if [ $gui_mode = 1 ]
 									then
-										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
+										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${handover_account}_${synch_now}.sync#g"`
 										dialog --title "$dialog_type_title_notification" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
 										if [ ! $cmd_path = "" ]
 										then
 											if [ ! $script_path = $cmd_path ]
 											then
-												mv ${synch_now}.sync ${cmd_path}/${synch_now}.sync
-												echo "FILE:${cmd_path}/${synch_now}.sync"
+												mv ${script_path}/${handover_account}_${synch_now}.sync ${cmd_path}/${handover_account}_${synch_now}.sync
+												echo "FILE:${cmd_path}/${handover_account}_${synch_now}.sync"
 											else
-												echo "FILE:${script_path}/${synch_now}.sync"
+												echo "FILE:${script_path}/${handover_account}_${synch_now}.sync"
 											fi
 										else
-											echo "FILE:${script_path}/${synch_now}.sync"
+											echo "FILE:${script_path}/${handover_account}_${synch_now}.sync"
 										fi
 										exit 0
 									fi
                        						else
-									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${synch_now}.sync#g"`
+									rm ${handover_account}_${synch_now}.sync 2>/dev/null
+									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${handover_account}_${synch_now}.sync#g"`
 									dialog --title "$dialog_type_title_error" --backtitle "Universal Credit System" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 							fi
-							rm ${script_path}/keys_sync.tmp 2>/dev/null
-							rm ${script_path}/files_for_sync.tmp 2>/dev/null
+							rm ${user_path}/keys_sync.tmp 2>/dev/null
+							rm ${user_path}/files_for_sync.tmp 2>/dev/null
 						fi
 						;;
 				"$dialog_history")	cd ${script_path}/trx
-							touch ${script_path}/my_trx.tmp
-							grep -l ":${handover_account}" *.*|sort -r -t . -k3 >${script_path}/my_trx.tmp
+							rm ${user_path}/my_trx.tmp 2>/dev/null
+							touch ${user_path}/my_trx.tmp
+							while read line
+							do
+								grep -l ":${handover_account}" ${line} >>${user_path}/my_trx.tmp
+							done <${user_path}/all_trx.dat
+							cat ${user_path}/my_trx.tmp|sort -r -t . -k3 >${user_path}/my_trx_sorted.tmp
+							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							cd ${script_path}
-							no_trx=`wc -l <${script_path}/my_trx.tmp`
+							no_trx=`wc -l <${user_path}/my_trx.tmp`
 							if [ $no_trx -gt 0 ]
 							then
 								while read line
@@ -2440,7 +2594,7 @@ do
 									trx_confirmations_user=0
 									line_extracted=$line
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
-									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2`
+									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
 									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
@@ -2449,12 +2603,12 @@ do
 										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 										then
 											trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/${line}/${line}.txt`
-											if [ $trx_confirmations_user -gt 0 ]
+											if [ $trx_confirmations_user -gt 0 -a ! $receiver = $line ]
 											then
 												trx_confirmations=$(( $trx_confirmations + 1 ))
 											fi
 										fi
-									done <${script_path}/friends.dat
+									done <${user_path}/friends.dat
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -2465,9 +2619,9 @@ do
 									then
 										if [ $trx_confirmations -gt 0 ]
 										then
-											trx_blacklisted=`grep -c "${line_extracted}" ${script_path}/blacklisted_trx.dat`
-											sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
-											receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
+											trx_blacklisted=`grep -c "${line_extracted}" ${user_path}/blacklisted_trx.dat`
+											sender_blacklisted=`grep -c "${sender}" ${user_path}/blacklisted_accounts.dat`
+											receiver_blacklisted=`grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat`
 											if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
 											then
 												trx_color="\Z2"
@@ -2482,33 +2636,35 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										printf "${trx_date}|-${trx_amount} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${script_path}/history_list.tmp
+										printf "${trx_date}|-${trx_amount} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${user_path}/history_list.tmp
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										printf "${trx_date}|+${trx_amount} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${script_path}/history_list.tmp
+										printf "${trx_date}|+${trx_amount} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${user_path}/history_list.tmp
 									fi
-								done <${script_path}/my_trx.tmp
+								done <${user_path}/my_trx.tmp
 							else
-								printf "${dialog_history_noresult}" >${script_path}/history_list.tmp
+								printf "${dialog_history_noresult}" >${user_path}/history_list.tmp
 							fi
+							menu_item_selected=`head -1 ${user_path}/history_list.tmp|cut -d ' ' -f1`
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --output-fd 1 --menu "$dialog_history_menu" 0 0 0 --file ${script_path}/history_list.tmp`
+								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "Universal Credit System" --output-fd 1 --default-item "${menu_item_selected}" --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp`
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
+									menu_item_selected=$decision
 									dialog_history_noresults=`echo $dialog_history_noresult|cut -d ' ' -f1`
 									if [ ! $decision = $dialog_history_noresults ]
 									then
 										trx_date_extracted=`echo $decision|cut -d '|' -f1`
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
-										trx_file=`grep "${trx_date}" ${script_path}/my_trx.tmp`
+										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
-										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2`
+										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
 										trx_status=""
 										trx_confirmations=0
 										trx_confirmations_user=0
@@ -2522,17 +2678,17 @@ do
 										then
 											trx_status="TRX_IGNORED "
 										fi
-										trx_blacklisted=`grep -c "${trx_file}" ${script_path}/blacklisted_trx.dat`
+										trx_blacklisted=`grep -c "${trx_file}" ${user_path}/blacklisted_trx.dat`
 										if [ $trx_blacklisted = 1 ]
 										then
 											trx_status="${trx_status}TRX_BLACKLISTED "
 										fi
-										sender_blacklisted=`grep -c "${sender}" ${script_path}/blacklisted_accounts.dat`
+										sender_blacklisted=`grep -c "${sender}" ${user_path}/blacklisted_accounts.dat`
 										if [ $sender_blacklisted = 1 ]
 										then
 										trx_status="${trx_status}SDR_BLACKLISTED "
 										fi
-										receiver_blacklisted=`grep -c "${receiver}" ${script_path}/blacklisted_accounts.dat`
+										receiver_blacklisted=`grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat`
 										if [ $receiver_blacklisted = 1 ]
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
@@ -2546,12 +2702,12 @@ do
 											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
 												trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/${line}/${line}.txt`
-												if [ $trx_confirmations_user -gt 0 ]
+												if [ $trx_confirmations_user -gt 0 -a ! $receiver = $line ]
 												then
 													trx_confirmations=$(( $trx_confirmations + 1 ))
 												fi
 											fi
-										done <${script_path}/friends.dat
+										done <${user_path}/friends.dat
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
@@ -2565,12 +2721,25 @@ do
 									fi
 								else
 									overview_quit=1
-									rm ${script_path}/history_list.tmp 2>/dev/null
+									rm ${user_path}/history_list.tmp 2>/dev/null
 								fi
 							done
-							rm ${script_path}/my_trx.tmp
+							rm ${user_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	###CALCULATE COINLOAD AND NEXT COINLOAD########
+				"$dialog_stats")	if [ $make_ledger = 0 ]
+							then
+								###SET VARIABLES TO CALCULATE COINLOAD##############
+								start_date="20210216"
+								date_stamp=`date +%s --date="${start_date}"`
+								now=`date +%Y%m%d`
+								now_date_status=`date +%s --date=${now}`
+                						now_date_status=$(( $now_date_status + 86400 ))
+								no_seconds_total=$(( $now_date_status - $date_stamp ))
+								no_days_total=`expr $no_seconds_total / 86400`
+								no_days_total=$(( $no_days_total + 1 ))
+							fi
+							
+							###CALCULATE COINLOAD AND NEXT COINLOAD########
 							months=`echo "scale=0;${no_days_total} / 30"|bc`
 							coinload=`echo "scale=6;0.97^$months*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${coinload}>=1"|bc`
@@ -2590,11 +2759,11 @@ do
 							###############################################
 
 							###EXTRACT STATISTICS FOR TOTAL################
-							total_keys=`ls -1 ${script_path}/keys|wc -l`
-							total_trx=`ls -1 ${script_path}/trx|wc -l`
-							total_user_blacklisted=`wc -l <${script_path}/blacklisted_accounts.dat`
-							total_trx_blacklisted=`wc -l <${script_path}/blacklisted_trx.dat`
-							total_friends=`wc -l <${script_path}/friends.dat`
+							total_keys=`cat ${user_path}/all_accounts.dat|wc -l`
+							total_trx=`cat ${user_path}/all_trx.dat|wc -l`
+							total_user_blacklisted=`wc -l <${user_path}/blacklisted_accounts.dat`
+							total_trx_blacklisted=`wc -l <${user_path}/blacklisted_trx.dat`
+							total_friends=`wc -l <${user_path}/friends.dat`
 							###############################################
 
 							if [ $gui_mode = 1 ]
@@ -2617,7 +2786,6 @@ do
 							;;
 				"Log out")		###LOG OUT USER###########
 							user_logged_in=0
-							make_ledger=1
 							;;
 			esac
 		fi
