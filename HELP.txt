@@ -62,15 +62,9 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				ledger and only perform basic integrity checks on 
 				files which will result in better performance. 
 				When this is set index-file will not be created.
-				The no_ledger parameter will only be considered
-				for following actions:
 
-				create_trx
-				create_sync
-				create_backup
-
-				For all other actions no_ledger may be set, but 
-				will be ignored.
+				no_ledger will be ignored for create_trx a ledger
+				must be available to have a balance.
 
 	-help			Display HELP
 
