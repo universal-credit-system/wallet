@@ -148,12 +148,12 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
-			mkdir ${script_path}/userdata/${handover_account}
-			mkdir ${script_path}/userdata/${handover_account}/temp
-			mkdir ${script_path}/userdata/${handover_account}/temp/keys
-			mkdir ${script_path}/userdata/${handover_account}/temp/proofs
-			mkdir ${script_path}/userdata/${handover_account}/temp/trx
-			user_path="${script_path}/userdata/${handover_account}"
+			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}
+			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp
+			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/keys
+			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/proofs
+			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/trx
+			user_path="${script_path}/userdata/${name_hashed}.${file_stamp}"
 
 			###EXPORT PUBLIC KEY#########################################
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase ${name_passphrase} --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
