@@ -1436,6 +1436,7 @@ get_dependencies(){
 
 			###CREATE FRIENDS LIST##############################
 			own_trx_there=`grep -c "${handover_account}" ${user_path}/depend_trx.dat`
+			touch ${user_path}/friends.dat
 			if [ $own_trx_there -gt 0 ]
 			then
 				grep -v "R:${handover_account}" ${handover_account}.*|grep "S:"|cut -d ':' -f4|cut -d ' ' -f1|sort|uniq >${user_path}/friends.dat
@@ -1577,7 +1578,7 @@ then
 	done
 	if [ $no_ledger = 1 ]
 	then
-		if [ $cmd_action = "create_trx" -o $cmd_action = "show_stats" ]
+		if [ $cmd_action = "create_trx" ]
 		then
 			no_ledger=0
 		fi
@@ -2726,7 +2727,7 @@ do
 							done
 							rm ${user_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	if [ $make_ledger = 0 ]
+				"$dialog_stats")	if [ $make_ledger = 0 -o $no_ledger = 1 ]
 							then
 								###SET VARIABLES TO CALCULATE COINLOAD##############
 								start_date="20210216"
