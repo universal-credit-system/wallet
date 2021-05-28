@@ -1272,11 +1272,14 @@ process_new_files(){
 			fi
 			while read line
 			do
-				if [ ! -h ${user_path}/temp/${line} ]
+				if [ -h ${user_path}/temp/${line} ]
 				then
-					mv ${user_path}/temp/${line} ${script_path}/${line}
+					rm ${user_path}/temp/${line}
 				fi
 			done <${user_path}/files_to_fetch.tmp
+			cp ${user_path}/temp/keys/* ${script_path}/keys/
+			cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/
+			cp ${user_path}/temp/trx/* ${script_path}/trx/
 			rm -r ${user_path}/temp/keys/* 2>/dev/null
 			rm -r ${user_path}/temp/trx/* 2>/dev/null
 			rm -r ${user_path}/temp/proofs/* 2>/dev/null
