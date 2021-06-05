@@ -19,3 +19,9 @@ permissions_files=`stat -c '%a' ${script_path}/test.tmp`
 rm ${script_path}/test.tmp
 sed -i "s/permissions_directories=<permissions_directories>/permissions_directories=${permissions_directories}/g" ${script_path}/control/config.conf
 sed -i "s/permissions_files=<permissions_files>/permissions_files=${permissions_files}/g" ${script_path}/control/config.conf
+
+###SET PATHS################
+sed -i "s#<trx_path_input>#${script_path}#g" ${script_path}/control/config.conf
+sed -i "s#<trx_path_output>#${script_path}#g" ${script_path}/control/config.conf
+sed -i "s#<sync_path_input>#${script_path}#g" ${script_path}/control/config.conf
+sed -i "s#<sync_path_output>#${script_path}#g" ${script_path}/control/config.conf
