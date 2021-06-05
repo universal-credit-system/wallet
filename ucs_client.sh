@@ -529,6 +529,8 @@ build_ledger(){
 		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 		current_percent=0
 		current_percent_display=0
+		current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
+		current_percent_display=`echo "${current_percent} / 1"|bc`
 		####################################################
 
 		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
@@ -2193,25 +2195,26 @@ do
 													fi
 													#############################################################################
 													rm ${user_path}/files_list.tmp
+													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
+													#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
+													#############################################################################
+													if [ ! $trx_path_output = $script_path ]
+													then
+														mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
+													fi
 													if [ $gui_mode = 1 ]
 													then
-														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${script_path}/${handover_account}_${trx_now}.trx#g"`
+														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
 														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
 													else
-														cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 														cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 														echo "BALANCE_${trx_now}:${cmd_output}"
-														if [ ! $cmd_path = "" ]
+														if [ ! $cmd_path = "" -a ! $trx_path_output = $cmd_path ]
 														then
-															if [ ! $script_path = $cmd_path ]
-															then 
-																mv ${script_path}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
-																echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
-															else
-																echo "FILE:${script_path}/${handover_account}_${trx_now}.trx"
-															fi
+															mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
+															echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
 														else
-															echo "FILE:${script_path}/${handover_account}_${trx_now}.trx"
+															echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
 														fi
 														exit 0
 													fi
@@ -2254,7 +2257,7 @@ do
 						fi
 						;;
 				"$dialog_receive")	file_found=0
-							path_to_search=$HOME
+							path_to_search=$trx_path_input
 							while [ $file_found = 0 ]
 							do
 								if [ $gui_mode = 1 ]
@@ -2397,7 +2400,7 @@ do
 						if [ $rt_query = 0 ]
 						then
 							file_found=0
-                        				path_to_search=$HOME
+                        				path_to_search=$sync_path_input
               			          		while [ $file_found = 0 ]
                         				do
 								if [ $gui_mode = 1 ]
@@ -2533,7 +2536,7 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
-								###Get list of keys and related proofs with path
+								###GET LIST OF KEYS WITH PATH############################
 								cat ${user_path}/all_accounts.dat >${user_path}/keys_sync.tmp
 								while read line
 								do
@@ -2555,35 +2558,41 @@ do
 									fi
 								done <${user_path}/keys_sync.tmp
 
-								###Get list of trx with path
+								###GET LIST OF TRX#######################################
 								cat ${user_path}/all_trx.dat >${user_path}/trx_sync.tmp
 								while read line
 								do
 									echo "trx/$line" >>${user_path}/files_for_sync.tmp
 								done <${user_path}/trx_sync.tmp
+								#########################################################
 
+								###GET CURRENT TIMESTAMP#################################
 								synch_now=`date +%s`
+
+								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
 								tar -czf ${handover_account}_${synch_now}.sync -T ${user_path}/files_for_sync.tmp --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
+									###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
+									#cp ${script_path}/${handover_account}_${synch_now}.sync ${user_path}/${handover_account}_${synch_now}.sync
+									###################################################################################
+									if [ ! $sync_path_output = $script_path ]
+									then
+										mv ${script_path}/${handover_account}_${synch_now}.sync ${sync_path_output}/${handover_account}_${synch_now}.sync
+									fi
 									if [ $gui_mode = 1 ]
 									then
-										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${script_path}/${handover_account}_${synch_now}.sync#g"`
+										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${synch_now}.sync#g"`
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
-										if [ ! $cmd_path = "" ]
+										if [ ! $cmd_path = "" -a ! $sync_path_output = $cmd_path ]
 										then
-											if [ ! $script_path = $cmd_path ]
-											then
-												mv ${script_path}/${handover_account}_${synch_now}.sync ${cmd_path}/${handover_account}_${synch_now}.sync
-												echo "FILE:${cmd_path}/${handover_account}_${synch_now}.sync"
-											else
-												echo "FILE:${script_path}/${handover_account}_${synch_now}.sync"
-											fi
+											mv ${sync_path_output}/${handover_account}_${synch_now}.sync ${cmd_path}/${handover_account}_${synch_now}.sync
+											echo "FILE:${cmd_path}/${handover_account}_${synch_now}.sync"
 										else
-											echo "FILE:${script_path}/${handover_account}_${synch_now}.sync"
+											echo "FILE:${sync_path_output}/${handover_account}_${synch_now}.sync"
 										fi
 										exit 0
 									fi
