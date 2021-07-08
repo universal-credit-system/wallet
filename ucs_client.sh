@@ -17,7 +17,7 @@ login_account(){
 				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $line|cut -d '.' -f1`
 		                keylist_stamp=`echo $line|cut -d '.' -f2`
-                                if [ ! $cmd_sender = ""  ]
+                                if [ ! $cmd_sender = "" ]
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
@@ -919,7 +919,7 @@ check_tsa(){
 					retry_counter=$(( $retry_counter + 1 ))
 					if [ $retry_counter -le 5 ]
 					then
-						sleep $wait_seconds_untiL_retry
+						sleep $wait_seconds_until_retry
 					else
 						if [ $gui_mode = 1 ]
 						then
