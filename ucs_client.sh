@@ -547,7 +547,7 @@ build_ledger(){
 
 			###CALCULATE CURRENT COINLOAD####################
 			months=`echo "scale=0;${day_counter} / 30"|bc`
-			coinload=`echo "scale=6;0.97^$months*$initial_coinload/30"|bc`
+			coinload=`echo "scale=9;0.97^$months*$initial_coinload/30"|bc`
 			is_greater_one=`echo "${coinload}>=1"|bc`
 		        if [ $is_greater_one = 0 ]
 	        	then
@@ -564,7 +564,7 @@ build_ledger(){
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GRANT COINLOAD OF THAT DAY####################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.6f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
 			if [ -s ${user_path}/${now}_ledger.tmp ]
 			then
 				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
@@ -2029,7 +2029,7 @@ do
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000001"|bc`
+											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000000001"|bc`
 											if [ $is_amount_big_enough = 1 ]
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
@@ -2772,14 +2772,14 @@ do
 							
 							###CALCULATE COINLOAD AND NEXT COINLOAD########
 							months=`echo "scale=0;${no_days_total} / 30"|bc`
-							coinload=`echo "scale=6;0.97^$months*$initial_coinload/30"|bc`
+							coinload=`echo "scale=9;0.97^$months*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${coinload}>=1"|bc`
 		        				if [ $is_greater_one = 0 ]
 	        					then
 	                					coinload="0${coinload}"
 	                				fi
                                                         next_month=$(( $months + 1 ))
-							next_coinload=`echo "scale=6;0.97^$next_month*$initial_coinload/30"|bc`
+							next_coinload=`echo "scale=9;0.97^$next_month*$initial_coinload/30"|bc`
 							is_greater_one=`echo "${next_coinload}>=1"|bc`
 		        				if [ $is_greater_one = 0 ]
 	        					then
