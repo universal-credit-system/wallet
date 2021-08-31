@@ -1137,7 +1137,12 @@ check_trx(){
 							then
 								####CHECK IF USER HAS INDEXED THE TRANSACTION############################
 								is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
-								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 ]
+
+								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+								trx_amount=`echo $trx_header|cut -d ' ' -f2`
+								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
+
+								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 ]
 								then
 									###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
 									rm $file_to_check 2>/dev/null
