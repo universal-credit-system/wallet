@@ -555,6 +555,13 @@ build_ledger(){
 	                fi
 			#################################################
 
+			###GRANT COINLOAD OF THAT DAY####################
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
+			if [ -s ${user_path}/${now}_ledger.tmp ]
+			then
+				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
+			fi
+
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_accounts.dat >${user_path}/accounts.tmp
@@ -562,13 +569,6 @@ build_ledger(){
 			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
-
-			###GRANT COINLOAD OF THAT DAY####################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
-			if [ -s ${user_path}/${now}_ledger.tmp ]
-			then
-				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
-			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/all_trx.dat >${user_path}/trxlist_${focus}.tmp
