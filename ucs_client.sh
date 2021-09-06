@@ -1901,7 +1901,9 @@ do
 												fi
 											else
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_backup_fail" 0 0
-											fi	
+											fi
+										else
+											rm ${script_path}/backups_list.tmp 2>/dev/null	
 										fi	
 									else
 										if [ $cmd_path = "" ]
