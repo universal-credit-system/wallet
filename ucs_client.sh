@@ -2017,7 +2017,7 @@ do
 								do
 									if [ $gui_mode = 1 ]
 									then
-										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount" 0 0 "1.000000"`
+										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount" 0 0 "1.000000000"`
 								        	rt_query=$?
 									else
 										rt_query=0
@@ -2035,7 +2035,9 @@ do
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
 											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000000001"|bc`
-											if [ $is_amount_big_enough = 1 ]
+											amount_mod=`echo "${order_amount_formatted} % 0.000000001"|bc`
+											is_amount_mod=`echo "${amount_mod} <=0"|bc` 
+											if [ $is_amount_big_enough = 1 -a $is_amount_mod = 1 ]
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
 												if [ $enough_balance = 1 ]
