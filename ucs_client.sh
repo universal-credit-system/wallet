@@ -2824,7 +2824,7 @@ do
 								exit 0
 							fi
 							;;
-				"Log out")		###LOG OUT USER###########
+				"$dialog_logout")	###LOG OUT USER###########
 							user_logged_in=0
 							;;
 			esac
