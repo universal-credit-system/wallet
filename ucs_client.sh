@@ -1078,22 +1078,24 @@ check_trx(){
 		touch ${user_path}/trx_list_all.tmp
 
 		###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE###########
-		index_there=1
+		index_there=0
 		ignore_there=0
-		ledger_needed=0
-		if [ ! -s ${user_path}/${now}_ledger.dat ]
+		ledger_needed=1
+		if [ -s ${user_path}/${now}_ledger.dat ]
 		then
-			ledger_needed=1
-		fi
-		if [ ! -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
-		then
-			ledger_needed=1
-			index_there=0
-		else
-			if [ -s ${user_path}/ignored_trx.dat ]
+			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
 			then
-				ignore_there=1
+				ledger_needed=0
+				index_there=1
+				if [ -s ${user_path}/ignored_trx.dat ]
+				then
+					ignore_there=1
+				fi
+			else
+				ledger_needed=1
 			fi
+		else
+			ledger_needed=1
 		fi
 		###################################################################
 
@@ -1978,6 +1980,10 @@ do
 			check_trx
 			get_dependencies
 			changes=$?
+			if [ $changes = 1 ]
+			then
+				make_ledger=1
+			fi
 			action_done=0
 		fi
 		if [ $no_ledger = 0 ]
