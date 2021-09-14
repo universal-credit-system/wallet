@@ -1091,11 +1091,7 @@ check_trx(){
 				then
 					ignore_there=1
 				fi
-			else
-				ledger_needed=1
 			fi
-		else
-			ledger_needed=1
 		fi
 		###################################################################
 
