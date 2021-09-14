@@ -461,6 +461,8 @@ check_input(){
 		return $rt_query
 }
 build_ledger(){
+		new=$1
+
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
@@ -475,7 +477,7 @@ build_ledger(){
 		###CHECK IF OLD LEDGER THERE########################
 		start_date="20210216"
 		old_ledger_there=`ls -1 ${user_path}/|grep -c "ledger.dat"`
-		if [ $old_ledger_there -gt 0 ]
+		if [ $old_ledger_there -gt 0 -a $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t_ -k1|tail -1`
@@ -486,14 +488,14 @@ build_ledger(){
 			date_stamp=$(( $last_ledger_date_stamp + 86400 ))
 
 			###MOVE LEDGER######################################
-			mv ${user_path}/${last_ledger_date}_ledger.dat ${user_path}/${now}_ledger.dat
+			mv ${user_path}/${last_ledger_date}_ledger.dat ${user_path}/${now}_ledger.dat 2>/dev/null
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=`date +%s --date="${start_date}"`
 			no_seconds_last=$(( $date_stamp - $date_stamp_last ))
 			day_counter=`expr $no_seconds_last / 86400`
 		else
-			###
+			###SET DATESTAMP####################################
 			date_stamp=`date +%s --date="${start_date}"`
 
 			###EMPTY LEDGER#####################################
@@ -1434,6 +1436,17 @@ import_keys(){
 }
 get_dependencies(){
 			cd ${script_path}/trx
+			changes=1
+			depend_accounts_old_hash="X"
+			depend_trx_old_hash="X"
+			if [ -e ${user_path}/depend_accounts.dat ]
+			then
+				if [ -e ${user_path}/depend_trx.dat ]
+				then
+					depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
+					depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+				fi
+			fi
 			echo "${handover_account}" >${user_path}/depend_accounts.dat
 			grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
 			while read line
@@ -1462,6 +1475,14 @@ get_dependencies(){
 			sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
 			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
+			###GET HASH AND COMPARE#############################
+			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
+			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash ]
+			then
+				changes=0
+			fi
+
 			###CREATE FRIENDS LIST##############################
 			own_trx_there=`grep -c "${handover_account}" ${user_path}/depend_trx.dat`
 			touch ${user_path}/friends.dat
@@ -1471,6 +1492,7 @@ get_dependencies(){
 			fi
 			####################################################
 			cd ${script_path}/
+			return $changes
 }
 ##################
 #Main Menu Screen#
@@ -1556,6 +1578,12 @@ then
 												;;
 									"read_sync")		main_menu=$dialog_main_logon
 												user_menu=$dialog_sync
+												;;
+									"send_uca")		main_menu=$dialog_main_logon
+												user_menu=$dialog_uca
+												;;
+									"request_uca")		main_menu=$dialog_main_logon
+												user_menu=$dialog_uca
 												;;
 									"show_stats")		main_menu=$dialog_main_logon
 												user_menu=$dialog_stats
@@ -1949,6 +1977,7 @@ do
 			check_keys
 			check_trx
 			get_dependencies
+			changes=$?
 			action_done=0
 		fi
 		if [ $no_ledger = 0 ]
@@ -1956,7 +1985,7 @@ do
 			now_stamp=`date +%s`
 			if [ $make_ledger = 1 ]
 			then
-				build_ledger
+				build_ledger $changes
 				make_signature "none" $now_stamp 1
 				make_ledger=0
 			fi
@@ -1966,7 +1995,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -2352,10 +2381,11 @@ do
 													check_tsa
 													check_keys
 													check_trx
+													get_dependencies
 													if [ $no_ledger = 0 ]
 													then
 														now_stamp=`date +%s`
-														build_ledger
+														build_ledger 1
 														make_signature "none" $now_stamp 1
 														rt_query=$?
 														if [ $rt_query -gt 0 ]
@@ -2503,10 +2533,11 @@ do
 													check_tsa
 													check_keys
 													check_trx
+													get_dependencies
 													if [ $no_ledger = 0 ]
 													then
 														now_stamp=`date +%s`
-														build_ledger
+														build_ledger 1
 														make_signature "none" $now_stamp 1
 														rt_query=$?
 														if [ $rt_query -gt 0 ]
@@ -2613,6 +2644,104 @@ do
 							fi
 							rm ${user_path}/keys_sync.tmp 2>/dev/null
 							rm ${user_path}/files_for_sync.tmp 2>/dev/null
+						fi
+						;;
+				"$dialog_uca")	session_key=`date -u +%Y%m%d`
+						if [ $gui_mode = 1 ]
+						then
+							dialog --yes-label "$dialog_uca_send" --no-label "$dialog_uca_request" --title "$dialog_uca" --backtitle "$core_system_name" --yesno "$dialog_uca_overview" 0 0
+							rt_query=$?
+							if [ $rt_query = 0 ]
+							then
+								file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
+ 			                               		rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									if [ ! -d ${file_path} ]
+									then
+										if [ -s ${file_path} ]
+										then
+											cat ${file_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 127.0.0.1 15000
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												dialog_uca_success=`echo $dialog_uca_success|sed "s#<file>#${file_path}#g"`
+												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
+											else
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+											fi
+										else
+											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+                               								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+										fi
+									else
+										dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+                               							dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+									fi
+								fi
+							else
+								if [ ! $rt_query = 255 ]
+								then
+									now_stamp=`date +%s`
+									netcat -q0 127.0.0.1 15001|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										dialog_uca_success=`echo $dialog_uca_success|sed "s#<file>#${user_path}/uca_${now_stamp}.sync#g"`
+										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
+									else
+										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+									fi
+								fi
+							fi
+						else
+							case $cmd_action in
+								"send_uca")	if [ ! $cmd_path = "" ]
+										then
+											if [ ! -d $cmd_path ]
+											then
+												if [ -s $cmd_path ]
+												then
+													session_key=`date -u +%Y%m%d`
+													cat ${cmd_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 127.0.0.1 15000
+													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														exit 0
+													else
+														exit 1
+													fi
+												else
+													exit 1
+												fi
+											else
+												exit 1
+											fi
+										else
+											exit 1
+										fi
+										;;
+								"request_uca")	if [ $cmd_path = "" ]
+										then
+											cmd_path=${script_path}
+										else
+											if [ -d $cmd_path ]
+											then
+												now=`date +%s`
+												netcat -q0 127.0.0.1 15001|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													exit 0
+												else
+													exit 1
+												fi
+											else
+												exit 1
+											fi
+										fi
+										;;
+							esac
 						fi
 						;;
 				"$dialog_history")	cd ${script_path}/trx
