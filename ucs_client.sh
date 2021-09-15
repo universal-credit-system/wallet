@@ -523,16 +523,21 @@ build_ledger(){
 		months=0
 		####################################################		
 
-		###INIT STATUS BAR##################################
-		now_date_status=`date +%s --date=${now}`
-                now_date_status=$(( $now_date_status + 86400 ))
-		no_seconds_total=$(( $now_date_status - $date_stamp ))
-		no_days_total=`expr $no_seconds_total / 86400`
-		percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
-		current_percent=0
-		current_percent_display=0
-		current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
-		current_percent_display=`echo "${current_percent} / 1"|bc`
+		if [ $focus -le $now ]
+		then
+			###INIT STATUS BAR##################################
+			now_date_status=`date +%s --date=${now}`
+        	        now_date_status=$(( $now_date_status + 86400 ))
+			no_seconds_total=$(( $now_date_status - $date_stamp ))
+			no_days_total=`expr $no_seconds_total / 86400`
+			percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
+			current_percent=0
+			current_percent_display=0
+			current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
+			current_percent_display=`echo "${current_percent} / 1"|bc`
+		else
+			progress_bar_redir="2"
+		fi
 		####################################################
 
 		###AS LONG AS FOCUS LESS OR EQUAL YET..#############
@@ -2876,18 +2881,15 @@ do
 							done
 							rm ${user_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	if [ $make_ledger = 0 -o $no_ledger = 1 ]
-							then
-								###SET VARIABLES TO CALCULATE COINLOAD##############
-								start_date="20210216"
-								date_stamp=`date +%s --date="${start_date}"`
-								now=`date +%Y%m%d`
-								now_date_status=`date +%s --date=${now}`
-                						now_date_status=$(( $now_date_status + 86400 ))
-								no_seconds_total=$(( $now_date_status - $date_stamp ))
-								no_days_total=`expr $no_seconds_total / 86400`
-								no_days_total=$(( $no_days_total + 1 ))
-							fi
+				"$dialog_stats")	###SET VARIABLES TO CALCULATE COINLOAD##############
+							start_date="20210216"
+							date_stamp=`date +%s --date="${start_date}"`
+							now=`date +%Y%m%d`
+							now_date_status=`date +%s --date=${now}`
+                					now_date_status=$(( $now_date_status + 86400 ))
+							no_seconds_total=$(( $now_date_status - $date_stamp ))
+							no_days_total=`expr $no_seconds_total / 86400`
+							no_days_total=$(( $no_days_total + 1 ))
 							
 							###CALCULATE COINLOAD AND NEXT COINLOAD########
 							months=`echo "scale=0;${no_days_total} / 30"|bc`
