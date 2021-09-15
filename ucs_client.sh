@@ -1080,12 +1080,12 @@ check_trx(){
 		###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE###########
 		index_there=0
 		ignore_there=0
-		ledger_needed=1
+		new_ledger=1
 		if [ -s ${user_path}/${now}_ledger.dat ]
 		then
 			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
 			then
-				ledger_needed=0
+				new_ledger=0
 				index_there=1
 				if [ -s ${user_path}/ignored_trx.dat ]
 				then
@@ -1199,12 +1199,6 @@ check_trx(){
 			mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		fi
 
-		###IF NO LEDGER IS NEEDED SET MAKE_LEDGER TO 0#####################
-		if [ $ledger_needed = 0 ]
-		then
-			make_ledger=0
-		fi
-
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
 		while read line
 		do
@@ -1223,6 +1217,7 @@ check_trx(){
 		cat ${user_path}/all_trx.tmp|sort|uniq -u >${user_path}/all_trx.dat
 		rm ${user_path}/all_trx.tmp 2>/dev/null
 		cd ${script_path}/
+		return $new_ledger
 }
 process_new_files(){
 			process_mode=$1
@@ -1434,7 +1429,7 @@ import_keys(){
 }
 get_dependencies(){
 			cd ${script_path}/trx
-			changes=1
+			new_ledger=1
 			depend_accounts_old_hash="X"
 			depend_trx_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
@@ -1445,28 +1440,9 @@ get_dependencies(){
 					depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
 				fi
 			fi
-			echo "${handover_account}" >${user_path}/depend_accounts.dat
-			grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
-			while read line
-			do
-				touch ${user_path}/depend_user_list.tmp
-				user=$line
-				grep -l "R:${line}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
-				grep "S:${line}" $(cat ${user_path}/all_trx.dat)|cut -d ' ' -f3|cut -d ':' -f2|sort|uniq >>${user_path}/depend_user_list.tmp
-				cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
-				mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
-				while read line
-				do
-					already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
-					if [ $already_there = 0 ]
-					then
-						echo $line >>${user_path}/depend_accounts.dat
-						grep $line ${user_path}/all_trx.dat >>${user_path}/depend_trx.dat
-					fi
-				done <${user_path}/depend_user_list.tmp
-				rm ${user_path}/depend_user_list.tmp 2>/dev/null
-			done <${user_path}/depend_accounts.dat
-
+			cat ${user_path}/all_accounts.dat >${user_path}/depend_accounts.dat
+			cat ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+			
 			###SORT DEPENDENCIE LISTS#####################################################
 			sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
 			mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
@@ -1478,7 +1454,7 @@ get_dependencies(){
 			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash ]
 			then
-				changes=0
+				new_ledger=0
 			fi
 
 			###CREATE FRIENDS LIST##############################
@@ -1490,7 +1466,7 @@ get_dependencies(){
 			fi
 			####################################################
 			cd ${script_path}/
-			return $changes
+			return $new_ledger
 }
 ##################
 #Main Menu Screen#
@@ -1974,11 +1950,14 @@ do
 			check_tsa
 			check_keys
 			check_trx
+			trx_new_ledger=$?
 			get_dependencies
-			changes=$?
-			if [ $changes = 1 ]
+			dep_new_ledger=$?
+			if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
 			then
-				make_ledger=1
+				changes=0
+			else
+				changes=1
 			fi
 			action_done=0
 		fi
