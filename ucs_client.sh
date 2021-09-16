@@ -1087,7 +1087,8 @@ check_trx(){
 		index_there=0
 		ignore_there=0
 		new_ledger=1
-		if [ -s ${user_path}/${now}_ledger.dat ]
+		total_ledgers=`ls -1 ${user_path}/|grep "_ledger.dat"|wc -l`
+		if [ $total_ledgers -gt 0 ]
 		then
 			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
 			then
