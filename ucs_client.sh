@@ -108,6 +108,7 @@ login_account(){
 				exit 1
 			fi
 		fi
+		rm ${user_path}/message_blank.dat.gpg 2>/dev/null
                 rm ${user_path}/account.acc.gpg 2>/dev/null
 	        rm ${user_path}/account.acc 2>/dev/null
 		action_done=1
