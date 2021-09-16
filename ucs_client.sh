@@ -2647,7 +2647,7 @@ do
 									then
 										if [ -s ${file_path} ]
 										then
-											cat ${file_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 127.0.0.1 15000
+											cat ${file_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -2669,7 +2669,7 @@ do
 								if [ ! $rt_query = 255 ]
 								then
 									now_stamp=`date +%s`
-									netcat -q0 127.0.0.1 15001|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
+									netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -2689,7 +2689,7 @@ do
 												if [ -s $cmd_path ]
 												then
 													session_key=`date -u +%Y%m%d`
-													cat ${cmd_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 127.0.0.1 15000
+													cat ${cmd_path}|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
@@ -2714,7 +2714,7 @@ do
 											if [ -d $cmd_path ]
 											then
 												now=`date +%s`
-												netcat -q0 127.0.0.1 15001|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
+												netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
