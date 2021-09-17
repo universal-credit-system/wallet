@@ -2566,6 +2566,11 @@ do
 							then
 								###GET LIST OF KEYS WITH PATH############################
 								cat ${user_path}/all_accounts.dat >${user_path}/keys_sync.tmp
+
+								###PURGE FILE TO AVOID BEING APPENDED####################
+								rm ${user_path}/files_for_sync.tmp 2>/dev/null
+
+								###WRITE FILE FOR TAR####################################
 								while read line
 								do
 									echo "keys/$line" >>${user_path}/files_for_sync.tmp
