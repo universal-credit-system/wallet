@@ -17,7 +17,7 @@ login_account(){
 				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $line|cut -d '.' -f1`
 		                keylist_stamp=`echo $line|cut -d '.' -f2`
-                                if [ ! $cmd_sender = "" ]
+                                if [ ! "${cmd_sender}" = "" ]
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
@@ -1642,7 +1642,7 @@ do
 			then
                 		clear
 			else
-				if [ ! $cmd_action = "create_user" -a ! $cmd_action = "create_backup" -a ! $cmd_action = "restore_backup" ]
+				if [ ! "${cmd_action}" = "create_user" -a ! "${cmd_action}" = "create_backup" -a ! "${cmd_action}" = "restore_backup" ]
 				then
 					main_menu=$dialog_main_logon
 				fi
@@ -1656,7 +1656,7 @@ do
 							account_entered_aborted=0
 							if [ $gui_mode = 0 ]
 							then
-								if [ ! $cmd_sender = "" ]
+								if [ ! "${cmd_sender}" = "" ]
 								then
 									account_entered_correct=1
 								fi
@@ -1915,7 +1915,7 @@ do
 											rm ${script_path}/backups_list.tmp 2>/dev/null	
 										fi	
 									else
-										if [ $cmd_path = "" ]
+										if [ "${cmd_path}" = "" ]
 										then
 											exit 1
 										else
@@ -2235,7 +2235,7 @@ do
 													else
 														cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 														echo "BALANCE_${trx_now}:${cmd_output}"
-														if [ ! $cmd_path = "" -a ! $trx_path_output = $cmd_path ]
+														if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
 														then
 															mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
 															echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
@@ -2615,7 +2615,7 @@ do
 										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${synch_now}.sync#g"`
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
-										if [ ! $cmd_path = "" -a ! $sync_path_output = $cmd_path ]
+										if [ ! "${cmd_path}" = "" -a ! "${sync_path_output}" = "${cmd_path}" ]
 										then
 											mv ${sync_path_output}/${handover_account}_${synch_now}.sync ${cmd_path}/${handover_account}_${synch_now}.sync
 											echo "FILE:${cmd_path}/${handover_account}_${synch_now}.sync"
@@ -2684,7 +2684,7 @@ do
 							fi
 						else
 							case $cmd_action in
-								"send_uca")	if [ ! $cmd_path = "" ]
+								"send_uca")	if [ ! "${cmd_path}" = "" ]
 										then
 											if [ ! -d $cmd_path ]
 											then
@@ -2709,7 +2709,7 @@ do
 											exit 1
 										fi
 										;;
-								"request_uca")	if [ $cmd_path = "" ]
+								"request_uca")	if [ "${cmd_path}" = "" ]
 										then
 											cmd_path=${script_path}
 										else
