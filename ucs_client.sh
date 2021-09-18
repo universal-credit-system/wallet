@@ -2676,10 +2676,8 @@ do
 								if [ ! $rt_query = 255 ]
 								then
 									now_stamp=`date +%s`
-									netcat -q0 ${uca_ip} ${uca_rcv_port} >${user_path}/received.dat
-									gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt ${user_path}/received.dat
+									netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
 									rt_query=$?
-									rm ${user_path}/received.dat 2>/dev/null
 									if [ $rt_query = 0 ]
 									then
 										dialog_uca_success=`echo $dialog_uca_success|sed "s#<file>#${user_path}/uca_${now_stamp}.sync#g"`
@@ -2723,10 +2721,8 @@ do
 											if [ -d $cmd_path ]
 											then
 												now=`date +%s`
-												netcat -q0 ${uca_ip} ${uca_rcv_port} >${user_path}/received.dat
-												gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt ${user_path}/received.dat
+												netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
 												rt_query=$?
-												rm ${user_path}/received.dat 2>/dev/null
 												if [ $rt_query = 0 ]
 												then
 													exit 0
