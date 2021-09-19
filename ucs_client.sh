@@ -735,7 +735,7 @@ check_archive(){
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 							files_not_homedir=`echo $line|cut -d '/' -f1`
 							case $files_not_homedir in
-		                				"keys")		if [ ! -d $line ]
+		                				"keys")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=`echo $line|cut -d '/' -f2`
 											file_ext=`echo $file_full|cut -d '.' -f2`
@@ -746,7 +746,7 @@ check_archive(){
 											else
 												if [ $check_mode = 0 ]
 												then
-													if [ ! -s $line ]
+													if [ ! -s ${script_path}/$line ]
 													then
 														echo "$line" >>${user_path}/files_to_fetch.tmp
 													fi
@@ -756,7 +756,7 @@ check_archive(){
 											fi
 										fi
 		                        		      			;;
-		               					"trx")		if [ ! -d $line ]
+		               					"trx")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=`echo $line|cut -d '/' -f2`
 											file_ext=`echo $file_full|cut -d '.' -f2`
@@ -771,7 +771,7 @@ check_archive(){
 												then
 													if [ $check_mode = 0 ]
 													then
-														if [ ! -s $line ]
+														if [ ! -s ${script_path}/$line ]
 														then
 															echo "$line" >>${user_path}/files_to_fetch.tmp
 														fi
@@ -784,7 +784,7 @@ check_archive(){
 											fi
 										fi
 			                       		        		;;
-								"proofs")	if [ ! -d $line ]
+								"proofs")	if [ ! -d ${script_path}/$line ]
 										then
 											file_usr=`echo $line|cut -d '/' -f2`
 											file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
@@ -794,7 +794,7 @@ check_archive(){
 												case $file_full in
 													"freetsa.tsq")		if [ $check_mode = 0 ]
 																then
-																	if [ ! -s $line ]
+																	if [ ! -s ${script_path}/$line ]
 																	then
 																		echo "$line" >>${user_path}/files_to_fetch.tmp
 																	fi
@@ -804,7 +804,7 @@ check_archive(){
 																;;
 													"freetsa.tsr")		if [ $check_mode = 0 ]
 																then
-																	if [ ! -s $line ]
+																	if [ ! -s ${script_path}/$line ]
 																	then
 																		echo "$line" >>${user_path}/files_to_fetch.tmp
 																	fi
@@ -2127,12 +2127,11 @@ do
 										if [ ! $small_trx = 255 ]
 										then
 											receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-											touch ${user_path}/keys_for_trx.tmp
-											cat ${user_path}/all_accounts.dat >${user_path}/keys_for_trx.tmp
-											while read line
-											do
-												if [ $small_trx = 0 -a -s $receipient_index_file ]
-												then
+											if [ $small_trx = 0 -a -s $receipient_index_file ]
+											then
+												###GET KEYS AND PROOFS##########################################
+												while read line
+												do
 													key_there=0
 													key_there=`grep -c "keys/${line}" $receipient_index_file`
 													if [ $key_there = 0 ]
@@ -2156,42 +2155,18 @@ do
 													then
 														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 													fi
-												else
-													echo "keys/${line}" >>${user_path}/files_list.tmp
-													tsa_req_check="${script_path}/proofs/${line}/freetsa.tsq"
-													if [ -s $tsa_req_check ]
-													then
-														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
-													fi
-													tsa_res_check="${script_path}/proofs/${line}/freetsa.tsr"
-													if [ -s $tsa_res_check ]
-													then
-														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
-													fi
-													index_file="proofs/${line}/${line}.txt"
-													if [ -s ${script_path}/${index_file} ]
-													then
-														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-													fi
-												fi
-											done <${user_path}/keys_for_trx.tmp
-											rm ${user_path}/keys_for_trx.tmp
+												done <${user_path}/all_accounts.dat
 
-											touch ${user_path}/trx_for_trx.tmp
-											cat ${user_path}/all_trx.dat >${user_path}/trx_for_trx.tmp
-											while read line
-											do
-												trx_there=0
-												if [ -s $receipient_index_file ]
-												then
+												###GET TRX######################################################
+												while read line
+												do
 													trx_there=`grep -c "trx/${line}" $receipient_index_file`
-												fi
-												if [ $trx_there = 0 ]
-												then
-													echo "trx/${line}" >>${user_path}/files_list.tmp
-												fi
-											done <${user_path}/trx_for_trx.tmp
-											rm ${user_path}/trx_for_trx.tmp
+													if [ $trx_there = 0 ]
+													then
+														echo "trx/${line}" >>${user_path}/files_list.tmp
+													fi
+												done <${user_path}/all_trx.dat
+											fi
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
@@ -2201,7 +2176,12 @@ do
 											if [ $rt_query = 0 ]
 											then
 												cd ${script_path}/
-												tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
+												if [ $small_trx = 0 -a -s $receipient_index_file ]
+												then
+													tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
+												else
+													tar -czf ${handover_account}_${trx_now}.trx keys/ proofs/ trx/ --dereference --hard-dereference
+												fi
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
@@ -2580,47 +2560,12 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
-								###GET LIST OF KEYS WITH PATH############################
-								cat ${user_path}/all_accounts.dat >${user_path}/keys_sync.tmp
-
-								###PURGE FILE TO AVOID BEING APPENDED####################
-								rm ${user_path}/files_for_sync.tmp 2>/dev/null
-
-								###WRITE FILE FOR TAR####################################
-								while read line
-								do
-									echo "keys/$line" >>${user_path}/files_for_sync.tmp
-									freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
-									if [ -s $freetsa_qfile ]
-									then
-										echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_for_sync.tmp
-									fi
-									freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
-									if [ -s $freetsa_rfile ]
-									then
-										echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_for_sync.tmp
-									fi
-									index_file="${script_path}/proofs/${line}/${line}.txt"
-									if [ -s $index_file ]
-									then
-										echo "proofs/${line}/${line}.txt" >>${user_path}/files_for_sync.tmp
-									fi
-								done <${user_path}/keys_sync.tmp
-
-								###GET LIST OF TRX#######################################
-								cat ${user_path}/all_trx.dat >${user_path}/trx_sync.tmp
-								while read line
-								do
-									echo "trx/$line" >>${user_path}/files_for_sync.tmp
-								done <${user_path}/trx_sync.tmp
-								#########################################################
-
 								###GET CURRENT TIMESTAMP#################################
 								synch_now=`date +%s`
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
-								tar -czf ${handover_account}_${synch_now}.sync -T ${user_path}/files_for_sync.tmp --dereference --hard-dereference
+								tar -czf ${handover_account}_${synch_now}.sync keys/ proofs/ trx/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -2651,8 +2596,6 @@ do
 									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 							fi
-							rm ${user_path}/keys_sync.tmp 2>/dev/null
-							rm ${user_path}/files_for_sync.tmp 2>/dev/null
 						fi
 						;;
 				"$dialog_uca")	session_key=`date -u +%Y%m%d`
