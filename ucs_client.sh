@@ -1304,9 +1304,9 @@ process_new_files(){
 					rm ${user_path}/temp/${line}
 				fi
 			done <${user_path}/files_to_fetch.tmp
-			cp ${user_path}/temp/keys/* ${script_path}/keys/
-			cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/
-			cp ${user_path}/temp/trx/* ${script_path}/trx/
+			cp ${user_path}/temp/keys/* ${script_path}/keys/ 2>/dev/null
+			cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
+			cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
 			rm -r ${user_path}/temp/keys/* 2>/dev/null
 			rm -r ${user_path}/temp/trx/* 2>/dev/null
 			rm -r ${user_path}/temp/proofs/* 2>/dev/null
@@ -2369,11 +2369,19 @@ do
 													check_tsa
 													check_keys
 													check_trx
+													trx_new_ledger=$?
 													get_dependencies
+													dep_new_ledger=$?
+													if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+													then
+														changes=0
+													else
+														changes=1
+													fi
 													if [ $no_ledger = 0 ]
 													then
 														now_stamp=`date +%s`
-														build_ledger 1
+														build_ledger $changes
 														make_signature "none" $now_stamp 1
 														rt_query=$?
 														if [ $rt_query -gt 0 ]
@@ -2521,11 +2529,19 @@ do
 													check_tsa
 													check_keys
 													check_trx
+													trx_new_ledger=$?
 													get_dependencies
+													dep_new_ledger=$?
+													if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+													then
+														changes=0
+													else
+														changes=1
+													fi
 													if [ $no_ledger = 0 ]
 													then
 														now_stamp=`date +%s`
-														build_ledger 1
+														build_ledger $changes
 														make_signature "none" $now_stamp 1
 														rt_query=$?
 														if [ $rt_query -gt 0 ]
@@ -2676,7 +2692,7 @@ do
 								if [ ! $rt_query = 255 ]
 								then
 									now_stamp=`date +%s`
-									netcat -q0 -w5 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
+									netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -2721,7 +2737,7 @@ do
 											if [ -d $cmd_path ]
 											then
 												now=`date +%s`
-												netcat -q0 -w5 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
+												netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
