@@ -2200,7 +2200,7 @@ do
 														echo "${order_receipient}" >>${user_path}/friends.dat
 													fi
 													#############################################################################
-													rm ${user_path}/files_list.tmp
+													rm ${user_path}/files_list.tmp 2>/dev/null
 													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 													#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 													#############################################################################
