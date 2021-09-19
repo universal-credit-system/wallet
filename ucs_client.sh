@@ -2676,7 +2676,7 @@ do
 								if [ ! $rt_query = 255 ]
 								then
 									now_stamp=`date +%s`
-									netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
+									netcat -q0 -w5 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -2721,7 +2721,7 @@ do
 											if [ -d $cmd_path ]
 											then
 												now=`date +%s`
-												netcat -q0 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
+												netcat -q0 -w5 ${uca_ip} ${uca_rcv_port}|gpg --batch --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
