@@ -2589,7 +2589,7 @@ do
 							fi
 						fi
 						;;
-				"$dialog_friends")	dialog --yes-label "$dialog_friends_save" --no-label "$dialog_cancel" --title "$dialog_friends" --backtitle "$core_system_name" --editbox ${script_path}/control/friends.conf 0 0 2>${user_path}/friends.tmp
+				"$dialog_friends")	dialog --ok-label "$dialog_friends_save" --no-label "$dialog_cancel" --title "$dialog_friends" --backtitle "$core_system_name" --editbox ${script_path}/control/friends.conf 0 0 2>${user_path}/friends.tmp
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
