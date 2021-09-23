@@ -1465,12 +1465,8 @@ get_dependencies(){
 			fi
 
 			###CREATE FRIENDS LIST##############################
-			own_trx_there=`grep -c "${handover_account}" ${user_path}/depend_trx.dat`
-			touch ${user_path}/friends.dat
-			if [ $own_trx_there -gt 0 ]
-			then
-				grep -v "R:${handover_account}" ${handover_account}.*|grep "S:"|cut -d ':' -f4|cut -d ' ' -f1|sort|uniq >${user_path}/friends.dat
-			fi
+			rm ${user_path}/friends.dat 2>/dev/null
+			cp ${script_path}/control/friends.conf ${user_path}/friends.dat
 			####################################################
 			cd ${script_path}/
 			return $new_ledger
@@ -2194,11 +2190,6 @@ do
 													fi
 													sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 													echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
-													friend_already_there=`grep -c "${order_receipient}" ${user_path}/friends.dat`
-													if [ $friend_already_there = 0 ]
-													then
-														echo "${order_receipient}" >>${user_path}/friends.dat
-													fi
 													#############################################################################
 													rm ${user_path}/files_list.tmp 2>/dev/null
 													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
