@@ -951,7 +951,7 @@ check_tsa(){
 			while read line
 			do
 				accountname_key_name=`echo $line`
-				accountname_key_content=`gpg --with-colons --show-keys ${script_path}/keys/$line|grep "uid"|cut -d ':' -f10`
+				accountname_key_content=`gpg --with-colons --with-fingerprint ${script_path}/keys/$line|grep "uid"|cut -d ':' -f10`
 				if [ $accountname_key_name = $accountname_key_content ]
 				then			
 					###CHECK TSA QUERYFILE#########################
