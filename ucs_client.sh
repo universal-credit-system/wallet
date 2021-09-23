@@ -709,7 +709,7 @@ check_archive(){
 			touch ${user_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
-			tar -tvf $path_to_tarfile >${user_path}/tar_check_temp.tmp
+			tar -tvf $path_to_tarfile|grep -v '//*$' >${user_path}/tar_check_temp.tmp
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -2635,7 +2635,7 @@ do
 								if [ ! $rt_query = 255 ]
 								then
 									now_stamp=`date +%s`
-									netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt -
+									netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt - 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -2680,7 +2680,7 @@ do
 											if [ -d $cmd_path ]
 											then
 												now=`date +%s`
-												netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt -
+												netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt - 2>/dev/null
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
