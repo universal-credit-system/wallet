@@ -1979,7 +1979,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_friends" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -2589,6 +2589,15 @@ do
 							fi
 						fi
 						;;
+				"$dialog_friends")	dialog --yes-label "$dialog_friends_save" --no-label "$dialog_cancel" --title "$dialog_friends" --backtitle "$core_system_name" --editbox ${script_path}/control/friends.conf 0 0 2>${user_path}/friends.tmp
+							rt_query=$?
+							if [ $rt_query = 0 ]
+							then
+								mv ${user_path}/friends.tmp ${script_path}/control/friends.conf
+							else
+								rm ${user_path}/friends.tmp 2>/dev/null
+							fi
+							;;
 				"$dialog_uca")	session_key=`date -u +%Y%m%d`
 						if [ $gui_mode = 1 ]
 						then
