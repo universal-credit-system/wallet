@@ -1466,7 +1466,7 @@ get_dependencies(){
 			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
 			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
 			depend_friends_new_hash=`cat ${user_path}/depend_friends.dat|shasum -a 256|cut -d ' ' -f1`
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_friends_new_hash = depend_friends_old_hash ]
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_friends_new_hash = $depend_friends_old_hash ]
 			then
 				new_ledger=0
 			fi
