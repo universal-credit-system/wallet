@@ -1439,16 +1439,22 @@ get_dependencies(){
 			new_ledger=1
 			depend_accounts_old_hash="X"
 			depend_trx_old_hash="X"
+			depend_friends_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
 			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
-					depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
-					depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+					if [ -e ${user_path}/depend_friends.dat ]
+					then
+						depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
+						depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+						depend_friends_old_hash=`cat ${user_path}/depend_friends.dat|shasum -a 256|cut -d ' ' -f1`
+					fi
 				fi
 			fi
 			cat ${user_path}/all_accounts.dat >${user_path}/depend_accounts.dat
 			cat ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+			cp ${script_path}/control/friends.conf ${user_path}/depend_friends.dat
 			
 			###SORT DEPENDENCIE LISTS#####################################################
 			sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
@@ -1459,13 +1465,13 @@ get_dependencies(){
 			###GET HASH AND COMPARE#############################
 			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
 			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash ]
+			depend_friends_new_hash=`cat ${user_path}/depend_friends.dat|shasum -a 256|cut -d ' ' -f1`
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_friends_new_hash = depend_friends_old_hash ]
 			then
 				new_ledger=0
 			fi
 
-			###CREATE FRIENDS LIST##############################
-			rm ${user_path}/friends.dat 2>/dev/null
+			###COPY FRIENDS LIST################################
 			cp ${script_path}/control/friends.conf ${user_path}/friends.dat
 			####################################################
 			cd ${script_path}/
