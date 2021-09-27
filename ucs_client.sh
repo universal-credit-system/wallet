@@ -1238,8 +1238,10 @@ process_new_files(){
 						then
 							grep "trx/${user_to_verify}" ${user_path}/temp/${line} >${user_path}/new_index_filelist.tmp
 							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
+							new_trx_score_total=0
 							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
 							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
+							old_trx_score_total=0
 							if [ $old_trx -le $new_trx ]
 							then
 								while read line
@@ -1247,9 +1249,29 @@ process_new_files(){
 									is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 									if [ $is_file_there = 0 ]
 									then
-										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+										old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+										old_trx_amount=`head -1 ${script_path}/${line}|cut -d ' ' -f2`
+										old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
+										old_trx_score=`echo "scale=0;${old_trx_amount} * ${old_trx_confirmations}"|bc`
+										old_trx_score_total=$(( $old_trx_score_total + $old_trx_score ))
 									fi
 								done <${user_path}/old_index_filelist.tmp
+								while read line
+								do
+									is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
+									if [ $is_file_there = 0 ]
+									then
+										new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+										new_trx_amount=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f2`
+										new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
+										new_trx_score=`echo "scale=0;${new_trx_amount} * ${new_trx_confirmations}"|bc`
+										new_trx_score_total=$(( $new_trx_score_total + $new_trx_score ))
+									fi
+								done <${user_path}/new_index_filelist.tmp
+								if [ $old_trx_score_total -ge $new_trx_score_total ]
+								then
+									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+								fi
 							else
 								no_matches=0
 								while read line
@@ -1258,11 +1280,32 @@ process_new_files(){
 									if [ $is_file_there = 1 ]
 									then
 										no_matches=$(( $no_matches + 1 ))
+									else
+										new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+										new_trx_amount=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f2`
+										new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
+										new_trx_score=`echo "scale=0;${new_trx_amount} * ${new_trx_confirmations}"|bc`
+										new_trx_score_total=$(( $new_trx_score_total + $new_trx_score ))
 									fi
 								done <${user_path}/new_index_filelist.tmp
 								if [ $no_matches -lt $old_trx ]
 								then
-									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+									while read line
+									do
+										is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
+										if [ $is_file_there = 0 ]
+										then
+											old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+											old_trx_amount=`head -1 ${script_path}/${line}|cut -d ' ' -f2`
+											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
+											old_trx_score=`echo "scale=0;${old_trx_amount} * ${old_trx_confirmations}"|bc`
+											old_trx_score_total=$(( $old_trx_score_total + $old_trx_score ))
+										fi
+									done <${user_path}/old_index_filelist.tmp
+									if [ $old_trx_score_total -ge $new_trx_score_total ]
+									then
+										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+									fi
 								fi
 							fi
 						else
@@ -2707,10 +2750,7 @@ do
 				"$dialog_history")	cd ${script_path}/trx
 							rm ${user_path}/my_trx.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
-							while read line
-							do
-								grep -l ":${handover_account}" ${line} >>${user_path}/my_trx.tmp
-							done <${user_path}/all_trx.dat
+							grep -l ":${handover_account}" *.* >${user_path}/my_trx.tmp 2>/dev/null
 							cat ${user_path}/my_trx.tmp|sort -r -t . -k3 >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							cd ${script_path}
