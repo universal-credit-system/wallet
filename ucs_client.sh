@@ -1263,7 +1263,7 @@ process_new_files(){
 									then
 										new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
 										new_trx_amount=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f2`
-										new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
+										new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 										new_trx_score=`echo "scale=0;${new_trx_amount} * ${new_trx_confirmations}"|bc`
 										new_trx_score_total=$(( $new_trx_score_total + $new_trx_score ))
 									fi
