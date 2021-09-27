@@ -572,14 +572,14 @@ build_ledger(){
 
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_accounts.dat >${user_path}/accounts.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/all_trx.dat >${user_path}/trxlist_${focus}.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat >${user_path}/trxlist_${focus}.tmp
 			while read line
 			do
 				###EXRACT DATA FOR CHECK######################################
@@ -597,20 +597,8 @@ build_ledger(){
 					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_hash}"`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
-						###CHECK IF FRIENDS KNOW OF THIS TRX##########################
-						number_of_friends_trx=0
-						number_of_friends_add=0
-						while read line
-						do
-							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-							then
-								number_of_friends_add=`grep -c "${trx_filename}" ${script_path}/proofs/${line}/${line}.txt`
-								if [ $number_of_friends_add -gt 0 ]
-								then
-									number_of_friends_trx=$(( $number_of_friends_trx + 1 ))
-								fi
-							fi
-						done <${user_path}/friends.dat
+						###CHECK CONFIRMATIONS########################################
+						number_of_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 						##############################################################
 
 						###EXTRACT TRX DATA###########################################
@@ -639,7 +627,7 @@ build_ledger(){
 							##############################################################
 
 							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
-							if [ $number_of_friends_trx -gt $confirmations_from_friends ]
+							if [ $number_of_confirmations -gt $confirmations_from_users ]
 							then
 								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
 								if [  $receiver_in_ledger = 1 ]
@@ -1437,24 +1425,42 @@ import_keys(){
 get_dependencies(){
 			cd ${script_path}/trx
 			new_ledger=1
+
+			###CHECK IF ANYTHING HAS CHANGED##############################################
 			depend_accounts_old_hash="X"
 			depend_trx_old_hash="X"
-			depend_friends_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
 			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
-					if [ -e ${user_path}/depend_friends.dat ]
-					then
-						depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
-						depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-						depend_friends_old_hash=`cat ${user_path}/depend_friends.dat|shasum -a 256|cut -d ' ' -f1`
-					fi
+					depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
+					depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+
 				fi
 			fi
-			cat ${user_path}/all_accounts.dat >${user_path}/depend_accounts.dat
-			cat ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
-			cp ${script_path}/control/friends.conf ${user_path}/depend_friends.dat
+
+			###GET DEPENDENT TRX AND ACCOUNTS#############################################
+			echo "${handover_account}" >${user_path}/depend_accounts.dat
+                        grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+                        while read line
+                        do
+                                touch ${user_path}/depend_user_list.tmp
+                                user=$line
+                                grep -l "R:${line}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
+                                grep "S:${line}" $(cat ${user_path}/all_trx.dat)|cut -d ' ' -f3|cut -d ':' -f2|sort|uniq >>${user_path}/depend_user_list.tmp
+                                cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
+                                mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
+                                while read line
+                                do
+                                        already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
+                                        if [ $already_there = 0 ]
+                                        then
+                                                echo $line >>${user_path}/depend_accounts.dat
+                                                grep $line ${user_path}/all_trx.dat >>${user_path}/depend_trx.dat
+                                        fi
+                                done <${user_path}/depend_user_list.tmp
+                                rm ${user_path}/depend_user_list.tmp 2>/dev/null
+                        done <${user_path}/depend_accounts.dat
 			
 			###SORT DEPENDENCIE LISTS#####################################################
 			sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
@@ -1462,18 +1468,14 @@ get_dependencies(){
 			sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
 			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
-			###GET HASH AND COMPARE#############################
+			###GET HASH AND COMPARE#######################################################
 			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
 			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-			depend_friends_new_hash=`cat ${user_path}/depend_friends.dat|shasum -a 256|cut -d ' ' -f1`
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_friends_new_hash = $depend_friends_old_hash ]
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash ]
 			then
 				new_ledger=0
 			fi
 
-			###COPY FRIENDS LIST################################
-			cp ${script_path}/control/friends.conf ${user_path}/friends.dat
-			####################################################
 			cd ${script_path}/
 			return $new_ledger
 }
@@ -1985,7 +1987,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_friends" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -2129,6 +2131,7 @@ do
 										if [ ! $small_trx = 255 ]
 										then
 											receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
+											rm ${user_path}/files_list.tmp 2>/dev/null
 											if [ $small_trx = 0 -a -s $receipient_index_file ]
 											then
 												###GET KEYS AND PROOFS##########################################
@@ -2157,9 +2160,9 @@ do
 													then
 														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 													fi
-												done <${user_path}/all_accounts.dat
+												done <${user_path}/depend_accounts.dat
 
-												###GET TRX######################################################
+												###GET TRX###################################################################
 												while read line
 												do
 													trx_there=`grep -c "trx/${line}" $receipient_index_file`
@@ -2167,7 +2170,19 @@ do
 													then
 														echo "trx/${line}" >>${user_path}/files_list.tmp
 													fi
-												done <${user_path}/all_trx.dat
+												done <${user_path}/depend_trx.dat
+											else
+												###GET KEYS AND PROOFS#######################################################
+												while read line
+												do
+													echo "keys/${line}" >>${user_path}/files_list.tmp
+													echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
+													echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
+													echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+												done <${user_path}/depend_accounts.dat
+
+												###GET TRX###################################################################
+												cat ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 											fi
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
@@ -2178,13 +2193,9 @@ do
 											if [ $rt_query = 0 ]
 											then
 												cd ${script_path}/
-												if [ $small_trx = 0 -a -s $receipient_index_file ]
-												then
-													tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
-												else
-													tar -czf ${handover_account}_${trx_now}.trx keys/ proofs/ trx/ --dereference --hard-dereference
-												fi
+												tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
 												rt_query=$?
+												rm ${user_path}/files_list.tmp 2>/dev/null
 												if [ $rt_query = 0 ]
 												then
 													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
@@ -2197,7 +2208,7 @@ do
 													sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 													echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
 													#############################################################################
-													rm ${user_path}/files_list.tmp 2>/dev/null
+
 													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 													#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 													#############################################################################
@@ -2595,15 +2606,6 @@ do
 							fi
 						fi
 						;;
-				"$dialog_friends")	dialog --ok-label "$dialog_friends_save" --no-label "$dialog_cancel" --title "$dialog_friends" --backtitle "$core_system_name" --editbox ${script_path}/control/friends.conf 0 0 2>${user_path}/friends.tmp
-							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								mv ${user_path}/friends.tmp ${script_path}/control/friends.conf
-							else
-								rm ${user_path}/friends.tmp 2>/dev/null
-							fi
-							;;
 				"$dialog_uca")	session_key=`date -u +%Y%m%d`
 						if [ $gui_mode = 1 ]
 						then
@@ -2718,24 +2720,13 @@ do
 								while read line
 								do
 									trx_confirmations=0
-									trx_confirmations_user=0
 									line_extracted=$line
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
 									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
 									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
-									while read line
-									do
-										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-										then
-											trx_confirmations_user=`grep -c "${line_extracted}" ${script_path}/proofs/${line}/${line}.txt`
-											if [ $trx_confirmations_user -gt 0 -a ! $receiver = $line ]
-											then
-												trx_confirmations=$(( $trx_confirmations + 1 ))
-											fi
-										fi
-									done <${user_path}/friends.dat
+									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -2793,8 +2784,6 @@ do
 										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
 										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
 										trx_status=""
-										trx_confirmations=0
-										trx_confirmations_user=0
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
 											trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -2824,17 +2813,7 @@ do
 										then
 											trx_status="OK"
 										fi
-										while read line
-										do
-											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-											then
-												trx_confirmations_user=`grep -c "${trx_file}" ${script_path}/proofs/${line}/${line}.txt`
-												if [ $trx_confirmations_user -gt 0 -a ! $receiver = $line ]
-												then
-													trx_confirmations=$(( $trx_confirmations + 1 ))
-												fi
-											fi
-										done <${user_path}/friends.dat
+										trx_confirmations=`grep -l "trx/${trx_file} proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
@@ -2887,13 +2866,12 @@ do
 							total_trx=`cat ${user_path}/all_trx.dat|wc -l`
 							total_user_blacklisted=`wc -l <${user_path}/blacklisted_accounts.dat`
 							total_trx_blacklisted=`wc -l <${user_path}/blacklisted_trx.dat`
-							total_friends=`wc -l <${user_path}/friends.dat`
 							###############################################
 
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<total_friends>/${total_friends}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g" -e "s/<in_days>/${in_days}/g"`
+								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g" -e "s/<in_days>/${in_days}/g"`
 								dialog --title "$dialog_stats" --backtitle "$core_system_name" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
@@ -2901,7 +2879,6 @@ do
 								echo "TRX_TOTAL:${total_trx}"
 								echo "BLACKLISTED_USERS_TOTAL:${total_user_blacklisted}"
 								echo "BLACKLISTED_TRX_TOTAL:${total_trx_blacklisted}"
-								echo "FRIENDS_TOTAL:${total_friends}"
 								echo "CURRENT_COINLOAD:${coinload}"
 								echo "NEXT_COINLOAD:${next_coinload}"
 								echo "IN_DAYS:${in_days}"
