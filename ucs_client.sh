@@ -2719,7 +2719,6 @@ do
 							then
 								while read line
 								do
-									trx_confirmations=0
 									line_extracted=$line
 									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
 									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
@@ -2813,7 +2812,7 @@ do
 										then
 											trx_status="OK"
 										fi
-										trx_confirmations=`grep -l "trx/${trx_file} proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+										trx_confirmations=`grep -l "trx/${trx_file}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
