@@ -1236,9 +1236,11 @@ process_new_files(){
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
+							touch ${user_path}/new_index_filelist.tmp
 							grep "trx/${user_to_verify}" ${user_path}/temp/${line} >${user_path}/new_index_filelist.tmp
 							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
 							new_trx_score_total=0
+							touch ${user_path}/old_index_filelist.tmp
 							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
 							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
 							old_trx_score_total=0
