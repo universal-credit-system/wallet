@@ -1157,11 +1157,9 @@ check_trx(){
 												is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
 												if [ $is_ignored = 0 ]
 												then
-													ledger_needed=1
 													echo $line >>${user_path}/all_trx.tmp
 												fi
 											else
-												ledger_needed=1
 												echo $line >>${user_path}/all_trx.tmp
 											fi
 										else
@@ -1239,11 +1237,11 @@ process_new_files(){
 							touch ${user_path}/new_index_filelist.tmp
 							grep "trx/${user_to_verify}" ${user_path}/temp/${line} >${user_path}/new_index_filelist.tmp
 							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
-							new_trx_score_total=0
+							new_trx_score_highest=0
 							touch ${user_path}/old_index_filelist.tmp
 							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
 							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
-							old_trx_score_total=0
+							old_trx_score_highest=0
 							if [ $old_trx -gt 0 -a $new_trx -gt 0 ]
 							then
 								if [ $old_trx -le $new_trx ]
@@ -1254,10 +1252,11 @@ process_new_files(){
 										if [ $is_file_there = 0 ]
 										then
 											old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-											old_trx_amount=`head -1 ${script_path}/${line}|cut -d ' ' -f2`
 											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
-											old_trx_score=`echo "scale=0;${old_trx_amount} * ${old_trx_confirmations}"|bc`
-											old_trx_score_total=$(( $old_trx_score_total + $old_trx_score ))
+											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+											then
+												old_trx_score_highest=$old_trx_confirmations
+											fi
 										fi
 									done <${user_path}/old_index_filelist.tmp
 									while read line
@@ -1266,13 +1265,14 @@ process_new_files(){
 										if [ $is_file_there = 0 ]
 										then
 											new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-											new_trx_amount=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f2`
 											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
-											new_trx_score=`echo "scale=0;${new_trx_amount} * ${new_trx_confirmations}"|bc`
-											new_trx_score_total=$(( $new_trx_score_total + $new_trx_score ))
+											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+											then
+												new_trx_score_highest=$new_trx_confirmations
+											fi
 										fi
 									done <${user_path}/new_index_filelist.tmp
-									if [ $old_trx_score_total -ge $new_trx_score_total ]
+									if [ $old_trx_score_highest -ge $new_trx_score_highest ]
 									then
 										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 									fi
@@ -1286,10 +1286,11 @@ process_new_files(){
 											no_matches=$(( $no_matches + 1 ))
 										else
 											new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-											new_trx_amount=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f2`
 											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
-											new_trx_score=`echo "scale=0;${new_trx_amount} * ${new_trx_confirmations}"|bc`
-											new_trx_score_total=$(( $new_trx_score_total + $new_trx_score ))
+											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+											then
+												new_trx_score_highest=$new_trx_confirmations
+											fi
 										fi
 									done <${user_path}/new_index_filelist.tmp
 									if [ $no_matches -lt $old_trx ]
@@ -1300,13 +1301,14 @@ process_new_files(){
 											if [ $is_file_there = 0 ]
 											then
 												old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-												old_trx_amount=`head -1 ${script_path}/${line}|cut -d ' ' -f2`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
-												old_trx_score=`echo "scale=0;${old_trx_amount} * ${old_trx_confirmations}"|bc`
-												old_trx_score_total=$(( $old_trx_score_total + $old_trx_score ))
+												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+												then
+													old_trx_score_highest=$old_trx_confirmations
+												fi
 											fi
 										done <${user_path}/old_index_filelist.tmp
-										if [ $old_trx_score_total -ge $new_trx_score_total ]
+										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
 										then
 											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 										fi
@@ -1611,12 +1613,6 @@ then
 												;;
 									"read_sync")		main_menu=$dialog_main_logon
 												user_menu=$dialog_sync
-												;;
-									"send_uca")		main_menu=$dialog_main_logon
-												user_menu=$dialog_uca
-												;;
-									"request_uca")		main_menu=$dialog_main_logon
-												user_menu=$dialog_uca
 												;;
 									"show_stats")		main_menu=$dialog_main_logon
 												user_menu=$dialog_stats
@@ -2035,7 +2031,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -2652,104 +2648,6 @@ do
 									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 							fi
-						fi
-						;;
-				"$dialog_uca")	session_key=`date -u +%Y%m%d`
-						if [ $gui_mode = 1 ]
-						then
-							dialog --yes-label "$dialog_uca_send" --no-label "$dialog_uca_request" --title "$dialog_uca" --backtitle "$core_system_name" --yesno "$dialog_uca_overview" 0 0
-							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
- 			                               		rt_query=$?
-								if [ $rt_query = 0 ]
-								then
-									if [ ! -d ${file_path} ]
-									then
-										if [ -s ${file_path} ]
-										then
-											cat ${file_path}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then
-												dialog_uca_success=`echo $dialog_uca_success|sed "s#<file>#${file_path}#g"`
-												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
-											else
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-											fi
-										else
-											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-                               								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-										fi
-									else
-										dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-                               							dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-									fi
-								fi
-							else
-								if [ ! $rt_query = 255 ]
-								then
-									now_stamp=`date +%s`
-									netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now_stamp}.sync --passphrase ${session_key} --decrypt - 2>/dev/null
-									rt_query=$?
-									if [ $rt_query = 0 ]
-									then
-										dialog_uca_success=`echo $dialog_uca_success|sed "s#<file>#${user_path}/uca_${now_stamp}.sync#g"`
-										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
-									else
-										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-									fi
-								fi
-							fi
-						else
-							case $cmd_action in
-								"send_uca")	if [ ! "${cmd_path}" = "" ]
-										then
-											if [ ! -d $cmd_path ]
-											then
-												if [ -s $cmd_path ]
-												then
-													session_key=`date -u +%Y%m%d`
-													cat ${cmd_path}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
-													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														exit 0
-													else
-														exit 1
-													fi
-												else
-													exit 1
-												fi
-											else
-												exit 1
-											fi
-										else
-											exit 1
-										fi
-										;;
-								"request_uca")	if [ "${cmd_path}" = "" ]
-										then
-											cmd_path=${script_path}
-										else
-											if [ -d $cmd_path ]
-											then
-												now=`date +%s`
-												netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/uca_${now}.sync --passphrase ${session_key} --decrypt - 2>/dev/null
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													exit 0
-												else
-													exit 1
-												fi
-											else
-												exit 1
-											fi
-										fi
-										;;
-							esac
 						fi
 						;;
 				"$dialog_history")	cd ${script_path}/trx
