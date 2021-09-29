@@ -1242,6 +1242,7 @@ process_new_files(){
 							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
 							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
 							old_trx_score_highest=0
+							no_matches=0
 							if [ $old_trx -gt 0 -a $new_trx -gt 0 ]
 							then
 								if [ $old_trx -le $new_trx ]
@@ -1249,8 +1250,10 @@ process_new_files(){
 									while read line
 									do
 										is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
-										if [ $is_file_there = 0 ]
+										if [ $is_file_there = 1 ]
 										then
+											no_matches=$(( $no_matches + 1 ))
+										else
 											old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
 											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
@@ -1259,25 +1262,27 @@ process_new_files(){
 											fi
 										fi
 									done <${user_path}/old_index_filelist.tmp
-									while read line
-									do
-										is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
-										if [ $is_file_there = 0 ]
-										then
-											new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
-											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
-											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-											then
-												new_trx_score_highest=$new_trx_confirmations
-											fi
-										fi
-									done <${user_path}/new_index_filelist.tmp
-									if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+									if [ $no_matches -lt $old_trx ]
 									then
-										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+										while read line
+										do
+											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
+											if [ $is_file_there = 0 ]
+											then
+												new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
+												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+												then
+													new_trx_score_highest=$new_trx_confirmations
+												fi
+											fi
+										done <${user_path}/new_index_filelist.tmp
+										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+										then
+											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+										fi
 									fi
 								else
-									no_matches=0
 									while read line
 									do
 										is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
@@ -1293,7 +1298,7 @@ process_new_files(){
 											fi
 										fi
 									done <${user_path}/new_index_filelist.tmp
-									if [ $no_matches -lt $old_trx ]
+									if [ $no_matches -lt $new_trx ]
 									then
 										while read line
 										do
@@ -1337,7 +1342,7 @@ process_new_files(){
 			fi
 			while read line
 			do
-				if [ -h ${user_path}/temp/${line} ]
+				if [ -h ${user_path}/temp/${line} -o -x ${user_path}/temp/${line} ]
 				then
 					rm ${user_path}/temp/${line}
 				fi
