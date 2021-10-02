@@ -627,7 +627,7 @@ build_ledger(){
 							##############################################################
 
 							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
-							if [ $number_of_confirmations -gt $confirmations_from_users ]
+							if [ $number_of_confirmations -ge $confirmations_from_users ]
 							then
 								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
 								if [  $receiver_in_ledger = 1 ]
@@ -1534,7 +1534,7 @@ get_dependencies(){
 			do
 				sending_user=`echo $line|awk -F. '{print $1"."$2}'`
 				total_confirmations=`grep -l "trx/${line}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
-				if [ $total_confirmations = 0 ]
+				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
 				fi
