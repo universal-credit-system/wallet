@@ -1484,13 +1484,17 @@ get_dependencies(){
 			###CHECK IF ANYTHING HAS CHANGED##############################################
 			depend_accounts_old_hash="X"
 			depend_trx_old_hash="X"
+			depend_confirmations_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
 			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
-					depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
-					depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-
+					if [ -e ${user_path}/depend_confirmations.dat ]
+					then
+						depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
+						depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
+						depend_confirmations_old_hash=`cat ${user_path}/depend_confirmations.dat|shasum -a 256|cut -d ' ' -f1`
+					fi
 				fi
 			fi
 
@@ -1523,14 +1527,27 @@ get_dependencies(){
 			sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
 			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
+			###GET DEPEND TRX WITH 0 CONFIRMATIONS########################################
+			rm ${user_path}/depend_confirmations.dat 2>/dev/null
+			touch ${user_path}/depend_confirmations.dat
+			while read line
+			do
+				sending_user=`echo $line|awk -F. '{print $1"."$2}'`
+				total_confirmations=`grep -l "trx/${line}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+				if [ $total_confirmations = 0 ]
+				then
+					echo "$line" >>${user_path}/depend_confirmations.dat
+				fi
+			done <${user_path}/depend_trx.dat
+
 			###GET HASH AND COMPARE#######################################################
 			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
 			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash ]
+			depend_confirmations_new_hash=`cat ${user_path}/depend_confirmations.dat|shasum -a 256|cut -d ' ' -f1`
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash ]
 			then
 				new_ledger=0
 			fi
-
 			cd ${script_path}/
 			return $new_ledger
 }
@@ -1618,6 +1635,12 @@ then
 												;;
 									"read_sync")		main_menu=$dialog_main_logon
 												user_menu=$dialog_sync
+												;;
+									"send_uca")		main_menu=$dialog_main_logon
+												user_menu=$dialog_uca
+												;;
+									"request_uca")		main_menu=$dialog_main_logon
+												user_menu=$dialog_uca
 												;;
 									"show_stats")		main_menu=$dialog_main_logon
 												user_menu=$dialog_stats
@@ -2027,7 +2050,10 @@ do
 			if [ $make_ledger = 1 ]
 			then
 				build_ledger $changes
-				make_signature "none" $now_stamp 1
+				if [ $changes = 1 ]
+				then
+					make_signature "none" $now_stamp 1
+				fi
 				make_ledger=0
 			fi
 			check_blacklist
@@ -2036,7 +2062,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
 			rt_query=0
@@ -2419,13 +2445,18 @@ do
 													then
 														now_stamp=`date +%s`
 														build_ledger $changes
-														make_signature "none" $now_stamp 1
-														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														if [ $changes = 1 ]
 														then
-															exit 1
+															make_signature "none" $now_stamp 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
 														else
-															exit 0
+															exit 1
 														fi
 													else
 														exit 0
@@ -2579,11 +2610,16 @@ do
 													then
 														now_stamp=`date +%s`
 														build_ledger $changes
-														make_signature "none" $now_stamp 1
-														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														if [ $changes = 1 ]
 														then
-															exit 1
+															make_signature "none" $now_stamp 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
 														else
 															exit 0
 														fi
@@ -2618,41 +2654,228 @@ do
 							if [ ! $rt_query = 255 ]
 							then
 								###GET CURRENT TIMESTAMP#################################
-								synch_now=`date +%s`
+								now_stamp=`date +%s`
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
-								tar -czf ${handover_account}_${synch_now}.sync keys/ proofs/ trx/ --dereference --hard-dereference
+								tar -czf ${handover_account}_${now_stamp}.sync keys/ proofs/ trx/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
 									###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
-									#cp ${script_path}/${handover_account}_${synch_now}.sync ${user_path}/${handover_account}_${synch_now}.sync
+									#cp ${script_path}/${handover_account}_${now_stamp}.sync ${user_path}/${handover_account}_${now_stamp}.sync
 									###################################################################################
 									if [ ! $sync_path_output = $script_path ]
 									then
-										mv ${script_path}/${handover_account}_${synch_now}.sync ${sync_path_output}/${handover_account}_${synch_now}.sync
+										mv ${script_path}/${handover_account}_${now_stamp}.sync ${sync_path_output}/${handover_account}_${now_stamp}.sync
 									fi
 									if [ $gui_mode = 1 ]
 									then
-										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${synch_now}.sync#g"`
+										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g"`
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
 										if [ ! "${cmd_path}" = "" -a ! "${sync_path_output}" = "${cmd_path}" ]
 										then
-											mv ${sync_path_output}/${handover_account}_${synch_now}.sync ${cmd_path}/${handover_account}_${synch_now}.sync
-											echo "FILE:${cmd_path}/${handover_account}_${synch_now}.sync"
+											mv ${sync_path_output}/${handover_account}_${now_stamp}.sync ${cmd_path}/${handover_account}_${now_stamp}.sync
+											echo "FILE:${cmd_path}/${handover_account}_${now_stamp}.sync"
 										else
-											echo "FILE:${sync_path_output}/${handover_account}_${synch_now}.sync"
+											echo "FILE:${sync_path_output}/${handover_account}_${now_stamp}.sync"
 										fi
 										exit 0
 									fi
                        						else
-									rm ${handover_account}_${synch_now}.sync 2>/dev/null
-									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${handover_account}_${synch_now}.sync#g"`
+									rm ${handover_account}_${now_stamp}.sync 2>/dev/null
+									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${handover_account}_${now_stamp}.sync#g"`
 									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 							fi
+						fi
+						;;
+				"$dialog_uca")	session_key=`date -u +%Y%m%d`
+						if [ $gui_mode = 1 ]
+						then
+							dialog --yes-label "$dialog_uca_send" --no-label "$dialog_uca_request" --title "$dialog_uca_full" --backtitle "$core_system_name" --yesno "$dialog_uca_overview" 0 0
+							rt_query=$?
+							if [ $rt_query = 0 ]
+							then
+								now_stamp=`date +%s`
+								sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
+								cd ${script_path}/
+								tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									while read line
+									do
+										uca_ip=`echo $line|cut -d ':' -f1`
+										uca_snd_port=`echo $line|cut -d ':' -f2`
+										uca_info=`echo $line|cut -d ':' -f4`
+										cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											dialog_uca_success=`echo $dialog_uca_success|sed "s#<uca_info>#${uca_info}#g"`
+											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
+										else
+											dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
+											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+										fi
+									done <${script_path}/control/uca.conf
+								else
+									dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
+									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+								fi
+								rm ${sync_file} 2>/dev/null
+							else
+								if [ ! $rt_query = 255 ]
+								then
+									trx_new_trigger=0
+									while read line
+									do
+										uca_ip=`echo $line|cut -d ':' -f1`
+										uca_rcv_port=`echo $line|cut -d ':' -f3`
+										uca_info=`echo $line|cut -d ':' -f4`
+										now_stamp=`date +%s`
+										sync_file="${user_path}/uca_${now_stamp}.sync"
+										netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											check_archive ${sync_file} 0
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												cd ${user_path}/temp
+                                        	               					tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													process_new_files 0
+													set_permissions
+													check_tsa
+													check_keys
+													check_trx
+													trx_new_ledger=$?
+													if [ $trx_new_ledger = 1 ]
+													then
+														trx_new_trigger=1
+													fi
+												else
+													restore_data
+												fi
+											else
+												dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+											fi
+											rm ${sync_file} 2>/dev/null
+										else
+											dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
+											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
+										fi
+									done <${script_path}/control/uca.conf
+									get_dependencies
+									dep_new_ledger=$?
+									if [ $trx_new_trigger = 0 -a $dep_new_ledger = 0 ]
+									then
+										changes=0
+									else
+										changes=1
+									fi
+									now_stamp=`date +%s`
+									build_ledger $changes
+									if [ $changes = 1 ]
+									then
+										make_signature "none" $now_stamp 1
+									fi
+								fi
+							fi
+						else
+							case $cmd_action in
+								"send_uca")	while read line
+										do
+											uca_ip=`echo $line|cut -d ':' -f1`
+											uca_snd_port=`echo $line|cut -d ':' -f2`
+											uca_info=`echo $line|cut -d ':' -f4`
+											now_stamp=`date +%s`
+											sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
+											cd ${script_path}/
+											tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then	
+												cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
+												rt_query=$?
+												if [ ! $rt_query = 0 ]
+												then
+													echo "ERROR: UCA LINK SND ${uca_ip}:${uca_snd_port} FAILED"
+												fi
+											else
+												echo "ERROR: UCA LINK SND ${uca_ip}:${uca_snd_port} FAILED"
+											fi
+										done <${script_path}/control/uca.conf
+										rm ${sync_file} 2>/dev/null
+										exit 0
+										;;
+								"request_uca")	trx_new_trigger=0
+										while read line
+										do
+											uca_ip=`echo $line|cut -d ':' -f1`
+											uca_rcv_port=`echo $line|cut -d ':' -f3`
+											uca_info=`echo $line|cut -d ':' -f4`
+											now_stamp=`date +%s`
+											sync_file="${user_path}/uca_${now_stamp}.sync"
+											netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												check_archive ${sync_file} 0
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													cd ${user_path}/temp
+                                        	               				 		tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														process_new_files 0
+														set_permissions
+														check_tsa
+														check_keys
+														check_trx
+														trx_new_ledger=$?
+														if [ $trx_new_ledger = 1 ]
+														then
+															trx_new_trigger=1
+														fi
+													else
+														restore_data
+														echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED" 
+													fi
+												else
+													echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
+												fi
+												rm ${sync_file} 2>/dev/null
+											else
+												echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
+											fi
+										done <${script_path}/control/uca.conf
+										get_dependencies
+										dep_new_ledger=$?
+										if [ $trx_new_trigger = 0 -a $dep_new_ledger = 0 ]
+										then
+											changes=0
+										else
+											changes=1
+										fi
+										now_stamp=`date +%s`
+										build_ledger $changes
+										if [ $changes = 1 ]
+										then
+											make_signature "none" $now_stamp 1
+										fi
+										exit 0
+										;;
+							esac
 						fi
 						;;
 				"$dialog_history")	cd ${script_path}/trx
