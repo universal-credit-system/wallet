@@ -299,7 +299,7 @@ make_signature(){
 				message=${script_path}/trx/${handover_account}.${trx_now}
 				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
-				echo $transaction_message >>${message_blank}
+				printf "${transaction_message}" >>${message_blank}
 				#################################################################
 			else
 				###IF YES.....###################################################
@@ -345,47 +345,28 @@ make_signature(){
 			fi
 			#################################################################
 
-			###CHECK SIZE OF FILE TO BE SIGNED###############################
-			total_blank=`wc -l <${message_blank}`
-			total_blank=$(( $total_blank + 16 ))
-
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				rm ${message_blank} 2>/dev/null
-				tail -$total_blank ${message_blank}.asc|sed -e 's/-----BEGIN PGP SIGNATURE-----//g' -e 's/-----END PGP SIGNATURE-----//g' >${message}
-				rm ${message_blank}.asc 2>/dev/null
+				mv ${message_blank}.asc ${message}
 			fi
 			#################################################################
+			
+			###PURGE FILES###################################################
+			rm ${message_blank} 2>/dev/null
+			rm ${message_blank}.asc 2>/dev/null
+
 			return $rt_query
 }
 verify_signature(){
 			file_to_verify=$1
 			user_signed=$2
 			signed_correct=0
-			build_message=${user_path}/verify_trx.tmp
-
-			###CHECK NO OF LINES OF THE TRX TO VERIFY#####################
-			no_lines_trx=`wc -l < ${file_to_verify}`
-
-			###CALCULATE SIZE OF MESSAGE##################################
-			till_sign=$(( $no_lines_trx - 16 ))	#-16
-
-			###REBUILD GPG FILE###########################################
-			echo "-----BEGIN PGP SIGNED MESSAGE-----" >${build_message}
-			echo "Hash: SHA512" >>${build_message}
-			echo "" >>${build_message}
-			head -${till_sign} ${file_to_verify} >>${build_message}
-			echo "-----BEGIN PGP SIGNATURE-----" >>${build_message}
-			echo "" >>${build_message}
-			tail -14 ${file_to_verify}|head -13 >>${build_message}
-			echo "-----END PGP SIGNATURE-----" >>${build_message}
-			##############################################################
 
 			###CHECK GPG FILE#############################################
-			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${build_message} >${user_path}/gpg_verify.tmp 2>/dev/null
+			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${file_to_verify} >${user_path}/gpg_verify.tmp 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -399,7 +380,6 @@ verify_signature(){
 			fi
 			###############################################################
 
-			rm ${build_message} 2>/dev/null
 			rm ${user_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_query
 }
@@ -584,8 +564,8 @@ build_ledger(){
 			do
 				###EXRACT DATA FOR CHECK######################################
 			        trx_filename=`echo $line|cut -d ' ' -f3`
-				trx_sender=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f1|cut -d ':' -f2`
-				trx_receiver=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f3|cut -d ':' -f2`
+				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
+				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_hash=`shasum -a 256 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
 				trx_path="trx/${trx_filename}"
 				##############################################################
@@ -602,7 +582,7 @@ build_ledger(){
 						##############################################################
 
 						###EXTRACT TRX DATA###########################################
-						trx_amount=`head -1 ${script_path}/trx/${trx_filename}|cut -d ' ' -f2`
+						trx_amount=`sed -n '5p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 						account_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 						##############################################################
 
@@ -1109,8 +1089,7 @@ check_trx(){
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
-			trx_header=`head -1 $file_to_check`
-			user_to_check_sender=`echo $trx_header|cut -d ' ' -f1|cut -d ':' -f2`
+			user_to_check_sender=`sed -n '6p' ${file_to_check}|cut -d ':' -f2`
 			if [ $user_to_check = $user_to_check_sender ]
 			then
 				###VERIFY SIGNATURE OF TRANSACTION#################################
@@ -1120,11 +1099,11 @@ check_trx(){
 				then
 					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME################
 					trx_date_filename=`echo $line|cut -d '.' -f3`
-					trx_date_inside=`echo $trx_header|cut -d ' ' -f4`
+					trx_date_inside=`sed -n '4p' ${file_to_check}|cut -d ':' -f2`
 					if [ $trx_date_filename = $trx_date_inside ]
 					then
 						###CHECK IF TRANSACTION WAS CREATED BEFORE RECEIVER EXISTED##############
-						user_to_check_receiver_date=`echo $trx_header|cut -d ' ' -f3|cut -d ':' -f2|cut -d '.' -f2`
+						user_to_check_receiver_date=`echo $user_to_check|cut -d '.' -f2`
 						if [ $trx_date_inside -gt $user_to_check_receiver_date ]
 						then
 							###CHECK IF USER HAS CREATED A INDEX FILE################################
@@ -1134,7 +1113,7 @@ check_trx(){
 								is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
 
 								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=`echo $trx_header|cut -d ' ' -f2`
+								trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 
 								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 ]
@@ -1254,7 +1233,7 @@ process_new_files(){
 										then
 											no_matches=$(( $no_matches + 1 ))
 										else
-											old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+											old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f2`
 											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 											then
@@ -1269,7 +1248,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
 											if [ $is_file_there = 0 ]
 											then
-												new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f2`
 												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
@@ -1290,7 +1269,7 @@ process_new_files(){
 										then
 											no_matches=$(( $no_matches + 1 ))
 										else
-											new_trx_receiver=`head -1 ${user_path}/temp/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+											new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f2`
 											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 											then
@@ -1305,7 +1284,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 											if [ $is_file_there = 0 ]
 											then
-												old_trx_receiver=`head -1 ${script_path}/${line}|cut -d ' ' -f3|cut -d ':' -f2`
+												old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f2`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
@@ -1507,8 +1486,11 @@ get_dependencies(){
                         do
                                 touch ${user_path}/depend_user_list.tmp
                                 user=$line
-                                grep -l "R:${line}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
-                                grep "S:${line}" $(cat ${user_path}/all_trx.dat)|cut -d ' ' -f3|cut -d ':' -f2|sort|uniq >>${user_path}/depend_user_list.tmp
+                                grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
+                                for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
+				do
+					sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
+				done
                                 cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
                                 mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
                                 while read line
@@ -1517,7 +1499,6 @@ get_dependencies(){
                                         if [ $already_there = 0 ]
                                         then
                                                 echo $line >>${user_path}/depend_accounts.dat
-                                                grep $line ${user_path}/all_trx.dat >>${user_path}/depend_trx.dat
                                         fi
                                 done <${user_path}/depend_user_list.tmp
                                 rm ${user_path}/depend_user_list.tmp 2>/dev/null
@@ -2191,7 +2172,7 @@ do
 							if [ $rt_query = 0 ]
 							then
 								trx_now=`date +%s`
-								make_signature "S:${handover_account} ${order_amount_formatted} R:${order_receipient} ${trx_now}" ${trx_now} 0
+								make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\n" ${trx_now} 0
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -2284,6 +2265,7 @@ do
 													fi
 													sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 													echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
+													get_dependencies
 													#############################################################################
 
 													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
@@ -2893,11 +2875,11 @@ do
 								while read line
 								do
 									line_extracted=$line
-									sender=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f1|cut -d ':' -f2`
-									receiver=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
-									trx_date_tmp=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f4`
+									sender=`sed -n '6p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+									trx_date_tmp=`sed -n '4p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-                              	                	        	trx_amount=`head -1 ${script_path}/trx/${line_extracted}|cut -d ' ' -f2`
+                              	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
@@ -2953,8 +2935,8 @@ do
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
-										sender=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f1|cut -d ':' -f2`
-										receiver=`head -1 ${script_path}/trx/${trx_file}|cut -d ' ' -f3|cut -d ':' -f2|cut -d ' ' -f1`
+										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
+										receiver=`sed -n '7p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
