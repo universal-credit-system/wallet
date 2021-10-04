@@ -1491,14 +1491,16 @@ get_dependencies(){
 				then
 					if [ -e ${user_path}/depend_confirmations.dat ]
 					then
-						depend_accounts_old_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
-						depend_trx_old_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-						depend_confirmations_old_hash=`cat ${user_path}/depend_confirmations.dat|shasum -a 256|cut -d ' ' -f1`
+						depend_accounts_old_hash=`shasum -a 256 <${user_path}/depend_accounts.dat|cut -d ' ' -f1`
+						depend_trx_old_hash=`shasum -a 256 <${user_path}/depend_trx.dat|cut -d ' ' -f1`
+						depend_confirmations_old_hash=`shasum -a 256 <${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
 					fi
 				fi
 			fi
 
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
+			rm ${user_path}/depend_trx.dat 2>/dev/null
+			touch ${user_path}/depend_trx.dat
 			echo "${handover_account}" >${user_path}/depend_accounts.dat
                         grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
                         while read line
@@ -1541,9 +1543,9 @@ get_dependencies(){
 			done <${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
-			depend_accounts_new_hash=`cat ${user_path}/depend_accounts.dat|shasum -a 256|cut -d ' ' -f1`
-			depend_trx_new_hash=`cat ${user_path}/depend_trx.dat|shasum -a 256|cut -d ' ' -f1`
-			depend_confirmations_new_hash=`cat ${user_path}/depend_confirmations.dat|shasum -a 256|cut -d ' ' -f1`
+			depend_accounts_new_hash=`shasum -a 256 <${user_path}/depend_accounts.dat|cut -d ' ' -f1`
+			depend_trx_new_hash=`shasum -a 256 <${user_path}/depend_trx.dat|cut -d ' ' -f1`
+			depend_confirmations_new_hash=`shasum -a 256 <${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash ]
 			then
 				new_ledger=0
