@@ -19,6 +19,8 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				read_trx	read a transaction
 				create_sync	create a syncronisation
 				read_sync	read a syncronisation
+				send_uca	send data to UCAs
+				request_uca	request data from UCAs
 				create_backup	create a backup
 				restore_backup	restore a backup
 				show_stats	display the statistics
@@ -63,8 +65,8 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				files which will result in better performance. 
 				When this is set index-file will not be created.
 
-				no_ledger will be ignored for create_trx a ledger
-				must be available to have a balance.
+				-no_ledger will be ignored for create_trx as a 
+				ledger must be available to have a balance.
 
 	-help			Display HELP
 
