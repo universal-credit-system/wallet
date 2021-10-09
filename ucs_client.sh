@@ -1479,35 +1479,42 @@ get_dependencies(){
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
 			rm ${user_path}/depend_trx.dat 2>/dev/null
 			touch ${user_path}/depend_trx.dat
-			echo "${handover_account}" >${user_path}/depend_accounts.dat
-                        grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
-                        while read line
-                        do
-                                touch ${user_path}/depend_user_list.tmp
-                                user=$line
-                                grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
-                                for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
-				do
-					sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
-				done
-                                cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
-                                mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
-                                while read line
-                                do
-                                        already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
-                                        if [ $already_there = 0 ]
-                                        then
-                                                echo $line >>${user_path}/depend_accounts.dat
-                                        fi
-                                done <${user_path}/depend_user_list.tmp
-                                rm ${user_path}/depend_user_list.tmp 2>/dev/null
-                        done <${user_path}/depend_accounts.dat
-			
-			###SORT DEPENDENCIE LISTS#####################################################
-			sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
-			mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
-			sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
-			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
+			if [ $only_process_depend = 1 ]
+			then
+				echo "${handover_account}" >${user_path}/depend_accounts.dat
+                	        grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+				while read line
+                        	do
+                                	touch ${user_path}/depend_user_list.tmp
+					user=$line
+					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
+					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
+					do
+						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
+					done
+                                	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
+                                	mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
+                                	while read line
+                                	do
+                                        	already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
+                                        	if [ $already_there = 0 ]
+                                        	then
+                                                	echo $line >>${user_path}/depend_accounts.dat
+                                        	fi
+                                	done <${user_path}/depend_user_list.tmp
+                               		rm ${user_path}/depend_user_list.tmp 2>/dev/null
+                        	done <${user_path}/depend_accounts.dat
+
+				###SORT DEPENDENCIE LISTS#####################################################
+				sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
+				mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
+				sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
+				mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
+			else
+				###COPY FILES#################################################################
+				cp ${user_path}/all_accounts.dat ${user_path}/depend_accounts.dat
+				cp ${user_path}/all_trx.dat ${user_path}/depend_trx.dat
+			fi
 
 			###GET DEPEND TRX WITH 0 CONFIRMATIONS########################################
 			rm ${user_path}/depend_confirmations.dat 2>/dev/null
