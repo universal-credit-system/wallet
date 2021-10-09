@@ -60,13 +60,12 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				read_sync
 				restore_backup
 
-	-no_ledger		Don't build a ledger. When set ucs won't create a
-				ledger and only perform basic integrity checks on 
-				files which will result in better performance. 
-				When this is set index-file will not be created.
+	-no_ledger		Don't build a ledger at start and only perform basic 
+				integrity checks. Used to increase the overall performance
+				as a ledger is only build once and not twice.
 
-				-no_ledger will be ignored for create_trx as a 
-				ledger must be available to have a balance.
+				Option will be ignored for create_trx.
+				
 
 	-help			Display HELP
 
