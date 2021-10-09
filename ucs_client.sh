@@ -534,13 +534,12 @@ build_ledger(){
 			#################################################
 
 			###CALCULATE CURRENT COINLOAD####################
-			months=`echo "scale=0;${day_counter} / 30"|bc`
-			coinload=`echo "scale=9;0.97^$months*$initial_coinload/30"|bc`
-			is_greater_one=`echo "${coinload}>=1"|bc`
-		        if [ $is_greater_one = 0 ]
-	        	then
-	                	coinload="0${coinload}"
-	                fi
+			if [ $day_counter = 2 ]
+			then
+				coinload=$initial_coinload
+			else
+				coinload=1
+			fi
 			#################################################
 
 			###GRANT COINLOAD OF THAT DAY####################
@@ -2425,25 +2424,20 @@ do
 													else
 														changes=1
 													fi
-													if [ $no_ledger = 0 ]
+													now_stamp=`date +%s`
+													build_ledger $changes
+													if [ $changes = 1 ]
 													then
-														now_stamp=`date +%s`
-														build_ledger $changes
-														if [ $changes = 1 ]
+														make_signature "none" $now_stamp 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now_stamp 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																exit 1
-															else
-																exit 0
-															fi
-														else
 															exit 1
+														else
+															exit 0
 														fi
 													else
-														exit 0
+														exit 1
 													fi
 												fi
 											fi
@@ -2590,20 +2584,15 @@ do
 													else
 														changes=1
 													fi
-													if [ $no_ledger = 0 ]
+													now_stamp=`date +%s`
+													build_ledger $changes
+													if [ $changes = 1 ]
 													then
-														now_stamp=`date +%s`
-														build_ledger $changes
-														if [ $changes = 1 ]
+														make_signature "none" $now_stamp 1
+														rt_query=$?
+														if [ $rt_query -gt 0 ]
 														then
-															make_signature "none" $now_stamp 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
-															then
-																exit 1
-															else
-																exit 0
-															fi
+															exit 1
 														else
 															exit 0
 														fi
@@ -2986,36 +2975,7 @@ do
 							done
 							rm ${user_path}/my_trx.tmp
 							;;
-				"$dialog_stats")	###SET VARIABLES TO CALCULATE COINLOAD##############
-							start_date="20210216"
-							date_stamp=`date +%s --date="${start_date}"`
-							now=`date +%Y%m%d`
-							now_date_status=`date +%s --date=${now}`
-                					now_date_status=$(( $now_date_status + 86400 ))
-							no_seconds_total=$(( $now_date_status - $date_stamp ))
-							no_days_total=`expr $no_seconds_total / 86400`
-							no_days_total=$(( $no_days_total + 1 ))
-							
-							###CALCULATE COINLOAD AND NEXT COINLOAD########
-							months=`echo "scale=0;${no_days_total} / 30"|bc`
-							coinload=`echo "scale=9;0.97^$months*$initial_coinload/30"|bc`
-							is_greater_one=`echo "${coinload}>=1"|bc`
-		        				if [ $is_greater_one = 0 ]
-	        					then
-	                					coinload="0${coinload}"
-	                				fi
-                                                        next_month=$(( $months + 1 ))
-							next_coinload=`echo "scale=9;0.97^$next_month*$initial_coinload/30"|bc`
-							is_greater_one=`echo "${next_coinload}>=1"|bc`
-		        				if [ $is_greater_one = 0 ]
-	        					then
-	                					next_coinload="0${next_coinload}"
-	                				fi
-							days_in_month=`expr $no_days_total % 30`
-							in_days=$(( 30 - $days_in_month ))
-							###############################################
-
-							###EXTRACT STATISTICS FOR TOTAL################
+				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`cat ${user_path}/all_accounts.dat|wc -l`
 							total_trx=`cat ${user_path}/all_trx.dat|wc -l`
 							total_user_blacklisted=`wc -l <${user_path}/blacklisted_accounts.dat`
@@ -3025,7 +2985,7 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g" -e "s/<coinload>/${coinload}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<next_coinload>/${next_coinload}/g" -e "s/<in_days>/${in_days}/g"`
+								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g"`
 								dialog --title "$dialog_stats" --backtitle "$core_system_name" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
@@ -3033,9 +2993,6 @@ do
 								echo "TRX_TOTAL:${total_trx}"
 								echo "BLACKLISTED_USERS_TOTAL:${total_user_blacklisted}"
 								echo "BLACKLISTED_TRX_TOTAL:${total_trx_blacklisted}"
-								echo "CURRENT_COINLOAD:${coinload}"
-								echo "NEXT_COINLOAD:${next_coinload}"
-								echo "IN_DAYS:${in_days}"
 								exit 0
 							fi
 							;;
