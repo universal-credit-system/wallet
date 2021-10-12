@@ -452,13 +452,17 @@ build_ledger(){
 			progress_bar_redir="2"
 		fi
 		
-		###GET TODAYS DATE##################################
+		###SET DATES##################################
 		now=`date +%Y%m%d`
+		start_date="20210216"
 
 		###CHECK IF OLD LEDGER THERE########################
-		start_date="20210216"
 		old_ledger_there=`ls -1 ${user_path}/|grep -c "ledger.dat"`
-		if [ $old_ledger_there -gt 0 -a $new = 0 ]
+
+		###CHECK IF OLD SCORETABLE IS THERE#################
+		old_scoretable_there=`ls -1 ${user_path}/|grep -c "scoretable.dat"`
+
+		if [ $old_ledger_there -gt 0 -a $old_scoretable_there = 1 -a $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t_ -k1|tail -1`
@@ -483,6 +487,10 @@ build_ledger(){
 			rm ${user_path}/*_ledger.dat 2>/dev/null
 			touch ${user_path}/${now}_ledger.dat
 			####################################################
+
+			###EMPTY SCORE TABLE################################
+			rm ${user_path}/scoretable.dat 2>/dev/null
+			touch ${user_path}/scoretable.dat
 
 			###EMPTY INDEX FILE#################################
 			rm ${user_path}/index_trx.dat 2>/dev/null
@@ -549,14 +557,22 @@ build_ledger(){
 				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
 			fi
 
+			###WRITE ENTRIES FOR THAT DAY####################
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/scoretable.dat >${user_path}/scoretable.tmp
+			if [ -s ${user_path}/scoretable.dat ]
+			then
+				mv ${user_path}/scoretable.tmp ${user_path}/scoretable.dat 2>/dev/null
+			fi
+
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
+			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
-
+			
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat >${user_path}/trxlist_${focus}.tmp
 			while read line
@@ -588,7 +604,14 @@ build_ledger(){
 						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
 						account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc`
 						enough_balance=`echo "${account_check_balance}>=0"|bc`
-						if [ $enough_balance = 1 ]
+						##############################################################
+
+						###SCORING####################################################
+						sender_score_balance=`grep "${trx_sender}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+						is_score_ok=`echo "${sender_score_balance}>=${trx_amount}"|bc`
+						##############################################################
+
+						if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 						then
 							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
 							echo "${trx_path} ${trx_hash}" >>${user_path}/index_trx.dat
@@ -605,12 +628,22 @@ build_ledger(){
 							sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${user_path}/${now}_ledger.dat
 							##############################################################
 
+							###SET SCORE FOR SENDER#######################################
+							sender_new_score_balance=`echo "${sender_score_balance} + ${trx_amount}"|bc`
+							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
+							##############################################################
+
 							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
 							if [ $number_of_confirmations -ge $confirmations_from_users ]
 							then
 								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
 								if [  $receiver_in_ledger = 1 ]
 								then
+									###SET SCORE FOR RECEIVER#####################################
+									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+									receiver_new_score_balance=`echo "${receiver_score_balance} + ${trx_amount}"|bc`
+									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_sender}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+									##############################################################
 									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
 									if [ $is_greater_one = 0 ]
@@ -662,6 +695,8 @@ build_ledger(){
 			then
 				cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 				echo "BALANCE_${now_stamp}:${cmd_output}"
+				cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
+				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 			fi
 			##############################################################
 		fi
@@ -1153,16 +1188,16 @@ check_trx(){
 								fi
 							fi
 						else
-							echo $file_to_check >>${user_path}/blacklisted_trx.dat
+							echo $line >>${user_path}/blacklisted_trx.dat
 						fi
 					else
-						echo $file_to_check >>${user_path}/blacklisted_trx.dat
+						echo $line >>${user_path}/blacklisted_trx.dat
 					fi
 				else
-					echo $file_to_check >>${user_path}/blacklisted_trx.dat
+					echo $line >>${user_path}/blacklisted_trx.dat
 				fi
 			else
-				echo $file_to_check >>${user_path}/blacklisted_trx.dat
+				echo $line >>${user_path}/blacklisted_trx.dat
 			fi
 		done <${user_path}/all_trx.dat
 		
@@ -1182,12 +1217,6 @@ check_trx(){
 		done <${user_path}/blacklisted_trx.dat
 		###################################################################
 
-		###REMOVE BLACKLISTED TRX FROM LIST OF TRANSACTIONS################
-		touch ${user_path}/all_trx.tmp
-		cat ${user_path}/all_trx.dat >${user_path}/all_trx.tmp
-		cat ${user_path}/blacklisted_trx.dat >>${user_path}/all_trx.tmp
-		cat ${user_path}/all_trx.tmp|sort|uniq -u >${user_path}/all_trx.dat
-		rm ${user_path}/all_trx.tmp 2>/dev/null
 		cd ${script_path}/
 		return $new_ledger
 }
@@ -2048,10 +2077,16 @@ do
 			fi
 			check_blacklist
 			account_my_balance=`grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+			account_my_score=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+			is_greater_balance=`echo "${account_my_score}>${account_my_balance}"|bc`
+			if [ $is_greater_balance = 1 ]
+			then
+				account_my_score="${account_my_balance}"
+			fi
 		fi
 		if [ $gui_mode = 1 ]
 		then
-			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
+			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
@@ -2105,7 +2140,18 @@ do
 								do
 									if [ $gui_mode = 1 ]
 									then
-										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount" 0 0 "1.000000000"`
+										###SCORE############################################################
+										sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+										is_greater_balance=`echo "${sender_score_balance}>${account_my_balance}"|bc`
+										if [ $is_greater_balance = 1 ]
+										then
+											sender_score_balance_value="${account_my_balance}"
+										else
+											sender_score_balance_value="${sender_score_balance}"
+										fi
+										####################################################################
+										dialog_send_amount_display=`echo $dialog_send_amount|sed -e "s/<score>/${sender_score_balance_value}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
+										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000"`
 								        	rt_query=$?
 									else
 										rt_query=0
@@ -2128,7 +2174,9 @@ do
 											if [ $is_amount_big_enough = 1 -a $is_amount_mod = 1 ]
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
-												if [ $enough_balance = 1 ]
+												###SCORE#############################################################
+												is_score_ok=`echo "${sender_score_balance}>=${order_amount_formatted}"|bc`
+												if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 												then
 													amount_selected=1
 												else
@@ -2252,7 +2300,13 @@ do
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
-											#############################################################################
+											###SCORE#####################################################################
+											sender_new_score_balance=`echo "${sender_score_balance} + ${order_amount_formatted}"|bc`
+											sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
+											receiver_score_balance=`grep "${order_receipient}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+											receiver_new_score_balance=`echo "${receiver_score_balance} + ${order_amount_formatted}"|bc`
+											sed -i "s/${order_receipient}=${receiver_score_balance}/${order_receipient}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+											##############################################################################
 											make_signature "none" ${trx_now} 1
 											rt_query=$?
 											if [ $rt_query = 0 ]
