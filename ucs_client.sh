@@ -1114,8 +1114,9 @@ check_trx(){
 								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
 								trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
-
-								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 ]
+								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
+								is_amount_mod=`echo "${is_amount_mod} >0"|bc`
+								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 -o $is_amount_mod = 1 ]
 								then
 									###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
 									rm $file_to_check 2>/dev/null
