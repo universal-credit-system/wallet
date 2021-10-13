@@ -640,6 +640,7 @@ build_ledger(){
 								if [  $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
+									sender_score_balance=`grep "${trx_sender}" ${user_path}/scoretable.dat|cut -d '=' -f2`
 									sender_new_score_balance=`echo "${sender_score_balance} + ${trx_amount}"|bc`
 									sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 									###SET SCORE FOR RECEIVER#####################################
