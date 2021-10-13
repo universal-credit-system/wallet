@@ -663,7 +663,7 @@ build_ledger(){
 									then
 										receiver_new_score_balance=0
 									fi
-									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_sender}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 								fi
 							fi
