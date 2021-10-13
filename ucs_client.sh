@@ -640,13 +640,7 @@ build_ledger(){
 								if [  $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
-									sender_score_balance=`grep "${trx_sender}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									sender_new_score_balance=`echo "${sender_score_balance} + ${trx_amount}"|bc`
-									sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
-									###SET SCORE FOR RECEIVER#####################################
-									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
-									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_sender}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
@@ -661,6 +655,16 @@ build_ledger(){
 										receiver_new_balance="0${receiver_new_balance}"
 									fi
 									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
+									###SET SCORE FOR RECEIVER#####################################
+									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+									receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
+									is_score_negative=`echo "${receiver_new_score_balance}<0"|bc`
+									if [ $is_score_negative = 1 ]
+									then
+										receiver_new_score_balance=0
+									fi
+									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_sender}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+									##############################################################
 								fi
 							fi
 							##############################################################
@@ -2180,6 +2184,7 @@ do
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
 												###SCORE#############################################################
 												is_score_ok=`echo "${sender_score_balance}>=${order_amount_formatted}"|bc`
+												#####################################################################
 												if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 												then
 													amount_selected=1
