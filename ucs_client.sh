@@ -618,14 +618,13 @@ build_ledger(){
 							##############################################################
 
 							###SET BALANCE FOR SENDER#####################################
-							account_balance=$account_check_balance
-							is_greater_one=`echo "${account_balance}>=1"|bc`
+							account_new_balance=$account_check_balance
+							is_greater_one=`echo "${account_new_balance}>=1"|bc`
 							if [ $is_greater_one = 0 ]
 							then
-								account_balance="0${account_balance}"
+								account_new_balance="0${account_new_balance}"
 							fi
-							account_prev_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-							sed -i "s/${trx_sender}=${account_prev_balance}/${trx_sender}=${account_balance}/g" ${user_path}/${now}_ledger.dat
+							sed -i "s/${trx_sender}=${account_balance}/${trx_sender}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 							##############################################################
 
 							###SET SCORE FOR SENDER#######################################
@@ -657,13 +656,17 @@ build_ledger(){
 									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
 									###SET SCORE FOR RECEIVER#####################################
 									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
-									is_score_negative=`echo "${receiver_new_score_balance}<0"|bc`
-									if [ $is_score_negative = 1 ]
+									is_score_equal_balance=`echo "${receiver_old_balance}==${receiver_score_balance}"|bc`
+									if [ ! is_score_equal_balance = 1 ]
 									then
-										receiver_new_score_balance=0
+										receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
+										is_score_negative=`echo "${receiver_new_score_balance}<0"|bc`
+										if [ $is_score_negative = 1 ]
+										then
+											receiver_new_score_balance=0
+										fi
+										sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 									fi
-									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 								fi
 							fi
@@ -2178,7 +2181,7 @@ do
 											fi
 											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000000001"|bc`
 											amount_mod=`echo "${order_amount_formatted} % 0.000000001"|bc`
-											is_amount_mod=`echo "${amount_mod} <=0"|bc` 
+											is_amount_mod=`echo "${amount_mod} == 0"|bc` 
 											if [ $is_amount_big_enough = 1 -a $is_amount_mod = 1 ]
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
