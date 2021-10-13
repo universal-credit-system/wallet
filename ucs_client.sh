@@ -629,7 +629,7 @@ build_ledger(){
 							##############################################################
 
 							###SET SCORE FOR SENDER#######################################
-							sender_new_score_balance=`echo "${sender_score_balance} + ${trx_amount}"|bc`
+							sender_new_score_balance=`echo "${sender_score_balance} - ${trx_amount}"|bc`
 							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 							##############################################################
 
@@ -639,9 +639,12 @@ build_ledger(){
 								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
 								if [  $receiver_in_ledger = 1 ]
 								then
+									###SET SCORE FOR SENDER#######################################
+									sender_new_score_balance=`echo "${sender_score_balance} + ${trx_amount}"|bc`
+									sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 									###SET SCORE FOR RECEIVER#####################################
 									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									receiver_new_score_balance=`echo "${receiver_score_balance} + ${trx_amount}"|bc`
+									receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
 									sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_sender}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
@@ -2301,11 +2304,8 @@ do
 											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
 											###SCORE#####################################################################
-											sender_new_score_balance=`echo "${sender_score_balance} + ${order_amount_formatted}"|bc`
+											sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
 											sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
-											receiver_score_balance=`grep "${order_receipient}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-											receiver_new_score_balance=`echo "${receiver_score_balance} + ${order_amount_formatted}"|bc`
-											sed -i "s/${order_receipient}=${receiver_score_balance}/${order_receipient}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 											##############################################################################
 											make_signature "none" ${trx_now} 1
 											rt_query=$?
