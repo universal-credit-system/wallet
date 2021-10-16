@@ -1590,6 +1590,10 @@ script_path=$(dirname $(readlink -f ${0}))
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
 
+###SET THEME################
+export DIALOGRC="${script_path}/theme/${theme_file}"
+dialogrc_set="${theme_file}"
+
 ###SOURCE LANGUAGE FILE#####
 . ${script_path}/lang/${lang_file}
 
@@ -1735,7 +1739,7 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name ${core_system_version}" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_lang" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
+			main_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name ${core_system_version}" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_settings" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
 			rt_query=$?
 		else
 			rt_query=0
@@ -1909,28 +1913,66 @@ do
 							done
 							set +f
 							;;
-				"$dialog_main_lang")	ls -1 ${script_path}/lang/ >${script_path}/languages.tmp
-							while read line
-							do
-								lang_ex_short=`echo $line|cut -d '_' -f2`
-								lang_ex_full=`echo $line|cut -d '_' -f3|cut -d '.' -f1`
-								printf "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
-							done <${script_path}/languages.tmp
-							lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
-							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
-								if [ ! $lang_file = $new_lang_file ]
-								then
-									sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/control/config.conf
-									. ${script_path}/control/config.conf
-									. ${script_path}/lang/${lang_file}
-								fi
-							fi
-							rm ${script_path}/languages.tmp
-							rm ${script_path}/lang_list.tmp
-							;;
+				"$dialog_main_settings")	quit_settings=0
+								while [ $quit_settings -eq 0 ]
+								do
+									settings_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" ""`
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										case $settings_menu in
+											"$dialog_main_lang")	ls -1 ${script_path}/lang/ >${script_path}/languages.tmp
+														while read line
+														do
+															lang_ex_short=`echo $line|cut -d '_' -f2`
+															lang_ex_full=`echo $line|cut -d '_' -f3|cut -d '.' -f1`
+															printf "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
+														done <${script_path}/languages.tmp
+														lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
+														rt_query=$?
+														if [ $rt_query = 0 ]
+														then
+															new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
+															if [ ! $lang_file = $new_lang_file ]
+															then
+																sed -i "s/lang_file=\"${lang_file}\"/lang_file=\"${new_lang_file}\"/g" ${script_path}/control/config.conf
+																. ${script_path}/control/config.conf
+																. ${script_path}/lang/${lang_file}
+															fi
+														fi
+														rm ${script_path}/languages.tmp
+														rm ${script_path}/lang_list.tmp
+														;;
+											"$dialog_main_theme")	ls -1 ${script_path}/theme/ >${script_path}/themes.tmp
+														while read line
+														do
+															theme_name=`echo $line|cut -d '.' -f1`
+															printf "$theme_name theme " >>${script_path}/theme_list.tmp
+														done <${script_path}/themes.tmp
+														theme_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp`
+														rt_query=$?
+														if [ $rt_query = 0 ]
+														then
+															new_theme_file=`grep "${theme_selection}" ${script_path}/themes.tmp`
+															if [ ! $dialogrc_set = $new_theme_file ]
+															then
+																sed -i "s/theme_file=\"${dialogrc_set}\"/theme_file=\"${new_theme_file}\"/g" ${script_path}/control/config.conf
+																. ${script_path}/control/config.conf
+																export DIALOGRC="${script_path}/theme/${theme_file}"
+																dialogrc_set="${theme_file}"
+																clear
+																sleep 1
+															fi
+														fi
+														rm ${script_path}/themes.tmp
+														rm ${script_path}/theme_list.tmp
+														;;
+										esac
+									else
+										quit_settings=1
+									fi
+								done
+								;;
 				"$dialog_main_backup")	if [ $gui_mode = 1 ]
 							then
 								dialog --yes-label "$dialog_backup_create" --no-label "$dialog_backup_restore" --title "$dialog_main_backup" --backtitle "$core_system_name" --yesno "$dialog_backup_text" 0 0
