@@ -2979,7 +2979,7 @@ do
 									line_extracted=$line
 									sender=`sed -n '6p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
-									trx_date_tmp=`sed -n '4p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f2`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
