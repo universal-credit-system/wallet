@@ -13,22 +13,43 @@ This is the main repository for the UCS client pre-alpha version.
 The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program. This program is actually the wallet you need to receive, send and manage your universal credit coins.
 
 ## Technologies used
-The program was written as **linux standard shell (#!/bin/sh)** script. The following has been used:
-* **Rasbperry Pi 3 Model B** (Raspberry Pi Model B V1.2)
-* **Raspbian Buster 10** (Raspbian GNU/Linux 10 (buster))
+The program was written as **linux standard shell (#!/bin/sh)** script.
 
-Although the script was written on a Raspberry Pi 3 Model B with Raspbian 10, it's not limited to this setup. **You can run it on any machine if you follow the installation instructions!**
+**You can run it on any machine if you follow the installation instructions!**
 
 The script **depends** on below programs that must be installed:
 
-* **bc**      (used for floating point calculations)
-* **wget**    (used to fetch certificate files of TSA from Internet)
-* **curl**    (used to send query to TSA and request response)
-* **shasum**  (used to hash files)
-* **openssl** (used for TSA stamp verification)
-* **gpg**     (used for transaction signing)
-* **dialog**  (used for GUI)
-* **git**     (used only to fetch the sourcecode from GitHub)
+* **awk**     used to sort/filter data
+* **bc**      used for floating point calculations
+* **cat**     used to concatenate content
+* **cp**      used to copy files
+* **curl**    used to send query to TSA and request response
+* **cut**     used to extract data from streams
+* **date**    used for date operations
+* **dialog**  used as GUI
+* **echo**    used to write output
+* **find**    used to search files/directories
+* **gpg**     used for transaction signing
+* **grep**    used to search files
+* **head**    used to display heading lines of a file
+* **mkdir**   used to create folders and subfolders
+* **mv**      used to move files
+* **netcat**  used to send/request files
+* **openssl** used for TSA stamp verification
+* **printf**  used to write output
+* **rm**      used to delete files
+* **shasum**  used to hash files
+* **sort**    used to sort files
+* **stat**    used to get permissions of files/directories
+* **tail**    used to display tailing lines of a file
+* **tar**     used to create the transaction file
+* **test**    used to test files
+* **touch**   used to create files
+* **tr**      used to convert chars
+* **umask**   used to determine umask
+* **uniq**    used to filter files
+* **wc**      used to count lines, words, bytes
+* **wget**    used to fetch certificate files of TSA from Internet
 
 ## How to install on LINUX
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
