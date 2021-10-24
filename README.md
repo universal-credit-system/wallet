@@ -41,6 +41,7 @@ The script **depends** on below programs that must be installed:
 * **openssl** used for TSA stamp verification
 * **printf**  used to write output
 * **rm**      used to delete files
+* **sed**     used to read/modify files
 * **shasum**  used to hash files
 * **sort**    used to sort files
 * **stat**    used to get permissions of files/directories
