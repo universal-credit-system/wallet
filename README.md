@@ -33,7 +33,7 @@ The script **depends** on below programs that must be installed:
 * **find**    used to search files/directories
 * **gpg**     used for transaction signing
 * **grep**    used to search files
-* **head**    used to display heading lines of a file
+* **head**    used to display heading lines/bytes of a file
 * **ls**      used to list files and directories
 * **mkdir**   used to create folders and subfolders
 * **mv**      used to move files
