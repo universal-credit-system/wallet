@@ -1,4 +1,4 @@
-# ucs_client_v0.0.1
+# Universal Credit System Wallet
 
 This is the main repository for the UCS client pre-alpha version.
 
@@ -9,14 +9,13 @@ This is the main repository for the UCS client pre-alpha version.
 * [How to install on ANDROID](#how-to-install-on-android)
 * [Community](#community)
 
-## What is UCS
+## What is Universal Credit System
 The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program. This program is actually the wallet you need to receive, send and manage your universal credit coins.
 
 ## Technologies used
 The program was written as **linux standard shell (#!/bin/sh)** script.
 
 **You can run it on any machine if you follow the installation instructions!**
-
 The script **depends** on below programs that must be installed:
 
 * **awk**     used to sort/filter data
