@@ -22,16 +22,19 @@ The script **depends** on below programs that must be installed:
 * **awk**     used to sort/filter data
 * **bc**      used for floating point calculations
 * **cat**     used to concatenate content
+* **chmod**   used to change permissions
 * **cp**      used to copy files
 * **curl**    used to send query to TSA and request response
 * **cut**     used to extract data from streams
 * **date**    used for date operations
 * **dialog**  used as GUI
 * **echo**    used to write output
+* **expr**    used for calculations
 * **find**    used to search files/directories
 * **gpg**     used for transaction signing
 * **grep**    used to search files
 * **head**    used to display heading lines of a file
+* **ls**      used to list files and directories
 * **mkdir**   used to create folders and subfolders
 * **mv**      used to move files
 * **netcat**  used to send/request files
