@@ -13,7 +13,7 @@ This is the main repository for the UCS client pre-alpha version.
 The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program. This program is actually the wallet you need to receive, send and manage your universal credit coins.
 
 ## Technologies used
-The program was written as **linux standard shell (#!/bin/sh)** script.
+The program was written as **standard shell script (#!/bin/sh)**.
 
 The script **depends** on below list of programs that must be installed:
 
@@ -55,7 +55,7 @@ The script **depends** on below list of programs that must be installed:
 
 During setup the `install.sh` script will perform a check if any program is missing.
 
-## How to install on LINUX
+## How to install
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
 To install the programs that are required for UCS just type the following into command prompt (you may use `sudo` for each command):
