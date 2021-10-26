@@ -16,7 +16,7 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 The program was written as **linux standard shell (#!/bin/sh)** script.
 
 **You can run it on any machine if you follow the installation instructions!**
-The script **depends** on below programs that must be installed:
+The script **depends** on below list of programs that must be installed:
 
 * **awk**     used to sort/filter data
 * **bc**      used for floating point calculations
@@ -54,6 +54,8 @@ The script **depends** on below programs that must be installed:
 * **wc**      used to count lines, words, bytes
 * **wget**    used to fetch certificate files of TSA from Internet
 
+During setup the `install.sh` script will perform a check if any program is missing.
+
 ## How to install on LINUX
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
@@ -69,34 +71,30 @@ apt-get install dialog
 apt-get install git
 ```
 
-Create a directory with `mkdir` wherever you want and step into this directory with `cd`:
+Create a directory wherever you want and step into this directory:
 ```
 mkdir ucs
 cd ucs
 ```
 
-Now clone the GitHub repository, latest version is `ucs_client_v0.0.1`:
+Clone the GitHub repository and step into this directory:
 ```
 git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
-```
-
-Step into directory:
-```
 cd ucs_client_v0.0.1/
 ```
 
 Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
-If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs and then run `install.sh` script again
+If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs first and then run `install.sh` script again
 ```
 ./install.sh
 ```
 
-After setup you can run the UCS client:
+After setup you can run `ucs_client.sh`:
 ```
 ./ucs_client.sh
 ```
 
 ## Community
-**Do you have problem? We have set up a [Forum](https://forum.universal-credit-system.org) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
+**Do you have a problem? We have set up a [Forum](https://forum.universal-credit-system.org) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
 
 **NOW HAVE FUN!**
