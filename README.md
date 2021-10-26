@@ -57,41 +57,41 @@ The script **depends** on below programs that must be installed:
 ## How to install on LINUX
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
-To install the programs that are required for UCS just type the following into command prompt:
+To install the programs that are required for UCS just type the following into command prompt (you may use `sudo` for each command):
 ```
-sudo apt-get install bc
-sudo apt-get install wget
-sudo apt-get install curl
-sudo apt-get install perl
-sudo apt-get install gnupg2
-sudo apt-get install openssl
-sudo apt-get install dialog
-sudo apt-get install git
+apt-get install bc
+apt-get install wget
+apt-get install curl
+apt-get install perl
+apt-get install gnupg2
+apt-get install openssl
+apt-get install dialog
+apt-get install git
 ```
 
-Now create a directory with `mkdir` wherever you want and step into this directory with `cd`:
+Create a directory with `mkdir` wherever you want and step into this directory with `cd`:
 ```
 mkdir ucs
 cd ucs
 ```
 
-Now clone the GitHub repository of UCS, in this case latest version is `ucs_client_v0.0.1`:
+Now clone the GitHub repository, latest version is `ucs_client_v0.0.1`:
 ```
 git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
 ```
 
-Step into directory that contains the cloned repository:
+Step into directory:
 ```
 cd ucs_client_v0.0.1/
 ```
 
-Now you can execute the install.sh script. The script will check for depending programs and if all depending apps are installed the setup will be done. 
-If there is a program that needs to be installed the script will output the program name and then quit. In this case you have to install these programs and then run `install.sh` again
+Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
+If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs and then run `install.sh` script again
 ```
 ./install.sh
 ```
 
-Once you have installed ucs you can run the UCS program just like you would executed any other script:
+After setup you can run the UCS client:
 ```
 ./ucs_client.sh
 ```
