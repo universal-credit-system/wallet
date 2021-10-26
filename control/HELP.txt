@@ -1,0 +1,71 @@
+COMMAND:
+
+./ucs_client.sh [OPTION]
+
+NOTE:	IF YOU WANT TO RUN UCS IN GUI-MODE JUST EXECUTE THE SCRIPT WITHOUT
+	ANY PARAMETERS.
+
+
+OPTIONS (for CMD-MODE ONLY!!!):
+
+	Parameter:		Purpose:
+
+	-action <ACTION>	Used to describe what to do.
+ 
+				Possible actions are:	
+
+				create_user	create a user
+				create_trx	create a transaction
+				read_trx	read a transaction
+				create_sync	create a syncronisation
+				read_sync	read a syncronisation
+				send_uca	send data to UCAs
+				request_uca	request data from UCAs
+				create_backup	create a backup
+				restore_backup	restore a backup
+				show_stats	display the statistics
+
+	-user <USER>		Name of the account	
+
+	-pin <PIN>		PIN of the account
+	
+	-password <PW>		Password of the account
+
+	-sender <ADRESS>	Sender of a transaction. Can be used to handover 
+				a adress only instead of user and pin seperately. 
+				If you use this parameter, skip -user and -pin 
+			
+	-receiver <ADRESS>	Receiver of transaction. Used only for create_trx
+			
+	-amount <AMOUNT>	Amount of transaction. Used only for create_trx
+			
+	-type <TYPE>		Possible values are "partial" or "full".
+
+				When creating a transaction this value is used to 
+				specifiy wheter a big or small transaction should 
+				be created. When reading a transaction or reading 
+				a sync file this parameter is used to specify 
+				wheter only new files should be extracted or 
+				all files should be extracted.
+			
+	-path <PATH>		Path where output is stored. Used for:
+
+				create_trx
+				create_sync
+				create_backup
+
+				Path from where to read input. Used for:
+ 
+				read_trx
+				read_sync
+				restore_backup
+
+	-no_ledger		Don't build a ledger at start and only perform basic 
+				integrity checks. Used to increase the overall performance
+				as a ledger is only build once and not twice.
+
+				Option will be ignored for create_trx.
+				
+
+	-help			Display HELP
+
