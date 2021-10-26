@@ -85,58 +85,13 @@ Step into directory that contains the cloned repository:
 cd ucs_client_v0.0.1/
 ```
 
-Now you can execute the install.sh script that creates required folders:
+Now you can execute the install.sh script. The script will check for depending programs and if all depending apps are installed the setup will be done. 
+If there is a program that needs to be installed the script will output the program name and then quit. In this case you have to install these programs and then run `install.sh` again
 ```
 ./install.sh
 ```
 
 Once you have installed ucs you can run the UCS program just like you would executed any other script:
-```
-./ucs_client.sh
-```
-
-## How to install on ANDROID
-**If you would like to run the script on ANDROID, you need a shell that you can access from where you can install and run the script. There are apps which allow you even to install a full linux within. We suggest that you use TERMUX for a simple shell access without installing a operating system inside the app. You can find TERMUX on the Google PlayStore. If you decide to use TERMUX you can use below commands for installation; it's very easy. Please note that if you are using any other app the command for installing a package might be different. The same applies if you have installed a linux operating system within one of the apps. This means that in both cases you have to change `pkginstall` to the command of the packaging tool your app/operating system is using!**
-
-To install the programs that are required for UCS just type the following into command prompt:
-```
-pkg install bc
-pkg install wget
-pkg install curl
-pkg install perl
-pkg install gnupg
-pkg install openssl
-pkg install dialog
-pkg install git
-```
-
-Now create a directory with `mkdir` wherever you want and step into this directory with `cd`:
-```
-mkdir ucs
-cd ucs
-```
-
-Now clone the GitHub repository of UCS, in this case latest version is `ucs_client_v0.0.1`:
-```
-git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
-```
-
-Step into directory that contains the cloned repository:
-```
-cd ucs_client_v0.0.1/
-```
-
-You may need to change permissions to make the install script executable:
-```
-chmod +x install.sh
-```
-
-Now you can execute the install.sh script that creates required folders:
-```
-./install.sh
-```
-
-Once you have installed ucs you can run the UCS Client just like you would executed any other script:
 ```
 ./ucs_client.sh
 ```
