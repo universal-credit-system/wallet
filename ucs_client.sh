@@ -1645,7 +1645,7 @@ then
 					;;
 			"-path")	cmd_var=$1
 					;;
-			"-help")	more ${script_path}/HELP.txt
+			"-help")	more ${script_path}/control/HELP.txt
 					exit 0
 					;;
 			*)		###SET TARGET VARIABLES########################################
