@@ -15,7 +15,6 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 ## Technologies used
 The program was written as **linux standard shell (#!/bin/sh)** script.
 
-**You can run it on any machine if you follow the installation instructions!**
 The script **depends** on below list of programs that must be installed:
 
 * **awk**     used to sort/filter data
