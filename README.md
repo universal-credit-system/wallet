@@ -5,8 +5,7 @@ This is the repository for the UCS client.
 ## Table of contents
 * [What is UCS](#what-is-ucs)
 * [Technologies used](#technologies-used)
-* [How to install on LINUX](#how-to-install-on-linux)
-* [How to install on ANDROID](#how-to-install-on-android)
+* [How to install](#how-to-install)
 * [Community](#community)
 
 ## What is Universal Credit System
