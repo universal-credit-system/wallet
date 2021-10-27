@@ -15,7 +15,9 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 ## Technologies used
 The program was written as **standard shell script (#!/bin/sh)**.
 
-The script **depends** on below list of programs that must be installed:
+The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed. While other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not. 
+
+THe following list of programs that must be installed:
 
 * **awk**     used to sort/filter data
 * **bc**      used for floating point calculations
@@ -40,7 +42,7 @@ The script **depends** on below list of programs that must be installed:
 * **printf**  used to write output
 * **rm**      used to delete files
 * **sed**     used to read/modify files
-* **shasum**  used to hash files
+* **shasum**  used to hash files (i.e. shipped with PERL package)
 * **sort**    used to sort files
 * **stat**    used to get permissions of files/directories
 * **tail**    used to display tailing lines of a file
@@ -53,7 +55,7 @@ The script **depends** on below list of programs that must be installed:
 * **wc**      used to count lines, words, bytes
 * **wget**    used to fetch certificate files of TSA from Internet
 
-During setup the `install.sh` script will perform a check if any program is missing.
+During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
 
 ## How to install
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
