@@ -89,6 +89,6 @@ After setup you can run `ucs_client.sh`:
 ```
 
 ## Community
-**Do you have a problem? We have set up a [Forum](https://forum.universal-credit-system.org) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
+**Do you have a problem? We have set up a [Forum](https://forum.universal-credit-system.org) and also a [Discord Server](https://discord.gg/5kvCP6kkRn) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
 
 **NOW HAVE FUN!**
