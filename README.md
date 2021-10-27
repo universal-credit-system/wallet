@@ -60,15 +60,8 @@ During setup the `install.sh` script will perform a check if any program is miss
 ## How to install
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
-To install the programs that are required for UCS just type the following into command prompt (you may use `sudo` for each command):
+Install Git (you may use `sudo` in front):
 ```
-apt-get install bc
-apt-get install wget
-apt-get install curl
-apt-get install perl
-apt-get install gnupg2
-apt-get install openssl
-apt-get install dialog
 apt-get install git
 ```
 
@@ -85,7 +78,7 @@ cd ucs_client_v0.0.1/
 ```
 
 Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
-If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs first and then run `install.sh` script again
+If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs first and then run `install.sh` script again.
 ```
 ./install.sh
 ```
