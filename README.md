@@ -1,6 +1,6 @@
 # Universal Credit System Wallet
 
-This is the main repository for the UCS client pre-alpha version.
+This is the repository for the UCS client.
 
 ## Table of contents
 * [What is UCS](#what-is-ucs)
@@ -15,9 +15,9 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 ## Technologies used
 The program was written as **standard shell script (#!/bin/sh)**.
 
-The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed while other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not.
+The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed while other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
 
-THe following list of programs that must be installed:
+The following programs are used:
 
 * **awk**     used to sort/filter data
 * **bc**      used for floating point calculations
@@ -54,8 +54,6 @@ THe following list of programs that must be installed:
 * **uniq**    used to filter files
 * **wc**      used to count lines, words, bytes
 * **wget**    used to fetch certificate files of TSA from Internet
-
-During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
 
 ## How to install
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
