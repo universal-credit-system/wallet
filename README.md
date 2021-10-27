@@ -15,7 +15,7 @@ The [Universal Credit System](https://www.universal-credit-system.org) offers a 
 ## Technologies used
 The program was written as **standard shell script (#!/bin/sh)**.
 
-The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed. While other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not. 
+The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed while other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not.
 
 THe following list of programs that must be installed:
 
