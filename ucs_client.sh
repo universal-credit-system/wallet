@@ -123,7 +123,7 @@ create_keys(){
 		key_remove=0
 
 		###SET FILESTAMP TO NOW######################################
-		file_stamp=`date +%s`
+		file_stamp=`date -u +%s`
 
 		###CREATE RANDOM 5 DIGIT NUMBER AS PIN#######################
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
@@ -453,7 +453,7 @@ build_ledger(){
 		fi
 		
 		###SET DATES##################################
-		now=`date +%Y%m%d`
+		now=`date -u +%Y%m%d`
 		start_date="20210216"
 
 		###CHECK IF OLD LEDGER THERE########################
@@ -467,7 +467,7 @@ build_ledger(){
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t_ -k1|tail -1`
 			last_ledger_date=`echo $last_ledger|cut -d '_' -f1`
-			last_ledger_date_stamp=`date +%s --date="${last_ledger_date}"`
+			last_ledger_date_stamp=`date -u +%s --date="${last_ledger_date}"`
 
 			###SET DATESTAMP TO NEXTDAY OF LAST LEDGER##########
 			date_stamp=$(( $last_ledger_date_stamp + 86400 ))
@@ -476,12 +476,12 @@ build_ledger(){
 			mv ${user_path}/${last_ledger_date}_ledger.dat ${user_path}/${now}_ledger.dat 2>/dev/null
 
 			###CALCULATE DAY COUNTER############################
-			date_stamp_last=`date +%s --date="${start_date}"`
+			date_stamp_last=`date -u +%s --date="${start_date}"`
 			no_seconds_last=$(( $date_stamp - $date_stamp_last ))
 			day_counter=`expr $no_seconds_last / 86400`
 		else
 			###SET DATESTAMP####################################
-			date_stamp=`date +%s --date="${start_date}"`
+			date_stamp=`date -u +%s --date="${start_date}"`
 
 			###EMPTY LEDGER#####################################
 			rm ${user_path}/*_ledger.dat 2>/dev/null
@@ -507,23 +507,21 @@ build_ledger(){
 		####################################################
 
 		###SET FOCUS########################################
-		focus=`date +%Y%m%d --date=@${date_stamp}`
-		now_stamp=`date +%s`
+		focus=`date -u +%Y%m%d --date=@${date_stamp}`
+		now_stamp=`date -u +%s`
 		months=0
 		####################################################		
 
 		if [ $focus -le $now ]
 		then
 			###INIT STATUS BAR##################################
-			now_date_status=`date +%s --date=${now}`
+			now_date_status=`date -u +%s --date=${now}`
         	        now_date_status=$(( $now_date_status + 86400 ))
 			no_seconds_total=$(( $now_date_status - $date_stamp ))
 			no_days_total=`expr $no_seconds_total / 86400`
 			percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 			current_percent=0
 			current_percent_display=0
-			current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
-			current_percent_display=`echo "${current_percent} / 1"|bc`
 		else
 			progress_bar_redir="2"
 		fi
@@ -684,7 +682,7 @@ build_ledger(){
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
 			date_stamp=$(( $date_stamp + 86400 ))
-			focus=`date +%Y%m%d --date=@${date_stamp}`
+			focus=`date -u +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
 		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
@@ -960,7 +958,9 @@ check_tsa(){
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
 			touch ${user_path}/all_accounts.dat
-			ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
+			
+			###FLOCK######################################
+			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
 			while read line
 			do
 				accountname_key_name=`echo $line`
@@ -984,7 +984,7 @@ check_tsa(){
 							then
 								###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
 								date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
-								date_to_verify_converted=`date +%s --date="${date_to_verify}"`
+								date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
 								accountdate_to_verify=`echo $line|cut -d '.' -f2`
 								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
 								if [ $creation_date_diff -ge 0 ]
@@ -1011,7 +1011,15 @@ check_tsa(){
 				fi
 			done <${user_path}/all_accounts.dat
 
+			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
+			###############################WITH FLOCK############################################
+			cd ${user_path}/
+			flock ${script_path}/keys/ -c '
+			user_path=`pwd`
+			base_dir=`dirname $user_path`
+			script_path=`dirname $base_dir`
+			handover_account=`basename $user_path`
 			while read line
 			do
 				if [ ! $line = $handover_account ]
@@ -1021,6 +1029,7 @@ check_tsa(){
 					rm ${script_path}/trx/${line}.* 2>/dev/null
 				fi
 			done <${user_path}/blacklisted_accounts.dat
+			'
 			#####################################################################################
 
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
@@ -1062,7 +1071,7 @@ check_keys(){
 					rt_query=$?
 					if [ $rt_query -gt 0 ]
 					then
-						rm ${script_path}/proofs/${line}/${line}.txt
+						rm ${script_path}/proofs/${line}/${line}.txt 2>/dev/null
 					fi
 				fi
                        	fi
@@ -1598,7 +1607,7 @@ dialogrc_set="${theme_file}"
 . ${script_path}/lang/${lang_file}
 
 ###SET INITIAL VARIABLES####
-now=`date +%Y%m%d`
+now=`date -u +%Y%m%d`
 no_ledger=0
 user_logged_in=0
 action_done=1
@@ -1988,7 +1997,7 @@ do
 							if [ $rt_query = 0 ]
 							then
 								cd ${script_path}
-								now_stamp=`date +%s`
+								now_stamp=`date -u +%s`
 								tar -czf ${script_path}/backup/${now_stamp}.bcp control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -2027,7 +2036,7 @@ do
 											while read line
 											do
 												backup_stamp=`echo $line|cut -d '.' -f1`
-												backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
+												backup_date=`date -u +'%F|%H:%M:%S' --date=@${backup_stamp}`
 												printf "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
 											done <${script_path}/backups_list.tmp
 										else
@@ -2042,7 +2051,7 @@ do
 											then
 												bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
 												bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
-													bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
+													bcp_stamp=`date -u +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
 												bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
 												file_path="${script_path}/backup/${bcp_file}"
 												cd ${script_path}
@@ -2118,7 +2127,7 @@ do
 		fi
 		if [ $no_ledger = 0 ]
 		then
-			now_stamp=`date +%s`
+			now_stamp=`date -u +%s`
 			if [ $make_ledger = 1 ]
 			then
 				build_ledger $changes
@@ -2280,7 +2289,7 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
-								trx_now=`date +%s`
+								trx_now=`date -u +%s`
 								make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\n" ${trx_now} 0
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -2537,7 +2546,7 @@ do
 													else
 														changes=1
 													fi
-													now_stamp=`date +%s`
+													now_stamp=`date -u +%s`
 													build_ledger $changes
 													if [ $changes = 1 ]
 													then
@@ -2697,7 +2706,7 @@ do
 													else
 														changes=1
 													fi
-													now_stamp=`date +%s`
+													now_stamp=`date -u +%s`
 													build_ledger $changes
 													if [ $changes = 1 ]
 													then
@@ -2740,7 +2749,7 @@ do
 							if [ ! $rt_query = 255 ]
 							then
 								###GET CURRENT TIMESTAMP#################################
-								now_stamp=`date +%s`
+								now_stamp=`date -u +%s`
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
@@ -2784,7 +2793,7 @@ do
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								now_stamp=`date +%s`
+								now_stamp=`date -u +%s`
 								sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
 								cd ${script_path}/
 								tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
@@ -2821,7 +2830,7 @@ do
 										uca_ip=`echo $line|cut -d ':' -f1`
 										uca_rcv_port=`echo $line|cut -d ':' -f3`
 										uca_info=`echo $line|cut -d ':' -f4`
-										now_stamp=`date +%s`
+										now_stamp=`date -u +%s`
 										sync_file="${user_path}/uca_${now_stamp}.sync"
 										netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
 										rt_query=$?
@@ -2867,7 +2876,7 @@ do
 									else
 										changes=1
 									fi
-									now_stamp=`date +%s`
+									now_stamp=`date -u +%s`
 									build_ledger $changes
 									if [ $changes = 1 ]
 									then
@@ -2882,7 +2891,7 @@ do
 											uca_ip=`echo $line|cut -d ':' -f1`
 											uca_snd_port=`echo $line|cut -d ':' -f2`
 											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date +%s`
+											now_stamp=`date -u +%s`
 											sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
 											cd ${script_path}/
 											tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
@@ -2908,7 +2917,7 @@ do
 											uca_ip=`echo $line|cut -d ':' -f1`
 											uca_rcv_port=`echo $line|cut -d ':' -f3`
 											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date +%s`
+											now_stamp=`date -u +%s`
 											sync_file="${user_path}/uca_${now_stamp}.sync"
 											netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
 											rt_query=$?
@@ -2953,7 +2962,7 @@ do
 										else
 											changes=1
 										fi
-										now_stamp=`date +%s`
+										now_stamp=`date -u +%s`
 										build_ledger $changes
 										if [ $changes = 1 ]
 										then
@@ -2980,7 +2989,7 @@ do
 									sender=`sed -n '6p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
-									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
+									trx_date=`date -u +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
@@ -3034,7 +3043,7 @@ do
 									then
 										trx_date_extracted=`echo $decision|cut -d '|' -f1`
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
-										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
+										trx_date=`date -u +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
