@@ -19,6 +19,7 @@ The script depends on other programs. Most of them are **GNU core utilities**, w
 The following programs are used:
 
 * **awk**     used to sort/filter data
+* **basename**used to strip directory and suffix from filenames
 * **bc**      used for floating point calculations
 * **cat**     used to concatenate content
 * **chmod**   used to change permissions
@@ -27,9 +28,11 @@ The following programs are used:
 * **cut**     used to extract data from streams
 * **date**    used for date operations
 * **dialog**  used as GUI
+* **dirname** used to strip non-directory suffix from file name
 * **echo**    used to write output
 * **expr**    used for calculations
 * **find**    used to search files/directories
+* **flock**   used to manage read locks for multi user setups 
 * **gpg**     used for transaction signing
 * **grep**    used to search files
 * **head**    used to display heading lines/bytes of a file
