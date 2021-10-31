@@ -19,7 +19,7 @@ The script depends on other programs. Most of them are **GNU core utilities**, w
 The following programs are used:
 
 * **awk**     used to sort/filter data
-* **basename**used to strip directory and suffix from filenames
+* **basename** used to strip directory and suffix from filenames
 * **bc**      used for floating point calculations
 * **cat**     used to concatenate content
 * **chmod**   used to change permissions
