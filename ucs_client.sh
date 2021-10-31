@@ -522,6 +522,8 @@ build_ledger(){
 			percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 			current_percent=0
 			current_percent_display=0
+                        current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
+			current_percent_display=`echo "${current_percent} / 1"|bc`
 		else
 			progress_bar_redir="2"
 		fi
