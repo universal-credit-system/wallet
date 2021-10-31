@@ -123,7 +123,7 @@ create_keys(){
 		key_remove=0
 
 		###SET FILESTAMP TO NOW######################################
-		file_stamp=`date -u +%s`
+		file_stamp=`date +%s`
 
 		###CREATE RANDOM 5 DIGIT NUMBER AS PIN#######################
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
@@ -508,7 +508,7 @@ build_ledger(){
 
 		###SET FOCUS########################################
 		focus=`date -u +%Y%m%d --date=@${date_stamp}`
-		now_stamp=`date -u +%s`
+		now_stamp=`date +%s`
 		months=0
 		####################################################		
 
@@ -1997,7 +1997,7 @@ do
 							if [ $rt_query = 0 ]
 							then
 								cd ${script_path}
-								now_stamp=`date -u +%s`
+								now_stamp=`date +%s`
 								tar -czf ${script_path}/backup/${now_stamp}.bcp control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -2036,7 +2036,7 @@ do
 											while read line
 											do
 												backup_stamp=`echo $line|cut -d '.' -f1`
-												backup_date=`date -u +'%F|%H:%M:%S' --date=@${backup_stamp}`
+												backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
 												printf "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
 											done <${script_path}/backups_list.tmp
 										else
@@ -2051,7 +2051,7 @@ do
 											then
 												bcp_date_extracted=`echo $backup_decision|cut -d '|' -f1`
 												bcp_time_extracted=`echo $backup_decision|cut -d '|' -f2`
-													bcp_stamp=`date -u +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
+												bcp_stamp=`date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}"`
 												bcp_file=`cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}"`
 												file_path="${script_path}/backup/${bcp_file}"
 												cd ${script_path}
@@ -2127,7 +2127,7 @@ do
 		fi
 		if [ $no_ledger = 0 ]
 		then
-			now_stamp=`date -u +%s`
+			now_stamp=`date +%s`
 			if [ $make_ledger = 1 ]
 			then
 				build_ledger $changes
@@ -2289,7 +2289,7 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
-								trx_now=`date -u +%s`
+								trx_now=`date +%s`
 								make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\n" ${trx_now} 0
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -2546,7 +2546,7 @@ do
 													else
 														changes=1
 													fi
-													now_stamp=`date -u +%s`
+													now_stamp=`date +%s`
 													build_ledger $changes
 													if [ $changes = 1 ]
 													then
@@ -2706,7 +2706,7 @@ do
 													else
 														changes=1
 													fi
-													now_stamp=`date -u +%s`
+													now_stamp=`date +%s`
 													build_ledger $changes
 													if [ $changes = 1 ]
 													then
@@ -2749,7 +2749,7 @@ do
 							if [ ! $rt_query = 255 ]
 							then
 								###GET CURRENT TIMESTAMP#################################
-								now_stamp=`date -u +%s`
+								now_stamp=`date +%s`
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
@@ -2793,7 +2793,7 @@ do
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								now_stamp=`date -u +%s`
+								now_stamp=`date +%s`
 								sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
 								cd ${script_path}/
 								tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
@@ -2830,7 +2830,7 @@ do
 										uca_ip=`echo $line|cut -d ':' -f1`
 										uca_rcv_port=`echo $line|cut -d ':' -f3`
 										uca_info=`echo $line|cut -d ':' -f4`
-										now_stamp=`date -u +%s`
+										now_stamp=`date +%s`
 										sync_file="${user_path}/uca_${now_stamp}.sync"
 										netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
 										rt_query=$?
@@ -2876,7 +2876,7 @@ do
 									else
 										changes=1
 									fi
-									now_stamp=`date -u +%s`
+									now_stamp=`date +%s`
 									build_ledger $changes
 									if [ $changes = 1 ]
 									then
@@ -2891,7 +2891,7 @@ do
 											uca_ip=`echo $line|cut -d ':' -f1`
 											uca_snd_port=`echo $line|cut -d ':' -f2`
 											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date -u +%s`
+											now_stamp=`date +%s`
 											sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
 											cd ${script_path}/
 											tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
@@ -2917,7 +2917,7 @@ do
 											uca_ip=`echo $line|cut -d ':' -f1`
 											uca_rcv_port=`echo $line|cut -d ':' -f3`
 											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date -u +%s`
+											now_stamp=`date +%s`
 											sync_file="${user_path}/uca_${now_stamp}.sync"
 											netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
 											rt_query=$?
@@ -2962,7 +2962,7 @@ do
 										else
 											changes=1
 										fi
-										now_stamp=`date -u +%s`
+										now_stamp=`date +%s`
 										build_ledger $changes
 										if [ $changes = 1 ]
 										then
@@ -2989,7 +2989,7 @@ do
 									sender=`sed -n '6p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
-									trx_date=`date -u +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
+									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
@@ -3043,7 +3043,7 @@ do
 									then
 										trx_date_extracted=`echo $decision|cut -d '|' -f1`
 										trx_time_extracted=`echo $decision|cut -d '|' -f2`
-										trx_date=`date -u +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
+										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
