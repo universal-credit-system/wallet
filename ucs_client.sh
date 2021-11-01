@@ -21,7 +21,7 @@ login_account(){
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
-					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|shasum -a 256|cut -d ' ' -f1`
+					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|sha256sum|cut -d ' ' -f1`
 				fi
 				#############################################################
 
@@ -129,7 +129,7 @@ create_keys(){
                 key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
 
 		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
-		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|shasum -a 256|cut -d ' ' -f1`
+		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|sha256sum|cut -d ' ' -f1`
 
 		if [ $gui_mode = 1 ]
 		then
@@ -311,7 +311,7 @@ make_signature(){
 				while read line
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=`shasum -a 256 <${script_path}/keys/${line}|cut -d ' ' -f1`
+					key_hash=`sha256sum ${script_path}/keys/${line}|cut -d ' ' -f1`
                                         key_path="keys/${line}"
                                         echo "${key_path} ${key_hash}" >>${message_blank}
 					#################################################################
@@ -321,7 +321,7 @@ make_signature(){
 					if [ -s $freetsa_qfile ]
 					then
 						freetsa_qfile_path="proofs/$line/freetsa.tsq"
-						freetsa_qfile_hash=`shasum -a 256 <${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
+						freetsa_qfile_hash=`sha256sum ${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
 						echo "${freetsa_qfile_path} ${freetsa_qfile_hash}" >>${message_blank}
 					fi
 					#################################################################
@@ -331,7 +331,7 @@ make_signature(){
 					if [ -s $freetsa_rfile ]
 					then
 						freetsa_rfile_path="proofs/$line/freetsa.tsr"
-						freetsa_rfile_hash=`shasum -a 256 <${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
+						freetsa_rfile_hash=`sha256sum ${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
 					fi
 					#################################################################
@@ -581,7 +581,7 @@ build_ledger(){
 			        trx_filename=`echo $line|cut -d ' ' -f3`
 				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
-				trx_hash=`shasum -a 256 <${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
+				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
 				trx_path="trx/${trx_filename}"
 				##############################################################
 
@@ -1521,9 +1521,9 @@ get_dependencies(){
 				then
 					if [ -e ${user_path}/depend_confirmations.dat ]
 					then
-						depend_accounts_old_hash=`shasum -a 256 <${user_path}/depend_accounts.dat|cut -d ' ' -f1`
-						depend_trx_old_hash=`shasum -a 256 <${user_path}/depend_trx.dat|cut -d ' ' -f1`
-						depend_confirmations_old_hash=`shasum -a 256 <${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
+						depend_accounts_old_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
+						depend_trx_old_hash=`sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1`
+						depend_confirmations_old_hash=`sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
 					fi
 				fi
 			fi
@@ -1582,9 +1582,9 @@ get_dependencies(){
 			done <${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
-			depend_accounts_new_hash=`shasum -a 256 <${user_path}/depend_accounts.dat|cut -d ' ' -f1`
-			depend_trx_new_hash=`shasum -a 256 <${user_path}/depend_trx.dat|cut -d ' ' -f1`
-			depend_confirmations_new_hash=`shasum -a 256 <${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
+			depend_accounts_new_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
+			depend_trx_new_hash=`sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1`
+			depend_confirmations_new_hash=`sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash ]
 			then
 				new_ledger=0
@@ -2363,7 +2363,7 @@ do
 												cat ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 											fi
 											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-											trx_hash=`shasum -a 256 <${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
+											trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
 											###SCORE#####################################################################
 											sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
