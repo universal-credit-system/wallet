@@ -38,6 +38,8 @@ OPTIONS (for CMD-MODE ONLY!!!):
 	-receiver <ADRESS>	Receiver of transaction. Used only for create_trx
 			
 	-amount <AMOUNT>	Amount of transaction. Used only for create_trx
+
+	-purpose "<TEXT>"	Purpose of the transaction.
 			
 	-type <TYPE>		Possible values are "partial" or "full".
 
