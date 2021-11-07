@@ -1032,6 +1032,7 @@ check_tsa(){
 				fi
 			done <${user_path}/blacklisted_accounts.dat
 			'
+			cd ${script_path}/
 			#####################################################################################
 
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
@@ -1039,7 +1040,6 @@ check_tsa(){
 			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
 			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
 			rm ${user_path}/all_accounts.tmp 2>/dev/null
-			cd ${script_path}/
 }
 check_keys(){
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
@@ -1080,7 +1080,15 @@ check_keys(){
                	done <${user_path}/all_accounts.dat
 		rm ${user_path}/keylist_gpg.tmp
 		
-		###REMOVE FILES OF ACCOUNTS THAT HAVE BEEN BLACKLISTED#############
+
+		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
+		###############################WITH FLOCK############################################
+		cd ${user_path}/
+		flock ${script_path}/keys/ -c '
+		user_path=`pwd`
+		base_dir=`dirname $user_path`
+		script_path=`dirname $base_dir`
+		handover_account=`basename $user_path`
 		while read line
 		do
 			if [ ! $line = $handover_account ]
@@ -1090,6 +1098,7 @@ check_keys(){
 				rm ${script_path}/trx/${line}.* 2>/dev/null
 			fi
 		done <${user_path}/blacklisted_accounts.dat
+		'
 		###################################################################
 
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
@@ -1377,9 +1386,22 @@ process_new_files(){
 					rm ${user_path}/temp/${line}
 				fi
 			done <${user_path}/files_to_fetch.tmp
+			#############################################
+			############  COPY FILES TO TARGET###########
+			##################WITH FLOCK#################
+			cd ${user_path}/
+			flock ${script_path}/keys/ -c '
+			user_path=`pwd`
+			base_dir=`dirname $user_path`
+			script_path=`dirname $base_dir`
 			cp ${user_path}/temp/keys/* ${script_path}/keys/ 2>/dev/null
 			cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
 			cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
+			'
+			cd ${script_path}/
+			#############################################
+
+			###PURGE TEMP FILES##########################
 			rm -r ${user_path}/temp/keys/* 2>/dev/null
 			rm -r ${user_path}/temp/trx/* 2>/dev/null
 			rm -r ${user_path}/temp/proofs/* 2>/dev/null
