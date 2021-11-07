@@ -1542,7 +1542,7 @@ get_dependencies(){
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
-						echo "${user_trx}" >>${user_path}/depend_trx.dat
+						echo "$line" >>${user_path}/depend_trx.dat
 						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
 					done
                                 	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
@@ -1629,6 +1629,7 @@ then
 	cmd_sender=""
 	cmd_receiver=""
 	cmd_amount=""
+	cmd_purpose=""
 	cmd_type=""
 	cmd_path=""
 
@@ -1652,6 +1653,8 @@ then
 			"-receiver")	cmd_var=$1
 					;;
 			"-amount")	cmd_var=$1
+					;;
+			"-purpose")	cmd_var=$1
 					;;
 			"-type")	cmd_var=$1
 					;;
@@ -1708,6 +1711,8 @@ then
 						"-receiver")	cmd_receiver=$1
 								;;
 						"-amount")	cmd_amount=$1
+								;;
+						"-purpose")	cmd_purpose=$1
 								;;
 						"-type")	cmd_type=$1
 								case $cmd_type in
@@ -2203,10 +2208,12 @@ do
 								rm ${user_path}/keylist.tmp
 								while [ $amount_selected = 0 ]
 								do
+									###SCORE############################################################
+									sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+									####################################################################
 									if [ $gui_mode = 1 ]
 									then
-										###SCORE############################################################
-										sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+										###SET SCORE TO BE DISPLAYED########################################
 										is_greater_balance=`echo "${sender_score_balance}>${account_my_balance}"|bc`
 										if [ $is_greater_balance = 1 ]
 										then
@@ -2284,154 +2291,180 @@ do
 						then
 							if [ $gui_mode = 1 ]
 							then
-								dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g"`
-								dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_overview_display" 0 0
+								order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "X"`
 								rt_query=$?
 							else
+								order_purpose=$cmd_purpose			
 								rt_query=0
 							fi
 							if [ $rt_query = 0 ]
 							then
-								trx_now=`date +%s`
-								make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\n" ${trx_now} 0
-								rt_query=$?
+								if [ $gui_mode = 1 ]
+								then
+									dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g" -e "s/<order_purpose>/${order_purpose}/g"`
+									dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_overview_display" 0 0
+									rt_query=$?
+								else
+									rt_query=0
+								fi
 								if [ $rt_query = 0 ]
 								then
-									last_trx="${script_path}/trx/${handover_account}.${trx_now}"
-									verify_signature ${last_trx} ${handover_account}
+									trx_now=`date +%s`
+									make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\nPRPS:${order_purpose}" ${trx_now} 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										if [ $gui_mode = 1 ]
+										last_trx="${script_path}/trx/${handover_account}.${trx_now}"
+										verify_signature ${last_trx} ${handover_account}
+										rt_query=$?
+										if [ $rt_query = 0 ]
 										then
-											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_trx" 0 0
-											small_trx=$?
-										fi
-										if [ ! $small_trx = 255 ]
-										then
-											receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-											rm ${user_path}/files_list.tmp 2>/dev/null
-											if [ $small_trx = 0 -a -s $receipient_index_file ]
+											if [ $gui_mode = 1 ]
 											then
-												###GET KEYS AND PROOFS##########################################
-												while read line
-												do
-													key_there=0
-													key_there=`grep -c "keys/${line}" $receipient_index_file`
-													if [ $key_there = 0 ]
-													then
-														echo "keys/${line}" >>${user_path}/files_list.tmp
-													fi
-													tsa_req_there=0
-													tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
-													if [ $tsa_req_there = 0 ]
-													then
-														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
-													fi
-													tsa_res_there=0
-													tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
-													if [ $tsa_res_there = 0 ]
-													then
-														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
-													fi
-													index_file="proofs/${line}/${line}.txt"
-													if [ -s ${script_path}/${index_file} ]
-													then
-														echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-													fi
-												done <${user_path}/depend_accounts.dat
-
-												###GET TRX###################################################################
-												while read line
-												do
-													trx_there=`grep -c "trx/${line}" $receipient_index_file`
-													if [ $trx_there = 0 ]
-													then
-														echo "trx/${line}" >>${user_path}/files_list.tmp
-													fi
-												done <${user_path}/depend_trx.dat
-											else
-												###GET KEYS AND PROOFS#######################################################
-												while read line
-												do
-													echo "keys/${line}" >>${user_path}/files_list.tmp
-													echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
-													echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
-													echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-												done <${user_path}/depend_accounts.dat
-
-												###GET TRX###################################################################
-												cat ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+												dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_trx" 0 0
+												small_trx=$?
 											fi
-											###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-											trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
-											echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
-											###SCORE#####################################################################
-											sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
-											sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
-											##############################################################################
-											make_signature "none" ${trx_now} 1
-											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ ! $small_trx = 255 ]
 											then
-												cd ${script_path}/
-												tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
-												rt_query=$?
+												receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
 												rm ${user_path}/files_list.tmp 2>/dev/null
+												if [ $small_trx = 0 -a -s $receipient_index_file ]
+												then
+													###GET KEYS AND PROOFS##########################################
+													while read line
+													do
+														key_there=0
+														key_there=`grep -c "keys/${line}" $receipient_index_file`
+														if [ $key_there = 0 ]
+														then
+															echo "keys/${line}" >>${user_path}/files_list.tmp
+														fi
+														tsa_req_there=0
+														tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
+														if [ $tsa_req_there = 0 ]
+														then
+															echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
+														fi
+														tsa_res_there=0
+														tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
+														if [ $tsa_res_there = 0 ]
+														then
+															echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
+														fi
+														index_file="proofs/${line}/${line}.txt"
+														if [ -s ${script_path}/${index_file} ]
+														then
+															echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+														fi
+													done <${user_path}/depend_accounts.dat
+	
+													###GET TRX###################################################################
+													while read line
+													do
+														trx_there=`grep -c "trx/${line}" $receipient_index_file`
+														if [ $trx_there = 0 ]
+														then
+															echo "trx/${line}" >>${user_path}/files_list.tmp
+														fi
+													done <${user_path}/depend_trx.dat
+												else
+													###GET KEYS AND PROOFS#######################################################
+													while read line
+													do
+														echo "keys/${line}" >>${user_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
+														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
+														if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+														then
+															echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+														fi
+													done <${user_path}/depend_accounts.dat
+	
+													###GET TRX###################################################################
+													while read line
+													do
+														echo "trx/${line}" >>${user_path}/files_list.tmp
+													done <${user_path}/depend_trx.dat
+												fi
+												###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+												trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
+												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
+												###SCORE#####################################################################
+												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
+												sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
+												##############################################################################
+												make_signature "none" ${trx_now} 1
+												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-													account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
-													is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
-													if [ $is_greater_one = 1 ]
+													cd ${script_path}/
+													tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
+													rt_query=$?
+													rm ${user_path}/files_list.tmp 2>/dev/null
+													if [ $rt_query = 0 ]
 													then
-														account_new_balance="0${account_new_balance}"
-													fi
-													sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
-													echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
-													get_dependencies
-													#############################################################################
-
-													###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
-													#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
-													#############################################################################
-													if [ ! $trx_path_output = $script_path ]
-													then
-														mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
-													fi
-													if [ $gui_mode = 1 ]
-													then
-														dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
-														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
-													else
-														cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
-														echo "BALANCE_${trx_now}:${cmd_output}"
-														if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
+														###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+														account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
+														is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
+														if [ $is_greater_one = 1 ]
 														then
-															mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
-															echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
-														else
-															echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
+															account_new_balance="0${account_new_balance}"
 														fi
-														exit 0
+														sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
+														echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
+														get_dependencies
+														#############################################################################
+	
+														###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
+														#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
+														#############################################################################
+														if [ ! $trx_path_output = $script_path ]
+														then
+															mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
+														fi
+														if [ $gui_mode = 1 ]
+														then
+															dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
+														else
+															cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
+															echo "BALANCE_${trx_now}:${cmd_output}"
+															cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
+															echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
+															if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
+															then
+																mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
+																echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
+															else
+																echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
+															fi
+															exit 0
+														fi
+													else
+														rm ${script_path}/${handover_account}_${trx_now}.trx 2>/dev/null
+														rm ${last_trx} 2>/dev/null
+														if [ $gui_mode = 1 ]
+														then
+															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+														else
+															exit 1
+														fi
 													fi
 												else
-													rm ${script_path}/${handover_account}_${trx_now}.trx 2>/dev/null
-													rm ${last_trx} 2>/dev/null
 													if [ $gui_mode = 1 ]
 													then
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
 													else
 														exit 1
 													fi
-												fi
+												fi	
+											fi
+										else
+											if [ $gui_mode = 1 ]
+											then
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
 											else
-												if [ $gui_mode = 1 ]
-												then
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
-												else
-													exit 1
-												fi
+												exit 1
 											fi
 										fi
 									else
@@ -2441,13 +2474,6 @@ do
 										else
 											exit 1
 										fi
-									fi
-								else
-									if [ $gui_mode = 1 ]
-									then
-										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
-									else
-										exit 1
 									fi
 								fi
 							fi
@@ -3051,6 +3077,14 @@ do
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
 										receiver=`sed -n '7p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
+										purpose=`sed -n '8p' ${script_path}/trx/${trx_file}`
+										purpose_size=`echo "${purpose}"|wc -c`
+										if [ $purpose_size -gt 6 ]
+										then
+											purpose_extracted=`echo $purpose|cut -c 6-$purpose_size`
+										else
+											purpose_extracted=""
+										fi
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -3084,10 +3118,10 @@ do
 										trx_confirmations=`grep -l "trx/${trx_file}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 										if [ $sender = $handover_account ]
 										then
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose_extracted}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose_extracted}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
