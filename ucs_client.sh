@@ -1522,7 +1522,7 @@ get_dependencies(){
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
-						echo "$line" >>${user_path}/depend_trx.dat
+						echo "${user_trx}" >>${user_path}/depend_trx.dat
 						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
 					done
                                 	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
