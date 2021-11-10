@@ -1421,49 +1421,7 @@ check_blacklist(){
 				fi
 			fi
 }
-restore_data(){
-			###SET PERMISSIONS TO ENSURE ACCESS#######################
-			chmod $permissions_directories ${script_path}/control/
-			chmod $permissions_directories ${script_path}/keys/
-			chmod $permissions_directories ${script_path}/trx/
-			chmod $permissions_directories ${script_path}/proofs/
 
-			###CREATE LIST WITH FILES THAT ARE NEW####################
-			cat ${user_path}/files_to_fetch.tmp >${user_path}/file_list_unsorted.tmp
-			cat ${user_path}/files_to_keep.tmp >>${user_path}/file_list_unsorted.tmp
-			sort ${user_path}/file_list_unsorted.tmp|uniq >${user_path}/files_to_delete.tmp
-
-			###REMOVE TMP FILE########################################
-			rm ${user_path}/file_list_unsorted.tmp
-
-			###GO THROUGH LIST AND DELETE NEW FILES###################
-			while read line
-			do
-				is_proof=`echo $line|grep -c "proof/"`
-				if [ is_proof = 1 ]
-				then
-					proof_user=`echo $line|cut -d '/' -f2`
-					if [ -d ${script_path}/proofs/${proof_user}/ ]
-					then
-						rm -R ${script_path}/proofs/${proof_user} 2>/dev/null
-					fi
-				else
-					rm ${script_path}/${line} 2>/dev/null
-				fi
-			done <${user_path}/files_to_delete.tmp
-
-			###UNPACK BACKUP FILE#####################################
-			cd ${script_path}/
-			tar -xzf ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-			
-			###REMOVE TEMP BACKUP FILE################################
-			rm ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp 2>/dev/null
-			
-			###REMOVE FILE LIST#######################################
-			rm ${user_path}/files_to_delete.tmp
-			rm ${user_path}/files_to_fetch.tmp 2>/dev/null
-			rm ${user_path}/files_to_keep.tmp 2>/dev/null
-}
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
 			while read line
@@ -2570,14 +2528,8 @@ do
 													fi
 												fi
 											fi
-											if [ $rt_query -gt 0 ]
+											if [ $rt_query = 0 ]
 											then
-												restore_data
-												if [ $gui_mode = 0 ]
-												then
-													exit 1
-												fi
-											else
 												set_permissions
 												if [ $gui_mode = 1 ]
 												then
@@ -2612,6 +2564,11 @@ do
 													else
 														exit 1
 													fi
+												fi
+											else
+												if [ $gui_mode = 0 ]
+												then
+													exit 1
 												fi
 											fi
 										else
@@ -2730,14 +2687,8 @@ do
 													fi
 												fi
 											fi
-											if [ $rt_query -gt 0 ]
+											if [ $rt_query = 0 ]
 											then
-												restore_data
-												if [ $gui_mode = 0 ]
-												then
-													exit 1
-												fi
-											else
 												set_permissions
 												if [ $gui_mode = 1 ]
 												then
@@ -2772,6 +2723,11 @@ do
 													else
 														exit 0
 													fi
+												fi
+											else
+												if [ $gui_mode = 0 ]
+												then
+													exit 1
 												fi
 											fi
 										else
@@ -2906,8 +2862,6 @@ do
 													then
 														trx_new_trigger=1
 													fi
-												else
-													restore_data
 												fi
 											else
 												dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
@@ -2994,7 +2948,6 @@ do
 															trx_new_trigger=1
 														fi
 													else
-														restore_data
 														echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED" 
 													fi
 												else
