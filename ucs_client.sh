@@ -2229,6 +2229,7 @@ do
 										if [ $order_amount_alnum = 0 ]
 										then
 											order_amount_formatted=`echo $order_amount|sed -e 's/,/./g' -e 's/ //g'`
+                                                                                        order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc`
 											is_greater_one=`echo "${order_amount_formatted}>=1"|bc`
 											if [ $is_greater_one = 0 ]
 											then
