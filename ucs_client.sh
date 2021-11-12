@@ -1210,12 +1210,22 @@ check_trx(){
 										else
 											echo $line >>${user_path}/all_trx.tmp
 										fi
+									else
+										if [ ${user_to_check} = ${handover_account} ]
+										then
+											echo $line >>${user_path}/all_trx.tmp
+										fi
 									fi 
 								fi
 							else
-								if [ $delete_trx_not_indexed = 1 ]
+								if [ ${user_to_check} = ${handover_account} ]
 								then
-									rm $file_to_check 2>/dev/null
+									echo $line >>${user_path}/all_trx.tmp
+								else
+									if [ $delete_trx_not_indexed = 1 ]
+									then
+										rm $file_to_check 2>/dev/null
+									fi
 								fi
 							fi
 						else
@@ -1522,8 +1532,12 @@ get_dependencies(){
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
-						echo "${user_trx}" >>${user_path}/depend_trx.dat
-						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp		
+						already_there=`grep -c "${user_trx}" ${user_path}/depend_trx.dat`
+                                        	if [ $already_there = 0 ]
+                                        	then
+							echo "${user_trx}" >>${user_path}/depend_trx.dat
+							sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
+						fi	
 					done
                                 	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
                                 	mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
