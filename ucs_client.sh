@@ -1587,6 +1587,84 @@ get_dependencies(){
 			cd ${script_path}/
 			return $new_ledger
 }
+request_uca(){
+		session_key=`date -u +%Y%m%d`
+		if [ $gui_mode = 1 ]
+		then
+			number_ucas=`wc -l <${script_path}/control/uca.conf`
+			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
+			current_percent=0
+			percent_display=0
+			echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+		fi
+		while read line
+		do
+			uca_ip=`echo $line|cut -d ':' -f1`
+			uca_rcv_port=`echo $line|cut -d ':' -f3`
+			uca_info=`echo $line|cut -d ':' -f4`
+			now_stamp=`date +%s`
+			sync_file="${user_path}/uca_${now_stamp}.sync"
+			netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
+			rt_query=$?
+			if [ $rt_query = 0 ]
+			then
+				check_archive ${sync_file} 0
+				rt_query=$?
+				if [ $rt_query = 0 ]
+				then
+					cd ${user_path}/temp
+					tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+					rt_query=$?
+					if [ $rt_query = 0 ]
+					then
+						process_new_files 0
+						set_permissions
+					fi
+				fi
+			fi
+			if [ $gui_mode = 1 ]
+			then
+				current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
+				percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
+				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+			fi
+			rm ${sync_file} 2>/dev/null
+		done <${script_path}/control/uca.conf
+}
+send_uca(){
+		session_key=`date -u +%Y%m%d`
+		now_stamp=`date +%s`
+		sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
+		if [ $gui_mode = 1 ]
+		then
+			number_ucas=`wc -l <${script_path}/control/uca.conf`
+			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
+			current_percent=0
+			percent_display=0
+			echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+		fi
+		cd ${script_path}/
+		tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
+		rt_query=$?
+		if [ $rt_query = 0 ]
+		then	
+			while read line
+			do
+				uca_ip=`echo $line|cut -d ':' -f1`
+				uca_snd_port=`echo $line|cut -d ':' -f2`
+				uca_info=`echo $line|cut -d ':' -f4`
+				now_stamp=`date +%s`
+				cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
+				if [ $gui_mode = 1 ]
+				then
+					current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
+					percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
+					echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+				fi
+			done <${script_path}/control/uca.conf
+		fi
+		rm ${sync_file} 2>/dev/null
+}
 ##################
 #Main Menu Screen#
 ##################
@@ -2110,6 +2188,12 @@ do
         	fi
 
 	else
+		###IF AUTO-UCA-SYNC########################
+		if [ $auto_uca_request_start = 1 ]
+		then
+			request_uca
+		fi
+
 		###ON EACH START AND AFTER EACH ACTION...
 		if [ $action_done = 1 ]
 		then
@@ -2127,6 +2211,7 @@ do
 			fi
 			action_done=0
 		fi
+
 		if [ $no_ledger = 0 ]
 		then
 			now_stamp=`date +%s`
@@ -2148,6 +2233,13 @@ do
 				account_my_score="${account_my_balance}"
 			fi
 		fi
+
+		###IF AUTO-UCA-SYNC########################
+		if [ $auto_uca_send_start = 1 ]
+		then
+			send_uca
+		fi
+
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
@@ -2838,6 +2930,7 @@ do
 											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
 										fi
 									done <${script_path}/control/uca.conf
+									rm ${sync_file} 2>/dev/null
 								else
 									dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
 									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
@@ -2882,11 +2975,11 @@ do
 												dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
 											fi
-											rm ${sync_file} 2>/dev/null
 										else
 											dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
 											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
 										fi
+										rm ${sync_file} 2>/dev/null
 									done <${script_path}/control/uca.conf
 									get_dependencies
 									dep_new_ledger=$?
@@ -2906,28 +2999,26 @@ do
 							fi
 						else
 							case $cmd_action in
-								"send_uca")	while read line
-										do
-											uca_ip=`echo $line|cut -d ':' -f1`
-											uca_snd_port=`echo $line|cut -d ':' -f2`
-											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date +%s`
-											sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
-											cd ${script_path}/
-											tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then	
+								"send_uca")	now_stamp=`date +%s`
+										sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
+										cd ${script_path}/
+										tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then	
+											while read line
+											do
+												uca_ip=`echo $line|cut -d ':' -f1`
+												uca_snd_port=`echo $line|cut -d ':' -f2`
+												uca_info=`echo $line|cut -d ':' -f4`
 												cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
 												rt_query=$?
 												if [ ! $rt_query = 0 ]
 												then
 													echo "ERROR: UCA LINK SND ${uca_ip}:${uca_snd_port} FAILED"
 												fi
-											else
-												echo "ERROR: UCA LINK SND ${uca_ip}:${uca_snd_port} FAILED"
-											fi
-										done <${script_path}/control/uca.conf
+											done <${script_path}/control/uca.conf
+										fi
 										rm ${sync_file} 2>/dev/null
 										exit 0
 										;;
@@ -2968,10 +3059,10 @@ do
 												else
 													echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
 												fi
-												rm ${sync_file} 2>/dev/null
 											else
 												echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
 											fi
+											rm ${sync_file} 2>/dev/null
 										done <${script_path}/control/uca.conf
 										get_dependencies
 										dep_new_ledger=$?
