@@ -2540,7 +2540,7 @@ do
 												else
 													if [ $gui_mode = 1 ]
 													then
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
 													else
 														exit 1
 													fi
@@ -2549,7 +2549,7 @@ do
 										else
 											if [ $gui_mode = 1 ]
 											then
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
 											else
 												exit 1
 											fi
@@ -2557,7 +2557,7 @@ do
 									else
 										if [ $gui_mode = 1 ]
 										then
-											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail2" 0 0
+											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
 										else
 											exit 1
 										fi
