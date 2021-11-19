@@ -353,7 +353,7 @@ make_signature(){
 				mv ${message_blank}.asc ${message}
 			fi
 			#################################################################
-			
+
 			###PURGE FILES###################################################
 			rm ${message_blank} 2>/dev/null
 			rm ${message_blank}.asc 2>/dev/null
@@ -451,7 +451,7 @@ build_ledger(){
 		else
 			progress_bar_redir="2"
 		fi
-		
+
 		###SET DATES##################################
 		now=`date -u +%Y%m%d`
 		start_date="20210216"
@@ -510,7 +510,7 @@ build_ledger(){
 		focus=`date -u +%Y%m%d --date=@${date_stamp}`
 		now_stamp=`date +%s`
 		months=0
-		####################################################		
+		####################################################
 
 		if [ $focus -le $now ]
 		then
@@ -572,7 +572,7 @@ build_ledger(){
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
-			
+
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat >${user_path}/trxlist_${focus}.tmp
 			while read line
@@ -931,7 +931,7 @@ check_tsa(){
 				else
 					freetsa_rootcert_available=1
 				fi
-	
+
 				###IF BOTH TSA.CRT AND CACERT.PEM ARE THERE SET FLAG####################
 				if [ $freetsa_cert_available = 1 -a $freetsa_rootcert_available = 1 ]
 				then
@@ -960,7 +960,7 @@ check_tsa(){
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
 			touch ${user_path}/all_accounts.dat
-			
+
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
 			while read line
@@ -968,7 +968,7 @@ check_tsa(){
 				accountname_key_name=`echo $line`
 				accountname_key_content=`gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g'`
 				if [ $accountname_key_name = $accountname_key_content ]
-				then			
+				then
 					###CHECK TSA QUERYFILE#########################
 					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/freetsa.tsq -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
 					rt_query=$?
@@ -1079,7 +1079,7 @@ check_keys(){
                        	fi
                	done <${user_path}/all_accounts.dat
 		rm ${user_path}/keylist_gpg.tmp
-		
+
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 		###############################WITH FLOCK############################################
@@ -1241,7 +1241,7 @@ check_trx(){
 				echo $line >>${user_path}/blacklisted_trx.dat
 			fi
 		done <${user_path}/all_trx.dat
-		
+
 		if [ -s ${user_path}/all_trx.tmp ]
 		then
 			mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
@@ -1537,7 +1537,7 @@ get_dependencies(){
                                         	then
 							echo "${user_trx}" >>${user_path}/depend_trx.dat
 							sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
-						fi	
+						fi
 					done
                                 	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
                                 	mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
@@ -1589,81 +1589,201 @@ get_dependencies(){
 }
 request_uca(){
 		session_key=`date -u +%Y%m%d`
+
+		###STATUS BAR FOR GUI##############################
 		if [ $gui_mode = 1 ]
 		then
 			number_ucas=`wc -l <${script_path}/control/uca.conf`
 			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
 			current_percent=0
 			percent_display=0
-			echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
 		fi
+
+		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
+			###GET VALUES FROM UCA.CONF#######################
 			uca_ip=`echo $line|cut -d ':' -f1`
-			uca_rcv_port=`echo $line|cut -d ':' -f3`
+			uca_rcv_port=`echo $line|cut -d ':' -f2`
 			uca_info=`echo $line|cut -d ':' -f4`
+
+			###STATUS BAR FOR GUI##############################
+			if [ $gui_mode = 1 ]
+			then
+				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+			fi
+
+			###GET RANDOM P AND RELATED G#####################
+			numbers_total=`wc -l <${script_path}/control/dh.db`
+			number_urandom=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 6`
+			number_random=`expr ${number_urandom} % ${numbers_total}`
+			number_random=$(( $number_random + 1 ))
+			p_number=`sed -n "${number_random}p" ${script_path}/dh.db|cut -d ':' -f1`
+			g_number=`sed -n "${number_random}p" ${script_path}/dh.db|cut -d ':' -f2`
+
+			###CALCULATE VALUE FOR A##########################
+			usera_random_integer_unformatted=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
+			usera_random_integer_formatted=`echo "${usera_random_integer_unformatted} / 1"|bc`
+			usera_send_tmp=`echo "${g_number} ^ ${usera_random_integer_formatted}"|bc`
+			usera_send=`echo "${usera_send_tmp} % ${p_number}"|bc`
+			usera_string="${p_number}:${g_number}:${usera_send}"
+			##################################################
+
+			###SET VALUES#####################################
 			now_stamp=`date +%s`
 			sync_file="${user_path}/uca_${now_stamp}.sync"
-			netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
+			out_file="${user_path}/uca_${now_stamp}.out"
+			save_file="${user_path}/uca_save.dat"
+
+			###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
+			printf "${usera_string}\n"|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				check_archive ${sync_file} 0
+				###GET SIZE OF HEADER AND BODY######################
+				total_bytes_received=`wc -c <${out_file}`
+				total_bytes_header=`head -1 ${out_file}|wc -c`
+				total_bytes_count=$(( $total_bytes_received - $total_bytes_header ))
+
+				###CALCULATE SHARED-SECRET##########################
+				userb_sent=`head -1 ${out_file}|cut -d ':' -f3`
+				usera_ssecret_tmp=`echo "${userb_sent} ^ ${usera_random_integer_formatted}"|bc`
+				usera_ssecret=`echo "${usera_ssecret_tmp} % ${p_number}"|bc`
+				usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
+
+				###CUT OUT BODY AND MOVE FILE#######################
+				dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1
+				mv ${out_file}.tmp ${out_file}
+
+				###DECRYPT SENT FILE################################
+				gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${usera_hssecret} --decrypt ${out_file} 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					cd ${user_path}/temp
-					tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+					if [ ! -s ${save_file} ]
+					then
+						echo "${uca_ip}:${usera_ssecret}:" >${save_file}
+					fi
+					###WRITE SHARED SECRET TO DB########################
+					ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
+					if [ $ssecret_there = 0 ]
+					then
+						echo "${uca_ip}:${usera_ssecret}:" >>${save_file}
+					else
+						same_key=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
+						if [ ! $same_key = $usera_ssecret ]
+						then
+							sed -i "s/${uca_ip}:${same_key}:/${uca_ip}:${usera_ssecret}/g" ${save_file}
+						fi
+					fi
+					###CHECK SENT FILE##################################
+					check_archive ${sync_file} 0
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						process_new_files 0
-						set_permissions
+						###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
+						cd ${user_path}/temp
+
+						###EXTRACT FILE#####################################
+						tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+						rt_query=$?
+						if [ $rt_query = 0 ]
+						then
+							process_new_files 0
+							set_permissions
+						fi
 					fi
 				fi
 			fi
+
+			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
 				current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
 				percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
 				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
 			fi
+
+			###PURGE TEMP FILES################################
+			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
 		done <${script_path}/control/uca.conf
 }
 send_uca(){
 		session_key=`date -u +%Y%m%d`
 		now_stamp=`date +%s`
+
+		###SET VARIABLES#############################
 		sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
+		out_file="${user_path}/${handover_account}_${now_stamp}.out"
+		save_file="${user_path}/uca_save.dat"
+
+		###STATUS BAR FOR GUI########################
 		if [ $gui_mode = 1 ]
 		then
 			number_ucas=`wc -l <${script_path}/control/uca.conf`
 			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
 			current_percent=0
 			percent_display=0
-			echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
 		fi
-		cd ${script_path}/
-		tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
-		rt_query=$?
-		if [ $rt_query = 0 ]
-		then	
-			while read line
-			do
-				uca_ip=`echo $line|cut -d ':' -f1`
-				uca_snd_port=`echo $line|cut -d ':' -f2`
-				uca_info=`echo $line|cut -d ':' -f4`
-				now_stamp=`date +%s`
-				cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
-				if [ $gui_mode = 1 ]
-				then
-					current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
-					percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
-					echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
-				fi
-			done <${script_path}/control/uca.conf
+
+		###ONLY CONTINUE IF SAVEFILE IS THERE########
+		if [ -s ${save_file} ]
+		then
+			###STEP INTO HOMEDIR AND CREATE TARBALL######
+			cd ${script_path}/
+			tar -czf ${out_file} keys/ proofs/ trx/ --dereference --hard-dereference
+			rt_query=$?
+			if [ $rt_query = 0 ]
+			then
+				###READ UCA.CONF LINE BY LINE################
+				while read line
+				do
+					###GET VALUES FROM UCA.CONF##################
+					uca_ip=`echo $line|cut -d ':' -f1`
+					uca_snd_port=`echo $line|cut -d ':' -f3`
+					uca_info=`echo $line|cut -d ':' -f4`
+
+					###STATUS BAR FOR GUI########################
+					if [ $gui_mode = 1 ]
+					then
+						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+					fi
+
+					###GET STAMP#################################
+					now_stamp=`date +%s`
+
+					###WRITE SHARED SECRET TO DB########################
+					ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
+					if [ ! $ssecret_there = 0 ]
+					then
+						###GET KEY FROM SAVE-TABLE#########################
+						usera_ssecret=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
+						usera_ssecret=$(( $usera_ssecret + $usera_ssecret ))
+						usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
+
+						###ENCRYPT SYNCFILE################################
+						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
+						rt_query=$?
+						if [ $rt_query = 0 ]
+						then
+							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
+							cat ${sync_file}|netcat -q0 ${uca_ip} ${uca_snd_port}
+						fi
+					fi
+
+					###STATUS BAR FOR GUI##############################
+					if [ $gui_mode = 1 ]
+					then
+						current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
+						percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
+						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+					fi
+				done <${script_path}/control/uca.conf
+			fi
 		fi
 		rm ${sync_file} 2>/dev/null
+		rm ${save_file} 2>/dev/null
 }
 ##################
 #Main Menu Screen#
@@ -1685,6 +1805,7 @@ dialogrc_set="${theme_file}"
 now=`date -u +%Y%m%d`
 no_ledger=0
 user_logged_in=0
+uca_trigger=0
 action_done=1
 make_ledger=1
 
@@ -1757,10 +1878,7 @@ then
 									"read_sync")		main_menu=$dialog_main_logon
 												user_menu=$dialog_sync
 												;;
-									"send_uca")		main_menu=$dialog_main_logon
-												user_menu=$dialog_uca
-												;;
-									"request_uca")		main_menu=$dialog_main_logon
+									"sync_uca")		main_menu=$dialog_main_logon
 												user_menu=$dialog_uca
 												;;
 									"show_stats")		main_menu=$dialog_main_logon
@@ -2149,8 +2267,8 @@ do
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_backup_fail" 0 0
 											fi
 										else
-											rm ${script_path}/backups_list.tmp 2>/dev/null	
-										fi	
+											rm ${script_path}/backups_list.tmp 2>/dev/null
+										fi
 									else
 										if [ "${cmd_path}" = "" ]
 										then
@@ -2189,7 +2307,7 @@ do
 
 	else
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_request_start = 1 ]
+		if [ $auto_uca_start = 1 ]
 		then
 			request_uca
 		fi
@@ -2235,9 +2353,15 @@ do
 		fi
 
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_send_start = 1 ]
+		if [ $auto_uca_start = 1 ]
 		then
 			send_uca
+		fi
+
+		###SET UCA TRIGGER BACK TO 0###############
+		if [ $uca_trigger = 1 ]
+		then
+			auto_uca_start=0
 		fi
 
 		if [ $gui_mode = 1 ]
@@ -2381,7 +2505,7 @@ do
 								order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "X"`
 								rt_query=$?
 							else
-								order_purpose=$cmd_purpose			
+								order_purpose=$cmd_purpose
 								rt_query=0
 							fi
 							if [ $rt_query = 0 ]
@@ -2444,7 +2568,7 @@ do
 															echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 														fi
 													done <${user_path}/depend_accounts.dat
-	
+
 													###GET TRX###################################################################
 													while read line
 													do
@@ -2466,7 +2590,7 @@ do
 															echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 														fi
 													done <${user_path}/depend_accounts.dat
-	
+
 													###GET TRX###################################################################
 													while read line
 													do
@@ -2501,7 +2625,7 @@ do
 														echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
 														get_dependencies
 														#############################################################################
-	
+
 														###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 														#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 														#############################################################################
@@ -2544,7 +2668,7 @@ do
 													else
 														exit 1
 													fi
-												fi	
+												fi
 											fi
 										else
 											if [ $gui_mode = 1 ]
@@ -2903,184 +3027,36 @@ do
 				"$dialog_uca")	session_key=`date -u +%Y%m%d`
 						if [ $gui_mode = 1 ]
 						then
-							dialog --yes-label "$dialog_uca_send" --no-label "$dialog_uca_request" --title "$dialog_uca_full" --backtitle "$core_system_name" --yesno "$dialog_uca_overview" 0 0
-							rt_query=$?
-							if [ $rt_query = 0 ]
+							if [ $auto_uca_start = 0 ]
 							then
-								now_stamp=`date +%s`
-								sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
-								cd ${script_path}/
-								tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
-								rt_query=$?
-								if [ $rt_query = 0 ]
-								then
-									while read line
-									do
-										uca_ip=`echo $line|cut -d ':' -f1`
-										uca_snd_port=`echo $line|cut -d ':' -f2`
-										uca_info=`echo $line|cut -d ':' -f4`
-										cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
-										rt_query=$?
-										if [ $rt_query = 0 ]
-										then
-											dialog_uca_success=`echo $dialog_uca_success|sed "s#<uca_info>#${uca_info}#g"`
-											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_uca_success" 0 0
-										else
-											dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
-											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-										fi
-									done <${script_path}/control/uca.conf
-									rm ${sync_file} 2>/dev/null
-								else
-									dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
-									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-								fi
-								rm ${sync_file} 2>/dev/null
-							else
-								if [ ! $rt_query = 255 ]
-								then
-									trx_new_trigger=0
-									while read line
-									do
-										uca_ip=`echo $line|cut -d ':' -f1`
-										uca_rcv_port=`echo $line|cut -d ':' -f3`
-										uca_info=`echo $line|cut -d ':' -f4`
-										now_stamp=`date +%s`
-										sync_file="${user_path}/uca_${now_stamp}.sync"
-										netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
-										rt_query=$?
-										if [ $rt_query = 0 ]
-										then
-											check_archive ${sync_file} 0
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then
-												cd ${user_path}/temp
-                                        	               					tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													process_new_files 0
-													set_permissions
-													check_tsa
-													check_keys
-													check_trx
-													trx_new_ledger=$?
-													if [ $trx_new_ledger = 1 ]
-													then
-														trx_new_trigger=1
-													fi
-												fi
-											else
-												dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-											fi
-										else
-											dialog_uca_fail=`echo $dialog_uca_fail|sed "s#<uca_info>#${uca_info}#g"`
-											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_uca_fail" 0 0
-										fi
-										rm ${sync_file} 2>/dev/null
-									done <${script_path}/control/uca.conf
-									get_dependencies
-									dep_new_ledger=$?
-									if [ $trx_new_trigger = 0 -a $dep_new_ledger = 0 ]
-									then
-										changes=0
-									else
-										changes=1
-									fi
-									now_stamp=`date +%s`
-									build_ledger $changes
-									if [ $changes = 1 ]
-									then
-										make_signature "none" $now_stamp 1
-									fi
-								fi
+								uca_trigger=1
+								auto_uca_start=1
 							fi
+							action_done=1
 						else
-							case $cmd_action in
-								"send_uca")	now_stamp=`date +%s`
-										sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
-										cd ${script_path}/
-										tar -czf ${sync_file} keys/ proofs/ trx/ --dereference --hard-dereference
-										rt_query=$?
-										if [ $rt_query = 0 ]
-										then	
-											while read line
-											do
-												uca_ip=`echo $line|cut -d ':' -f1`
-												uca_snd_port=`echo $line|cut -d ':' -f2`
-												uca_info=`echo $line|cut -d ':' -f4`
-												cat ${sync_file}|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output - --passphrase ${session_key} -|netcat -q0 ${uca_ip} ${uca_snd_port}
-												rt_query=$?
-												if [ ! $rt_query = 0 ]
-												then
-													echo "ERROR: UCA LINK SND ${uca_ip}:${uca_snd_port} FAILED"
-												fi
-											done <${script_path}/control/uca.conf
-										fi
-										rm ${sync_file} 2>/dev/null
-										exit 0
-										;;
-								"request_uca")	trx_new_trigger=0
-										while read line
-										do
-											uca_ip=`echo $line|cut -d ':' -f1`
-											uca_rcv_port=`echo $line|cut -d ':' -f3`
-											uca_info=`echo $line|cut -d ':' -f4`
-											now_stamp=`date +%s`
-											sync_file="${user_path}/uca_${now_stamp}.sync"
-											netcat -q0 -w10 ${uca_ip} ${uca_rcv_port}|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${session_key} --decrypt - 2>/dev/null
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then
-												check_archive ${sync_file} 0
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													cd ${user_path}/temp
-                                        	               				 		tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
-													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														process_new_files 0
-														set_permissions
-														check_tsa
-														check_keys
-														check_trx
-														trx_new_ledger=$?
-														if [ $trx_new_ledger = 1 ]
-														then
-															trx_new_trigger=1
-														fi
-													else
-														echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED" 
-													fi
-												else
-													echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
-												fi
-											else
-												echo "ERROR: UCA LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
-											fi
-											rm ${sync_file} 2>/dev/null
-										done <${script_path}/control/uca.conf
-										get_dependencies
-										dep_new_ledger=$?
-										if [ $trx_new_trigger = 0 -a $dep_new_ledger = 0 ]
-										then
-											changes=0
-										else
-											changes=1
-										fi
-										now_stamp=`date +%s`
-										build_ledger $changes
-										if [ $changes = 1 ]
-										then
-											make_signature "none" $now_stamp 1
-										fi
-										exit 0
-										;;
-							esac
+							if [ $cmd_action = "sync_uca" ]
+							then
+								request_uca
+								check_tsa
+								check_keys
+								check_trx
+								trx_new_ledger=$?
+								get_dependencies
+								dep_new_ledger=$?
+								if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+								then
+									changes=0
+								else
+									changes=1
+								fi
+								build_ledger $changes
+								if [ $changes = 1 ]
+								then
+									make_signature "none" $now_stamp 1
+								fi
+								send_uca
+								exit 0
+							fi
 						fi
 						;;
 				"$dialog_history")	cd ${script_path}/trx
