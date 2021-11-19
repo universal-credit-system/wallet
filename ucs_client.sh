@@ -1694,6 +1694,11 @@ request_uca(){
 						fi
 					fi
 				fi
+			else
+				if [ $gui_mode = 0 ]
+				then
+					echo "ERROR: UCA-LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
+				fi
 			fi
 
 			###STATUS BAR FOR GUI##############################
@@ -1769,6 +1774,14 @@ send_uca(){
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
 							cat ${sync_file}|netcat -q0 ${uca_ip} ${uca_snd_port}
+							rt_query=$?
+							if [ ! $rt_query = 0 ]
+							then
+								if [ $gui_mode = 0 ]
+								then
+									echo "ERROR: UCA-LINK SND ${uca_ip}:${uca_snd_port} FAILED"
+								fi
+							fi
 						fi
 					fi
 
