@@ -19,8 +19,7 @@ OPTIONS (for CMD-MODE ONLY!!!):
 				read_trx	read a transaction
 				create_sync	create a syncronisation
 				read_sync	read a syncronisation
-				send_uca	send data to UCAs
-				request_uca	request data from UCAs
+				sync_uca	sync with UCAs
 				create_backup	create a backup
 				restore_backup	restore a backup
 				show_stats	display the statistics
