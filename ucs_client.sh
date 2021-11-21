@@ -719,7 +719,6 @@ check_archive(){
 			###TOUCH FILES TO AVOID NON EXISTENT FILES####################
 			touch ${user_path}/tar_check.tmp
 			touch ${user_path}/files_to_fetch.tmp
-			touch ${user_path}/files_to_keep.tmp
 
 			###CHECK TARFILE CONTENT######################################
 			tar -tvf $path_to_tarfile|grep -v '//*$' >${user_path}/tar_check_temp.tmp
@@ -849,32 +848,6 @@ check_archive(){
 					rt_query=1
 				fi
 				##############################################################
-			fi
-			##############################################################
-
-			###CREATE LIST OF FILES THAT ARE ALREADY THERE FOR RESTORE####
-			if [ $rt_query = 0 ]
-			then
-				###NORMAL EXTRACT WHERE ONLY CERTAIN FILES WILL BE KEPT######
-				while read line
-				do
-					if [ ! -d ${script_path}/${line} ]
-					then
-						if [ -s ${script_path}/${line} ]
-						then
-							echo $line >>${user_path}/files_to_keep.tmp
-						fi
-					fi
-				done<${user_path}/tar_check.tmp
-
-				any_files_there=`wc -l <${user_path}/files_to_keep.tmp`
-				if [ $any_files_there -gt 0 ]
-				then
-					###PACK BACKUP FILE###########################################
-					cd ${script_path}/
-					tar -czf ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp -T ${user_path}/files_to_keep.tmp --dereference --hard-dereference
-					rt_query=$?
-				fi
 			fi
 			##############################################################
 
@@ -1455,12 +1428,8 @@ set_permissions(){
 				fi
 			done <${user_path}/files_to_fetch.tmp
 
-			###REMOVE TEMP BACKUP FILE################################
-			rm ${script_path}/userdata/${handover_account}/${handover_account}_temp.bcp 2>/dev/null
-
 			###REMOVE FILE LIST#######################################
 			rm ${user_path}/files_to_fetch.tmp 2>/dev/null
-			rm ${user_path}/files_to_keep.tmp 2>/dev/null
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
@@ -2403,7 +2372,7 @@ do
                               		        do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 ""`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "ca2c6f1d030c0ea7e56893a89c32d6c86478b56ff40cfb327608ef47a58bc401.1613477644"`
 								rt_query=$?
 							else
 								rt_query=0
@@ -2613,6 +2582,7 @@ do
 												###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 												trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
+												echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
 												###SCORE#####################################################################
 												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
 												sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
@@ -2622,7 +2592,7 @@ do
 												if [ $rt_query = 0 ]
 												then
 													cd ${script_path}/
-													tar -czf ${handover_account}_${trx_now}.trx -T ${user_path}/files_list.tmp --dereference --hard-dereference
+													tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 													rt_query=$?
 													rm ${user_path}/files_list.tmp 2>/dev/null
 													if [ $rt_query = 0 ]
@@ -2639,33 +2609,52 @@ do
 														get_dependencies
 														#############################################################################
 
-														###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
-														#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
-														#############################################################################
-														if [ ! $trx_path_output = $script_path ]
+														###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
+														gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
+														rt_query=$?
+														if [ $rt_query = 0 ]
 														then
-															mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
-														fi
-														if [ $gui_mode = 1 ]
-														then
-															dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
-														else
-															cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
-															echo "BALANCE_${trx_now}:${cmd_output}"
-															cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
-															echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
-															if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
+															###REMOVE GPG TMP FILE#######################################################
+															rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+
+															###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
+															#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
+															#############################################################################
+															if [ ! $trx_path_output = $script_path ]
 															then
-																mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
-																echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
-															else
-																echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
+																mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
 															fi
-															exit 0
+															if [ $gui_mode = 1 ]
+															then
+																dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
+															else
+																cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
+																echo "BALANCE_${trx_now}:${cmd_output}"
+																cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
+																echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
+																if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
+																then
+																	mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
+																	echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
+																else
+																	echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
+																fi
+																exit 0
+															fi
+														else
+															rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+															rm ${trx_path_output}/${handover_account}_${trx_now}.trx 2>/dev/null
+															rm ${last_trx} 2>/dev/null
+															if [ $gui_mode = 1 ]
+															then
+																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+															else
+																exit 1
+															fi
 														fi
 													else
-														rm ${script_path}/${handover_account}_${trx_now}.trx 2>/dev/null
+														rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
 														rm ${last_trx} 2>/dev/null
 														if [ $gui_mode = 1 ]
 														then
@@ -2724,96 +2713,115 @@ do
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-												rt_query=0
+												all_extract=0
 											else
-												rt_query=$extract_all
+												all_extract=$extract_all
 											fi
+
+											###DECRYPT TRANSACTION FILE################################
+											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${handover_account} --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
+											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												check_archive $file_path 0
-												rt_query=$?
-												if [ $rt_query = 0 ]
+												###CHANGE TO ORIGINAL FILENAME#############################
+												mv ${file_path}.tmp ${file_path}
+
+												if [ $all_extract = 0 ]
 												then
-													cd ${user_path}/temp
-													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+													check_archive $file_path 0
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														process_new_files 0
-													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-													else
-														exit 1
-													fi
-												fi
-											else
-												check_archive $file_path 1
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													cd ${user_path}/temp
-													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														process_new_files 1
-													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-													else
-														exit 1
-													fi
-												fi
-											fi
-											if [ $rt_query = 0 ]
-											then
-												set_permissions
-												if [ $gui_mode = 1 ]
-												then
-													file_found=1
-													action_done=1
-													make_ledger=1
-												else
-													check_tsa
-													check_keys
-													check_trx
-													trx_new_ledger=$?
-													get_dependencies
-													dep_new_ledger=$?
-													if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
-													then
-														changes=0
-													else
-														changes=1
-													fi
-													now_stamp=`date +%s`
-													build_ledger $changes
-													if [ $changes = 1 ]
-													then
-														make_signature "none" $now_stamp 1
+														cd ${user_path}/temp
+														tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
 														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														if [ $rt_query = 0 ]
 														then
-															exit 1
-														else
-															exit 0
+															process_new_files 0
 														fi
 													else
+														if [ $gui_mode = 1 ]
+														then
+															dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+														else
+															exit 1
+														fi
+													fi
+												else
+													check_archive $file_path 1
+													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														cd ${user_path}/temp
+														tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+														rt_query=$?
+														if [ $rt_query = 0 ]
+														then
+															process_new_files 1
+														fi
+													else
+														if [ $gui_mode = 1 ]
+														then
+															dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+														else
+															exit 1
+														fi
+													fi
+												fi
+												if [ $rt_query = 0 ]
+												then
+													set_permissions
+													if [ $gui_mode = 1 ]
+													then
+														file_found=1
+														action_done=1
+														make_ledger=1
+													else
+														check_tsa
+														check_keys
+														check_trx
+														trx_new_ledger=$?
+														get_dependencies
+														dep_new_ledger=$?
+														if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+														then
+															changes=0
+														else
+															changes=1
+														fi
+														now_stamp=`date +%s`
+														build_ledger $changes
+														if [ $changes = 1 ]
+														then
+															make_signature "none" $now_stamp 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
+														else
+															exit 1
+														fi
+													fi
+												else
+													if [ $gui_mode = 0 ]
+													then
 														exit 1
 													fi
 												fi
 											else
-												if [ $gui_mode = 0 ]
+												if [ $gui_mode = 1 ]
 												then
+													dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+												else
 													exit 1
 												fi
+												rm ${file_path}.tmp 2>/dev/null
 											fi
 										else
 											if [ $gui_mode = 1 ]
@@ -3090,7 +3098,7 @@ do
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
-									trx_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+									trx_confirmations=`grep -l "trx/${line_extracted}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
