@@ -1605,7 +1605,7 @@ request_uca(){
 			save_file="${user_path}/uca_save.dat"
 
 			###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-			printf "${usera_string}\n"|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file}
+			printf "${usera_string}\n"|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -1742,7 +1742,7 @@ send_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-							cat ${sync_file}|netcat -q0 ${uca_ip} ${uca_snd_port}
+							cat ${sync_file}|netcat -q0 ${uca_ip} ${uca_snd_port} 2>/dev/null
 							rt_query=$?
 							if [ ! $rt_query = 0 ]
 							then
