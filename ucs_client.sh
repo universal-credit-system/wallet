@@ -1621,7 +1621,7 @@ request_uca(){
 				usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
 
 				###CUT OUT BODY AND MOVE FILE#######################
-				dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1
+				dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
 				mv ${out_file}.tmp ${out_file}
 
 				###DECRYPT SENT FILE################################
@@ -1742,7 +1742,7 @@ send_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-							cat ${sync_file}|netcat -q0 ${uca_ip} ${uca_snd_port} 2>/dev/null
+							cat ${sync_file}|netcat -q0 -w5 ${uca_ip} ${uca_snd_port} 2>/dev/null
 							rt_query=$?
 							if [ ! $rt_query = 0 ]
 							then
