@@ -1587,8 +1587,8 @@ request_uca(){
 			number_urandom=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 6`
 			number_random=`expr ${number_urandom} % ${numbers_total}`
 			number_random=$(( $number_random + 1 ))
-			p_number=`sed -n "${number_random}p" ${script_path}/dh.db|cut -d ':' -f1`
-			g_number=`sed -n "${number_random}p" ${script_path}/dh.db|cut -d ':' -f2`
+			p_number=`sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f1`
+			g_number=`sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f2`
 
 			###CALCULATE VALUE FOR A##########################
 			usera_random_integer_unformatted=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
