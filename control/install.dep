@@ -7,6 +7,7 @@ cp
 curl
 cut
 date
+dd
 dialog
 dirname
 echo
