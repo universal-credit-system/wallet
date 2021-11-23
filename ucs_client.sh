@@ -989,30 +989,33 @@ check_tsa(){
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 			###############################WITH FLOCK############################################
-			cd ${user_path}/
-			flock ${script_path}/keys/ -c '
-			user_path=`pwd`
-			base_dir=`dirname $user_path`
-			script_path=`dirname $base_dir`
-			handover_account=`basename $user_path`
-			while read line
-			do
-				if [ ! $line = $handover_account ]
-				then
-					rm ${script_path}/keys/${line} 2>/dev/null
-					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
-					rm ${script_path}/trx/${line}.* 2>/dev/null
-				fi
-			done <${user_path}/blacklisted_accounts.dat
-			'
-			cd ${script_path}/
-			#####################################################################################
+			if [ -s ${user_path}/blacklisted_accounts.dat ]
+			then
+				cd ${user_path}/
+				flock ${script_path}/keys/ -c '
+				user_path=`pwd`
+				base_dir=`dirname $user_path`
+				script_path=`dirname $base_dir`
+				handover_account=`basename $user_path`
+				while read line
+				do
+					if [ ! $line = $handover_account ]
+					then
+						rm ${script_path}/keys/${line} 2>/dev/null
+						rm -R ${script_path}/proofs/${line}/ 2>/dev/null
+						rm ${script_path}/trx/${line}.* 2>/dev/null
+					fi
+				done <${user_path}/blacklisted_accounts.dat
+				'
+				cd ${script_path}
+				#####################################################################################
 
-			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-			cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
-			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
-			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
-			rm ${user_path}/all_accounts.tmp 2>/dev/null
+				###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
+				cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
+				cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
+				cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
+				rm ${user_path}/all_accounts.tmp 2>/dev/null
+			fi
 }
 check_keys(){
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
@@ -1056,29 +1059,32 @@ check_keys(){
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 		###############################WITH FLOCK############################################
-		cd ${user_path}/
-		flock ${script_path}/keys/ -c '
-		user_path=`pwd`
-		base_dir=`dirname $user_path`
-		script_path=`dirname $base_dir`
-		handover_account=`basename $user_path`
-		while read line
-		do
-			if [ ! $line = $handover_account ]
-			then
-				rm ${script_path}/keys/${line} 2>/dev/null
-				rm -R ${script_path}/proofs/${line}/ 2>/dev/null
-				rm ${script_path}/trx/${line}.* 2>/dev/null
-			fi
-		done <${user_path}/blacklisted_accounts.dat
-		'
-		###################################################################
+		if [ -s ${user_path}/blacklisted_accounts.dat ]
+		then
+			cd ${user_path}/
+			flock ${script_path}/keys/ -c '
+			user_path=`pwd`
+			base_dir=`dirname $user_path`
+			script_path=`dirname $base_dir`
+			handover_account=`basename $user_path`
+			while read line
+			do
+				if [ ! $line = $handover_account ]
+				then
+					rm ${script_path}/keys/${line} 2>/dev/null
+					rm -R ${script_path}/proofs/${line}/ 2>/dev/null
+					rm ${script_path}/trx/${line}.* 2>/dev/null
+				fi
+			done <${user_path}/blacklisted_accounts.dat
+			'
+			###################################################################
 
-		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-               	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
-		cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
-		cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
-		rm ${user_path}/all_accounts.tmp 2>/dev/null
+			###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
+        	       	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
+			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
+			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
+			rm ${user_path}/all_accounts.tmp 2>/dev/null
+		fi
 }
 check_trx(){
 		###REMOVE OLD FILES AND RECREATE THEM##############################
