@@ -27,6 +27,7 @@ The following programs are used:
 * **curl**    used to send query to TSA and request response
 * **cut**     used to extract data from streams
 * **date**    used for date operations
+* **dd**      used to convert files
 * **dialog**  used as GUI
 * **dirname** used to strip non-directory suffix from file name
 * **echo**    used to write output
