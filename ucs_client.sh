@@ -1,8 +1,8 @@
 #!/bin/sh
 login_account(){
-		account_name_chosen=$1
-		account_key_rn=$2
-		account_password=$3
+		login_name=$1
+		login_pin=$2
+		login_password=$3
 		account_found=0
 		handover_account=""
 
@@ -21,7 +21,7 @@ login_account(){
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
-					keylist_hash=`echo "${account_name_chosen}_${keylist_stamp}_${account_key_rn}"|sha256sum|cut -d ' ' -f1`
+					keylist_hash=`echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1`
 				fi
 				#############################################################
 
@@ -54,8 +54,8 @@ login_account(){
 			user_path="${script_path}/userdata/${handover_account}"
 
 			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo $account_name_chosen >${user_path}/account.acc
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${account_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
+			echo $login_name >${user_path}/account.acc
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -63,17 +63,17 @@ login_account(){
 				rm ${user_path}/account.acc
 
 				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${account_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
 					extracted_name=`cat ${user_path}/account.acc`
-					if [ "${extracted_name}" = "${account_name_chosen}" ]
+					if [ "${extracted_name}" = "${login_name}" ]
 					then
 						if [ $gui_mode = 1 ]
 						then
 							###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
-							dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<account_name_chosen>/${account_name_chosen}/g"`
+							dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g"`
 							dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_login_welcome_display" 0 0
 							sleep 1
 						fi
@@ -91,7 +91,7 @@ login_account(){
 				if [ $gui_mode = 1 ]
 				then
 					###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND################
-					dialog_login_nokey_display="${dialog_login_nokey} (-> ${account_name_chosen})!"
+					dialog_login_nokey_display="${dialog_login_nokey} (-> ${login_name})!"
 					dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey_display" 0 0
 				else
 					exit 1
@@ -101,7 +101,7 @@ login_account(){
 			if [ $gui_mode = 1 ]
 			then
 				###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
-				dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${account_name_chosen}/g"`
+				dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${login_name}/g"`
 				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey2_display" 0 0
 				clear
 			else
@@ -115,9 +115,9 @@ login_account(){
 		make_ledger=1
 }
 create_keys(){
-		name_chosen=$1
-		name_passphrase=$2
-		name_cleared=$name_chosen
+		create_name=$1
+		create_pin=$2
+		create_password=$3
 
 		###SET REMOVE TRIGGER TO 0###################################
 		key_remove=0
@@ -125,11 +125,8 @@ create_keys(){
 		###SET FILESTAMP TO NOW######################################
 		file_stamp=`date +%s`
 
-		###CREATE RANDOM 5 DIGIT NUMBER AS PIN#######################
-                key_rn=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5`
-
 		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
-		name_hashed=`echo "${name_cleared}_${file_stamp}_${key_rn}"|sha256sum|cut -d ' ' -f1`
+		create_name_hashed=`echo "${create_name}_${file_stamp}_${create_pin}"|sha256sum|cut -d ' ' -f1`
 
 		if [ $gui_mode = 1 ]
 		then
@@ -138,7 +135,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${name_passphrase} --pinentry-mode loopback --quick-gen-key ${name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${create_password} --pinentry-mode loopback --quick-gen-key ${create_name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -149,15 +146,15 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
-			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}
-			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp
-			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/keys
-			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/proofs
-			mkdir ${script_path}/userdata/${name_hashed}.${file_stamp}/temp/trx
-			user_path="${script_path}/userdata/${name_hashed}.${file_stamp}"
+			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}
+			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp
+			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/keys
+			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/proofs
+			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/trx
+			user_path="${script_path}/userdata/${create_name_hashed}.${file_stamp}"
 
 			###EXPORT PUBLIC KEY#########################################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc --passphrase ${name_passphrase} --pinentry-mode loopback --export ${name_hashed}.${file_stamp}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc --passphrase ${create_password} --pinentry-mode loopback --export ${create_name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -171,7 +168,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${name_passphrase} --export-secret-keys ${name_hashed}.${file_stamp}
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${create_password} --export-secret-keys ${create_name_hashed}.${file_stamp}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -179,7 +176,7 @@ create_keys(){
 					cd ${user_path}
 
 					###CREATE TSA QUIERY FILE####################################
-					openssl ts -query -data ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/freetsa.tsq 1>/dev/null 2>/dev/null
+					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/freetsa.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -213,30 +210,30 @@ create_keys(){
 											clear
 										fi
 										###CREATE PROOFS DIRECTORY AND COPY TSA FILES###################
-										mkdir ${script_path}/proofs/${name_hashed}.${file_stamp}
-										mv ${user_path}/freetsa.tsq ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsq
-										mv ${user_path}/freetsa.tsr ${script_path}/proofs/${name_hashed}.${file_stamp}/freetsa.tsr
+										mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
+										mv ${user_path}/freetsa.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/freetsa.tsq
+										mv ${user_path}/freetsa.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/freetsa.tsr
 
 										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
-										cp ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_pub.asc ${script_path}/keys/${name_hashed}.${file_stamp}
+										cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc ${script_path}/keys/${create_name_hashed}.${file_stamp}
 
 										###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-										cp ${user_path}/${name_hashed}_${key_rn}_${file_stamp}_priv.asc ${script_path}/control/keys/${name_hashed}.${file_stamp}
+										cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc ${script_path}/control/keys/${create_name_hashed}.${file_stamp}
 
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<name_chosen>/${name_chosen}/g" -e "s/<name_hashed>/${name_hashed}.${file_stamp}/g" -e "s/<key_rn>/${key_rn}/g" -e "s/<file_stamp>/${file_stamp}/g"`
+											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
 				                                                	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_final_display" 0 0
 											clear
 										else
-											echo "USER:${name_cleared}"
-											echo "PIN:${key_rn}"
-											echo "PASSWORD:>${name_passphrase}<"
-											echo "ADRESS:${name_hashed}.${file_stamp}"
-											echo "KEY:${name_hashed}.${file_stamp}"
-											echo "KEY_PUB:/keys/${name_hashed}.${file_stamp}"
-											echo "KEY_PRV:/control/keys/${name_hashed}.${file_stamp}"
+											echo "USER:${create_name}"
+											echo "PIN:${create_pin}"
+											echo "PASSWORD:>${create_password}<"
+											echo "ADRESS:${create_name_hashed}.${file_stamp}"
+											echo "KEY:${create_name_hashed}.${file_stamp}"
+											echo "KEY_PUB:/keys/${create_name_hashed}.${file_stamp}"
+											echo "KEY_PRV:/control/keys/${create_name_hashed}.${file_stamp}"
 											exit 0
 										fi
 									else
@@ -266,13 +263,13 @@ create_keys(){
 			if [ $key_remove = 1 ]
 			then
                                 ###REMOVE PROOFS DIRECTORY OF USER###########################
-				rm -r ${script_path}/proofs/${name_hashed}.${file_stamp} 2>/dev/null
+				rm -r ${script_path}/proofs/${create_name_hashed}.${file_stamp} 2>/dev/null
 
 				###REMOVE USERDATA DIRECTORY OF USER#########################
-				rm -r ${script_path}/userdata/${name_hashed}.${file_stamp} 2>/dev/null
+				rm -r ${script_path}/userdata/${create_name_hashed}.${file_stamp} 2>/dev/null
 
 				###REMOVE KEYS FROM KEYRING##################################
-				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${name_hashed}.${file_stamp}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+				key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${create_name_hashed}.${file_stamp}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -1941,168 +1938,241 @@ do
 		fi
 		if [ ! $rt_query = 0 ]
         	then
-                	exit
+			clear
+                	exit 0
         	else
-			if [ $gui_mode = 1 ]
-			then
-                		clear
-			else
-				if [ ! "${cmd_action}" = "create_user" -a ! "${cmd_action}" = "create_backup" -a ! "${cmd_action}" = "restore_backup" ]
-				then
-					main_menu=$dialog_main_logon
-				fi
-			fi
                 	case $main_menu in
                         	"$dialog_main_logon")   set -f
-							account_chosen="blank"
-							account_rn="blank"
-							password_chosen="blank"
-							account_entered_correct=0
-							account_entered_aborted=0
-							if [ $gui_mode = 0 ]
-							then
-								if [ ! "${cmd_sender}" = "" ]
-								then
-									account_entered_correct=1
-								fi
-							fi
-							while [ $account_entered_correct = 0 ]
+							account_name_entered="blank"
+							account_pin_entered="12345"
+							account_name_entered_correct=0
+							while [ $account_name_entered_correct = 0 ]
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 ""`
+									account_name_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 ""`
 									rt_query=$?
 								else
-									rt_query=0
-									account_chosen="${cmd_user}"
+									if [ ! "${cmd_user}" = "" ]
+									then 
+										rt_query=0
+										account_name_entered=$cmd_user
+									else
+										if [ "${cmd_sender}" = "" ]
+										then
+											exit 1
+										fi
+									fi
 								fi
 								if [ $rt_query = 0 ]
 								then
-									check_input "${account_chosen}" 0
+									check_input "${account_name_entered}" 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										if [ $gui_mode = 1 ]
-										then
-											account_rn=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
-                                                                                	rt_query=$?
-										else
-											rt_query=0
-											account_rn=$cmd_pin
-										fi
-                                                                                if [ $rt_query = 0 ]
-                                                                                then
-                                                                                        check_input "${account_rn}" 1
-                                                                                        rt_query=$?
-                                                                                        if [ $rt_query = 0 ]
-                                                                                        then
-                                                                                                account_entered_correct=1
-                                                                                        fi
-                                                                                else
-                                                                                        account_entered_correct=1
-                                                                                        account_entered_aborted=1
-                                                                                fi
+										account_pin_entered_correct=0
+										while [ $account_pin_entered_correct = 0 ]
+										do
+											if [ $gui_mode = 1 ]
+											then
+												account_pin_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
+                                                                        	        	rt_query=$?
+											else
+												if [ ! "${cmd_pin}" = "" ]
+												then 
+													rt_query=0
+													account_pin_entered=$cmd_pin
+												else
+													if [ "${cmd_sender}" = "" ]
+													then
+														exit 1
+													fi
+												fi
+											fi
+                                                                                	if [ $rt_query = 0 ]
+                                                                                	then
+												check_input "${account_pin_entered}" 1
+                                                                                        	rt_query=$?
+                                                                                        	if [ $rt_query = 0 ]
+                                                                                       		then
+                                                                                                	if [ $gui_mode = 1 ]
+													then
+														account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
+                                                                						rt_query=$?
+													else
+														if [ ! "${cmd_pw}" = "" ]
+														then 
+															rt_query=0
+															account_password_entered=$cmd_pw
+														else
+															exit 1
+														fi
+													fi
+                                                                					if [ $rt_query = 0 ]
+                                                               						then
+														login_account "${account_name_entered}" "${account_pin_entered}" "${account_password_entered}"
+													fi
+													account_pin_entered_correct=1
+													account_name_entered_correct=1
+                                                                                        	fi
+        	                                                                        else
+	                                                                                        account_pin_entered_correct=1
+												account_name_entered_correct=1
+                        	                                                        fi
+										done
 									fi
 								else
-									account_entered_correct=1
-									account_entered_aborted=1
+									account_name_entered_correct=1
 								fi
 							done
-							if [ $account_entered_aborted = 0 ]
-							then
-								if [ $gui_mode = 1 ]
-								then
-									password_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
-                                                                	rt_query=$?
-								else
-									rt_query=0
-									password_chosen=$cmd_pw
-								fi
-                                                                if [ $rt_query = 0 ]
-                                                                then
-									login_account "${account_chosen}" "${account_rn}" "${password_chosen}"
-								fi
-							fi
 							set +f
 							;;
                         	"$dialog_main_create")  set -f
-							account_entered_correct=0
-							account_chosen_inputbox=""
-							while [ $account_entered_correct = 0 ]
+							account_name_inputbox=""
+							account_name_entered_correct=0
+							while [ $account_name_entered_correct = 0 ]
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_chosen=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_chosen_inputbox}"`
+									account_name=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}"`
 									rt_query=$?
 								else
-									account_chosen=$cmd_user
+									if [ "${cmd_user}" = "" ]
+									then
+										account_name=`tr -dc A-Za-z0-9 </dev/urandom|head -c 20`
+									else
+										account_name=$cmd_user
+									fi
+									rt_query=0
 								fi
 								if [ $rt_query = 0 ]
 								then
-									check_input "${account_chosen}" 0
+									check_input "${account_name}" 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										password_found=0
-	     									while [ $password_found = 0 ]
-               									do
+										account_pin_inputbox=""
+										account_pin_entered_correct=0
+										while [ $account_pin_entered_correct = 0 ]
+										do
 											if [ $gui_mode = 1 ]
 											then
-                										password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0`
+                										account_pin_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox"`
 												rt_query=$?
 											else
-												password_first=$cmd_pw
+												if [ "${cmd_pin}" = "" ]
+												then
+													account_pin_first=`tr -dc 0-9 </dev/urandom|head -c 5`
+													account_pin_second=$account_pin_first
+												else
+													account_pin_first=$cmd_pin
+													account_pin_second=$cmd_pin
+												fi
 												rt_query=0
 											fi
 											if [ $rt_query = 0 ]
 											then
-               											check_input "${password_first}" 0
+												check_input "${account_pin_first}" 1
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
 													if [ $gui_mode = 1 ]
 													then
 														clear
-														password_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0`
+														account_pin_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox"`
 														rt_query=$?
 													else
-														password_second=$cmd_pw
 														rt_query=0
 													fi
 													if [ $rt_query = 0 ]
 													then
-                                       										if [ ! $password_first = $password_second ]
+                                       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
                         											then
 															clear
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pwmatch" 0 0
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pinmatch" 0 0
 															clear
 														else
-															account_entered_correct=1
-                                											password_found=1
-															create_keys $account_chosen $password_second
-															rt_query=$?
-															if [ $rt_query = 0 ]
-															then
-																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_success" 0 0
-															else
-																dialog --title "$dialog_type_titel_error" --backtitle "$core_system_name" --msgbox "$dialog_keys_fail" 0 0
-															fi
+															account_password_entered_correct=0
+	     														while [ $account_password_entered_correct = 0 ]
+               														do
+																if [ $gui_mode = 1 ]
+																then
+                															account_password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0`
+																	rt_query=$?
+																else
+																	if [ "${cmd_pw}" = "" ]
+																	then
+																		account_password_first=`tr -dc A-Za-z0-9 </dev/urandom|head -c 10`
+																		account_password_second=$account_password_first
+																	else
+																		account_password_first=$cmd_pw
+																		account_password_second=$cmd_pw
+																	fi
+																	rt_query=0
+																fi
+																if [ $rt_query = 0 ]
+																then
+               																check_input "${account_password_first}" 0
+																	rt_query=$?
+																	if [ $rt_query = 0 ]
+																	then
+																		if [ $gui_mode = 1 ]
+																		then
+																			clear
+																			account_password_second=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0`
+																			rt_query=$?
+																		else
+																			rt_query=0
+																		fi
+																		if [ $rt_query = 0 ]
+																		then
+                                       															if [ ! "${account_password_first}" = "${account_password_second}" ]
+                        																then
+																				clear
+																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pwmatch" 0 0
+																				clear
+																			else
+																				account_name_entered_correct=1
+																				account_pin_entered_correct=1
+                                																account_password_entered_correct=1
+																				create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
+																				rt_query=$?
+																				if [ $rt_query = 0 ]
+																				then
+																					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_success" 0 0
+																				else
+																					dialog --title "$dialog_type_titel_error" --backtitle "$core_system_name" --msgbox "$dialog_keys_fail" 0 0
+																				fi
+																			fi
+																		else
+																			account_password_entered_correct=1
+																		fi
+																	fi
+																else
+																	account_password_entered_correct=1
+																fi
+															done
 														fi
 													else
-														password_found=1
+														account_pin_entered_correct=1
 													fi
 												fi
 											else
-												password_found=1
+												if [ $rt_query = 3 ]
+												then
+													account_pin_inputbox=`tr -dc 0-9 </dev/urandom|head -c 5`
+												else
+													account_pin_entered_correct=1
+												fi
 											fi
 										done
 									fi
 								else
 									if [ $rt_query = 3 ]
 									then
-										account_chosen_inputbox=`tr -dc A-Za-z0-9 </dev/urandom|head -c 20`
+										account_name_inputbox=`tr -dc A-Za-z0-9 </dev/urandom|head -c 20`
 									else
-										account_entered_correct=1
+										account_name_entered_correct=1
 									fi
 								fi
 							done
@@ -2288,7 +2358,8 @@ do
 							fi
 							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
-                        	"$dialog_main_end")     exit 0
+                        	"$dialog_main_end")     clear
+							exit 0
 							;;
                 	esac
         	fi
@@ -2354,7 +2425,7 @@ do
 
 		if [ $gui_mode = 1 ]
 		then
-			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<account_name_chosen>/${account_name_chosen}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
+			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
         		rt_query=$?
 		else
