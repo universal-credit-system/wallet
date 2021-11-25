@@ -1191,7 +1191,7 @@ check_trx(){
 										then
 											echo $line >>${user_path}/all_trx.tmp
 										fi
-									fi 
+									fi
 								fi
 							else
 								if [ ${user_to_check} = ${handover_account} ]
@@ -1954,7 +1954,7 @@ do
 									rt_query=$?
 								else
 									if [ ! "${cmd_user}" = "" ]
-									then 
+									then
 										rt_query=0
 										account_name_entered=$cmd_user
 									else
@@ -2001,7 +2001,7 @@ do
                                                                 						rt_query=$?
 													else
 														if [ ! "${cmd_pw}" = "" ]
-														then 
+														then
 															rt_query=0
 															account_password_entered=$cmd_pw
 														else
@@ -2421,6 +2421,7 @@ do
 		if [ $uca_trigger = 1 ]
 		then
 			auto_uca_start=0
+			uca_trigger=0
 		fi
 
 		if [ $gui_mode = 1 ]
