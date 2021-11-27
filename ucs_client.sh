@@ -1801,6 +1801,7 @@ user_logged_in=0
 uca_trigger=0
 action_done=1
 make_ledger=1
+end_program=0
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
@@ -1933,7 +1934,7 @@ then
 else
 	gui_mode=1
 fi
-while [ ! 1 = 2 ]
+while [ $end_program = 0 ]
 do
 	if [ $user_logged_in = 0 ]
 	then
@@ -2381,7 +2382,7 @@ do
 							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
                         	"$dialog_main_end")     clear
-							exit 0
+							end_program=1
 							;;
                 	esac
         	fi
