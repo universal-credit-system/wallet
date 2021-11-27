@@ -384,30 +384,10 @@ check_input(){
 		input_string=$1
 		check_mode=$2
 		rt_query=0
-		no_digit_check=0
 		length_counter=0
 
 		###CHECK LENGTH OF INPUT STRING########################################
 		length_counter=`echo "${input_string}"|wc -m`
-
-		if [ $check_mode = 1 ]
-		then
-			###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
-			nodigit_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
-
-			###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
-			if [ $nodigit_check = 1 ]
-			then
-				if [ $gui_mode = 1 ]
-				then
-					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg1" 0 0
-					rt_query=1
-				else
-					exit 1
-				fi
-			fi
-			#######################################################################
-		fi
 
 		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
 		if [ $length_counter -le 1 ]
@@ -422,20 +402,48 @@ check_input(){
 		fi
 		#######################################################################
 
-		###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
-		alnum_check=`echo "${input_string}"|grep -c '[^[:alnum:]]'`
+		case $check_mode in
+			 0 )	###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
+				string_check=`echo "${input_string}"|grep -c '[^[:alnum:]]'`
 
-		###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
-		if [ $alnum_check = 1 ]
-		then
-			if [ $gui_mode = 1 ]
-			then
-				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg3" 0 0
-				rt_query=1
-			else
-				exit 1
-			fi
-		fi
+				###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
+				if [ $string_check = 1 ]
+				then
+					if [ $gui_mode = 1 ]
+					then
+						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg3" 0 0
+						rt_query=1
+					else
+						exit 1
+					fi
+				fi
+				;;
+			1 )	###CHECK IF ONLY DIGITS ARE IN INPUT STRING############################
+				string_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
+
+				###IF NOT CHECK IF ALPHA NUM ARE IN INPUT STRING#######################
+				if [ string_check = 0 ]
+				then
+					###CHECK IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION########
+					string_check=`echo "${input_string}"|grep -c '[^[:alnum:]]'`
+				fi
+
+				###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
+				if [ $string_check = 1 ]
+				then
+					if [ $gui_mode = 1 ]
+					then
+						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg1" 0 0
+						rt_query=1
+					else
+						exit 1
+					fi
+				fi
+				#######################################################################
+				;;
+			*)	exit 1
+				;;
+		esac
 		return $rt_query
 }
 build_ledger(){
@@ -1995,26 +2003,40 @@ do
                                                                                         	rt_query=$?
                                                                                         	if [ $rt_query = 0 ]
                                                                                        		then
-                                                                                                	if [ $gui_mode = 1 ]
-													then
-														account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
-                                                                						rt_query=$?
-													else
-														if [ ! "${cmd_pw}" = "" ]
+													account_password_entered_correct=0
+	     												while [ $account_password_entered_correct = 0 ]
+               												do
+														if [ $gui_mode = 1 ]
 														then
-															rt_query=0
-															account_password_entered=$cmd_pw
+															account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
+                                                                							rt_query=$?
 														else
-															exit 1
+															if [ ! "${cmd_pw}" = "" ]
+															then
+																rt_query=0
+																account_password_entered=$cmd_pw
+															else
+																exit 1
+															fi
 														fi
-													fi
-                                                                					if [ $rt_query = 0 ]
-                                                               						then
-														login_account "${account_name_entered}" "${account_pin_entered}" "${account_password_entered}"
-													fi
-													account_pin_entered_correct=1
-													account_name_entered_correct=1
-                                                                                        	fi
+                                                             	   						if [ $rt_query = 0 ]
+                                                               							then
+															check_input "${account_password_entered}" 0
+															rt_query=$?
+															if [ $rt_query = 0 ]
+															then
+																login_account "${account_name_entered}" "${account_pin_entered}" "${account_password_entered}"
+																account_password_entered_correct=1
+																account_pin_entered_correct=1
+																account_name_entered_correct=1
+                                                                                        				fi
+														else
+															account_password_entered_correct=1
+															account_pin_entered_correct=1
+															account_name_entered_correct=1
+														fi
+													done
+												fi
         	                                                                        else
 	                                                                                        account_pin_entered_correct=1
 												account_name_entered_correct=1
