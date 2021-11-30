@@ -1568,8 +1568,6 @@ get_dependencies(){
 			return $new_ledger
 }
 request_uca(){
-		session_key=`date -u +%Y%m%d`
-
 		###STATUS BAR FOR GUI##############################
 		if [ $gui_mode = 1 ]
 		then
@@ -1582,6 +1580,9 @@ request_uca(){
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
+			###SET SESSION KEY################################
+			session_key=`date -u +%Y%m%d`
+
 			###GET VALUES FROM UCA.CONF#######################
 			uca_ip=`echo $line|cut -d ':' -f1`
 			uca_rcv_port=`echo $line|cut -d ':' -f2`
@@ -1615,63 +1616,77 @@ request_uca(){
 			out_file="${user_path}/uca_${now_stamp}.out"
 			save_file="${user_path}/uca_save.dat"
 
-			###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-			printf "${usera_string}\n"|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file} 2>/dev/null
+			###WRITE HEADER AND ENCRYPT#######################
+			printf "${usera_string}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				###GET SIZE OF HEADER AND BODY######################
-				total_bytes_received=`wc -c <${out_file}`
-				total_bytes_header=`head -1 ${out_file}|wc -c`
-				total_bytes_count=$(( $total_bytes_received - $total_bytes_header ))
-
-				###CALCULATE SHARED-SECRET##########################
-				userb_sent=`head -1 ${out_file}|cut -d ':' -f3`
-				usera_ssecret_tmp=`echo "${userb_sent} ^ ${usera_random_integer_formatted}"|bc`
-				usera_ssecret=`echo "${usera_ssecret_tmp} % ${p_number}"|bc`
-				usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
-
-				###CUT OUT BODY AND MOVE FILE#######################
-				dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
-				mv ${out_file}.tmp ${out_file}
-
-				###DECRYPT SENT FILE################################
-				gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${usera_hssecret} --decrypt ${out_file} 2>/dev/null
+				###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
+				cat ${user_path}/uca_header.tmp|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file} 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					if [ ! -s ${save_file} ]
-					then
-						echo "${uca_ip}:${usera_ssecret}:" >${save_file}
-					fi
-					###WRITE SHARED SECRET TO DB########################
-					ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
-					if [ $ssecret_there = 0 ]
-					then
-						echo "${uca_ip}:${usera_ssecret}:" >>${save_file}
-					else
-						same_key=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
-						if [ ! $same_key = $usera_ssecret ]
-						then
-							sed -i "s/${uca_ip}:${same_key}:/${uca_ip}:${usera_ssecret}/g" ${save_file}
-						fi
-					fi
-					###CHECK SENT FILE##################################
-					check_archive ${sync_file} 0
+					###DECRYPT HEADER RECEIVED#########################
+					header=`head -6 ${out_file}|gpg --batch --no-tty --output - --passphrase ${session_key} --decrypt - 2>/dev/null`
+
+					###GET SIZE OF HEADER AND BODY######################
+					total_bytes_received=`wc -c <${out_file}`
+					total_bytes_header=`head -6 ${out_file}|wc -c`
+					total_bytes_count=$(( $total_bytes_received - $total_bytes_header ))
+
+					###CALCULATE SHARED-SECRET##########################
+					userb_sent=`echo $header|cut -d ':' -f3`
+					usera_ssecret_tmp=`echo "${userb_sent} ^ ${usera_random_integer_formatted}"|bc`
+					usera_ssecret=`echo "${usera_ssecret_tmp} % ${p_number}"|bc`
+					usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
+
+					###CUT OUT BODY AND MOVE FILE#######################
+					dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
+					mv ${out_file}.tmp ${out_file}
+
+					###DECRYPT SENT FILE################################
+					gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${usera_hssecret} --decrypt ${out_file} 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
-						cd ${user_path}/temp
-
-						###EXTRACT FILE#####################################
-						tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+						if [ ! -s ${save_file} ]
+						then
+							echo "${uca_ip}:${usera_ssecret}:" >${save_file}
+						fi
+						###WRITE SHARED SECRET TO DB########################
+						ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
+						if [ $ssecret_there = 0 ]
+						then
+							echo "${uca_ip}:${usera_ssecret}:" >>${save_file}
+						else
+							same_key=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
+							if [ ! $same_key = $usera_ssecret ]
+							then
+								sed -i "s/${uca_ip}:${same_key}:/${uca_ip}:${usera_ssecret}/g" ${save_file}
+							fi
+						fi
+						###CHECK SENT FILE##################################
+						check_archive ${sync_file} 0
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							process_new_files 0
-							set_permissions
+							###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
+							cd ${user_path}/temp
+
+							###EXTRACT FILE#####################################
+							tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+							rt_query=$?
+							if [ $rt_query = 0 ]
+							then
+								process_new_files 0
+								set_permissions
+							fi
 						fi
+					fi
+				else
+					if [ $gui_mode = 0 ]
+					then
+						echo "ERROR: UCA-LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
 					fi
 				fi
 			else
@@ -1680,6 +1695,8 @@ request_uca(){
 					echo "ERROR: UCA-LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
 				fi
 			fi
+			###REMOVE TMP HEADER FILE##########################
+			rm ${user_path}/uca_header.tmp 2>/dev/null
 
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
@@ -1695,7 +1712,6 @@ request_uca(){
 		done <${script_path}/control/uca.conf
 }
 send_uca(){
-		session_key=`date -u +%Y%m%d`
 		now_stamp=`date +%s`
 
 		###SET VARIABLES#############################
@@ -1724,6 +1740,9 @@ send_uca(){
 				###READ UCA.CONF LINE BY LINE################
 				while read line
 				do
+					###SET SESSION KEY################################
+					session_key=`date -u +%Y%m%d`
+
 					###GET VALUES FROM UCA.CONF##################
 					uca_ip=`echo $line|cut -d ':' -f1`
 					uca_snd_port=`echo $line|cut -d ':' -f3`
@@ -1748,7 +1767,7 @@ send_uca(){
 						usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
 
 						###ENCRYPT SYNCFILE################################
-						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
+						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
