@@ -594,11 +594,11 @@ build_ledger(){
 				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt -o $trx_sender = ${handover_account} ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=`grep "trx/${trx_filename}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|grep -c "${trx_hash}"`
+					is_signed=`grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###CHECK CONFIRMATIONS########################################
-						number_of_confirmations=`grep -l "trx/${trx_filename}" proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+						number_of_confirmations=`grep -l "trx/${trx_filename} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 						##############################################################
 
 						###EXTRACT TRX DATA###########################################
@@ -1549,7 +1549,8 @@ get_dependencies(){
 			while read line
 			do
 				sending_user=`echo $line|awk -F. '{print $1"."$2}'`
-				total_confirmations=`grep -l "trx/${line}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
+				total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
@@ -3218,7 +3219,8 @@ do
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
                               	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
-									trx_confirmations=`grep -l "trx/${line_extracted}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+									trx_hash=`sha256sum ${script_path}/trx/${line_extracted}|cut -d ' ' -f1`
+									trx_confirmations=`grep -l "trx/${line_extracted} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -3273,6 +3275,7 @@ do
 										trx_date=`date +%s --date="${trx_date_extracted} ${trx_time_extracted}"`
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
+										trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
 										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
 										receiver=`sed -n '7p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
 										purpose=`sed -n '8p' ${script_path}/trx/${trx_file}`
@@ -3286,7 +3289,7 @@ do
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
-											trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
+											trx_signed=`grep -c "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt`
 										else
 											trx_signed=0
 										fi
@@ -3313,7 +3316,7 @@ do
 										then
 											trx_status="OK"
 										fi
-										trx_confirmations=`grep -l "trx/${trx_file}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+										trx_confirmations=`grep -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose_extracted}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
