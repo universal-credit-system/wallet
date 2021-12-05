@@ -1307,6 +1307,8 @@ process_new_files(){
 										then
 											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 										fi
+									else
+										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 									fi
 								else
 									while read line
