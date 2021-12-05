@@ -1121,7 +1121,7 @@ check_trx(){
 		###################################################################
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
-		cat ${user_path}/all_trx.dat|sort -t . -k3 >${user_path}/all_trx.tmp
+		sort -t . -k3 ${user_path}/all_trx.dat >${user_path}/all_trx.tmp
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 
 		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
@@ -3205,7 +3205,7 @@ do
 							rm ${user_path}/my_trx.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
 							grep -l ":${handover_account}" *.* >${user_path}/my_trx.tmp 2>/dev/null
-							cat ${user_path}/my_trx.tmp|sort -r -t . -k3 >${user_path}/my_trx_sorted.tmp
+							sort -r -t . -k3 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							cd ${script_path}
 							no_trx=`wc -l <${user_path}/my_trx.tmp`
