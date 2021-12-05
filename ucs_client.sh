@@ -10,13 +10,13 @@ login_account(){
 		ignore_rest=0
 
 		###READ LIST OF KEYS LINE BY LINE############################
-		for line in `ls -1 ${script_path}/keys/|sort -t. -k2`
+		for key_file in `ls -1 ${script_path}/keys/|sort -t. -k2`
 		do
 			if [ $ignore_rest = 0 ]
 			then
 				###EXTRACT KEY DATA##########################################
-				keylist_name=`echo $line|cut -d '.' -f1`
-		                keylist_stamp=`echo $line|cut -d '.' -f2`
+				keylist_name=`echo $key_file|cut -d '.' -f1`
+		                keylist_stamp=`echo $key_file|cut -d '.' -f2`
                                 if [ ! "${cmd_sender}" = "" ]
 				then
                                         keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
@@ -30,7 +30,7 @@ login_account(){
 				then
 					account_found=1
 					ignore_rest=1
-					handover_account=$line
+					handover_account=$key_file
 				fi
 				##############################################################
 			fi
@@ -303,39 +303,33 @@ make_signature(){
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
                                 message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
-				touch ${user_path}/index_keys.tmp
-				cat ${user_path}/all_accounts.dat >${user_path}/index_keys.tmp
-				while read line
+				for key_file in `cat ${user_path}/all_accounts.dat`
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=`sha256sum ${script_path}/keys/${line}|cut -d ' ' -f1`
-                                        key_path="keys/${line}"
-                                        echo "${key_path} ${key_hash}" >>${message_blank}
+					key_hash=`sha256sum ${script_path}/keys/${key_file}|cut -d ' ' -f1`
+                                        echo "keys/${key_file} ${key_hash}" >>${message_blank}
 					#################################################################
 
 					###IF TSA QUIERY FILE IS AVAILABLE ADD TO INDEX FILE#############
-					freetsa_qfile="${script_path}/proofs/${line}/freetsa.tsq"
+					freetsa_qfile="${script_path}/proofs/${key_file}/freetsa.tsq"
 					if [ -s $freetsa_qfile ]
 					then
-						freetsa_qfile_path="proofs/$line/freetsa.tsq"
-						freetsa_qfile_hash=`sha256sum ${script_path}/proofs/$line/freetsa.tsq|cut -d ' ' -f1`
+						freetsa_qfile_path="proofs/${key_file}/freetsa.tsq"
+						freetsa_qfile_hash=`sha256sum ${script_path}/proofs/${key_file}/freetsa.tsq|cut -d ' ' -f1`
 						echo "${freetsa_qfile_path} ${freetsa_qfile_hash}" >>${message_blank}
 					fi
 					#################################################################
 
 					###IF TSA RESPONSE FILE IS AVAILABLE ADD TO INDEX FILE###########
-					freetsa_rfile="${script_path}/proofs/${line}/freetsa.tsr"
+					freetsa_rfile="${script_path}/proofs/${key_file}/freetsa.tsr"
 					if [ -s $freetsa_rfile ]
 					then
-						freetsa_rfile_path="proofs/$line/freetsa.tsr"
-						freetsa_rfile_hash=`sha256sum ${script_path}/proofs/$line/freetsa.tsr|cut -d ' ' -f1`
+						freetsa_rfile_path="proofs/${key_file}/freetsa.tsr"
+						freetsa_rfile_hash=`sha256sum ${script_path}/proofs/${key_file}/freetsa.tsr|cut -d ' ' -f1`
 						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
 					fi
 					#################################################################
-				done <${user_path}/index_keys.tmp
-
-				###REMOVE KEYLIST################################################
-				rm ${user_path}/index_keys.tmp
+				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
                                 cat ${user_path}/index_trx.dat >>${message_blank}
@@ -562,7 +556,7 @@ build_ledger(){
 				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
 			fi
 
-			###WRITE ENTRIES FOR THAT DAY####################
+			###UPDATE SCORETABLE#############################
 			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/scoretable.dat >${user_path}/scoretable.tmp
 			if [ -s ${user_path}/scoretable.dat ]
 			then
@@ -573,17 +567,16 @@ build_ledger(){
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
-			###GO TROUGH ACCOUNTS FOR FIRST ENTRY############
+			###CREATE LEDGER AND SCORETABEL ENTRY############
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
 			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat >${user_path}/trxlist_${focus}.tmp
-			while read line
+			for each_trx_today in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
 				###EXRACT DATA FOR CHECK######################################
-			        trx_filename=`echo $line|cut -d ' ' -f3`
+			        trx_filename=`echo $each_trx_today|cut -d ' ' -f3`
 				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
@@ -684,8 +677,7 @@ build_ledger(){
 					##############################################################
 				fi
 				##############################################################
-			done <${user_path}/trxlist_${focus}.tmp
-			rm ${user_path}/trxlist_${focus}.tmp 2>/dev/null
+			done
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
 			date_stamp=$(( $date_stamp + 86400 ))
@@ -1232,14 +1224,17 @@ check_trx(){
 		fi
 
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
-		while read line
-		do
-			trx_account=`echo $line|awk -F. '{print $1"."$2}'`
-			if [ ! $trx_account = $handover_account ]
-			then
-				rm ${script_path}/trx/${line} 2>/dev/null
-			fi
-		done <${user_path}/blacklisted_trx.dat
+		if [ -s ${user_path}/blacklisted_trx.dat ]
+		then
+			while read line
+			do
+				trx_account=`echo $line|awk -F. '{print $1"."$2}'`
+				if [ ! $trx_account = $handover_account ]
+				then
+					rm ${script_path}/trx/${line} 2>/dev/null
+				fi
+			done <${user_path}/blacklisted_trx.dat
+		fi
 		###################################################################
 
 		cd ${script_path}/
@@ -1253,26 +1248,24 @@ process_new_files(){
 				touch ${user_path}/old_index_filelist.tmp
 				touch ${user_path}/remove_list.tmp
 				touch ${user_path}/temp_filelist.tmp
-				touch ${user_path}/new_indexes.tmp
-				grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt" >${user_path}/new_indexes.tmp
-				while read line
+				for new_index_file in `grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt"`
 				do
-					user_to_verify_name=`echo $line|cut -d '/' -f2|cut -d '.' -f1`
-					user_to_verify_date=`echo $line|cut -d '/' -f2|cut -d '.' -f2`
+					user_to_verify_name=`basename $new_index_file|cut -d '.' -f1`
+					user_to_verify_date=`basename $new_index_file|cut -d '.' -f2`
 					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
 					user_already_there=`cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}"`
 					if [ $user_already_there = 1 ]
 					then
-						verify_signature ${user_path}/temp/${line} $user_to_verify
+						verify_signature ${user_path}/temp/${new_index_file} $user_to_verify
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
 							touch ${user_path}/new_index_filelist.tmp
-							grep "trx/${user_to_verify}" ${user_path}/temp/${line} >${user_path}/new_index_filelist.tmp
+							grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
 							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
 							new_trx_score_highest=0
 							touch ${user_path}/old_index_filelist.tmp
-							grep "trx/${user_to_verify}" ${script_path}/${line} >${user_path}/old_index_filelist.tmp
+							grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
 							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
 							old_trx_score_highest=0
 							no_matches=0
@@ -1352,6 +1345,8 @@ process_new_files(){
 										fi
 									fi
 								fi
+							else
+								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 							fi
 						else
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
@@ -1363,15 +1358,20 @@ process_new_files(){
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 						fi
 					fi
-				done <${user_path}/new_indexes.tmp
-				rm ${user_path}/new_indexes.tmp
+				done
 				rm ${user_path}/new_index_filelist.tmp
 				rm ${user_path}/old_index_filelist.tmp
 				cat ${user_path}/remove_list.tmp|sort|uniq >${user_path}/temp_filelist.tmp
 				cat ${user_path}/files_to_fetch.tmp >>${user_path}/temp_filelist.tmp
 				cat ${user_path}/temp_filelist.tmp|sort|uniq -u >${user_path}/files_to_fetch.tmp
                                 rm ${user_path}/temp_filelist.tmp
-                                rm ${user_path}/remove_list.tmp
+
+				###REMOVE FILES OF REMOVE LIST################
+				while read line
+				do
+					rm ${user_path}/temp/${line}
+				done <${user_path}/remove_list.tmp
+				rm ${user_path}/remove_list.tmp 2>/dev/null
 			fi
 			while read line
 			do
@@ -1380,25 +1380,29 @@ process_new_files(){
 					rm ${user_path}/temp/${line}
 				fi
 			done <${user_path}/files_to_fetch.tmp
-			#############################################
-			############  COPY FILES TO TARGET###########
-			##################WITH FLOCK#################
-			cd ${user_path}/
-			flock ${script_path}/keys/ -c '
-			user_path=`pwd`
-			base_dir=`dirname $user_path`
-			script_path=`dirname $base_dir`
-			cp ${user_path}/temp/keys/* ${script_path}/keys/ 2>/dev/null
-			cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
-			cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
-			'
-			cd ${script_path}/
-			#############################################
+			files_to_copy=`find ${user_path}/temp/ -maxdepth 3 -type f|wc -l`
+			if [ $files_to_copy -gt 0 ]
+			then
+				#############################################
+				############  COPY FILES TO TARGET###########
+				##################WITH FLOCK#################
+				cd ${user_path}/
+				flock ${script_path}/keys/ -c '
+				user_path=`pwd`
+				base_dir=`dirname $user_path`
+				script_path=`dirname $base_dir`
+				cp ${user_path}/temp/keys/* ${script_path}/keys/ 2>/dev/null
+				cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
+				cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
+				'
+				cd ${script_path}/
+				#############################################
 
-			###PURGE TEMP FILES##########################
-			rm -r ${user_path}/temp/keys/* 2>/dev/null
-			rm -r ${user_path}/temp/trx/* 2>/dev/null
-			rm -r ${user_path}/temp/proofs/* 2>/dev/null
+				###PURGE TEMP FILES##########################
+				rm -r ${user_path}/temp/keys/* 2>/dev/null
+				rm -r ${user_path}/temp/trx/* 2>/dev/null
+				rm -r ${user_path}/temp/proofs/* 2>/dev/null
+			fi
 }
 check_blacklist(){
 			###CHECK IF USER HAS BEEN BLACKLISTED AND IF SO WARN HIM##
@@ -1444,19 +1448,16 @@ set_permissions(){
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
-		touch ${user_path}/keylist_gpg.tmp
-		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 >${user_path}/keylist_gpg.tmp 2>/dev/null
-		while read line
+		for key_file in `gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 2>/dev/null`
 		do
-			key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${line}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
+			key_fp=`gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${key_file}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'`
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
 				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
 				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 			fi
-		done <${user_path}/keylist_gpg.tmp
-		rm ${user_path}/keylist_gpg.tmp 2>/dev/null
+		done
 
 		###REMOVE KEYRING AND FILES########################################
 		rm ${script_path}/control/keyring.file 2>/dev/null
@@ -1468,13 +1469,10 @@ purge_files(){
 }
 import_keys(){
 		cd ${script_path}/control/keys
-		touch ${user_path}/keys_to_import.tmp
-		ls -1 ${script_path}/control/keys >${user_path}/keys_to_import.tmp
-		while read line
+		for key_file in `ls -1 ${script_path}/control/keys`
 		do
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${line}
-		done <${user_path}/keys_to_import.tmp
-		rm ${user_path}/keys_to_import.tmp
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${key_file}
+		done
 		cd ${script_path}/
 }
 get_dependencies(){
@@ -2240,7 +2238,7 @@ do
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
-															new_lang_file=`grep "lang_${lang_selection}_"  ${script_path}/languages.tmp`
+															new_lang_file=`grep "lang_${lang_selection}_" ${script_path}/languages.tmp`
 															if [ ! $lang_file = $new_lang_file ]
 															then
 																sed -i "s/lang_file=\"${lang_file}\"/lang_file=\"${new_lang_file}\"/g" ${script_path}/control/config.conf
