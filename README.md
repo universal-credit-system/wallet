@@ -11,7 +11,7 @@ This is the repository for the UCS wallet.
 ## What is Universal Credit System
 The [Universal Credit System](https://www.universal-credit-system.org) is a new innovative and resource friendly crypto currency. Every day a number of universal credit coins will be granted to all users of the universal credit system resulting in a **free digital basic income** for all participants. The users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid. 
 
-The purpose of this document is to show how you can setup and run the UCS wallet you need to receive, send and manage your universal credit coins.
+The purpose of this document is to show how you can setup and run the UCS wallet.
 
 ## Technologies used
 The program was written as **standard shell script (#!/bin/sh)**.
