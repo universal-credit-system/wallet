@@ -76,8 +76,8 @@ cd ucs
 
 Clone the GitHub repository and step into this directory:
 ```
-git clone https://github.com/universal-credit-system/ucs_client_v0.0.1
-cd ucs_client_v0.0.1/
+git clone https://github.com/universal-credit-system/wallet
+cd wallet/
 ```
 
 Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
