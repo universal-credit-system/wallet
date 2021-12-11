@@ -1,6 +1,6 @@
 # Universal Credit System Wallet
 
-This is the repository for the UCS client.
+This is the repository for the UCS wallet.
 
 ## Table of contents
 * [What is UCS](#what-is-ucs)
@@ -9,12 +9,12 @@ This is the repository for the UCS client.
 * [Community](#community)
 
 ## What is Universal Credit System
-The [Universal Credit System](https://www.universal-credit-system.org) offers a **free digital basic income** for everybody. Every day a number of universal credit coins will be granted to all users of the universal credit system program. The purpose of this document is to show how you can setup and run the UCS program. This program is actually the wallet you need to receive, send and manage your universal credit coins.
+The [Universal Credit System](https://www.universal-credit-system.org) is a resource friendly and highly innovative crypto currency. Every day a number of universal credit coins will be granted to all users of the universal credit system resulting in a **free digital basic income** for all participants. Users process their own blocks and permanently review and audit each other on a file based protocol which allows them too manage themself offline in a decentralised block grid. The purpose of this document is to show how you can setup and run the UCS wallet you need to receive, send and manage your universal credit coins.
 
 ## Technologies used
 The program was written as **standard shell script (#!/bin/sh)**.
 
-The script depends on other programs. Most of them are **GNU core utilities**, which means they should be already installed while other programs (i.e. ``bc``,``shasum``, ``openssl``, ``curl``, ``netcat``) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
+The script depends on other programs. Most of them are **GNU core utilities**, which means that depending on your version of the GNU core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
 
 The following programs are used:
 
