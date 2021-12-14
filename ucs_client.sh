@@ -601,12 +601,12 @@ build_ledger(){
 
 						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
 						account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc`
-						enough_balance=`echo "${account_check_balance}>=0"|bc`
+						enough_balance=`echo "${account_check_balance} >= 0"|bc`
 						##############################################################
 
 						###SCORING####################################################
 						sender_score_balance=`grep "${trx_sender}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-						is_score_ok=`echo "${sender_score_balance}>=${trx_amount}"|bc`
+						is_score_ok=`echo "${sender_score_balance} >= ${trx_amount}"|bc`
 						##############################################################
 
 						if [ $enough_balance = 1 -a $is_score_ok = 1 ]
@@ -617,7 +617,7 @@ build_ledger(){
 
 							###SET BALANCE FOR SENDER#####################################
 							account_new_balance=$account_check_balance
-							is_greater_one=`echo "${account_new_balance}>=1"|bc`
+							is_greater_one=`echo "${account_new_balance} >= 1"|bc`
 							if [ $is_greater_one = 0 ]
 							then
 								account_new_balance="0${account_new_balance}"
@@ -637,16 +637,21 @@ build_ledger(){
 								if [  $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
+									is_score_greater_balance=`echo "${sender_score_balance} > ${account_new_balance}"|bc`
+									if [ $is_score_greater_balance = 1 ]
+									then
+										sender_score_balance=$account_new_balance
+									fi
 									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-									is_greater_one=`echo "${receiver_old_balance}>=1"|bc`
+									is_greater_one=`echo "${receiver_old_balance} >= 1"|bc`
 									if [ $is_greater_one = 0 ]
 									then
 										receiver_old_balance="0${receiver_old_balance}"
 									fi
 									receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-									is_greater_one=`echo "${receiver_new_balance}>=1"|bc`
+									is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
 									if [ $is_greater_one = 0 ]
 									then
 										receiver_new_balance="0${receiver_new_balance}"
@@ -654,11 +659,11 @@ build_ledger(){
 									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
 									###SET SCORE FOR RECEIVER#####################################
 									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									is_score_equal_balance=`echo "${receiver_old_balance}==${receiver_score_balance}"|bc`
+									is_score_equal_balance=`echo "${receiver_old_balance} == ${receiver_score_balance}"|bc`
 									if [ ! is_score_equal_balance = 1 ]
 									then
 										receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
-										is_score_negative=`echo "${receiver_new_score_balance}<0"|bc`
+										is_score_negative=`echo "${receiver_new_score_balance} < 0"|bc`
 										if [ $is_score_negative = 1 ]
 										then
 											receiver_new_score_balance=0
@@ -1157,7 +1162,7 @@ check_trx(){
 								trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
-								is_amount_mod=`echo "${is_amount_mod} >0"|bc`
+								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
 								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 -o $is_amount_mod = 1 ]
 								then
 									###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
@@ -2447,11 +2452,6 @@ do
 			check_blacklist
 			account_my_balance=`grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 			account_my_score=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-			is_greater_balance=`echo "${account_my_score}>${account_my_balance}"|bc`
-			if [ $is_greater_balance = 1 ]
-			then
-				account_my_score="${account_my_balance}"
-			fi
 		fi
 
 		###IF AUTO-UCA-SYNC########################
@@ -2526,15 +2526,6 @@ do
 									####################################################################
 									if [ $gui_mode = 1 ]
 									then
-										###SET SCORE TO BE DISPLAYED########################################
-										is_greater_balance=`echo "${sender_score_balance}>${account_my_balance}"|bc`
-										if [ $is_greater_balance = 1 ]
-										then
-											sender_score_balance_value="${account_my_balance}"
-										else
-											sender_score_balance_value="${sender_score_balance}"
-										fi
-										####################################################################
 										dialog_send_amount_display=`echo $dialog_send_amount|sed -e "s/<score>/${sender_score_balance_value}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000"`
 								        	rt_query=$?
@@ -2549,19 +2540,19 @@ do
 										then
 											order_amount_formatted=`echo $order_amount|sed -e 's/,/./g' -e 's/ //g'`
                                                                                         order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc`
-											is_greater_one=`echo "${order_amount_formatted}>=1"|bc`
+											is_greater_one=`echo "${order_amount_formatted} >= 1"|bc`
 											if [ $is_greater_one = 0 ]
 											then
 												order_amount_formatted="0${order_amount_formatted}"
 											fi
-											is_amount_big_enough=`echo "${order_amount_formatted}>=0.000000001"|bc`
+											is_amount_big_enough=`echo "${order_amount_formatted} >= 0.000000001"|bc`
 											amount_mod=`echo "${order_amount_formatted} % 0.000000001"|bc`
 											is_amount_mod=`echo "${amount_mod} == 0"|bc` 
 											if [ $is_amount_big_enough = 1 -a $is_amount_mod = 1 ]
 											then
-												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted}>=0"|bc`
+												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc`
 												###SCORE#############################################################
-												is_score_ok=`echo "${sender_score_balance}>=${order_amount_formatted}"|bc`
+												is_score_ok=`echo "${sender_score_balance} >= ${order_amount_formatted}"|bc`
 												#####################################################################
 												if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 												then
