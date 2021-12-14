@@ -2523,6 +2523,7 @@ do
 								do
 									###SCORE############################################################
 									sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+									sender_score_balance_value=$sender_score_balance
 									####################################################################
 									if [ $gui_mode = 1 ]
 									then
