@@ -590,7 +590,7 @@ build_ledger(){
 					is_signed=`grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
-						###CHECK CONFIRMATIONS########################################
+						###GET CONFIRMATIONS##########################################
 						number_of_confirmations=`grep -l "trx/${trx_filename} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 						##############################################################
 
@@ -657,20 +657,6 @@ build_ledger(){
 										receiver_new_balance="0${receiver_new_balance}"
 									fi
 									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
-									###SET SCORE FOR RECEIVER#####################################
-									receiver_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									is_score_equal_balance=`echo "${receiver_old_balance} == ${receiver_score_balance}"|bc`
-									if [ ! is_score_equal_balance = 1 ]
-									then
-										receiver_new_score_balance=`echo "${receiver_score_balance} - ${trx_amount}"|bc`
-										is_score_negative=`echo "${receiver_new_score_balance} < 0"|bc`
-										if [ $is_score_negative = 1 ]
-										then
-											receiver_new_score_balance=0
-										fi
-										sed -i "s/${trx_receiver}=${receiver_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
-									fi
-									##############################################################
 								fi
 							fi
 							##############################################################
