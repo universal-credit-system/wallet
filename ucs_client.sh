@@ -175,13 +175,17 @@ create_keys(){
 					###STEP INTO USER DIRECTORY##################################
 					cd ${user_path}
 
-					###CREATE TSA QUIERY FILE####################################
-					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/freetsa.tsq 1>/dev/null 2>/dev/null
+					###CREATE TSA QUERY FILE#####################################
+					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/${default_tsa}.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###SET QUIERY TO TSA#########################################
-						curl --silent -H "Content-Type: application/timestamp-query" --data-binary '@freetsa.tsq' https://freetsa.org/tsr > ${user_path}/freetsa.tsr
+						###GET TSA DATA##############################################
+						tsa_config_line=`grep "${default_tsa}" ${script_path}/control/tsa.conf`
+						tsa_connect_string=`echo "${tsa_config_line}"|cut -d ',' -f4`
+
+						###SENT QUERY TO TSA#########################################
+						curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${default_tsa}.tsr ${tsa_connect_string} >${user_path}/${default_tsa}.tsr
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
@@ -189,17 +193,19 @@ create_keys(){
 							cd ${script_path}/certs
 
 							###DOWNLOAD LATEST TSA CERTIFICATES##########################
-							wget -q https://freetsa.org/files/tsa.crt
+							tsa_cert_url=`echo "${tsa_config_line}"|cut -d ',' -f2`
+							wget -q ${tsa_cert_url}
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								wget -q https://freetsa.org/files/cacert.pem
+								tsa_cert_url=`echo "${tsa_config_line}"|cut -d ',' -f3`
+								wget -q ${tsa_cert_url}
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
-									mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-									openssl ts -verify -queryfile ${user_path}/freetsa.tsq -in ${user_path}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+									mv ${script_path}/certs/tsa.crt ${script_path}/certs/${default_tsa}/tsa.crt
+									mv ${script_path}/certs/cacert.pem ${script_path}/certs/${default_tsa}/cacert.pem
+									openssl ts -verify -queryfile ${user_path}/${default_tsa}.tsq -in ${user_path}/${default_tsa}.tsr -CAfile ${script_path}/certs/${default_tsa}/cacert.pem -untrusted ${script_path}/certs/${default_tsa}/tsa.crt 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -211,8 +217,8 @@ create_keys(){
 										fi
 										###CREATE PROOFS DIRECTORY AND COPY TSA FILES###################
 										mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
-										mv ${user_path}/freetsa.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/freetsa.tsq
-										mv ${user_path}/freetsa.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/freetsa.tsr
+										mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsq
+										mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsr
 
 										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
 										cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc ${script_path}/keys/${create_name_hashed}.${file_stamp}
@@ -310,25 +316,28 @@ make_signature(){
                                         echo "keys/${key_file} ${key_hash}" >>${message_blank}
 					#################################################################
 
-					###IF TSA QUIERY FILE IS AVAILABLE ADD TO INDEX FILE#############
-					freetsa_qfile="${script_path}/proofs/${key_file}/freetsa.tsq"
-					if [ -s $freetsa_qfile ]
-					then
-						freetsa_qfile_path="proofs/${key_file}/freetsa.tsq"
-						freetsa_qfile_hash=`sha256sum ${script_path}/proofs/${key_file}/freetsa.tsq|cut -d ' ' -f1`
-						echo "${freetsa_qfile_path} ${freetsa_qfile_hash}" >>${message_blank}
-					fi
-					#################################################################
+					for tsa_service in `ls -1 ${script_path}/certs`
+					do
+						###IF TSA QUERY FILE IS AVAILABLE ADD TO INDEX FILE#############
+						tsa_qfile="${script_path}/proofs/${key_file}/${tsa_service}.tsq"
+						if [ -s $tsa_qfile ]
+						then
+							tsa_qfile_path="proofs/${key_file}/${tsa_service}.tsq"
+							tsa_qfile_hash=`sha256sum ${script_path}/proofs/${key_file}/${tsa_service}.tsq|cut -d ' ' -f1`
+							echo "${tsa_qfile_path} ${tsa_qfile_hash}" >>${message_blank}
+						fi
+						#################################################################
 
-					###IF TSA RESPONSE FILE IS AVAILABLE ADD TO INDEX FILE###########
-					freetsa_rfile="${script_path}/proofs/${key_file}/freetsa.tsr"
-					if [ -s $freetsa_rfile ]
-					then
-						freetsa_rfile_path="proofs/${key_file}/freetsa.tsr"
-						freetsa_rfile_hash=`sha256sum ${script_path}/proofs/${key_file}/freetsa.tsr|cut -d ' ' -f1`
-						echo "${freetsa_rfile_path} ${freetsa_rfile_hash}" >>${message_blank}
-					fi
-					#################################################################
+						###IF TSA RESPONSE FILE IS AVAILABLE ADD TO INDEX FILE###########
+						tsa_rfile="${script_path}/proofs/${key_file}/${tsa_service}.tsr"
+						if [ -s $tsa_rfile ]
+						then
+							tsa_rfile_path="proofs/${key_file}/${tsa_service}.tsr"
+							tsa_rfile_hash=`sha256sum ${script_path}/proofs/${key_file}/${tsa_service}.tsr|cut -d ' ' -f1`
+							echo "${tsa_rfile_path} ${tsa_rfile_hash}" >>${message_blank}
+						fi
+						#################################################################
+					done
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
@@ -789,10 +798,16 @@ check_archive(){
 											file_usr=`echo $line|cut -d '/' -f2`
 											file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
 											if [ $file_usr_correct = 0 ]
-											then
+											then	
 												file_full=`echo $line|cut -d '/' -f3`
-												case $file_full in
-													"freetsa.tsq")		if [ $check_mode = 0 ]
+												file_ext=`echo $line|cut -d '/' -f3|cut -d '.' -f2`
+												case $file_ext in
+													"tsq")	tsa_name=`echo $line|cut -d '/' -f3|cut -d '.' -f1`
+														for tsa_service in `ls -1 ${script_path}/certs`
+														do
+															if [ "${tsa_service}" = "${tsa_name}" ]
+															then
+																if [ $check_mode = 0 ]
 																then
 																	if [ ! -s ${script_path}/$line ]
 																	then
@@ -801,8 +816,15 @@ check_archive(){
 																else
 																	echo "$line" >>${user_path}/files_to_fetch.tmp
 																fi
-																;;
-													"freetsa.tsr")		if [ $check_mode = 0 ]
+															fi
+														done
+														;;
+													"tsr")	tsa_name=`echo $line|cut -d '/' -f3|cut -d '.' -f1`
+														for tsa_service in `ls -1 ${script_path}/certs`
+														do
+															if [ "${tsa_service}" = "${tsa_name}" ]
+															then
+																if [ $check_mode = 0 ]
 																then
 																	if [ ! -s ${script_path}/$line ]
 																	then
@@ -811,11 +833,18 @@ check_archive(){
 																else
 																	echo "$line" >>${user_path}/files_to_fetch.tmp
 																fi
-																;;
-													"${file_usr}.txt")	echo "$line" >>${user_path}/files_to_fetch.tmp
-																;;
-													*)			rt_query=1
-																;;
+															fi
+														done
+														;;
+													"txt")	if [ "${file_full}" = "${file_usr}.txt" ]
+														then
+															echo "$line" >>${user_path}/files_to_fetch.tmp
+														else
+															rt_query=1
+														fi
+														;;
+													*)	rt_query=1
+														;;
 												esac
 											else
 												rt_query=1
@@ -849,75 +878,83 @@ check_archive(){
 check_tsa(){
 			cd ${script_path}/certs
 
-			###VARIABLE FOR FREETSA CERTIFICATE DOWNLOAD CHECK###########
-			freetsa_available=0
-			freetsa_cert_available=0
-			freetsa_rootcert_available=0
-			retry_counter=0
-
-			while [ $freetsa_available = 0 ]
+			###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+			for tsa_service in `ls -1 ${script_path}/certs`
 			do
-				###IF TSA.CRT NOT AVAILABLE...############
-				if [ ! -s ${script_path}/certs/freetsa/tsa.crt ]
-				then
-					###DOWNLOAD TSA.CRT######################
-					wget -q https://freetsa.org/files/tsa.crt
-					rt_query=$?
-					if [ $rt_query = 0 ]
+				###VARIABLE FOR TSA CERTIFICATE DOWNLOAD CHECK###########
+				tsa_available=0
+				tsa_cert_available=0
+				tsa_rootcert_available=0
+				retry_counter=0
+				while [ $tsa_available = 0 ]
+				do
+					###IF TSA.CRT NOT AVAILABLE...############
+					if [ ! -s ${script_path}/certs/${tsa_service}/tsa.crt ]
 					then
-						###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
-						mv ${script_path}/certs/tsa.crt ${script_path}/certs/freetsa/tsa.crt
-						freetsa_cert_available=1
-					else
-						rm ${script_path}/certs/tsa.crt 2>/dev/null
-					fi
-				else
-					freetsa_cert_available=1
-				fi
+						###GET URL FROM TSA.CONF#################
+						tsa_cert_url=`grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f2`
 
-				###IF CACERT.PEM NOT AVAILABLE...#########
-				if [ ! -s ${script_path}/certs/freetsa/cacert.pem ]
-				then
-					###DOWNLOAD CACERT.PEM####################
-					wget -q https://freetsa.org/files/cacert.pem
-					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
-						mv ${script_path}/certs/cacert.pem ${script_path}/certs/freetsa/cacert.pem
-						freetsa_rootcert_available=1
-					else
-						rm ${script_path}/certs/cacert.pem 2>/dev/null
-					fi
-				else
-					freetsa_rootcert_available=1
-				fi
-
-				###IF BOTH TSA.CRT AND CACERT.PEM ARE THERE SET FLAG####################
-				if [ $freetsa_cert_available = 1 -a $freetsa_rootcert_available = 1 ]
-				then
-					freetsa_available=1
-				else
-					retry_counter=$(( $retry_counter + 1 ))
-					if [ $retry_counter -le 5 ]
-					then
-						sleep $wait_seconds_until_retry
-					else
-						if [ $gui_mode = 1 ]
+						###DOWNLOAD TSA.CRT######################
+						wget -q ${tsa_cert_url}
+						rt_query=$?
+						if [ $rt_query = 0 ]
 						then
-							dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_no_network" 0 0
-							sleep 10
-							exit 1
+							###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
+							mv ${script_path}/certs/tsa.crt ${script_path}/certs/${tsa_service}/tsa.crt
+							tsa_cert_available=1
 						else
-							exit 1
+							rm ${script_path}/certs/tsa.crt 2>/dev/null
+						fi
+					else
+						tsa_cert_available=1
+					fi
+
+					###IF CACERT.PEM NOT AVAILABLE...#########
+					if [ ! -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+					then
+						###GET URL FROM TSA.CONF#################
+						tsa_cert_url=`grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f3`
+
+						###DOWNLOAD CACERT.PEM####################
+						wget -q ${tsa_cert_url}
+						rt_query=$?
+						if [ $rt_query = 0 ]
+						then
+							###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
+							mv ${script_path}/certs/cacert.pem ${script_path}/certs/${tsa_service}/cacert.pem
+							tsa_rootcert_available=1
+						else
+							rm ${script_path}/certs/cacert.pem 2>/dev/null
+						fi
+					else
+						tsa_rootcert_available=1
+					fi
+
+					###IF BOTH TSA.CRT AND CACERT.PEM ARE THERE SET FLAG####################
+					if [ $tsa_cert_available = 1 -a $tsa_rootcert_available = 1 ]
+					then
+						tsa_available=1
+					else
+						retry_counter=$(( $retry_counter + 1 ))
+						if [ $retry_counter -le $retry_limit ]
+						then
+							sleep $retry_wait_seconds
+						else
+							if [ $gui_mode = 1 ]
+							then
+								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_no_network" 0 0
+								sleep 10
+								exit 1
+							else
+								exit 1
+							fi
 						fi
 					fi
-				fi
-				######################################
+				done
 			done
-			cd ${script_path}
+			cd ${script_path}/
 
-			###VERIFY USERS AND THEIR TSA STAMPS###
+			###PURGE BLACKLIST AND SETUP ALL LIST#########
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
 			touch ${user_path}/all_accounts.dat
@@ -926,47 +963,64 @@ check_tsa(){
 			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
 			while read line
 			do
+				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 				accountname_key_name=`echo $line`
 				accountname_key_content=`gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g'`
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
-					###CHECK TSA QUERYFILE#########################
-					openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/freetsa.tsq -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
-					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						###WRITE OUTPUT OF RESPONSE TO FILE############
-						openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
-						rt_query=$?
-						if [ $rt_query = 0 ]
+					###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+					tsa_file_found=0
+					for tsa_service in `ls -1 ${script_path}/certs`
+					do
+						###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
+						if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -a -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
 						then
-							###VERIFY TSA RESPONSE#########################
-							openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/freetsa.tsr -CAfile ${script_path}/certs/freetsa/cacert.pem -untrusted ${script_path}/certs/freetsa/tsa.crt 1>/dev/null 2>/dev/null
+							###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+							tsa_file_found=1
+
+							###CHECK TSA QUERYFILE###################################
+							openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/cacert.pem -untrusted ${script_path}/certs/${tsa_service}/tsa.crt 1>/dev/null 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-								date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
-								date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
-								accountdate_to_verify=`echo $line|cut -d '.' -f2`
-								creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
-								if [ $creation_date_diff -ge 0 ]
+								###WRITE OUTPUT OF RESPONSE TO FILE######################
+								openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+								rt_query=$?
+								if [ $rt_query = 0 ]
 								then
-									if [ $creation_date_diff -gt 120 ]
+									###VERIFY TSA RESPONSE###################################
+									openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/cacert.pem -untrusted ${script_path}/certs/${tsa_service}/tsa.crt 1>/dev/null 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
 									then
+										###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
+										date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
+										date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
+										accountdate_to_verify=`echo $line|cut -d '.' -f2`
+										creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+										if [ $creation_date_diff -ge 0 ]
+										then
+											if [ $creation_date_diff -gt 120 ]
+											then
+												echo $line >>${user_path}/blacklisted_accounts.dat
+											fi
+										else
+											echo $line >>${user_path}/blacklisted_accounts.dat
+										fi
+									else
 										echo $line >>${user_path}/blacklisted_accounts.dat
 									fi
 								else
 									echo $line >>${user_path}/blacklisted_accounts.dat
 								fi
+								rm ${user_path}/timestamp_check.tmp 2>/dev/null
 							else
 								echo $line >>${user_path}/blacklisted_accounts.dat
 							fi
-						else
-							echo $line >>${user_path}/blacklisted_accounts.dat
 						fi
-						rm ${user_path}/timestamp_check.tmp 2>/dev/null
-					else
+					done
+					if [ $tsa_file_found = 0 ]
+					then
 						echo $line >>${user_path}/blacklisted_accounts.dat
 					fi
 				else
@@ -999,10 +1053,8 @@ check_tsa(){
 				#####################################################################################
 
 				###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-				cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
-				cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
-				cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
-				rm ${user_path}/all_accounts.tmp 2>/dev/null
+				cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort|uniq -u >${user_path}/all_accounts.tmp
+				mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			fi
 }
 check_keys(){
@@ -2631,18 +2683,23 @@ do
 														then
 															echo "keys/${line}" >>${user_path}/files_list.tmp
 														fi
-														tsa_req_there=0
-														tsa_req_there=`grep -c "proofs/${line}/freetsa.tsq" $receipient_index_file`
-														if [ $tsa_req_there = 0 ]
-														then
-															echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
-														fi
-														tsa_res_there=0
-														tsa_res_there=`grep -c "proofs/${line}/freetsa.tsr" $receipient_index_file`
-														if [ $tsa_res_there = 0 ]
-														then
-															echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
-														fi
+
+														for tsa_service in `ls -1 ${script_path}/certs`
+														do
+															tsa_req_there=0
+															tsa_req_there=`grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file`
+															if [ $tsa_req_there = 0 ]
+															then
+																echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+															fi
+															tsa_res_there=0
+															tsa_res_there=`grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file`
+															if [ $tsa_res_there = 0 ]
+															then
+																echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+															fi
+														done
+
 														index_file="proofs/${line}/${line}.txt"
 														if [ -s ${script_path}/${index_file} ]
 														then
@@ -2664,8 +2721,17 @@ do
 													while read line
 													do
 														echo "keys/${line}" >>${user_path}/files_list.tmp
-														echo "proofs/${line}/freetsa.tsq" >>${user_path}/files_list.tmp
-														echo "proofs/${line}/freetsa.tsr" >>${user_path}/files_list.tmp
+														for tsa_service in `ls -1 ${script_path}/certs`
+														do
+															if [ -s "proofs/${line}/${tsa_service}.tsq" ]
+															then
+																echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+															fi
+															if [ -s "proofs/${line}/${tsa_service}.tsr" ]
+															then
+																echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+															fi
+														done
 														if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 														then
 															echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
