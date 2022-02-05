@@ -836,14 +836,12 @@ check_archive(){
 															fi
 														done
 														;;
-													"txt")	if [ "${file_full}" = "${file_usr}.txt" ]
+													*)	if [ "${file_full}" = "${file_usr}.txt" ]
 														then
 															echo "$line" >>${user_path}/files_to_fetch.tmp
 														else
 															rt_query=1
 														fi
-														;;
-													*)	rt_query=1
 														;;
 												esac
 											else
@@ -878,7 +876,7 @@ check_archive(){
 check_tsa(){
 			cd ${script_path}/certs
 
-			###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#################
 			for tsa_service in `ls -1 ${script_path}/certs`
 			do
 				###VARIABLE FOR TSA CERTIFICATE DOWNLOAD CHECK###########
