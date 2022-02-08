@@ -10,7 +10,7 @@ login_account(){
 		ignore_rest=0
 
 		###READ LIST OF KEYS LINE BY LINE############################
-		for key_file in `ls -1 ${script_path}/keys/|sort -t. -k2`
+		for key_file in `ls -1 ${script_path}/keys/|sort -t . -k2`
 		do
 			if [ $ignore_rest = 0 ]
 			then
@@ -473,7 +473,7 @@ build_ledger(){
 		if [ $old_ledger_there -gt 0 -a $old_scoretable_there = 1 -a $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
-			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t_ -k1|tail -1`
+			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1`
 			last_ledger_date=`echo $last_ledger|cut -d '_' -f1`
 			last_ledger_date_stamp=`date -u +%s --date="${last_ledger_date}"`
 
@@ -489,7 +489,7 @@ build_ledger(){
 			day_counter=`expr $no_seconds_last / 86400`
 		else
 			###SET DATESTAMP####################################
-			date_stamp=`date -u +%s --date="${start_date}"`
+			date_stamp=`date -u +%s --date=$(date -u +%Y%m%d --date=@$(sort -t . -k2 ${user_path}/depend_accounts.dat|head -1|cut -d '.' -f2))`
 
 			###EMPTY LEDGER#####################################
 			rm ${user_path}/*_ledger.dat 2>/dev/null
@@ -509,8 +509,11 @@ build_ledger(){
 			rm ${user_path}/ignored_trx.dat 2>/dev/null
 			####################################################
 
-			###SET DAYCOUNTER FOR NORMAL LEDGER RUN#############
-			day_counter=1
+			###CALCULATE DAY COUNTER############################
+			date_stamp_last=`date -u +%s --date="${start_date}"`
+			no_seconds_last=$(( $date_stamp_last - $date_stamp ))
+			day_counter=`expr $no_seconds_last / 86400`
+			day_counter=$(( $day_counter + 1 ))
 		fi
 		####################################################
 
@@ -958,7 +961,7 @@ check_tsa(){
 			touch ${user_path}/all_accounts.dat
 
 			###FLOCK######################################
-			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t. -k2 >${user_path}/all_accounts.dat
+			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t . -k2 >${user_path}/all_accounts.dat
 			while read line
 			do
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
