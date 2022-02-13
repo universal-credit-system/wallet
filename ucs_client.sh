@@ -182,7 +182,7 @@ create_keys(){
 					then
 						###GET TSA DATA##############################################
 						tsa_config_line=`grep "${default_tsa}" ${script_path}/control/tsa.conf`
-						tsa_connect_string=`echo "${tsa_config_line}"|cut -d ',' -f4`
+						tsa_connect_string=`echo "${tsa_config_line}"|cut -d ',' -f5`
 
 						###SENT QUERY TO TSA#########################################
 						curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${default_tsa}.tsr ${tsa_connect_string} >${user_path}/${default_tsa}.tsr
@@ -194,12 +194,12 @@ create_keys(){
 
 							###DOWNLOAD LATEST TSA CERTIFICATES##########################
 							tsa_cert_url=`echo "${tsa_config_line}"|cut -d ',' -f2`
-							wget -q ${tsa_cert_url}
+							wget -q -O tsa.crt ${tsa_cert_url}
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
 								tsa_cert_url=`echo "${tsa_config_line}"|cut -d ',' -f3`
-								wget -q ${tsa_cert_url}
+								wget -q -O cacert.pem ${tsa_cert_url}
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -879,10 +879,19 @@ check_archive(){
 check_tsa(){
 			cd ${script_path}/certs
 
+			###SET NOW STAMP#########
+			now_stamp=`date +%s`
+
+			###PURGE OLD TMP FILES###
+			rm ${script_path}/certs/*.crt 2>/dev/null
+			rm ${script_path}/certs/*.crl 2>/dev/null
+			rm ${script_path}/certs/*.pem 2>/dev/null
+
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#################
 			for tsa_service in `ls -1 ${script_path}/certs`
 			do
 				###VARIABLE FOR TSA CERTIFICATE DOWNLOAD CHECK###########
+				tsa_update_required=0
 				tsa_available=0
 				tsa_cert_available=0
 				tsa_rootcert_available=0
@@ -890,51 +899,126 @@ check_tsa(){
 				while [ $tsa_available = 0 ]
 				do
 					###IF TSA.CRT NOT AVAILABLE...############
-					if [ ! -s ${script_path}/certs/${tsa_service}/tsa.crt ]
+					if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
+					then
+						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
+						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
+						then
+							tsa_cert_available=1
+						else
+							tsa_update_required=1
+						fi
+					else
+						tsa_update_required=1
+					fi
+					if [ $tsa_update_required = 1 ]
 					then
 						###GET URL FROM TSA.CONF#################
 						tsa_cert_url=`grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f2`
 
 						###DOWNLOAD TSA.CRT######################
-						wget -q ${tsa_cert_url}
+						wget -q -O tsa.crt ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
-							mv ${script_path}/certs/tsa.crt ${script_path}/certs/${tsa_service}/tsa.crt
-							tsa_cert_available=1
-						else
-							rm ${script_path}/certs/tsa.crt 2>/dev/null
+							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
+							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
+							then
+								if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
+								then
+									mv ${script_path}/certs/${tsa_service}/tsa.crt ${script_path}/certs/${tsa_service}/tsa.${old_cert_valid_from}-${old_cert_valid_till}.crt
+								fi
+								mv ${script_path}/certs/tsa.crt ${script_path}/certs/${tsa_service}/tsa.crt
+								tsa_cert_available=1
+							else
+								rm ${script_path}/certs/tsa.crt 2>/dev/null
+							fi
 						fi
-					else
-						tsa_cert_available=1
+						rm ${script_path}/certs/tsa.crt 2>/dev/null
+						tsa_update_required=0
 					fi
 
 					###IF CACERT.PEM NOT AVAILABLE...#########
-					if [ ! -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+					if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+					then
+						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
+						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
+						then
+							tsa_rootcert_available=1
+						else
+							tsa_update_required=1
+						fi
+					else
+						tsa_update_required=1
+					fi
+					if [ $tsa_update_required = 1 ]
 					then
 						###GET URL FROM TSA.CONF#################
 						tsa_cert_url=`grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f3`
 
 						###DOWNLOAD CACERT.PEM####################
-						wget -q ${tsa_cert_url}
+						wget -q -O cacert.pem ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###IF SUCCESSFUL MOVE TO CERTS-FOLDER######
-							mv ${script_path}/certs/cacert.pem ${script_path}/certs/${tsa_service}/cacert.pem
-							tsa_rootcert_available=1
-						else
-							rm ${script_path}/certs/cacert.pem 2>/dev/null
+							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
+							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
+							then
+								if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+								then
+									mv ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/cacert.${old_cert_valid_from}-${old_cert_valid_till}.pem
+								fi
+								mv ${script_path}/certs/cacert.pem ${script_path}/certs/${tsa_service}/cacert.pem
+								tsa_rootcert_available=1
+							else
+								rm ${script_path}/certs/cacert.pem
+							fi
 						fi
-					else
-						tsa_rootcert_available=1
+						rm ${script_path}/certs/cacert.pem 2>/dev/null
+						tsa_update_required=0
 					fi
 
 					###IF BOTH TSA.CRT AND CACERT.PEM ARE THERE SET FLAG####################
 					if [ $tsa_cert_available = 1 -a $tsa_rootcert_available = 1 ]
 					then
-						tsa_available=1
+						###GET TSA CRL URL FIRST BY CRT THEN BY CONFIG#######
+						tsa_crl_url=""
+						tsa_crl_url=`openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A4 "X509v3 CRL Distribution Points:"|grep "URI"|awk -F: '{print $2":"$3}'`
+						if [ "${tsa_crl_url}" = "" ]
+						then
+							###GET CRL URL FROM TSA.CONF#################
+							tsa_crl_url=`grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f4`
+							if [ "${tsa_crl_url}" = "" ]
+							then
+								###IF NO CRL IS THERE###################
+								tsa_available=1
+							fi
+						fi
+						if [ $tsa_available = 0 ]
+						then
+							###DOWNLOAD CRL FILE####################
+							wget -q -O root_ca.crl ${tsa_crl_url}
+							if [ -s ${script_path}/certs/root_ca.crl ]
+							then
+								mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+							fi
+							if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
+							then
+								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain_${now_stamp}.pem
+								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain_${now_stamp}.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									tsa_available=1
+								else
+									tsa_update_required=1	
+								fi
+							fi
+						fi
 					else
 						retry_counter=$(( $retry_counter + 1 ))
 						if [ $retry_counter -le $retry_limit ]
@@ -958,10 +1042,18 @@ check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
+			if [ -s ${user_path}/all_accounts.dat ]
+			then
+				mv ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat
+			else
+				rm ${user_path}/ack_accounts.dat 2>/dev/null
+				touch ${user_path}/ack_accounts.dat
+			fi
 			touch ${user_path}/all_accounts.dat
 
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t . -k2 >${user_path}/all_accounts.dat
+			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort|uniq -u >${user_path}/all_accounts.tmp
 			while read line
 			do
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
@@ -1027,7 +1119,7 @@ check_tsa(){
 				else
 					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
-			done <${user_path}/all_accounts.dat
+			done <${user_path}/all_accounts.tmp
 
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1629,9 +1721,9 @@ request_uca(){
 			session_key=`date -u +%Y%m%d`
 
 			###GET VALUES FROM UCA.CONF#######################
-			uca_ip=`echo $line|cut -d ':' -f1`
-			uca_rcv_port=`echo $line|cut -d ':' -f2`
-			uca_info=`echo $line|cut -d ':' -f4`
+			uca_connect_string=`echo $line|cut -d ',' -f1`
+			uca_rcv_port=`echo $line|cut -d ',' -f2`
+			uca_info=`echo $line|cut -d ',' -f4`
 
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
@@ -1667,7 +1759,7 @@ request_uca(){
 			if [ $rt_query = 0 ]
 			then
 				###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-				cat ${user_path}/uca_header.tmp|netcat -q0 -w60 ${uca_ip} ${uca_rcv_port} >${out_file} 2>/dev/null
+				cat ${user_path}/uca_header.tmp|netcat -q0 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -1696,18 +1788,18 @@ request_uca(){
 					then
 						if [ ! -s ${save_file} ]
 						then
-							echo "${uca_ip}:${usera_ssecret}:" >${save_file}
+							echo "${uca_connect_string}:${usera_ssecret}:" >${save_file}
 						fi
 						###WRITE SHARED SECRET TO DB########################
-						ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
+						ssecret_there=`grep "${uca_connect_string}" ${save_file}|wc -l`
 						if [ $ssecret_there = 0 ]
 						then
-							echo "${uca_ip}:${usera_ssecret}:" >>${save_file}
+							echo "${uca_connect_string}:${usera_ssecret}:" >>${save_file}
 						else
-							same_key=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
+							same_key=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2`
 							if [ ! $same_key = $usera_ssecret ]
 							then
-								sed -i "s/${uca_ip}:${same_key}:/${uca_ip}:${usera_ssecret}/g" ${save_file}
+								sed -i "s/${uca_connect_string}:${same_key}:/${uca_connect_string}:${usera_ssecret}/g" ${save_file}
 							fi
 						fi
 						###CHECK SENT FILE##################################
@@ -1731,13 +1823,13 @@ request_uca(){
 				else
 					if [ $gui_mode = 0 ]
 					then
-						echo "ERROR: UCA-LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
+						echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 					fi
 				fi
 			else
 				if [ $gui_mode = 0 ]
 				then
-					echo "ERROR: UCA-LINK RCV ${uca_ip}:${uca_rcv_port} FAILED"
+					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 				fi
 			fi
 			###REMOVE TMP HEADER FILE##########################
@@ -1789,9 +1881,9 @@ send_uca(){
 					session_key=`date -u +%Y%m%d`
 
 					###GET VALUES FROM UCA.CONF##################
-					uca_ip=`echo $line|cut -d ':' -f1`
-					uca_snd_port=`echo $line|cut -d ':' -f3`
-					uca_info=`echo $line|cut -d ':' -f4`
+					uca_connect_string=`echo $line|cut -d ',' -f1`
+					uca_snd_port=`echo $line|cut -d ',' -f3`
+					uca_info=`echo $line|cut -d ',' -f4`
 
 					###STATUS BAR FOR GUI########################
 					if [ $gui_mode = 1 ]
@@ -1803,11 +1895,11 @@ send_uca(){
 					now_stamp=`date +%s`
 
 					###WRITE SHARED SECRET TO DB########################
-					ssecret_there=`grep "${uca_ip}" ${save_file}|wc -l`
+					ssecret_there=`grep "${uca_connect_string}" ${save_file}|wc -l`
 					if [ ! $ssecret_there = 0 ]
 					then
 						###GET KEY FROM SAVE-TABLE#########################
-						usera_ssecret=`grep "${uca_ip}" ${save_file}|cut -d ':' -f2`
+						usera_ssecret=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2`
 						usera_ssecret=$(( $usera_ssecret + $usera_ssecret ))
 						usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
 
@@ -1817,13 +1909,13 @@ send_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-							cat ${sync_file}|netcat -q0 -w5 ${uca_ip} ${uca_snd_port} 2>/dev/null
+							cat ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} 2>/dev/null
 							rt_query=$?
 							if [ ! $rt_query = 0 ]
 							then
 								if [ $gui_mode = 0 ]
 								then
-									echo "ERROR: UCA-LINK SND ${uca_ip}:${uca_snd_port} FAILED"
+									echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
 								fi
 							fi
 						fi
