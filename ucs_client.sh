@@ -1744,7 +1744,8 @@ request_uca(){
 			usera_random_integer_formatted=`echo "${usera_random_integer_unformatted} / 1"|bc`
 			usera_send_tmp=`echo "${g_number} ^ ${usera_random_integer_formatted}"|bc`
 			usera_send=`echo "${usera_send_tmp} % ${p_number}"|bc`
-			usera_string="${p_number}:${g_number}:${usera_send}"
+			usera_session_id=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 20`
+			usera_string="${p_number}:${g_number}:${usera_send}:${usera_session_id}:"
 			##################################################
 
 			###SET VALUES#####################################
@@ -1788,13 +1789,13 @@ request_uca(){
 					then
 						if [ ! -s ${save_file} ]
 						then
-							echo "${uca_connect_string}:${usera_ssecret}:" >${save_file}
+							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:" >${save_file}
 						fi
 						###WRITE SHARED SECRET TO DB########################
 						ssecret_there=`grep "${uca_connect_string}" ${save_file}|wc -l`
 						if [ $ssecret_there = 0 ]
 						then
-							echo "${uca_connect_string}:${usera_ssecret}:" >>${save_file}
+							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:" >>${save_file}
 						else
 							same_key=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2`
 							if [ ! $same_key = $usera_ssecret ]
@@ -1902,23 +1903,31 @@ send_uca(){
 						usera_ssecret=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2`
 						usera_ssecret=$(( $usera_ssecret + $usera_ssecret ))
 						usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
+						usera_session_id=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3`
 
-						###ENCRYPT SYNCFILE################################
-						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
+						###ENCRYPT HEADER CONTAINING SESSION ID############
+						printf "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-							cat ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} 2>/dev/null
+							###ENCRYPT SYNCFILE################################
+							gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
 							rt_query=$?
-							if [ ! $rt_query = 0 ]
+							if [ $rt_query = 0 ]
 							then
-								if [ $gui_mode = 0 ]
+								###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
+								cat ${user_path}/uca_header.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} 2>/dev/null
+								rt_query=$?
+								if [ ! $rt_query = 0 ]
 								then
-									echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
+									if [ $gui_mode = 0 ]
+									then
+										echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
+									fi
 								fi
 							fi
 						fi
+						rm ${user_path}/uca_header.tmp 2>/dev/null
 					fi
 
 					###STATUS BAR FOR GUI##############################
