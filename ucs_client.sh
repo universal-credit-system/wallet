@@ -2737,11 +2737,17 @@ do
 						then
 							if [ $gui_mode = 1 ]
 							then
-								order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "X"`
+								order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
 								rt_query=$?
 							else
 								order_purpose=$cmd_purpose
-								rt_query=0
+								order_purpose_size=`printf "${cmd_purpose}"|wc -m`
+								if [ $order_purpose_size -lt 75 ]
+								then
+									rt_query=0
+								else
+									exit 1
+								fi
 							fi
 							if [ $rt_query = 0 ]
 							then
