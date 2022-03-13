@@ -1120,6 +1120,7 @@ check_tsa(){
 					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
 			done <${user_path}/all_accounts.tmp
+			rm ${user_path}/all_accounts.tmp 2>/dev/null
 
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1220,11 +1221,21 @@ check_keys(){
 		fi
 }
 check_trx(){
+		###PURGE BLACKLIST AND SETUP ALL LIST##############################
+		rm ${user_path}/blacklisted_trx.dat 2>/dev/null
+		touch ${user_path}/blacklisted_trx.dat
+		if [ -s ${user_path}/all_trx.dat ]
+		then
+			mv ${user_path}/all_trx.dat ${user_path}/ack_trx.dat
+		else
+			rm ${user_path}/ack_trx.dat 2>/dev/null
+			touch ${user_path}/ack_trx.dat
+		fi
+		touch ${user_path}/all_trx.dat
+
 		###REMOVE OLD FILES AND RECREATE THEM##############################
-		rm ${user_path}/all_trx.dat 2>/dev/null
 		rm ${user_path}/all_trx.tmp 2>/dev/null
 		rm ${user_path}/trx_list_all.tmp 2>/dev/null
-		touch ${user_path}/all_trx.dat
 		touch ${user_path}/all_trx.tmp
 		touch ${user_path}/trx_list_all.tmp
 
@@ -1257,7 +1268,7 @@ check_trx(){
 		###################################################################
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
-		sort -t . -k3 ${user_path}/all_trx.dat >${user_path}/all_trx.tmp
+		cat ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|sort -t . -k3|uniq -u >${user_path}/all_trx.tmp
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 
 		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
@@ -1283,62 +1294,70 @@ check_trx(){
 						user_to_check_receiver_date=`echo $user_to_check|cut -d '.' -f2`
 						if [ $trx_date_inside -gt $user_to_check_receiver_date ]
 						then
-							###CHECK IF USER HAS CREATED A INDEX FILE################################
-							if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+							###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
+							trx_purpose=`sed -n '8p' ${file_to_check}|cut -d ':' -f2`
+							purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
+							if [ $purpos_contains_alnum = 0 ]
 							then
-								####CHECK IF USER HAS INDEXED THE TRANSACTION############################
-								is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
-
-								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
-								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
-								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
-								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-								if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 -o $is_amount_mod = 1 ]
+								###CHECK IF USER HAS CREATED A INDEX FILE################################
+								if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 								then
-									###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
-									rm $file_to_check 2>/dev/null
-								else
-									if [ $is_trx_signed = 1 ]
+									####CHECK IF USER HAS INDEXED THE TRANSACTION############################
+									is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
+
+									###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+									trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
+									is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
+									is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
+									is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
+									if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 -o $is_amount_mod = 1 ]
 									then
-										if [ $index_there = 1 ]
+										###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
+										rm $file_to_check 2>/dev/null
+									else
+										if [ $is_trx_signed = 1 ]
 										then
-											is_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${handover_account}/${handover_account}.txt`
-										else
-											is_indexed=0
-										fi
-										if [ $is_indexed = 0 ]
-										then
-											if [ $ignore_there = 1 ]
+											if [ $index_there = 1 ]
 											then
-												is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
-												if [ $is_ignored = 0 ]
+												is_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${handover_account}/${handover_account}.txt`
+											else
+												is_indexed=0
+											fi
+											if [ $is_indexed = 0 ]
+											then
+												if [ $ignore_there = 1 ]
 												then
+													is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
+													if [ $is_ignored = 0 ]
+													then
+														echo $line >>${user_path}/all_trx.tmp
+													fi
+												else
 													echo $line >>${user_path}/all_trx.tmp
 												fi
 											else
 												echo $line >>${user_path}/all_trx.tmp
 											fi
 										else
-											echo $line >>${user_path}/all_trx.tmp
+											if [ ${user_to_check} = ${handover_account} ]
+											then
+												echo $line >>${user_path}/all_trx.tmp
+											fi
 										fi
+									fi
+								else
+									if [ ${user_to_check} = ${handover_account} ]
+									then
+										echo $line >>${user_path}/all_trx.tmp
 									else
-										if [ ${user_to_check} = ${handover_account} ]
+										if [ $delete_trx_not_indexed = 1 ]
 										then
-											echo $line >>${user_path}/all_trx.tmp
+											rm $file_to_check 2>/dev/null
 										fi
 									fi
 								fi
 							else
-								if [ ${user_to_check} = ${handover_account} ]
-								then
-									echo $line >>${user_path}/all_trx.tmp
-								else
-									if [ $delete_trx_not_indexed = 1 ]
-									then
-										rm $file_to_check 2>/dev/null
-									fi
-								fi
+								echo $line >>${user_path}/blacklisted_trx.dat
 							fi
 						else
 							echo $line >>${user_path}/blacklisted_trx.dat
@@ -1356,7 +1375,9 @@ check_trx(){
 
 		if [ -s ${user_path}/all_trx.tmp ]
 		then
-			mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
+			cat ${user_path}/all_trx.tmp ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.dat
+		else
+			cp ${user_path}/ack_trx.dat ${user_path}/all_trx.dat
 		fi
 
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
@@ -2762,7 +2783,8 @@ do
 								if [ $rt_query = 0 ]
 								then
 									trx_now=`date +%s`
-									make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\nPRPS:${order_purpose}" ${trx_now} 0
+									order_purpose_hash=`printf "${handover_account}_${trx_now}_${order_purpose}"|sha224sum|cut -d ' ' -f1`
+									make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\nPRPS:${order_purpose_hash}" ${trx_now} 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
