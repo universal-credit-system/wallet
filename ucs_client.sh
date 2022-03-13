@@ -1297,7 +1297,7 @@ check_trx(){
 							###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
 							trx_purpose=`sed -n '8p' ${file_to_check}|cut -d ':' -f2`
 							purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
-							if [ $purpos_contains_alnum = 0 ]
+							if [ $purpose_contains_alnum = 0 ]
 							then
 								###CHECK IF USER HAS CREATED A INDEX FILE################################
 								if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
