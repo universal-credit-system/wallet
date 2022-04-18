@@ -16,10 +16,10 @@ login_account(){
 			then
 				###EXTRACT KEY DATA##########################################
 				keylist_name=`echo $key_file|cut -d '.' -f1`
-		                keylist_stamp=`echo $key_file|cut -d '.' -f2`
-                                if [ ! "${cmd_sender}" = "" ]
+				keylist_stamp=`echo $key_file|cut -d '.' -f2`
+				if [ ! "${cmd_sender}" = "" ]
 				then
-                                        keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
+					keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
 				else
 					keylist_hash=`echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1`
 				fi
@@ -48,8 +48,8 @@ login_account(){
 				mkdir ${script_path}/userdata/${handover_account}/temp/proofs
 				mkdir ${script_path}/userdata/${handover_account}/temp/trx
 			else
-               	 		rm ${user_path}/account.acc.gpg 2>/dev/null
-	        		rm ${user_path}/account.acc 2>/dev/null
+	       	 		rm ${user_path}/account.acc.gpg 2>/dev/null
+				rm ${user_path}/account.acc 2>/dev/null
 			fi
 			user_path="${script_path}/userdata/${handover_account}"
 
@@ -109,8 +109,8 @@ login_account(){
 			fi
 		fi
 		rm ${user_path}/message_blank.dat.gpg 2>/dev/null
-                rm ${user_path}/account.acc.gpg 2>/dev/null
-	        rm ${user_path}/account.acc 2>/dev/null
+		rm ${user_path}/account.acc.gpg 2>/dev/null
+		rm ${user_path}/account.acc 2>/dev/null
 		action_done=1
 		make_ledger=1
 }
@@ -230,7 +230,7 @@ create_keys(){
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
 											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
-				                                                	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_final_display" 0 0
+											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_final_display" 0 0
 											clear
 										else
 											echo "USER:${create_name}"
@@ -268,7 +268,7 @@ create_keys(){
 		then
 			if [ $key_remove = 1 ]
 			then
-                                ###REMOVE PROOFS DIRECTORY OF USER###########################
+				###REMOVE PROOFS DIRECTORY OF USER###########################
 				rm -r ${script_path}/proofs/${create_name_hashed}.${file_stamp} 2>/dev/null
 
 				###REMOVE USERDATA DIRECTORY OF USER#########################
@@ -297,7 +297,7 @@ make_signature(){
 
 			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
 			if [ $create_index_file = 0 ]
-                        then
+			then
 				###IF NOT WRITE TRX MESSAGE TO FILE##############################
 				message=${script_path}/trx/${handover_account}.${trx_now}
 				message_blank=${user_path}/message_blank.dat
@@ -307,13 +307,13 @@ make_signature(){
 			else
 				###IF YES.....###################################################
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
-                                message_blank=${user_path}/message_blank.dat
+				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
 				for key_file in `cat ${user_path}/all_accounts.dat`
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
 					key_hash=`sha256sum ${script_path}/keys/${key_file}|cut -d ' ' -f1`
-                                        echo "keys/${key_file} ${key_hash}" >>${message_blank}
+					echo "keys/${key_file} ${key_hash}" >>${message_blank}
 					#################################################################
 
 					for tsa_service in `ls -1 ${script_path}/certs`
@@ -341,7 +341,7 @@ make_signature(){
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
-                                cat ${user_path}/index_trx.dat >>${message_blank}
+				cat ${user_path}/index_trx.dat >>${message_blank}
 			fi
 			#################################################################
 
@@ -394,11 +394,11 @@ check_input(){
 
 		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
 		if [ $length_counter -le 1 ]
-                then
+		then
 			if [ $gui_mode = 1 ]
 			then
-                        	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg2" 0 0
-                		rt_query=1
+				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg2" 0 0
+				rt_query=1
 			else
 				exit 1
 			fi
@@ -527,13 +527,13 @@ build_ledger(){
 		then
 			###INIT STATUS BAR##################################
 			now_date_status=`date -u +%s --date=${now}`
-        	        now_date_status=$(( $now_date_status + 86400 ))
+			now_date_status=$(( $now_date_status + 86400 ))
 			no_seconds_total=$(( $now_date_status - $date_stamp ))
 			no_days_total=`expr $no_seconds_total / 86400`
 			percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 			current_percent=0
 			current_percent_display=0
-                        current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
+			current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
 		else
 			progress_bar_redir="2"
@@ -548,7 +548,7 @@ build_ledger(){
 			then
 				echo "$current_percent_display"
 			fi
-                        current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
+			current_percent=`echo "scale=10;${current_percent} + ${percent_per_day}"|bc`
 			current_percent_display=`echo "${current_percent} / 1"|bc`
 			#################################################
 
@@ -588,7 +588,7 @@ build_ledger(){
 			for each_trx_today in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
 				###EXRACT DATA FOR CHECK######################################
-			        trx_filename=`echo $each_trx_today|cut -d ' ' -f3`
+				trx_filename=`echo $each_trx_today|cut -d ' ' -f3`
 				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
@@ -747,7 +747,7 @@ check_archive(){
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 							files_not_homedir=`echo $line|cut -d '/' -f1`
 							case $files_not_homedir in
-		                				"keys")		if [ ! -d ${script_path}/$line ]
+								"keys")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=`echo $line|cut -d '/' -f2`
 											file_ext=`echo $file_full|cut -d '.' -f2`
@@ -767,8 +767,8 @@ check_archive(){
 												fi
 											fi
 										fi
-		                        		      			;;
-		               					"trx")		if [ ! -d ${script_path}/$line ]
+							      			;;
+			       					"trx")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=`echo $line|cut -d '/' -f2`
 											file_ext=`echo $file_full|cut -d '.' -f2`
@@ -795,7 +795,7 @@ check_archive(){
 												fi
 											fi
 										fi
-			                       		        		;;
+					       					;;
 								"proofs")	if [ ! -d ${script_path}/$line ]
 										then
 											file_usr=`echo $line|cut -d '/' -f2`
@@ -851,7 +851,7 @@ check_archive(){
 												rt_query=1
 											fi
 										fi
-		                               					;;
+					       					;;
 								*)		rt_query=1
 										;;
 							esac
@@ -1159,22 +1159,22 @@ check_keys(){
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
-                       	key_uname=$line
- 	                key_imported=`grep -c "${key_uname}" ${user_path}/keylist_gpg.tmp`
-                        if [ $key_imported = 0 ]
-              		then
-                               	gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
-              		        rt_query=$?
-                               	if [ $rt_query -gt 0 ]
-                               	then
+		       	key_uname=$line
+ 			key_imported=`grep -c "${key_uname}" ${user_path}/keylist_gpg.tmp`
+			if [ $key_imported = 0 ]
+	      		then
+			       	gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
+	      			rt_query=$?
+			       	if [ $rt_query -gt 0 ]
+			       	then
 					dialog_import_fail_display=`echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g"`
-                       			dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_import_fail_display" 0 0
-                                       	key_already_blacklisted=`grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat`
-                                       	if [ $key_already_blacklisted = 0 ]
-                                       	then
-                                               	echo "${line}" >>${user_path}/blacklisted_accounts.dat
-                                       	fi
-                               	fi
+		       			dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_import_fail_display" 0 0
+				       	key_already_blacklisted=`grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat`
+				       	if [ $key_already_blacklisted = 0 ]
+				       	then
+					       	echo "${line}" >>${user_path}/blacklisted_accounts.dat
+				       	fi
+			       	fi
 			else
 				index_file="${script_path}/proofs/${line}/${line}.txt"
 				if [ -s $index_file ]
@@ -1186,8 +1186,8 @@ check_keys(){
 						rm ${script_path}/proofs/${line}/${line}.txt 2>/dev/null
 					fi
 				fi
-                       	fi
-               	done <${user_path}/all_accounts.dat
+		       	fi
+	       	done <${user_path}/all_accounts.dat
 		rm ${user_path}/keylist_gpg.tmp
 
 
@@ -1214,7 +1214,7 @@ check_keys(){
 			###################################################################
 
 			###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-        	       	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
+		       	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
 			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
 			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
 			rm ${user_path}/all_accounts.tmp 2>/dev/null
@@ -1523,7 +1523,7 @@ process_new_files(){
 				cat ${user_path}/remove_list.tmp|sort|uniq >${user_path}/temp_filelist.tmp
 				cat ${user_path}/files_to_fetch.tmp >>${user_path}/temp_filelist.tmp
 				cat ${user_path}/temp_filelist.tmp|sort|uniq -u >${user_path}/files_to_fetch.tmp
-                                rm ${user_path}/temp_filelist.tmp
+				rm ${user_path}/temp_filelist.tmp
 
 				###REMOVE FILES OF REMOVE LIST################
 				while read line
@@ -1531,6 +1531,24 @@ process_new_files(){
 					rm ${user_path}/temp/${line}
 				done <${user_path}/remove_list.tmp
 				rm ${user_path}/remove_list.tmp 2>/dev/null
+			else
+				###CHECK IF EXISTING FILES ARE OVERWRITTEN####
+				files_replaced=0
+				while read line
+				do
+					if [ -s ${script_path}/$line ]
+					then
+						files_replaced=1
+					fi
+				done <${user_path}/files_to_fetch.tmp
+				
+				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
+				if [ $files_replaced = 1 ]
+				then
+					rm ${script_path}/userdata/${handover_account}/all_trx.dat
+					rm ${script_path}/userdata/${handover_account}/all_accounts.dat
+					rm ${script_path}/userdata/${handover_account}/*_ledger.dat
+				fi
 			fi
 			while read line
 			do
@@ -1661,33 +1679,33 @@ get_dependencies(){
 			if [ $only_process_depend = 1 ]
 			then
 				echo "${handover_account}" >${user_path}/depend_accounts.dat
-                	        grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
+				grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
 				while read line
-                        	do
-                                	touch ${user_path}/depend_user_list.tmp
+				do
+					touch ${user_path}/depend_user_list.tmp
 					user=$line
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
 						already_there=`grep -c "${user_trx}" ${user_path}/depend_trx.dat`
-                                        	if [ $already_there = 0 ]
-                                        	then
+						if [ $already_there = 0 ]
+						then
 							echo "${user_trx}" >>${user_path}/depend_trx.dat
 							sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
 						fi
 					done
-                                	cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
-                                	mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
-                                	while read line
-                                	do
-                                        	already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
-                                        	if [ $already_there = 0 ]
-                                        	then
-                                                	echo $line >>${user_path}/depend_accounts.dat
-                                        	fi
-                                	done <${user_path}/depend_user_list.tmp
-                               		rm ${user_path}/depend_user_list.tmp 2>/dev/null
-                        	done <${user_path}/depend_accounts.dat
+					cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
+					mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
+					while read line
+					do
+						already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
+						if [ $already_there = 0 ]
+						then
+							echo $line >>${user_path}/depend_accounts.dat
+						fi
+					done <${user_path}/depend_user_list.tmp
+			       		rm ${user_path}/depend_user_list.tmp 2>/dev/null
+				done <${user_path}/depend_accounts.dat
 
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
@@ -1833,7 +1851,7 @@ request_uca(){
 							cd ${user_path}/temp
 
 							###EXTRACT FILE#####################################
-							tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+							tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -2017,7 +2035,7 @@ then
 					;;
 			"-user")	cmd_var=$1
 					;;
-			"-pin")         cmd_var=$1
+			"-pin")	 cmd_var=$1
 					;;
 			"-password")	cmd_var=$1
 					;;
@@ -2072,7 +2090,7 @@ then
 								;;
 						"-user")	cmd_user=$1
 								;;
-						"-pin")         cmd_pin=$1
+						"-pin")	 cmd_pin=$1
 								;;
 						"-password")	cmd_pw=$1
 								;;
@@ -2132,12 +2150,12 @@ do
 			rt_query=0
 		fi
 		if [ ! $rt_query = 0 ]
-        	then
+		then
 			clear
-                	exit 0
-        	else
-                	case $main_menu in
-                        	"$dialog_main_logon")   set -f
+			exit 0
+		else
+			case $main_menu in
+				"$dialog_main_logon")   set -f
 							account_name_entered="blank"
 							account_pin_entered="12345"
 							account_name_entered_correct=0
@@ -2171,7 +2189,7 @@ do
 											if [ $gui_mode = 1 ]
 											then
 												account_pin_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
-                                                                        	        	rt_query=$?
+												rt_query=$?
 											else
 												if [ ! "${cmd_pin}" = "" ]
 												then 
@@ -2184,19 +2202,19 @@ do
 													fi
 												fi
 											fi
-                                                                                	if [ $rt_query = 0 ]
-                                                                                	then
+											if [ $rt_query = 0 ]
+											then
 												check_input "${account_pin_entered}" 1
-                                                                                        	rt_query=$?
-                                                                                        	if [ $rt_query = 0 ]
-                                                                                       		then
+												rt_query=$?
+												if [ $rt_query = 0 ]
+										       		then
 													account_password_entered_correct=0
 	     												while [ $account_password_entered_correct = 0 ]
-               												do
+	       												do
 														if [ $gui_mode = 1 ]
 														then
 															account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
-                                                                							rt_query=$?
+															rt_query=$?
 														else
 															if [ ! "${cmd_pw}" = "" ]
 															then
@@ -2206,8 +2224,8 @@ do
 																exit 1
 															fi
 														fi
-                                                             	   						if [ $rt_query = 0 ]
-                                                               							then
+							     	   						if [ $rt_query = 0 ]
+							       							then
 															check_input "${account_password_entered}" 0
 															rt_query=$?
 															if [ $rt_query = 0 ]
@@ -2216,7 +2234,7 @@ do
 																account_password_entered_correct=1
 																account_pin_entered_correct=1
 																account_name_entered_correct=1
-                                                                                        				fi
+															fi
 														else
 															account_password_entered_correct=1
 															account_pin_entered_correct=1
@@ -2224,10 +2242,10 @@ do
 														fi
 													done
 												fi
-        	                                                                        else
-	                                                                                        account_pin_entered_correct=1
+											else
+												account_pin_entered_correct=1
 												account_name_entered_correct=1
-                        	                                                        fi
+											fi
 										done
 									fi
 								else
@@ -2236,7 +2254,7 @@ do
 							done
 							set +f
 							;;
-                        	"$dialog_main_create")  set -f
+				"$dialog_main_create")  set -f
 							account_name_inputbox=""
 							account_name_entered_correct=0
 							while [ $account_name_entered_correct = 0 ]
@@ -2266,7 +2284,7 @@ do
 										do
 											if [ $gui_mode = 1 ]
 											then
-                										account_pin_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox"`
+												account_pin_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox"`
 												rt_query=$?
 											else
 												if [ "${cmd_pin}" = "" ]
@@ -2295,18 +2313,18 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-                                       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
-                        											then
+				       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
+														then
 															clear
 															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pinmatch" 0 0
 															clear
 														else
 															account_password_entered_correct=0
 	     														while [ $account_password_entered_correct = 0 ]
-               														do
+	       														do
 																if [ $gui_mode = 1 ]
 																then
-                															account_password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0`
+																	account_password_first=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0`
 																	rt_query=$?
 																else
 																	if [ "${cmd_pw}" = "" ]
@@ -2321,7 +2339,7 @@ do
 																fi
 																if [ $rt_query = 0 ]
 																then
-               																check_input "${account_password_first}" 0
+	       																check_input "${account_password_first}" 0
 																	rt_query=$?
 																	if [ $rt_query = 0 ]
 																	then
@@ -2335,15 +2353,15 @@ do
 																		fi
 																		if [ $rt_query = 0 ]
 																		then
-                                       															if [ ! "${account_password_first}" = "${account_password_second}" ]
-                        																then
+				       															if [ ! "${account_password_first}" = "${account_password_second}" ]
+																			then
 																				clear
 																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pwmatch" 0 0
 																				clear
 																			else
 																				account_name_entered_correct=1
 																				account_pin_entered_correct=1
-                                																account_password_entered_correct=1
+																				account_password_entered_correct=1
 																				create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
 																				rt_query=$?
 																				if [ $rt_query = 0 ]
@@ -2567,11 +2585,11 @@ do
 							fi
 							rm ${script_path}/backup_list.tmp 2>/dev/null
 							;;
-                        	"$dialog_main_end")     clear
+				"$dialog_main_end")     clear
 							end_program=1
 							;;
-                	esac
-        	fi
+			esac
+		fi
 
 	else
 		###IF AUTO-UCA-SYNC########################
@@ -2632,10 +2650,11 @@ do
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
-        		rt_query=$?
+			rt_query=$?
 		else
 			rt_query=0
 		fi
+
 		if [ ! $rt_query = 0 ]
 		then
 			user_logged_in=0
@@ -2650,8 +2669,8 @@ do
 			case "$user_menu" in
 				"$dialog_send")	recipient_found=0
 						order_aborted=0
-              			        	while [ $recipient_found = 0 ]
-                              		        do
+	      					while [ $recipient_found = 0 ]
+			      			do
 							if [ $gui_mode = 1 ]
 							then
 								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 ""`
@@ -2667,7 +2686,7 @@ do
 								key_there=`grep -c -w "${order_receipient}" ${user_path}/keylist.tmp`
 								if [ $key_there = 1 ]
 								then
-                                                                        receiver_file=`grep "${order_receipient}" ${user_path}/keylist.tmp|head -1`
+									receiver_file=`grep "${order_receipient}" ${user_path}/keylist.tmp|head -1`
 									recipient_found=1
 									amount_selected=0
 								else
@@ -2690,18 +2709,18 @@ do
 									then
 										dialog_send_amount_display=`echo $dialog_send_amount|sed -e "s/<score>/${sender_score_balance_value}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
 										order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000"`
-								        	rt_query=$?
+										rt_query=$?
 									else
 										rt_query=0
 										order_amount=$cmd_amount
 									fi
-             								if [ $rt_query = 0 ]
-                							then
+	     								if [ $rt_query = 0 ]
+									then
 										order_amount_alnum=`echo $order_amount|grep -c '[[:alpha:]]'`
 										if [ $order_amount_alnum = 0 ]
 										then
 											order_amount_formatted=`echo $order_amount|sed -e 's/,/./g' -e 's/ //g'`
-                                                                                        order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc`
+											order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc`
 											is_greater_one=`echo "${order_amount_formatted} >= 1"|bc`
 											if [ $is_greater_one = 0 ]
 											then
@@ -3021,90 +3040,72 @@ do
 												###CHANGE TO ORIGINAL FILENAME#############################
 												mv ${file_path}.tmp ${file_path}
 
+												###CHECK ARCHIVE###########################################
 												if [ $all_extract = 0 ]
 												then
 													check_archive $file_path 0
 													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														cd ${user_path}/temp
-														tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
-														rt_query=$?
-														if [ $rt_query = 0 ]
-														then
-															process_new_files 0
-														fi
-													else
-														if [ $gui_mode = 1 ]
-														then
-															dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-														else
-															exit 1
-														fi
-													fi
 												else
 													check_archive $file_path 1
 													rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														cd ${user_path}/temp
-														tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-														rt_query=$?
-														if [ $rt_query = 0 ]
-														then
-															process_new_files 1
-														fi
-													else
-														if [ $gui_mode = 1 ]
-														then
-															dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-														else
-															exit 1
-														fi
-													fi
 												fi
+
+												###UNPACK ARCHIVE##########################################
 												if [ $rt_query = 0 ]
 												then
-													set_permissions
-													if [ $gui_mode = 1 ]
+													cd ${user_path}/temp
+													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
+													rt_query=$?
+													if [ $rt_query = 0 ]
 													then
-														file_found=1
-														action_done=1
-														make_ledger=1
-													else
-														check_tsa
-														check_keys
-														check_trx
-														trx_new_ledger=$?
-														get_dependencies
-														dep_new_ledger=$?
-														if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+														if [ $all_extract = 0 ]
 														then
-															changes=0
+															process_new_files 0
 														else
-															changes=1
-														fi
-														now_stamp=`date +%s`
-														build_ledger $changes
-														if [ $changes = 1 ]
+															process_new_files 1
+														fi	
+														set_permissions
+														if [ $gui_mode = 1 ]
 														then
-															make_signature "none" $now_stamp 1
-															rt_query=$?
-															if [ $rt_query -gt 0 ]
+															file_found=1
+															action_done=1
+															make_ledger=1
+														else
+															check_tsa
+															check_keys
+															check_trx
+															trx_new_ledger=$?
+															get_dependencies
+															dep_new_ledger=$?
+															if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
 															then
-																exit 1
+																changes=0
 															else
-																exit 0
+																changes=1
 															fi
-														else
-															exit 1
+															now_stamp=`date +%s`
+															build_ledger $changes
+															if [ $changes = 1 ]
+															then
+																make_signature "none" $now_stamp 1
+																rt_query=$?
+																if [ $rt_query -gt 0 ]
+																then
+																	exit 1
+																else
+																	exit 0
+																fi
+															else
+																exit 1
+															fi
 														fi
 													fi
 												else
-													if [ $gui_mode = 0 ]
+													if [ $gui_mode = 1 ]
 													then
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+													else
 														exit 1
 													fi
 												fi
@@ -3122,7 +3123,7 @@ do
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-                                								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
 												exit 1
 											fi
@@ -3131,7 +3132,7 @@ do
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-                        								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
 											exit 1
 										fi
@@ -3158,130 +3159,114 @@ do
 						if [ $rt_query = 0 ]
 						then
 							file_found=0
-                        				path_to_search=$sync_path_input
-              			          		while [ $file_found = 0 ]
-                        				do
+							path_to_search=$sync_path_input
+	      				  		while [ $file_found = 0 ]
+							do
 								if [ $gui_mode = 1 ]
 								then
-                                					file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
- 			                               			rt_query=$?
+									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
+ 						       			rt_query=$?
 								else
 									rt_query=0
 									file_path=$cmd_path
 								fi
-                        		        		if [ $rt_query = 0 ]
-                                				then
+								if [ $rt_query = 0 ]
+								then
 									if [ ! -d $file_path ]
-                  		                                        then
-                                	                	                if [ -s $file_path ]
-                                        	                		then
+		  							then
+										if [ -s $file_path ]
+										then
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-                                         			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_sync_add" 0 0
-                                        		        				rt_query=$?
+					 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_sync_add" 0 0
+												all_extract=$?
 											else
 												case $cmd_type in
-													"partial")	rt_query=0
+													"partial")	all_extract=0
 															;;
-													"full")		rt_query=1
+													"full")		all_extract=1
 															;;
 													*)		exit 1
 															;;
 												esac
 											fi
-                     		                           				if [ $rt_query = 0 ]
-                                	                				then
-												check_archive $file_path 0
-												rt_query=$?
+											if [ ! $all_extract = 255 ]
+											then
+												if [ $all_extract = 0 ]
+												then
+													check_archive $file_path 0
+													rt_query=$?
+												else
+													check_archive $file_path 1
+													rt_query=$?
+												fi
 												if [ $rt_query = 0 ]
 												then
 													cd ${user_path}/temp
-                                        	               			 			tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --skip-old-files --dereference --hard-dereference
+								       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														process_new_files 0
-													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-													else
-														exit 1
-													fi
-												fi
-		                                                			else
-                		                                 				check_archive $file_path 1
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													cd ${user_path}/temp
-													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
-                                		                					rt_query=$?
-													if [ $rt_query = 0 ]
-													then
-														process_new_files 1
-													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
-													else
-														exit 1
-													fi
-												fi
-											fi
-											if [ $rt_query = 0 ]
-											then
-												set_permissions
-												if [ $gui_mode = 1 ]
-												then
-													file_found=1
-													action_done=1
-													make_ledger=1
-												else
-													check_tsa
-													check_keys
-													check_trx
-													trx_new_ledger=$?
-													get_dependencies
-													dep_new_ledger=$?
-													if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
-													then
-														changes=0
-													else
-														changes=1
-													fi
-													now_stamp=`date +%s`
-													build_ledger $changes
-													if [ $changes = 1 ]
-													then
-														make_signature "none" $now_stamp 1
-														rt_query=$?
-														if [ $rt_query -gt 0 ]
+														if [ $all_extract = 0 ]
 														then
-															exit 1
+															process_new_files 0
 														else
-															exit 0
+															process_new_files 1
 														fi
+														set_permissions
+														if [ $gui_mode = 1 ]
+														then
+															file_found=1
+															action_done=1
+															make_ledger=1
+														else
+															check_tsa
+															check_keys
+															check_trx
+															trx_new_ledger=$?
+															get_dependencies
+															dep_new_ledger=$?
+															if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+															then
+																changes=0
+															else
+																changes=1
+															fi
+															now_stamp=`date +%s`
+															build_ledger $changes
+															if [ $changes = 1 ]
+															then
+																make_signature "none" $now_stamp 1
+																rt_query=$?
+																if [ $rt_query -gt 0 ]
+																then
+																	exit 1
+																else
+																	exit 0
+																fi
+															else
+																exit 0
+															fi
+														fi
+													fi
+												else
+													if [ $gui_mode = 1 ]
+													then
+														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
-														exit 0
+														exit 1
 													fi
 												fi
 											else
-												if [ $gui_mode = 0 ]
-												then
-													exit 1
-												fi
+												file_found=1
 											fi
 										else
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-    								                        	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+    												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
 												exit 1
 											fi
@@ -3290,15 +3275,15 @@ do
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-                               								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+			       								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
 											exit 1
 										fi
 									fi
-                               					else
-                              			 			file_found=1
-                               					fi
-                        				done
+			       					else
+			      			 			file_found=1
+			       					fi
+							done
 						else
 							if [ ! $rt_query = 255 ]
 							then
@@ -3332,7 +3317,7 @@ do
 										fi
 										exit 0
 									fi
-                       						else
+		       						else
 									rm ${handover_account}_${now_stamp}.sync 2>/dev/null
 									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${handover_account}_${now_stamp}.sync#g"`
 									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_fail_display" 0 0
@@ -3392,7 +3377,7 @@ do
 									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-                              	                	        	trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+			      						trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
 									trx_hash=`sha256sum ${script_path}/trx/${line_extracted}|cut -d ' ' -f1`
 									trx_confirmations=`grep -l "trx/${line_extracted} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
