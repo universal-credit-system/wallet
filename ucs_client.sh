@@ -1117,7 +1117,6 @@ check_tsa(){
 												fi
 											fi
 										fi
-										rm ${user_path}/timestamp_check.tmp 2>/dev/null
 									fi
 								done
 								if [ $cacert_file_found = 1 ]
@@ -1137,6 +1136,7 @@ check_tsa(){
 					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
 			done <${user_path}/all_accounts.tmp
+			rm ${user_path}/timestamp_check.tmp 2>/dev/null
 			rm ${user_path}/all_accounts.tmp 2>/dev/null
 
 			#####################################################################################
@@ -1168,13 +1168,24 @@ check_tsa(){
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
 			cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+			rm ${user_path}/ack_accounts.dat
 			rm ${user_path}/all_accounts.tmp
 }
 check_keys(){
-		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
-		rm ${user_path}/blacklisted_trx.dat 2>/dev/null
-		touch ${user_path}/blacklisted_trx.dat
+		###SETUP ALL LIST#################################################
+		if [ -s ${user_path}/all_keys.dat ]
+		then
+			mv ${user_path}/all_keys.dat ${user_path}/ack_keys.dat
+		else
+			rm ${user_path}/ack_keys.dat 2>/dev/null
+			touch ${user_path}/ack_keys.dat
+		fi
+		cp ${user_path}/all_accounts.dat ${user_path}/all_keys.dat
+		touch ${user_path}/all_keys.tmp
 		touch ${user_path}/keylist_gpg.tmp
+		cat ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|sort -t . -k2|uniq -u >${user_path}/all_keys.tmp
+
+		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
@@ -1206,7 +1217,8 @@ check_keys(){
 					fi
 				fi
 		       	fi
-	       	done <${user_path}/all_accounts.dat
+	       	done <${user_path}/all_keys.tmp
+		rm ${user_path}/all_keys.tmp
 		rm ${user_path}/keylist_gpg.tmp
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1232,10 +1244,11 @@ check_keys(){
 			###################################################################
 		fi
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-		cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+		cat ${user_path}/all_keys.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
 		cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+		rm ${user_path}/ack_keys.dat
 		rm ${user_path}/all_accounts.tmp
 }
 check_trx(){
@@ -1407,6 +1420,7 @@ check_trx(){
 
 		###ADD ACKNOWLEDGED TRX TO FINAL LIST##############################
 		cat ${user_path}/all_trx.tmp ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.dat
+		rm ${user_path}/ack_trx.dat
 		rm ${user_path}/all_trx.tmp
 
 		cd ${script_path}/
@@ -1560,6 +1574,7 @@ process_new_files(){
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ $files_replaced = 1 ]
 				then
+					rm ${script_path}/userdata/${handover_account}/all_keys.dat
 					rm ${script_path}/userdata/${handover_account}/all_trx.dat
 					rm ${script_path}/userdata/${handover_account}/all_accounts.dat
 					rm ${script_path}/userdata/${handover_account}/*_ledger.dat
