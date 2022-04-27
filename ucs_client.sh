@@ -1004,12 +1004,18 @@ check_tsa(){
 							wget -q -O root_ca.crl ${tsa_crl_url}
 							if [ -s ${script_path}/certs/root_ca.crl ]
 							then
-								mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+								new_crl_hash=`sha224sum ${script_path}/certs/root_ca.crl|cut -d ' ' -f1`
+								old_crl_hash=`sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl|cut -d ' ' -f1`
+								if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
+								then
+									mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+								fi
 							fi
+							rm ${script_path}/certs/root_ca.crl 2>/dev/null
 							if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
 							then
-								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain_${now_stamp}.pem
-								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain_${now_stamp}.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null
+								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
+								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -1053,70 +1059,81 @@ check_tsa(){
 
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t . -k2 >${user_path}/all_accounts.dat
-			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort|uniq -u >${user_path}/all_accounts.tmp
+			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
 			while read line
 			do
+				###SET FLAG##############################################
+				account_verified=0
+
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 				accountname_key_name=`echo $line`
 				accountname_key_content=`gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g'`
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
-					###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
-					tsa_file_found=0
-					for tsa_service in `ls -1 ${script_path}/certs`
-					do
-						###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
-						if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -a -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
-						then
-							###SET VARIABLE THAT TSA HAS BEEN FOUND##################
-							tsa_file_found=1
-
-							###CHECK TSA QUERYFILE###################################
-							openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/cacert.pem -untrusted ${script_path}/certs/${tsa_service}/tsa.crt 1>/dev/null 2>/dev/null
-							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								###WRITE OUTPUT OF RESPONSE TO FILE######################
-								openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
-								rt_query=$?
-								if [ $rt_query = 0 ]
-								then
-									###VERIFY TSA RESPONSE###################################
-									openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/cacert.pem -untrusted ${script_path}/certs/${tsa_service}/tsa.crt 1>/dev/null 2>/dev/null
+					###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
+					if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -a -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
+					then
+						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+						for tsa_service in `ls -1 ${script_path}/certs`
+						do
+							cacert_file_found=0
+							for cacert_file in `ls -1 ${script_path}/certs/${tsa_service}/cacert.*`
+							do
+								for crt_file in `ls -1 ${script_path}/certs/${tsa_service}/tsa.*`
+								do
+									###CHECK TSA QUERYFILE###################################
+									openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-										date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
-										date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
-										accountdate_to_verify=`echo $line|cut -d '.' -f2`
-										creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
-										if [ $creation_date_diff -ge 0 ]
+										###WRITE OUTPUT OF RESPONSE TO FILE######################
+										openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
 										then
-											if [ $creation_date_diff -gt 120 ]
+											###VERIFY TSA RESPONSE###################################
+											openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+											rt_query=$?
+											if [ $rt_query = 0 ]
 											then
-												echo $line >>${user_path}/blacklisted_accounts.dat
+												###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
+												date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
+												date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
+												accountdate_to_verify=`echo $line|cut -d '.' -f2`
+												creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+												if [ $creation_date_diff -ge 0 ]
+												then
+													if [ $creation_date_diff -le 120 ]
+													then
+														###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+														account_verified=1
+
+														###STEP OUT OF LOOP CACERT_FILE##########################
+														cacert_file_found=1
+													
+														###STEP OUT OF LOOP CRT_FILE#############################
+														break
+													fi
+												fi
 											fi
-										else
-											echo $line >>${user_path}/blacklisted_accounts.dat
 										fi
-									else
-										echo $line >>${user_path}/blacklisted_accounts.dat
+										rm ${user_path}/timestamp_check.tmp 2>/dev/null
 									fi
-								else
-									echo $line >>${user_path}/blacklisted_accounts.dat
+								done
+								if [ $cacert_file_found = 1 ]
+								then
+									break
 								fi
-								rm ${user_path}/timestamp_check.tmp 2>/dev/null
-							else
-								echo $line >>${user_path}/blacklisted_accounts.dat
+							done
+							if [ $account_verified = 1 ]
+							then
+								break
 							fi
-						fi
-					done
-					if [ $tsa_file_found = 0 ]
-					then
-						echo $line >>${user_path}/blacklisted_accounts.dat
+						done
 					fi
-				else
+				fi
+				if [ $account_verified = 0 ]
+				then
 					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
 			done <${user_path}/all_accounts.tmp
@@ -1145,11 +1162,13 @@ check_tsa(){
 				'
 				cd ${script_path}
 				#####################################################################################
-
-				###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-				cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort|uniq -u >${user_path}/all_accounts.tmp
-				mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			fi
+			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
+			cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+
+			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
+			cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+			rm ${user_path}/all_accounts.tmp
 }
 check_keys(){
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
@@ -1190,7 +1209,6 @@ check_keys(){
 	       	done <${user_path}/all_accounts.dat
 		rm ${user_path}/keylist_gpg.tmp
 
-
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 		###############################WITH FLOCK############################################
 		if [ -s ${user_path}/blacklisted_accounts.dat ]
@@ -1212,13 +1230,13 @@ check_keys(){
 			done <${user_path}/blacklisted_accounts.dat
 			'
 			###################################################################
-
-			###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-		       	cat ${user_path}/all_accounts.dat >${user_path}/all_accounts.tmp
-			cat ${user_path}/blacklisted_accounts.dat >>${user_path}/all_accounts.tmp
-			cat ${user_path}/all_accounts.tmp|sort|uniq -u >${user_path}/all_accounts.dat
-			rm ${user_path}/all_accounts.tmp 2>/dev/null
 		fi
+		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
+		cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+
+		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
+		cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+		rm ${user_path}/all_accounts.tmp
 }
 check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST##############################
@@ -1274,6 +1292,9 @@ check_trx(){
 		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
 		while read line
 		do
+			###SET ACKNOWLEDGED VARIABLE###############################
+			trx_acknowledged=0
+
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
@@ -1330,25 +1351,25 @@ check_trx(){
 													is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
 													if [ $is_ignored = 0 ]
 													then
-														echo $line >>${user_path}/all_trx.tmp
+														trx_acknowledged=1
 													fi
 												else
-													echo $line >>${user_path}/all_trx.tmp
+													trx_acknowledged=1
 												fi
 											else
-												echo $line >>${user_path}/all_trx.tmp
+												trx_acknowledged=1
 											fi
 										else
 											if [ ${user_to_check} = ${handover_account} ]
 											then
-												echo $line >>${user_path}/all_trx.tmp
+												trx_acknowledged=1
 											fi
 										fi
 									fi
 								else
 									if [ ${user_to_check} = ${handover_account} ]
 									then
-										echo $line >>${user_path}/all_trx.tmp
+										trx_acknowledged=1
 									else
 										if [ $delete_trx_not_indexed = 1 ]
 										then
@@ -1356,29 +1377,16 @@ check_trx(){
 										fi
 									fi
 								fi
-							else
-								echo $line >>${user_path}/blacklisted_trx.dat
 							fi
-						else
-							echo $line >>${user_path}/blacklisted_trx.dat
 						fi
-					else
-						echo $line >>${user_path}/blacklisted_trx.dat
 					fi
-				else
-					echo $line >>${user_path}/blacklisted_trx.dat
 				fi
-			else
+			fi
+			if [ $trx_acknowledged = 0 ]
+			then
 				echo $line >>${user_path}/blacklisted_trx.dat
 			fi
 		done <${user_path}/all_trx.dat
-
-		if [ -s ${user_path}/all_trx.tmp ]
-		then
-			cat ${user_path}/all_trx.tmp ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.dat
-		else
-			cp ${user_path}/ack_trx.dat ${user_path}/all_trx.dat
-		fi
 
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
 		if [ -s ${user_path}/blacklisted_trx.dat ]
@@ -1393,6 +1401,13 @@ check_trx(){
 			done <${user_path}/blacklisted_trx.dat
 		fi
 		###################################################################
+
+		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST########################
+		cat ${user_path}/all_trx.dat ${user_path}/blacklisted_trx.dat|sort -t . -k3|uniq -u >${user_path}/all_trx.tmp
+
+		###ADD ACKNOWLEDGED TRX TO FINAL LIST##############################
+		cat ${user_path}/all_trx.tmp ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.dat
+		rm ${user_path}/all_trx.tmp
 
 		cd ${script_path}/
 		return $new_ledger
