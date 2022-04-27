@@ -1055,7 +1055,6 @@ check_tsa(){
 				rm ${user_path}/ack_accounts.dat 2>/dev/null
 				touch ${user_path}/ack_accounts.dat
 			fi
-			touch ${user_path}/all_accounts.dat
 
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t . -k2 >${user_path}/all_accounts.dat
@@ -1137,7 +1136,6 @@ check_tsa(){
 				fi
 			done <${user_path}/all_accounts.tmp
 			rm ${user_path}/timestamp_check.tmp 2>/dev/null
-			rm ${user_path}/all_accounts.tmp 2>/dev/null
 
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1164,12 +1162,12 @@ check_tsa(){
 				#####################################################################################
 			fi
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-			cat ${user_path}/all_accounts.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+			cat ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.dat
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-			cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.tmp
+			mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			rm ${user_path}/ack_accounts.dat
-			rm ${user_path}/all_accounts.tmp
 }
 check_keys(){
 		###SETUP ALL LIST#################################################
@@ -1181,11 +1179,10 @@ check_keys(){
 			touch ${user_path}/ack_keys.dat
 		fi
 		cp ${user_path}/all_accounts.dat ${user_path}/all_keys.dat
-		touch ${user_path}/all_keys.tmp
-		touch ${user_path}/keylist_gpg.tmp
 		cat ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|sort -t . -k2|uniq -u >${user_path}/all_keys.tmp
 
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
+		touch ${user_path}/keylist_gpg.tmp
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
@@ -1218,7 +1215,6 @@ check_keys(){
 				fi
 		       	fi
 	       	done <${user_path}/all_keys.tmp
-		rm ${user_path}/all_keys.tmp
 		rm ${user_path}/keylist_gpg.tmp
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1244,12 +1240,13 @@ check_keys(){
 			###################################################################
 		fi
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-		cat ${user_path}/all_keys.dat ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+		cat ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_keys.dat
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-		cat ${user_path}/all_accounts.tmp ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.dat
+		cat ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|sort -t . -k2 >${user_path}/all_keys.tmp
+		mv ${user_path}/all_keys.tmp ${user_path}/all_keys.dat
+		cp ${user_path}/all_keys.dat ${user_path}/all_accounts.dat
 		rm ${user_path}/ack_keys.dat
-		rm ${user_path}/all_accounts.tmp
 }
 check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST##############################
@@ -1300,7 +1297,6 @@ check_trx(){
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
 		cat ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|sort -t . -k3|uniq -u >${user_path}/all_trx.tmp
-		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 
 		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
 		while read line
@@ -1399,7 +1395,7 @@ check_trx(){
 			then
 				echo $line >>${user_path}/blacklisted_trx.dat
 			fi
-		done <${user_path}/all_trx.dat
+		done <${user_path}/all_trx.tmp
 
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
 		if [ -s ${user_path}/blacklisted_trx.dat ]
@@ -1416,12 +1412,12 @@ check_trx(){
 		###################################################################
 
 		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST########################
-		cat ${user_path}/all_trx.dat ${user_path}/blacklisted_trx.dat|sort -t . -k3|uniq -u >${user_path}/all_trx.tmp
+		cat ${user_path}/all_trx.tmp ${user_path}/blacklisted_trx.dat|sort -t . -k3|uniq -u >${user_path}/all_trx.dat
 
 		###ADD ACKNOWLEDGED TRX TO FINAL LIST##############################
-		cat ${user_path}/all_trx.tmp ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.dat
+		cat ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|sort -t . -k3 >${user_path}/all_trx.tmp
+		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		rm ${user_path}/ack_trx.dat
-		rm ${user_path}/all_trx.tmp
 
 		cd ${script_path}/
 		return $new_ledger
