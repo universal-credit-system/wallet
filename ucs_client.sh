@@ -452,6 +452,9 @@ check_input(){
 build_ledger(){
 		new=$1
 
+		###STEP INTO TRX DIRECTORY##########################
+		cd ${script_path}/trx
+
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
@@ -736,6 +739,9 @@ build_ledger(){
 			fi
 			##############################################################
 		fi
+
+		###STEP BACK TO MAIN DIRECTORY##########################
+		cd ${script_path}/
 }
 check_archive(){
 			path_to_tarfile=$1
