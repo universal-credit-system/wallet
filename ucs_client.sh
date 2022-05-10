@@ -667,10 +667,16 @@ build_ledger(){
 								##############################################################
 								###SET SCORE FOR RECEIVER#####################################
 								receiver_old_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-								receiver_trx_average=`sed -n '5p' $(grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp')|grep -v "${trx_receiver}")|cut -d ':' -f2|awk '{ total += $1 } END { print total/NR }'`
-								is_greater_amount=`echo "${receiver_trx_average} > ${trx_amount}"|bc`
-								if [ $is_greater_amount = 1 ]
+								receiver_trx_total=`grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp')|grep -v "${trx_receiver}")|wc -l`
+								if [ $receiver_trx_total -gt 0 ]
 								then
+									receiver_trx_average=`sed -n '5p' $(grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp')|grep -v "${trx_receiver}")|cut -d ':' -f2|awk '{ total += $1 } END { print total/NR }'`
+									is_greater_amount=`echo "${receiver_trx_average} > ${trx_amount}"|bc`
+									if [ $is_greater_amount = 1 ]
+									then
+										receiver_trx_average=$trx_amount
+									fi
+								else
 									receiver_trx_average=$trx_amount
 								fi
 								receiver_new_score_balance=`echo "${receiver_old_score_balance} + ${receiver_trx_average}"|bc`
