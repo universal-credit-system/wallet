@@ -644,23 +644,31 @@ build_ledger(){
 							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 							##############################################################
 
-							receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
-							if [ $receiver_in_ledger = 1 ]
+							###CHECK CONFIRMATIONS########################################
+							total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+							if [ $total_confirmations -ge $confirmations_from_users ]
 							then
-								###SET SCORE FOR SENDER#######################################
-								sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
-								##############################################################
-								###SET BALANCE FOR RECEIVER###################################
-								receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-								receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-								is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
-								if [ $is_greater_one = 0 ]
+								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
+								if [ $receiver_in_ledger = 1 ]
 								then
-									receiver_new_balance="0${receiver_new_balance}"
+									###SET SCORE FOR SENDER#######################################
+									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
+									##############################################################
+									###SET BALANCE FOR RECEIVER###################################
+									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+									receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
+									is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
+									if [ $is_greater_one = 0 ]
+									then
+										receiver_new_balance="0${receiver_new_balance}"
+									fi
+									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
+									##############################################################
 								fi
-								sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
-								##############################################################
+							else
+								echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 							fi
+							##############################################################
 						else
 							echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 						fi
@@ -1746,10 +1754,6 @@ get_dependencies(){
 					echo "$line" >>${user_path}/depend_confirmations.dat
 				fi
 			done <${user_path}/depend_trx.dat
-
-			###CREATE LIST OF DEPEND TRX THAT HAVE BEEN CONFIRMED#########################
-			sort -t . -k3 ${user_path}/depend_trx.dat ${user_path}/depend_confirmations.dat|uniq -u >${user_path}/depend_trx.tmp
-			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
 			depend_accounts_new_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
