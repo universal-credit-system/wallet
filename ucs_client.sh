@@ -585,10 +585,10 @@ build_ledger(){
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			for each_trx_today in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
+			for trx_filename in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
 				###EXRACT DATA FOR CHECK######################################
-				trx_filename=`echo $each_trx_today|cut -d ' ' -f3`
+				trx_stamp=`echo $trx_filename|cut -d '.' -f3`
 				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
@@ -602,10 +602,6 @@ build_ledger(){
 					is_signed=`grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
-						###GET CONFIRMATIONS##########################################
-						number_of_confirmations=`grep -l "trx/${trx_filename} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
-						##############################################################
-
 						###EXTRACT TRX DATA###########################################
 						trx_amount=`sed -n '5p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
 						account_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
@@ -621,6 +617,7 @@ build_ledger(){
 						is_score_ok=`echo "${sender_score_balance} >= ${trx_amount}"|bc`
 						##############################################################
 
+						###CHECK IF BALANCE AND SCORE ARE OK##########################
 						if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 						then
 							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
@@ -642,42 +639,64 @@ build_ledger(){
 							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 							##############################################################
 
-							###IF FRIEDS ACKNOWLEDGED TRX HIGHER BALANCE OF RECEIVER######
-							if [ $number_of_confirmations -ge $confirmations_from_users ]
+							receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
+							if [ $receiver_in_ledger = 1 ]
 							then
-								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
-								if [  $receiver_in_ledger = 1 ]
+								###SET SCORE FOR SENDER#######################################
+								is_score_greater_balance=`echo "${sender_score_balance} > ${account_new_balance}"|bc`
+								if [ $is_score_greater_balance = 1 ]
 								then
-									###SET SCORE FOR SENDER#######################################
-									is_score_greater_balance=`echo "${sender_score_balance} > ${account_new_balance}"|bc`
-									if [ $is_score_greater_balance = 1 ]
-									then
-										sender_score_balance=$account_new_balance
-									fi
-									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
-									##############################################################
-									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-									is_greater_one=`echo "${receiver_old_balance} >= 1"|bc`
-									if [ $is_greater_one = 0 ]
-									then
-										receiver_old_balance="0${receiver_old_balance}"
-									fi
-									receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-									is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
-									if [ $is_greater_one = 0 ]
-									then
-										receiver_new_balance="0${receiver_new_balance}"
-									fi
-									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
+									sender_score_balance=$account_new_balance
 								fi
+								sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
+								##############################################################
+								###SET BALANCE FOR RECEIVER###################################
+								receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+								is_greater_one=`echo "${receiver_old_balance} >= 1"|bc`
+								if [ $is_greater_one = 0 ]
+								then
+									receiver_old_balance="0${receiver_old_balance}"
+								fi
+								receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
+								is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
+								if [ $is_greater_one = 0 ]
+								then
+									receiver_new_balance="0${receiver_new_balance}"
+								fi
+								sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
+								##############################################################
+								###SET SCORE FOR RECEIVER#####################################
+								receiver_old_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+								receiver_trx_average=`sed -n '5p' $(grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp')|grep -v "${trx_receiver}")|cut -d ':' -f2|awk '{ total += $1 } END { print total/NR }'`
+								is_greater_amount=`echo "${receiver_trx_average} > ${trx_amount}"|bc`
+								if [ $is_greater_amount = 1 ]
+								then
+									receiver_trx_average=$trx_amount
+								fi
+								receiver_new_score_balance=`echo "${receiver_old_score_balance} + ${receiver_trx_average}"|bc`
+								is_greater_one=`echo "${receiver_new_score_balance} >= 1"|bc`
+								if [ $is_greater_one = 0 ]
+								then
+									receiver_new_score_balance="0${receiver_new_score_balance}"
+								fi
+								is_greater_balance=`echo "${receiver_new_score_balance} > ${receiver_new_balance}"|bc`
+								if [ $is_greater_balance = 1 ]
+								then
+									receiver_new_score_balance=$receiver_new_balance
+								fi
+								sed -i "s/${trx_receiver}=${receiver_old_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
+								##############################################################
 							fi
-							##############################################################
 						else
 							echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 						fi
 						##############################################################
+					else
+						echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 					fi
 					##############################################################
+				else
+					echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 				fi
 				##############################################################
 			done
@@ -1713,14 +1732,10 @@ get_dependencies(){
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
-						already_there=`grep -c "${user_trx}" ${user_path}/depend_trx.dat`
-						if [ $already_there = 0 ]
-						then
-							echo "${user_trx}" >>${user_path}/depend_trx.dat
-							sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
-						fi
+						echo "${user_trx}" >>${user_path}/depend_trx.dat
+						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
 					done
-					cat ${user_path}/depend_user_list.tmp|sort|uniq >${user_path}/depend_user_list_sorted.tmp
+					sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq >${user_path}/depend_user_list_sorted.tmp
 					mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
 					while read line
 					do
@@ -1736,7 +1751,7 @@ get_dependencies(){
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
 				mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
-				sort -t . -k3 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
+				sort -t . -k3 ${user_path}/depend_trx.dat|uniq >${user_path}/depend_trx.tmp
 				mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 			else
 				###COPY FILES#################################################################
@@ -1749,14 +1764,18 @@ get_dependencies(){
 			touch ${user_path}/depend_confirmations.dat
 			while read line
 			do
-				sending_user=`echo $line|awk -F. '{print $1"."$2}'`
 				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
+				trx_sender=`sed -n '6p' ${script_path}/trx/${user_trx}|cut -d ':' -f2`
 				total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
 				fi
 			done <${user_path}/depend_trx.dat
+
+			###CREATE LIST OF DEPEND TRX THAT HAVE BEEN CONFIRMED#########################
+			sort -t . -k3 ${user_path}/depend_trx.dat ${user_path}/depend_confirmations.dat|uniq -d >${user_path}/depend_trx.tmp
+			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
 			depend_accounts_new_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
