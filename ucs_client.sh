@@ -1748,7 +1748,7 @@ get_dependencies(){
 			done <${user_path}/depend_trx.dat
 
 			###CREATE LIST OF DEPEND TRX THAT HAVE BEEN CONFIRMED#########################
-			sort -t . -k3 ${user_path}/depend_trx.dat ${user_path}/depend_confirmations.dat|uniq -d >${user_path}/depend_trx.tmp
+			sort -t . -k3 ${user_path}/depend_trx.dat ${user_path}/depend_confirmations.dat|uniq -u >${user_path}/depend_trx.tmp
 			mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
@@ -3417,7 +3417,7 @@ do
 									fi
 									if [ $trx_signed -gt 0 ]
 									then
-										if [ $trx_confirmations -gt 0 ]
+										if [ $trx_confirmations -ge $confirmations_from_users ]
 										then
 											trx_blacklisted=`grep -c "${line_extracted}" ${user_path}/blacklisted_trx.dat`
 											sender_blacklisted=`grep -c "${sender}" ${user_path}/blacklisted_accounts.dat`
