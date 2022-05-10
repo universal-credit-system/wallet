@@ -452,9 +452,6 @@ check_input(){
 build_ledger(){
 		new=$1
 
-		###STEP INTO TRX DIRECTORY##########################
-		cd ${script_path}/trx
-
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
 		if [ $gui_mode = 1 ]
 		then
@@ -639,6 +636,11 @@ build_ledger(){
 
 							###SET SCORE FOR SENDER#######################################
 							sender_new_score_balance=`echo "${sender_score_balance} - ${trx_amount}"|bc`
+							is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
+							if [ $is_greater_one = 0 ]
+							then
+								sender_new_score_balance="0${sender_new_score_balance}"
+							fi
 							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 							##############################################################
 
@@ -646,20 +648,10 @@ build_ledger(){
 							if [ $receiver_in_ledger = 1 ]
 							then
 								###SET SCORE FOR SENDER#######################################
-								is_score_greater_balance=`echo "${sender_score_balance} > ${account_new_balance}"|bc`
-								if [ $is_score_greater_balance = 1 ]
-								then
-									sender_score_balance=$account_new_balance
-								fi
 								sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
 								##############################################################
 								###SET BALANCE FOR RECEIVER###################################
 								receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-								is_greater_one=`echo "${receiver_old_balance} >= 1"|bc`
-								if [ $is_greater_one = 0 ]
-								then
-									receiver_old_balance="0${receiver_old_balance}"
-								fi
 								receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
 								is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
 								if [ $is_greater_one = 0 ]
@@ -667,33 +659,6 @@ build_ledger(){
 									receiver_new_balance="0${receiver_new_balance}"
 								fi
 								sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
-								##############################################################
-								###SET SCORE FOR RECEIVER#####################################
-								receiver_old_score_balance=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-								receiver_trx_total=`grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp'|grep -v "${trx_receiver}")|wc -l`
-								if [ $receiver_trx_total -gt 0 ]
-								then
-									receiver_trx_average=`sed -n '5p' $(grep -l "RCVR:${trx_receiver}" $(cat ${user_path}/depend_trx.dat|awk -F. -v trx_stamp="${trx_stamp}" '$3 <= trx_stamp')|grep -v "${trx_receiver}")|cut -d ':' -f2|awk '{ total += $1 } END { print total/NR }'`
-									is_greater_amount=`echo "${receiver_trx_average} > ${trx_amount}"|bc`
-									if [ $is_greater_amount = 1 ]
-									then
-										receiver_trx_average=$trx_amount
-									fi
-								else
-									receiver_trx_average=$trx_amount
-								fi
-								receiver_new_score_balance=`echo "${receiver_old_score_balance} + ${receiver_trx_average}"|bc`
-								is_greater_one=`echo "${receiver_new_score_balance} >= 1"|bc`
-								if [ $is_greater_one = 0 ]
-								then
-									receiver_new_score_balance="0${receiver_new_score_balance}"
-								fi
-								is_greater_balance=`echo "${receiver_new_score_balance} > ${receiver_new_balance}"|bc`
-								if [ $is_greater_balance = 1 ]
-								then
-									receiver_new_score_balance=$receiver_new_balance
-								fi
-								sed -i "s/${trx_receiver}=${receiver_old_score_balance}/${trx_receiver}=${receiver_new_score_balance}/g" ${user_path}/scoretable.dat
 								##############################################################
 							fi
 						else
@@ -739,9 +704,6 @@ build_ledger(){
 			fi
 			##############################################################
 		fi
-
-		###STEP BACK TO MAIN DIRECTORY##########################
-		cd ${script_path}/
 }
 check_archive(){
 			path_to_tarfile=$1
@@ -2688,6 +2650,11 @@ do
 			check_blacklist
 			account_my_balance=`grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
 			account_my_score=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+			is_score_greater_balance=`echo "${account_my_score} > ${account_my_balance}"|bc`
+			if [ $is_score_greater_balance = 1 ]
+			then
+				account_my_score=$account_my_balance
+			fi
 		fi
 
 		###IF AUTO-UCA-SYNC########################
@@ -2760,7 +2727,7 @@ do
 								do
 									###SCORE############################################################
 									sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									sender_score_balance_value=$sender_score_balance
+									sender_score_balance_value=$account_my_score
 									####################################################################
 									if [ $gui_mode = 1 ]
 									then
@@ -2790,7 +2757,7 @@ do
 											then
 												enough_balance=`echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc`
 												###SCORE#############################################################
-												is_score_ok=`echo "${sender_score_balance} >= ${order_amount_formatted}"|bc`
+												is_score_ok=`echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc`
 												#####################################################################
 												if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 												then
@@ -2956,6 +2923,11 @@ do
 												echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
 												###SCORE#####################################################################
 												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
+												is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
+												if [ $is_greater_one = 0 ]
+												then
+													sender_new_score_balance="0${sender_new_score_balance}"
+												fi
 												sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
 												##############################################################################
 												make_signature "none" ${trx_now} 1
@@ -2970,8 +2942,8 @@ do
 													then
 														###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 														account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
-														is_greater_one=`echo "${account_my_balance} - ${order_amount_formatted}<1"|bc`
-														if [ $is_greater_one = 1 ]
+														is_greater_one=`echo "${account_new_balance} >= 1"|bc`
+														if [ $is_greater_one = 0 ]
 														then
 															account_new_balance="0${account_new_balance}"
 														fi
