@@ -3395,7 +3395,9 @@ do
 						;;
 				"$dialog_history")	cd ${script_path}/trx
 							rm ${user_path}/my_trx.tmp 2>/dev/null
+							rm ${user_path}/my_trx_sorted.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
+							touch ${user_path}/my_trx_sorted.tmp
 							grep -l ":${handover_account}" *.* >${user_path}/my_trx.tmp 2>/dev/null
 							sort -r -t . -k3 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
@@ -3527,7 +3529,6 @@ do
 									rm ${user_path}/history_list.tmp 2>/dev/null
 								fi
 							done
-							rm ${user_path}/my_trx.tmp
 							;;
 				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`cat ${user_path}/all_accounts.dat|wc -l`
