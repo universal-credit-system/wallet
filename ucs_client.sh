@@ -6,93 +6,88 @@ login_account(){
 		account_found=0
 		handover_account=""
 
-		###SET TRIGGER THAT ACCOUND WAS FOUND TO 0###################
-		ignore_rest=0
-
 		###READ LIST OF KEYS LINE BY LINE############################
 		for key_file in `ls -1 ${script_path}/keys/|sort -t . -k2`
 		do
-			if [ $ignore_rest = 0 ]
+			###EXTRACT KEY DATA##########################################
+			keylist_name=`echo $key_file|cut -d '.' -f1`
+			keylist_stamp=`echo $key_file|cut -d '.' -f2`
+			if [ ! "${cmd_sender}" = "" ]
 			then
-				###EXTRACT KEY DATA##########################################
-				keylist_name=`echo $key_file|cut -d '.' -f1`
-				keylist_stamp=`echo $key_file|cut -d '.' -f2`
-				if [ ! "${cmd_sender}" = "" ]
-				then
-					keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
-				else
-					keylist_hash=`echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1`
-				fi
-				#############################################################
-
-				###IF ACCOUNT MATCHES########################################
-				if [ $keylist_name = $keylist_hash ]
-				then
-					account_found=1
-					ignore_rest=1
-					handover_account=$key_file
-				fi
-				##############################################################
+				keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
+			else
+				keylist_hash=`echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1`
 			fi
+			#############################################################
+
+			###IF ACCOUNT MATCHES########################################
+			if [ $keylist_name = $keylist_hash ]
+			then
+				account_found=1
+				echo "${keylist_hash}.${keylist_stamp}" >>${script_path}/logon_${my_pid}.tmp
+			fi
+			##############################################################
 		done
 		#############################################################
 
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
-			if [ ! -d ${script_path}/userdata/${handover_account} ]
-			then
-				mkdir ${script_path}/userdata/${handover_account}
-				mkdir ${script_path}/userdata/${handover_account}/temp
-				mkdir ${script_path}/userdata/${handover_account}/temp/keys
-				mkdir ${script_path}/userdata/${handover_account}/temp/proofs
-				mkdir ${script_path}/userdata/${handover_account}/temp/trx
-			else
-	       	 		rm ${user_path}/account.acc.gpg 2>/dev/null
-				rm ${user_path}/account.acc 2>/dev/null
-			fi
-			user_path="${script_path}/userdata/${handover_account}"
+			for each_user in `cat ${script_path}/logon_${my_pid}.tmp`
+			do
+				handover_account=$each_user
+				if [ ! -d ${script_path}/userdata/${handover_account} ]
+				then
+					mkdir ${script_path}/userdata/${handover_account}
+					mkdir ${script_path}/userdata/${handover_account}/temp
+					mkdir ${script_path}/userdata/${handover_account}/temp/keys
+					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
+					mkdir ${script_path}/userdata/${handover_account}/temp/trx
+				else
+	       	 			rm ${user_path}/account.acc.gpg 2>/dev/null
+					rm ${user_path}/account.acc 2>/dev/null
+				fi
+				user_path="${script_path}/userdata/${handover_account}"
 
-			###TEST KEY BY ENCRYPTING A MESSAGE##########################
-			echo $login_name >${user_path}/account.acc
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r $handover_account --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
-			rt_query=$?
-			if [ $rt_query = 0 ]
-			then
-				###REMOVE ENCRYPTION SOURCE FILE#############################
-				rm ${user_path}/account.acc
-
-				####TEST KEY BY DECRYPTING THE MESSAGE#######################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
+				###TEST KEY BY ENCRYPTING A MESSAGE##########################
+				echo $login_name >${user_path}/account.acc
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${handover_account} -r ${handover_account} --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					extracted_name=`cat ${user_path}/account.acc`
-					if [ "${extracted_name}" = "${login_name}" ]
+					###REMOVE ENCRYPTION SOURCE FILE#############################
+					rm ${user_path}/account.acc
+
+					####TEST KEY BY DECRYPTING THE MESSAGE#######################
+					gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
+					rt_query=$?
+					if [ $rt_query = 0 ]
 					then
-						if [ $gui_mode = 1 ]
+						extracted_name=`cat ${user_path}/account.acc`
+						if [ "${extracted_name}" = "${login_name}" ]
 						then
-							###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
-							dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g"`
-							dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_login_welcome_display" 0 0
-							sleep 1
+							user_logged_in=1
+							break
 						fi
-						user_logged_in=1
 					fi
-				else
-					if [ $gui_mode = 1 ]
-					then
-						dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_login_wrongpw" 0 0
-					else
-						exit 1
-					fi
+				fi
+			done
+			if [ $user_logged_in = 1 ]
+			then
+				if [ $gui_mode = 1 ]
+				then
+					###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
+					dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g"`
+					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_login_welcome_display" 0 0
+					sleep 1
 				fi
 			else
 				if [ $gui_mode = 1 ]
 				then
-					###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND################
+					###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
 					dialog_login_nokey_display="${dialog_login_nokey} (-> ${login_name})!"
-					dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey_display" 0 0
+					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey_display" 0 0
+					clear
 				else
 					exit 1
 				fi
@@ -113,6 +108,7 @@ login_account(){
 		rm ${user_path}/account.acc 2>/dev/null
 		action_done=1
 		make_ledger=1
+		rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
 }
 create_keys(){
 		create_name=$1
@@ -346,7 +342,7 @@ make_signature(){
 			#################################################################
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --digest-algo SHA512 --local-user $handover_account --clearsign ${message_blank} 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -1018,7 +1014,7 @@ check_tsa(){
 								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
 								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query = 0 -o $rt_query = 2 ]
 								then
 									tsa_available=1
 								else
@@ -2010,6 +2006,9 @@ send_uca(){
 ##################
 ###GET SCRIPT PATH##########
 script_path=$(dirname $(readlink -f ${0}))
+
+###GET PID##################
+my_pid=$$
 
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
