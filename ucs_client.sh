@@ -185,7 +185,7 @@ create_keys(){
 						tsa_connect_string=`echo "${tsa_config_line}"|cut -d ',' -f5`
 
 						###SENT QUERY TO TSA#########################################
-						curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${default_tsa}.tsr ${tsa_connect_string} >${user_path}/${default_tsa}.tsr
+						curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${default_tsa}.tsq ${tsa_connect_string} >${user_path}/${default_tsa}.tsr
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
