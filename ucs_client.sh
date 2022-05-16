@@ -1012,7 +1012,7 @@ check_tsa(){
 							if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
 							then
 								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
-								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null
+								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
 								rt_query=$?
 								if [ $rt_query = 0 -o $rt_query = 2 ]
 								then
