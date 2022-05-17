@@ -1011,14 +1011,23 @@ check_tsa(){
 							rm ${script_path}/certs/root_ca.crl 2>/dev/null
 							if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
 							then
-								cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
-								openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
-								rt_query=$?
-								if [ $rt_query = 0 -o $rt_query = 2 ]
+								crl_last_update=`openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45`
+								crl_last_update_stamp=`date +%s --date="${crl_last_update}"`
+								crl_next_update=`openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45`
+								crl_next_update_stamp=`date +%s --date="${crl_next_update}"`
+								if [ $crl_last_update_stamp -lt $now_stamp -a $crl_next_update_stamp -gt $now_stamp ]
 								then
-									tsa_available=1
+									cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
+									openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										tsa_available=1
+									else
+										tsa_update_required=1
+									fi
 								else
-									tsa_update_required=1	
+									tsa_available=1
 								fi
 							fi
 						fi
