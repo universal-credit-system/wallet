@@ -994,9 +994,6 @@ check_tsa(){
 							then
 								###IF NO CRL IS THERE###################
 								tsa_available=1
-
-								###ACKNOWLEDGE TSA######################
-								echo "${tsa_service} ${now_stamp}" >>${user_path}/tsa.dat
 							fi
 						fi
 						if [ $tsa_available = 0 ]
@@ -1114,7 +1111,7 @@ check_tsa(){
 						do
 							cacert_file_found=0
 							for cacert_file in `ls -1 ${script_path}/certs/${tsa_service}/cacert.*`
-							do	
+							do
 								for crt_file in `ls -1 ${script_path}/certs/${tsa_service}/tsa.*`
 								do
 									###GET DATES FROM CERTIFICATE###########################
@@ -1168,7 +1165,7 @@ check_tsa(){
 												fi
 											fi
 										fi
-									fi	
+									fi
 								done
 								if [ $cacert_file_found = 1 ]
 								then
