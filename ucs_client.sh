@@ -342,7 +342,7 @@ make_signature(){
 			#################################################################
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -892,14 +892,15 @@ check_tsa(){
 				tsa_available=0
 				tsa_cert_available=0
 				tsa_rootcert_available=0
+				crl_retry_counter=0
 				retry_counter=0
 				while [ $tsa_available = 0 ]
 				do
 					###IF TSA.CRT NOT AVAILABLE...############
 					if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
 					then
-						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
-						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)"`
+						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)"`
 						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
 						then
 							tsa_cert_available=1
@@ -919,8 +920,8 @@ check_tsa(){
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
-							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)"`
+							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)"`
 							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
 							then
 								if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
@@ -940,8 +941,8 @@ check_tsa(){
 					###IF CACERT.PEM NOT AVAILABLE...#########
 					if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
 					then
-						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
-						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+						old_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)"`
+						old_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)"`
 						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
 						then
 							tsa_rootcert_available=1
@@ -961,8 +962,8 @@ check_tsa(){
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
-							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -text -noout|grep -A2 "Validity"|grep "Not After"|cut -c 25-48)"`
+							new_cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)"`
+							new_cert_valid_till=`date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)"`
 							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
 							then
 								if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
@@ -993,6 +994,9 @@ check_tsa(){
 							then
 								###IF NO CRL IS THERE###################
 								tsa_available=1
+
+								###ACKNOWLEDGE TSA######################
+								echo "${tsa_service} ${now_stamp}" >>${user_path}/tsa.dat
 							fi
 						fi
 						if [ $tsa_available = 0 ]
@@ -1001,21 +1005,40 @@ check_tsa(){
 							wget -q -O root_ca.crl ${tsa_crl_url}
 							if [ -s ${script_path}/certs/root_ca.crl ]
 							then
-								new_crl_hash=`sha224sum ${script_path}/certs/root_ca.crl|cut -d ' ' -f1`
-								old_crl_hash=`sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl|cut -d ' ' -f1`
-								if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
+								###CHECK IF OLD CRL IS THERE############
+								if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
 								then
+									###GET CRL DATES########################
+									crl_old_valid_from=`date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)"`
+									crl_old_valid_till=`date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)"`
+									crl_new_valid_from=`date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)"`
+									crl_new_valid_till=`date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)"`
+									
+									###COMPARE VALID FROM AND VALID TILL####
+									if [ $crl_old_valid_from -eq $crl_new_valid_from -a $crl_old_valid_till -eq $crl_new_valid_till ]
+									then
+										###GET HASHES TO COMPARE################
+										new_crl_hash=`sha224sum ${script_path}/certs/root_ca.crl|cut -d ' ' -f1`
+										old_crl_hash=`sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl|cut -d ' ' -f1`
+										if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
+										then
+											mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+										fi
+									else
+										###UNCOMMENT TO ENABLE SAVESTORE OF CRL#
+										mv ${script_path}/certs/${tsa_service}/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.${crl_old_valid_from}-${crl_old_valid_till}.crl
+										mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+									fi
+								else
 									mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
 								fi
 							fi
 							rm ${script_path}/certs/root_ca.crl 2>/dev/null
 							if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
 							then
-								crl_last_update=`openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45`
-								crl_last_update_stamp=`date +%s --date="${crl_last_update}"`
-								crl_next_update=`openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45`
-								crl_next_update_stamp=`date +%s --date="${crl_next_update}"`
-								if [ $crl_last_update_stamp -lt $now_stamp -a $crl_next_update_stamp -gt $now_stamp ]
+								crl_valid_from=`date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)"`
+								crl_valid_till=`date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)"`
+								if [ $crl_valid_from -lt $now_stamp -a $crl_valid_till -gt $now_stamp ]
 								then
 									cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
 									openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
@@ -1025,10 +1048,17 @@ check_tsa(){
 										tsa_available=1
 									else
 										tsa_update_required=1
+										if [ $crl_retry_counter = 1 ]
+										then
+											cert_valid_from=`date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)"`
+											mv ${script_path}/certs/${tsa_service}/tsa.crt ${script_path}/certs/${tsa_service}/tsa.${cert_valid_from}-${crl_valid_from}.crt
+											tsa_available=1
+										fi
+										crl_retry_counter=$(( $crl_retry_counter + 1 ))
 									fi
 								else
 									tsa_available=1
-								fi
+								fi	
 							fi
 						fi
 					else
@@ -1072,6 +1102,7 @@ check_tsa(){
 
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 				accountname_key_name=`echo $line`
+				accountname_key_stamp=`echo $line|cut -d '.' -f2`
 				accountname_key_content=`gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g'`
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
@@ -1083,46 +1114,61 @@ check_tsa(){
 						do
 							cacert_file_found=0
 							for cacert_file in `ls -1 ${script_path}/certs/${tsa_service}/cacert.*`
-							do
+							do	
 								for crt_file in `ls -1 ${script_path}/certs/${tsa_service}/tsa.*`
 								do
-									###CHECK TSA QUERYFILE###################################
-									openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
-									rt_query=$?
-									if [ $rt_query = 0 ]
+									###GET DATES FROM CERTIFICATE###########################
+									crt_file_base=`basename ${crt_file}`
+									if [ ! "${crt_file_base}" = "tsa.crt" ]
 									then
-										###WRITE OUTPUT OF RESPONSE TO FILE######################
-										openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+										valid_from=`echo $crt_file_base|cut -d '.' -f2|cut -d '-' -f1`
+										valid_till=`echo $crt_file_base|cut -d '.' -f2|cut -d '-' -f2`
+									else
+										valid_from=`date +%s --date="$(openssl x509 -in ${crt_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)"`
+										valid_till=`date +%s --date="$(openssl x509 -in ${crt_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)"`
+									fi
+
+									###IF CERT WAS VALID AT TIMESTAMP OF ACCOUNT CREATION..##
+									if [ $accountname_key_stamp -gt $valid_from -a $accountname_key_stamp -lt $valid_till ]
+									then	 
+										###CHECK TSA QUERYFILE###################################
+										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###VERIFY TSA RESPONSE###################################
-											openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+											###WRITE OUTPUT OF RESPONSE TO FILE######################
+											openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-												date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
-												date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
-												accountdate_to_verify=`echo $line|cut -d '.' -f2`
-												creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
-												if [ $creation_date_diff -ge 0 ]
+												###VERIFY TSA RESPONSE###################################
+												openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+												rt_query=$?
+												if [ $rt_query = 0 ]
 												then
-													if [ $creation_date_diff -le 120 ]
+													###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
+													date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
+													date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
+													accountdate_to_verify=`echo $line|cut -d '.' -f2`
+													creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+													if [ $creation_date_diff -ge 0 ]
 													then
-														###SET VARIABLE THAT TSA HAS BEEN FOUND##################
-														account_verified=1
-
-														###STEP OUT OF LOOP CACERT_FILE##########################
-														cacert_file_found=1
+														if [ $creation_date_diff -le 120 ]
+														then
+															###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+															account_verified=1
+			
+															###STEP OUT OF LOOP CACERT_FILE##########################
+															cacert_file_found=1
 													
-														###STEP OUT OF LOOP CRT_FILE#############################
-														break
+															###STEP OUT OF LOOP CRT_FILE#############################
+															break
+														fi
 													fi
 												fi
 											fi
 										fi
-									fi
+									fi	
 								done
 								if [ $cacert_file_found = 1 ]
 								then
