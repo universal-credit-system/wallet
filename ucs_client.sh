@@ -3582,8 +3582,8 @@ do
 							done
 							;;
 				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
-							total_keys=`cat ${user_path}/all_accounts.dat|wc -l`
-							total_trx=`cat ${user_path}/all_trx.dat|wc -l`
+							total_keys=`wc -l <${user_path}/all_accounts.dat`
+							total_trx=`wc -l <${user_path}/all_trx.dat`
 							total_user_blacklisted=`wc -l <${user_path}/blacklisted_accounts.dat`
 							total_trx_blacklisted=`wc -l <${user_path}/blacklisted_trx.dat`
 							###############################################
