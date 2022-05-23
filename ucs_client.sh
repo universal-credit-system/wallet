@@ -648,6 +648,12 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
+									sender_score_balance=`echo "scale=9; ${sender_score_balance} / 4"|bc`
+									is_greater_one=`echo "${sender_score_balance} >= 1"|bc`
+									if [ $is_greater_one = 0 ]
+									then
+										sender_score_balance="0${sender_score_balance}"
+									fi
 									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
 									##############################################################
 									###SET BALANCE FOR RECEIVER###################################
@@ -2080,6 +2086,7 @@ uca_trigger=0
 action_done=1
 make_ledger=1
 end_program=0
+small_trx=0
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
