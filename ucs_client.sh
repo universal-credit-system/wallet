@@ -2032,7 +2032,7 @@ send_uca(){
 							if [ $rt_query = 0 ]
 							then
 								###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-								cat ${user_path}/uca_header.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} 2>/dev/null
+								cat ${user_path}/uca_header.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
 								rt_query=$?
 								if [ ! $rt_query = 0 ]
 								then
