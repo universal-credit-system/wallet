@@ -660,22 +660,6 @@ build_ledger(){
 									fi
 									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
 									##############################################################
-									###SET SCORE FOR RECEIVER#####################################
-									receiver_old_score=`grep "${trx_receiver}" ${user_path}/scoretable.dat|cut -d '=' -f2`
-									receiver_new_score=`echo "${receiver_old_score} - ${trx_amount}"|bc`
-									is_greater_one=`echo "${receiver_new_score} >= 1"|bc`
-									if [ $is_greater_one = 0 ]
-									then
-										receiver_new_score="0${receiver_new_score}"
-									else
-										is_greater_zero=`echo "${receiver_new_score} >= 0"|bc`
-										if [ $is_greater_zero = 0 ]
-										then
-											receiver_new_score=0
-										fi
-									fi
-									sed -i "s/${trx_receiver}=${receiver_old_score}/${trx_receiver}=${receiver_new_score}/g" ${user_path}/scoretable.dat
-									##############################################################
 								fi
 							else
 								echo "${trx_filename}" >>${user_path}/ignored_trx.dat
