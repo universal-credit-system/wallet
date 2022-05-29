@@ -648,7 +648,7 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
-									sender_score_balance=`echo "scale=9; ${sender_score_balance} / 4"|bc`
+									sender_score_balance=`echo "scale=9; ${trx_amount} * 0.25"|bc`
 									is_greater_one=`echo "${sender_score_balance} >= 1"|bc`
 									if [ $is_greater_one = 0 ]
 									then
