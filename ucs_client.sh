@@ -1322,20 +1322,6 @@ check_trx(){
 		touch ${user_path}/all_trx.tmp
 		touch ${user_path}/trx_list_all.tmp
 
-		###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE###########
-		index_there=0
-		new_ledger=1
-		total_ledgers=`ls -1 ${user_path}/|grep "_ledger.dat"|wc -l`
-		if [ $total_ledgers -gt 0 ]
-		then
-			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
-			then
-				new_ledger=0
-				index_there=1
-			fi
-		fi
-		###################################################################
-
 		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE######################
 		ls -1 ${script_path}/trx >${user_path}/trx_list_all.tmp
 		while read line
@@ -1417,11 +1403,7 @@ check_trx(){
 		then
 			while read line
 			do
-				trx_account=`echo $line|awk -F. '{print $1"."$2}'`
-				if [ ! $trx_account = $handover_account ]
-				then
-					rm ${script_path}/trx/${line} 2>/dev/null
-				fi
+				rm ${script_path}/trx/${line} 2>/dev/null
 			done <${user_path}/blacklisted_trx.dat
 		fi
 		###################################################################
@@ -1435,7 +1417,6 @@ check_trx(){
 		rm ${user_path}/ack_trx.dat
 
 		cd ${script_path}/
-		return $new_ledger
 }
 process_new_files(){
 			process_mode=$1
@@ -1696,6 +1677,14 @@ import_keys(){
 get_dependencies(){
 			cd ${script_path}/trx
 			new_ledger=1
+			own_index_there=0
+
+			###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE######################
+			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
+			then
+				own_index_there=1
+			fi
+			##############################################################################
 
 			###CHECK IF ANYTHING HAS CHANGED##############################################
 			depend_accounts_old_hash="X"
@@ -1773,7 +1762,7 @@ get_dependencies(){
 			depend_accounts_new_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
 			depend_trx_new_hash=`sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1`
 			depend_confirmations_new_hash=`sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash ]
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash -a $own_index_there = 1 ]
 			then
 				new_ledger=0
 			fi
@@ -2645,10 +2634,9 @@ do
 			check_tsa
 			check_keys
 			check_trx
-			trx_new_ledger=$?
 			get_dependencies
-			dep_new_ledger=$?
-			if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+			build_new_ledger=$?
+			if [ $build_new_ledger = 0 ]
 			then
 				changes=0
 			else
@@ -3125,10 +3113,9 @@ do
 															check_tsa
 															check_keys
 															check_trx
-															trx_new_ledger=$?
 															get_dependencies
-															dep_new_ledger=$?
-															if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+															build_new_ledger=$?
+															if [ $build_new_ledger = 0 ]
 															then
 																changes=0
 															else
@@ -3275,10 +3262,9 @@ do
 															check_tsa
 															check_keys
 															check_trx
-															trx_new_ledger=$?
 															get_dependencies
-															dep_new_ledger=$?
-															if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+															build_new_ledger=$?
+															if [ $build_new_ledger = 0 ]
 															then
 																changes=0
 															else
@@ -3392,10 +3378,9 @@ do
 								check_tsa
 								check_keys
 								check_trx
-								trx_new_ledger=$?
 								get_dependencies
-								dep_new_ledger=$?
-								if [ $trx_new_ledger = 0 -a $dep_new_ledger = 0 ]
+								build_new_ledger=$?
+								if [ $build_new_ledger = 0 ]
 								then
 									changes=0
 								else
