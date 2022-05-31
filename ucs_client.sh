@@ -1324,7 +1324,6 @@ check_trx(){
 
 		###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE###########
 		index_there=0
-		ignore_there=0
 		new_ledger=1
 		total_ledgers=`ls -1 ${user_path}/|grep "_ledger.dat"|wc -l`
 		if [ $total_ledgers -gt 0 ]
@@ -1333,10 +1332,6 @@ check_trx(){
 			then
 				new_ledger=0
 				index_there=1
-				if [ -s ${user_path}/ignored_trx.dat ]
-				then
-					ignore_there=1
-				fi
 			fi
 		fi
 		###################################################################
@@ -1395,50 +1390,9 @@ check_trx(){
 									is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 									is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
 									is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-									if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 1 -o $is_amount_ok = 0 -o $is_amount_mod = 1 ]
-									then
-										###DELETE IF NOT SIGNED AND DELETE_TRX_NOT_INDEX SET TO 1 IN CONFIG.CONF##
-										rm $file_to_check 2>/dev/null
-									else
-										if [ $is_trx_signed = 1 ]
-										then
-											if [ $index_there = 1 ]
-											then
-												is_indexed=`grep -c "trx/${line}" ${script_path}/proofs/${handover_account}/${handover_account}.txt`
-											else
-												is_indexed=0
-											fi
-											if [ $is_indexed = 0 ]
-											then
-												if [ $ignore_there = 1 ]
-												then
-													is_ignored=`grep -c "${line}" ${user_path}/ignored_trx.dat`
-													if [ $is_ignored = 0 ]
-													then
-														trx_acknowledged=1
-													fi
-												else
-													trx_acknowledged=1
-												fi
-											else
-												trx_acknowledged=1
-											fi
-										else
-											if [ ${user_to_check} = ${handover_account} ]
-											then
-												trx_acknowledged=1
-											fi
-										fi
-									fi
-								else
-									if [ ${user_to_check} = ${handover_account} ]
+									if [ $is_trx_signed = 1 -a $delete_trx_not_indexed = 0 -o $is_amount_ok = 1 -o $is_amount_mod = 0 ]
 									then
 										trx_acknowledged=1
-									else
-										if [ $delete_trx_not_indexed = 1 ]
-										then
-											rm $file_to_check 2>/dev/null
-										fi
 									fi
 								fi
 							fi
@@ -1448,7 +1402,13 @@ check_trx(){
 			fi
 			if [ $trx_acknowledged = 0 ]
 			then
-				echo $line >>${user_path}/blacklisted_trx.dat
+				if [ ! ${user_to_check} = ${handover_account} ]
+				then
+					if [ $delete_trx_not_indexed = 1 ]
+					then
+						echo $line >>${user_path}/blacklisted_trx.dat
+					fi
+				fi
 			fi
 		done <${user_path}/all_trx.tmp
 
