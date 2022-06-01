@@ -2981,6 +2981,8 @@ do
 												trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
 												echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
+												echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
+												echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 												###SCORE#####################################################################
 												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
 												is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
