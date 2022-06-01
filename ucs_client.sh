@@ -1798,6 +1798,7 @@ get_dependencies(){
 						then
 							echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
 						fi
+					fi
 					if [ -e ${user_path}/depend_confirmations.dat -a ! "${depend_confirmations_new_hash}" = "X" ]
 					then
 						depend_confirmations_new_date=`sort -t . -k3 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3`
