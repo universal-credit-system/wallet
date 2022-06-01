@@ -1787,23 +1787,31 @@ get_dependencies(){
 
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
 					depend_accounts_new_date=`sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1|cut -d '.' -f2`
-					echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
+					if [ ! "${depend_accounts_new_date}" = "" ]
+					then
+						echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
+					fi
 					if [ -e ${user_path}/depend_trx.dat -a ! "${depend_trx_old_hash}" = "X" ]
 					then
 						depend_trx_new_date=`sort -t . -k3 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f3`
-						echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
-					fi
+						if [ ! "${depend_trx_new_date}" = "" ]
+						then
+							echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
+						fi
 					if [ -e ${user_path}/depend_confirmations.dat -a ! "${depend_confirmations_new_hash}" = "X" ]
 					then
 						depend_confirmations_new_date=`sort -t . -k3 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3`
-						echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
+						if [ ! "${depend_confirmations_new_date}" = "" ]
+						then
+							echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
+						fi
 					fi
 
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
 					last_date=`date +%Y%m%d --date=@$(sort ${user_path}/dates.tmp|head -1)`
-					rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-					rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-					rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm ${user_path}/$(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm ${user_path}/$(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm ${user_path}/$(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 					rm ${user_path}/*.tmp 2>/dev/null
 				fi
 			fi
