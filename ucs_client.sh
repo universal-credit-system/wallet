@@ -337,7 +337,8 @@ make_signature(){
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
-				cat ${user_path}/index_trx.dat >>${message_blank}
+				last_index_file=`ls -1 ${user_path}/|grep "index_trx.dat"|tail -1`
+				cat ${user_path}/${last_index_file} >>${message_blank}
 			fi
 			#################################################################
 
@@ -466,7 +467,7 @@ build_ledger(){
 		###CHECK IF OLD SCORETABLE IS THERE#################
 		old_scoretable_there=`ls -1 ${user_path}/|grep -c "scoretable.dat"`
 
-		if [ $old_ledger_there -gt 0 -a $old_scoretable_there = 1 -a $new = 0 ]
+		if [ $old_ledger_there -gt 0 -a $old_scoretable_there -gt 0 -a $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1`
@@ -476,9 +477,6 @@ build_ledger(){
 			###SET DATESTAMP TO NEXTDAY OF LAST LEDGER##########
 			date_stamp=$(( $last_ledger_date_stamp + 86400 ))
 
-			###MOVE LEDGER######################################
-			mv ${user_path}/${last_ledger_date}_ledger.dat ${user_path}/${now}_ledger.dat 2>/dev/null
-
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=`date -u +%s --date="${start_date}"`
 			no_seconds_last=$(( $date_stamp - $date_stamp_last ))
@@ -486,19 +484,20 @@ build_ledger(){
 		else
 			###SET DATESTAMP####################################
 			date_stamp=`date -u +%s --date=$(date -u +%Y%m%d --date=@$(sort -t . -k2 ${user_path}/depend_accounts.dat|head -1|cut -d '.' -f2))`
+			date_stamp_yesterday=`date +%Y%m%d --date="$(date -u +%Y%m%d --date=@${date_stamp}) - 1 day"`
 
 			###EMPTY LEDGER#####################################
 			rm ${user_path}/*_ledger.dat 2>/dev/null
-			touch ${user_path}/${now}_ledger.dat
+			touch ${user_path}/${date_stamp_yesterday}_ledger.dat
 			####################################################
 
 			###EMPTY SCORE TABLE################################
-			rm ${user_path}/scoretable.dat 2>/dev/null
-			touch ${user_path}/scoretable.dat
+			rm ${user_path}/*_scoretable.dat 2>/dev/null
+			touch ${user_path}/${date_stamp_yesterday}_scoretable.dat
 
 			###EMPTY INDEX FILE#################################
-			rm ${user_path}/index_trx.dat 2>/dev/null
-			touch ${user_path}/index_trx.dat
+			rm ${user_path}/*_index_trx.dat 2>/dev/null
+			touch ${user_path}/${date_stamp_yesterday}_index_trx.dat
 			####################################################
 
 			###EMPTY IGNORE TRX#################################
@@ -557,27 +556,34 @@ build_ledger(){
 			fi
 			#################################################
 
+			###MOVE FILENAMES TO NEXT DAY####################
+			previous_day=`date +%Y%m%d --date="${focus} - 1 day"`
+			cp ${user_path}/${previous_day}_ledger.dat ${user_path}/${focus}_ledger.dat
+			cp ${user_path}/${previous_day}_scoretable.dat ${user_path}/${focus}_scoretable.dat
+			cp ${user_path}/${previous_day}_index_trx.dat ${user_path}/${focus}_index_trx.dat
+
 			###GRANT COINLOAD OF THAT DAY####################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${now}_ledger.dat >${user_path}/${now}_ledger.tmp
-			if [ -s ${user_path}/${now}_ledger.tmp ]
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger.tmp
+			if [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
-				mv ${user_path}/${now}_ledger.tmp ${user_path}/${now}_ledger.dat 2>/dev/null
+				mv ${user_path}/${focus}_ledger.tmp ${user_path}/${focus}_ledger.dat 2>/dev/null
 			fi
 
 			###UPDATE SCORETABLE#############################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/scoretable.dat >${user_path}/scoretable.tmp
-			if [ -s ${user_path}/scoretable.dat ]
+			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_scoretable.dat >${user_path}/${focus}_scoretable.tmp
+			if [ -s ${user_path}/${focus}_scoretable.tmp ]
 			then
-				mv ${user_path}/scoretable.tmp ${user_path}/scoretable.dat 2>/dev/null
+				mv ${user_path}/${focus}_scoretable.tmp ${user_path}/${focus}_scoretable.dat 2>/dev/null
 			fi
 
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
+			touch ${user_path}/accounts.tmp
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY############
-			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${now}_ledger.dat
-			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/scoretable.dat
+			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
+			awk -F. '{print $1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
@@ -600,7 +606,7 @@ build_ledger(){
 					then
 						###EXTRACT TRX DATA###########################################
 						trx_amount=`sed -n '5p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
-						account_balance=`grep "${trx_sender}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+						account_balance=`grep "${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
 						##############################################################
 
 						###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
@@ -609,7 +615,7 @@ build_ledger(){
 						##############################################################
 
 						###SCORING####################################################
-						sender_score_balance=`grep "${trx_sender}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+						sender_score_balance=`grep "${trx_sender}" ${user_path}/${focus}_scoretable.dat|cut -d '=' -f2`
 						is_score_ok=`echo "${sender_score_balance} >= ${trx_amount}"|bc`
 						##############################################################
 
@@ -617,7 +623,7 @@ build_ledger(){
 						if [ $enough_balance = 1 -a $is_score_ok = 1 ]
 						then
 							####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
-							echo "${trx_path} ${trx_hash}" >>${user_path}/index_trx.dat
+							echo "${trx_path} ${trx_hash}" >>${user_path}/${focus}_index_trx.dat
 							##############################################################
 
 							###SET BALANCE FOR SENDER#####################################
@@ -627,7 +633,7 @@ build_ledger(){
 							then
 								account_new_balance="0${account_new_balance}"
 							fi
-							sed -i "s/${trx_sender}=${account_balance}/${trx_sender}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
+							sed -i "s/${trx_sender}=${account_balance}/${trx_sender}=${account_new_balance}/g" ${user_path}/${focus}_ledger.dat
 							##############################################################
 
 							###SET SCORE FOR SENDER#######################################
@@ -637,14 +643,14 @@ build_ledger(){
 							then
 								sender_new_score_balance="0${sender_new_score_balance}"
 							fi
-							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
+							sed -i "s/${trx_sender}=${sender_score_balance}/${trx_sender}=${sender_new_score_balance}/g" ${user_path}/${focus}_scoretable.dat
 							##############################################################
 
 							###CHECK CONFIRMATIONS########################################
 							total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 							if [ $total_confirmations -ge $confirmations_from_users ]
 							then
-								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${now}_ledger.dat`
+								receiver_in_ledger=`grep -c "${trx_receiver}" ${user_path}/${focus}_ledger.dat`
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###SET SCORE FOR SENDER#######################################
@@ -654,17 +660,17 @@ build_ledger(){
 									then
 										sender_score_balance="0${sender_score_balance}"
 									fi
-									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/scoretable.dat
+									sed -i "s/${trx_sender}=${sender_new_score_balance}/${trx_sender}=${sender_score_balance}/g" ${user_path}/${focus}_scoretable.dat
 									##############################################################
 									###SET BALANCE FOR RECEIVER###################################
-									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
+									receiver_old_balance=`grep "${trx_receiver}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
 									receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
 									is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
 									if [ $is_greater_one = 0 ]
 									then
 										receiver_new_balance="0${receiver_new_balance}"
 									fi
-									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${now}_ledger.dat
+									sed -i "s/${trx_receiver}=${receiver_old_balance}/${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
 									##############################################################
 								fi
 							else
@@ -707,9 +713,9 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
+				cmd_output=`grep "${handover_account}" ${user_path}/${focus}_ledger.dat`
 				echo "BALANCE_${now_stamp}:${cmd_output}"
-				cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
+				cmd_output=`grep "${handover_account}" ${user_path}/${focus}_scoretable.dat`
 				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 			fi
 			##############################################################
@@ -1678,6 +1684,7 @@ get_dependencies(){
 			cd ${script_path}/trx
 			new_ledger=1
 			own_index_there=0
+			first_start=0
 
 			###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE######################
 			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
@@ -1692,14 +1699,22 @@ get_dependencies(){
 			depend_confirmations_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
 			then
+				depend_accounts_old_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
+				cp ${user_path}/depend_accounts.dat ${user_path}/depend_accounts_old.tmp
+			else
+				first_start=1
+			fi
+			if [ $first_start = 0 ]
+			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
-					if [ -e ${user_path}/depend_confirmations.dat ]
-					then
-						depend_accounts_old_hash=`sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
-						depend_trx_old_hash=`sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1`
-						depend_confirmations_old_hash=`sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
-					fi
+					depend_trx_old_hash=`sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1`
+					cp ${user_path}/depend_trx.dat ${user_path}/depend_trx_old.tmp
+				fi
+				if [ -e ${user_path}/depend_confirmations.dat ]
+				then
+					depend_confirmations_old_hash=`sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1`
+					cp ${user_path}/depend_confirmations.dat ${user_path}/depend_confirmations_old.tmp
 				fi
 			fi
 
@@ -1765,6 +1780,32 @@ get_dependencies(){
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash -a $own_index_there = 1 ]
 			then
 				new_ledger=0
+			else
+				if [ $first_start = 0 ]
+				then
+					new_ledger=0
+
+					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
+					depend_accounts_new_date=`sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1|cut -d '.' -f2`
+					echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
+					if [ -e ${user_path}/depend_trx.dat -a ! "${depend_trx_old_hash}" = "X" ]
+					then
+						depend_trx_new_date=`sort -t . -k3 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f3`
+						echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
+					fi
+					if [ -e ${user_path}/depend_confirmations.dat -a ! "${depend_confirmations_new_hash}" = "X" ]
+					then
+						depend_confirmations_new_date=`sort -t . -k3 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3`
+						echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
+					fi
+
+					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
+					last_date=`date +%Y%m%d --date=@$(sort ${user_path}/dates.tmp|head -1)`
+					rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					rm ${user_path}/*.tmp 2>/dev/null
+				fi
 			fi
 			cd ${script_path}/
 			return $new_ledger
@@ -2659,7 +2700,7 @@ do
 			fi
 			check_blacklist
 			account_my_balance=`grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2`
-			account_my_score=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+			account_my_score=`grep "${handover_account}" ${user_path}/${now}_scoretable.dat|cut -d '=' -f2`
 			is_score_greater_balance=`echo "${account_my_score} > ${account_my_balance}"|bc`
 			if [ $is_score_greater_balance = 1 ]
 			then
@@ -2736,7 +2777,7 @@ do
 								while [ $amount_selected = 0 ]
 								do
 									###SCORE############################################################
-									sender_score_balance=`grep "${handover_account}" ${user_path}/scoretable.dat|cut -d '=' -f2`
+									sender_score_balance=`grep "${handover_account}" ${user_path}/${now}_scoretable.dat|cut -d '=' -f2`
 									sender_score_balance_value=$account_my_score
 									####################################################################
 									if [ $gui_mode = 1 ]
@@ -2929,7 +2970,7 @@ do
 												fi
 												###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 												trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
-												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/index_trx.dat
+												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
 												echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
 												###SCORE#####################################################################
 												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
@@ -2938,7 +2979,7 @@ do
 												then
 													sender_new_score_balance="0${sender_new_score_balance}"
 												fi
-												sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/scoretable.dat
+												sed -i "s/${handover_account}=${sender_score_balance}/${handover_account}=${sender_new_score_balance}/g" ${user_path}/${now}_scoretable.dat
 												##############################################################################
 												make_signature "none" ${trx_now} 1
 												rt_query=$?
@@ -2984,7 +3025,7 @@ do
 															else
 																cmd_output=`grep "${handover_account}" ${user_path}/${now}_ledger.dat`
 																echo "BALANCE_${trx_now}:${cmd_output}"
-																cmd_output=`grep "${handover_account}" ${user_path}/scoretable.dat`
+																cmd_output=`grep "${handover_account}" ${user_path}/${now}_scoretable.dat`
 																echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
 																if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
 																then
