@@ -1735,17 +1735,14 @@ get_dependencies(){
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
 						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
 					done
-					sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq >${user_path}/depend_user_list_sorted.tmp
-					mv ${user_path}/depend_user_list_sorted.tmp ${user_path}/depend_user_list.tmp
-					while read line
-					do
-						already_there=`grep -c "${line}" ${user_path}/depend_accounts.dat`
+					for trx_file in `sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq`
+					done
+						already_there=`grep -c "${trx_file}" ${user_path}/depend_accounts.dat`
 						if [ $already_there = 0 ]
 						then
-							echo $line >>${user_path}/depend_accounts.dat
+							echo $trx_file >>${user_path}/depend_accounts.dat
 						fi
-					done <${user_path}/depend_user_list.tmp
-			       		rm ${user_path}/depend_user_list.tmp 2>/dev/null
+					done
 				done <${user_path}/depend_accounts.dat
 
 				###SORT DEPENDENCIE LISTS#####################################################
@@ -2981,8 +2978,6 @@ do
 												trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 												echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
 												echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
-												echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
-												echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 												###SCORE#####################################################################
 												sender_new_score_balance=`echo "${sender_score_balance} - ${order_amount_formatted}"|bc`
 												is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
@@ -3011,6 +3006,8 @@ do
 														fi
 														sed -i "s/${handover_account}=${account_my_balance}/${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 														echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
+														echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
+														echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 														get_dependencies
 														#############################################################################
 
