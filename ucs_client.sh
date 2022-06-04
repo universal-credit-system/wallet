@@ -810,7 +810,7 @@ check_archive(){
 											file_usr=`echo $line|cut -d '/' -f2`
 											file_usr_correct=`echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]'`
 											if [ $file_usr_correct = 0 ]
-											then	
+											then
 												file_full=`echo $line|cut -d '/' -f3`
 												file_ext=`echo $line|cut -d '/' -f3|cut -d '.' -f2`
 												case $file_ext in
@@ -1022,7 +1022,7 @@ check_tsa(){
 									crl_old_valid_till=`date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)"`
 									crl_new_valid_from=`date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)"`
 									crl_new_valid_till=`date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)"`
-									
+
 									###COMPARE VALID FROM AND VALID TILL####
 									if [ $crl_old_valid_from -eq $crl_new_valid_from -a $crl_old_valid_till -eq $crl_new_valid_till ]
 									then
@@ -1067,7 +1067,7 @@ check_tsa(){
 									fi
 								else
 									tsa_available=1
-								fi	
+								fi
 							fi
 						fi
 					else
@@ -1139,7 +1139,7 @@ check_tsa(){
 
 									###IF CERT WAS VALID AT TIMESTAMP OF ACCOUNT CREATION..##
 									if [ $accountname_key_stamp -gt $valid_from -a $accountname_key_stamp -lt $valid_till ]
-									then	 
+									then
 										###CHECK TSA QUERYFILE###################################
 										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
 										rt_query=$?
@@ -1166,10 +1166,10 @@ check_tsa(){
 														then
 															###SET VARIABLE THAT TSA HAS BEEN FOUND##################
 															account_verified=1
-			
+
 															###STEP OUT OF LOOP CACERT_FILE##########################
 															cacert_file_found=1
-													
+
 															###STEP OUT OF LOOP CRT_FILE#############################
 															break
 														fi
@@ -1568,7 +1568,7 @@ process_new_files(){
 						files_replaced=1
 					fi
 				done <${user_path}/files_to_fetch.tmp
-				
+
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ $files_replaced = 1 ]
 				then
@@ -3151,7 +3151,7 @@ do
 															process_new_files 0
 														else
 															process_new_files 1
-														fi	
+														fi
 														set_permissions
 														if [ $gui_mode = 1 ]
 														then
