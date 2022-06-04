@@ -1810,9 +1810,9 @@ get_dependencies(){
 					rm ${user_path}/$(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 					rm ${user_path}/$(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 					rm ${user_path}/$(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-					rm ${user_path}/*.tmp 2>/dev/null
 				fi
 			fi
+			rm ${user_path}/*.tmp 2>/dev/null
 			cd ${script_path}/
 			return $new_ledger
 }
@@ -3445,15 +3445,14 @@ do
 							fi
 						fi
 						;;
-				"$dialog_history")	cd ${script_path}/trx
-							rm ${user_path}/my_trx.tmp 2>/dev/null
-							rm ${user_path}/my_trx_sorted.tmp 2>/dev/null
+				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
 							touch ${user_path}/my_trx_sorted.tmp
+							cd ${script_path}/trx
 							grep -l ":${handover_account}" *.* >${user_path}/my_trx.tmp 2>/dev/null
+							cd ${script_path}
 							sort -r -t . -k3 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
-							cd ${script_path}
 							no_trx=`wc -l <${user_path}/my_trx.tmp`
 							if [ $no_trx -gt 0 ]
 							then
@@ -3581,6 +3580,7 @@ do
 									rm ${user_path}/history_list.tmp 2>/dev/null
 								fi
 							done
+							rm ${user_path}/*.tmp 2>/dev/null
 							;;
 				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
 							total_keys=`wc -l <${user_path}/all_accounts.dat`
