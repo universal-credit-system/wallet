@@ -65,30 +65,30 @@ The following programs are used:
 
 Install Git (you may use `sudo` in front):
 ```shell session
-apt-get install git
+$ apt-get install git
 ```
 
 Create a directory wherever you want and step into this directory:
 ```shell session
-mkdir ucs
-cd ucs
+$ mkdir ucs
+$ cd ucs
 ```
 
 Clone the GitHub repository and step into this directory:
 ```shell session
-git clone https://github.com/universal-credit-system/wallet
-cd wallet/
+$ git clone https://github.com/universal-credit-system/wallet
+$ cd wallet/
 ```
 
 Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
 If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs first and then run `install.sh` script again.
 ```shell session
-./install.sh
+$ ./install.sh
 ```
 
 After setup you can run `ucs_client.sh`:
 ```shell session
-./ucs_client.sh
+$ ./ucs_client.sh
 ```
 
 ## Community
