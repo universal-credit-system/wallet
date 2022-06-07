@@ -2167,7 +2167,7 @@ then
 								;;
 						"-user")	cmd_user=$1
 								;;
-						"-pin")	 cmd_pin=$1
+						"-pin")		cmd_pin=$1
 								;;
 						"-password")	cmd_pw=$1
 								;;
@@ -2670,7 +2670,7 @@ do
 
 	else
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ]
+		if [ $auto_uca_start = 1 -a $no_ledger = 0 ]
 		then
 			request_uca
 		fi
@@ -2715,7 +2715,7 @@ do
 		fi
 
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ]
+		if [ $auto_uca_start = 1 -a $no_ledger = 0 ]
 		then
 			send_uca
 		fi
