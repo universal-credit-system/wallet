@@ -2,71 +2,59 @@ COMMAND:
 
 ./ucs_client.sh [OPTION]
 
-NOTE:	IF YOU WANT TO RUN UCS IN GUI-MODE JUST EXECUTE THE SCRIPT WITHOUT
-	ANY PARAMETERS.
+OPTIONS:
 
+  -action <ACTION>	possible actions:
 
-OPTIONS (for CMD-MODE ONLY!!!):
+			create_user	to create a user
+			create_trx	to create a transaction
+			read_trx	to read a transaction
+			create_sync	to create a syncronisation
+			read_sync	to read a syncronisation
+			sync_uca	to sync with UCAs
+			create_backup	to create a backup
+			restore_backup	to restore a backup
+			show_stats	to display the statistics
 
-	Parameter:		Purpose:
+  -user <USER>		name of the account.	
 
-	-action <ACTION>	Used to describe what to do.
- 
-				Possible actions are:	
+  -pin <PIN>		PIN of the account
 
-				create_user	create a user
-				create_trx	create a transaction
-				read_trx	read a transaction
-				create_sync	create a syncronisation
-				read_sync	read a syncronisation
-				sync_uca	sync with UCAs
-				create_backup	create a backup
-				restore_backup	restore a backup
-				show_stats	display the statistics
+  -password <PW>	password of the account
 
-	-user <USER>		Name of the account	
+  -sender <ADRESS>	sender of a transaction. can be used to handover 
+			a adress only instead of user and pin seperately. 
+			If you use this parameter, skip -user and -pin 
 
-	-pin <PIN>		PIN of the account
-	
-	-password <PW>		Password of the account
+  -receiver <ADRESS>	receiver of transaction. used only for action
+			create_trx
 
-	-sender <ADRESS>	Sender of a transaction. Can be used to handover 
-				a adress only instead of user and pin seperately. 
-				If you use this parameter, skip -user and -pin 
+  -amount <AMOUNT>	amount of transaction. used only for action
+			create_trx
+
+  -purpose "<TEXT>"	purpose of the transaction. used only for action
+			create_trx
+
+  -type <TYPE>		possible values are "partial" or "full".
+
+			when creating a transaction this value is used to 
+			specifiy wheter a big or small transaction should 
+			be created. 
+
+			when reading a transaction or reading 
+			a sync file this parameter is used to specify 
+			wheter only new files should be extracted or 
+			all files should be extracted.
+
+  -path <PATH>		path where output file is stored. 
+			path from where to read input file.
+
+  -no_ledger		don't build a ledger at start and only perform basic 
+			integrity checks. should only be performed after a
+			certain action to ensure information are up-to-date.
+			when option is applied the usage of auto_uca_start 
+			setting in control/config.conf is disabled.
 			
-	-receiver <ADRESS>	Receiver of transaction. Used only for create_trx
-			
-	-amount <AMOUNT>	Amount of transaction. Used only for create_trx
+			Option will be ignored for action create_trx.
 
-	-purpose "<TEXT>"	Purpose of the transaction.
-			
-	-type <TYPE>		Possible values are "partial" or "full".
-
-				When creating a transaction this value is used to 
-				specifiy wheter a big or small transaction should 
-				be created. When reading a transaction or reading 
-				a sync file this parameter is used to specify 
-				wheter only new files should be extracted or 
-				all files should be extracted.
-			
-	-path <PATH>		Path where output is stored. Used for:
-
-				create_trx
-				create_sync
-				create_backup
-
-				Path from where to read input. Used for:
- 
-				read_trx
-				read_sync
-				restore_backup
-
-	-no_ledger		Don't build a ledger at start and only perform basic 
-				integrity checks. Used to increase the overall performance
-				as a ledger is only build once and not twice.
-
-				Option will be ignored for create_trx.
-				
-
-	-help			Display HELP
-
+  -help			Display this HELP
