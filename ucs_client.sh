@@ -1375,28 +1375,27 @@ check_trx(){
 								purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
 								if [ $purpose_contains_alnum = 0 ]
 								then
+									###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+									trx_amount=`sed -n '6p' ${file_to_check}|cut -d ':' -f2`
+									is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
+									is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
+									is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
 									###CHECK IF USER HAS CREATED A INDEX FILE################################
 									if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 									then
 										####CHECK IF USER HAS INDEXED THE TRANSACTION############################
 										is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
-
-										###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-										trx_amount=`sed -n '6p' ${file_to_check}|cut -d ':' -f2`
-										is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
-										is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
-										is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
 										if [ $is_trx_signed = 1 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
 										then
 											trx_acknowledged=1
 										else
-											if [ $is_trx_signed = 0 -a $delete_trx_not_indexed = 0 ]
+											if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
 											then
 												trx_acknowledged=1
 											fi
 										fi
 									else
-										if [  $delete_trx_not_indexed = 0 ]
+										if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
 										then
 											trx_acknowledged=1
 										fi
