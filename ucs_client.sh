@@ -2764,11 +2764,12 @@ do
 			case "$user_menu" in
 				"$dialog_send")	recipient_found=0
 						order_aborted=0
+						order_receipient=""
 	      					while [ $recipient_found = 0 ]
 			      			do
 							if [ $gui_mode = 1 ]
 							then
-								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 ""`
+								order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --help-button --help-label "..." --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient"`
 								rt_query=$?
 							else
 								rt_query=0
@@ -2864,8 +2865,13 @@ do
 									fi
 								done
 							else
-								recipient_found=1
-								order_aborted=1
+								if [ $rt_query = 2 ]
+								then
+									order_receipient=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/all_accounts.dat`
+								else
+									recipient_found=1
+									order_aborted=1
+								fi
 							fi
 						done
 						if [ $order_aborted = 0 ]
