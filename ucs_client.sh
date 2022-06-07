@@ -1736,7 +1736,7 @@ get_dependencies(){
 						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
 					done
 					for trx_file in `sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq`
-					done
+					do
 						already_there=`grep -c "${trx_file}" ${user_path}/depend_accounts.dat`
 						if [ $already_there = 0 ]
 						then
