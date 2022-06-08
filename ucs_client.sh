@@ -3023,6 +3023,12 @@ do
 														echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
 														echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 														get_dependencies
+														build_new_ledger=$?
+														if [ $build_new_ledger = 1 ]
+														then
+															make_ledger=1
+															changes=1
+														fi
 														#############################################################################
 
 														###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
