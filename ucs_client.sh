@@ -590,9 +590,11 @@ build_ledger(){
 			for trx_filename in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
 				###EXRACT DATA FOR CHECK######################################
-				trx_stamp=`echo $trx_filename|cut -d '.' -f3`
-				trx_sender=`sed -n '6p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
-				trx_receiver=`sed -n '7p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
+				trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_filename}`
+				trx_data=`echo $trx_data_raw|sed 's/ //g'`
+				trx_stamp=`echo "${trx_data}"|cut -d ':' -f3`
+				trx_sender=`echo "${trx_data}"|cut -d ':' -f7`
+				trx_receiver=`echo "${trx_data}"|cut -d ':' -f9`
 				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
 				trx_path="trx/${trx_filename}"
 				##############################################################
@@ -605,7 +607,7 @@ build_ledger(){
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX DATA###########################################
-						trx_amount=`sed -n '5p' ${script_path}/trx/${trx_filename}|cut -d ':' -f2`
+						trx_amount=`echo "${trx_data}"|cut -d ':' -f5`
 						account_balance=`grep "${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
 						##############################################################
 
@@ -1349,53 +1351,52 @@ check_trx(){
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
-			user_to_check_sender=`sed -n '6p' ${file_to_check}|cut -d ':' -f2`
-			if [ $user_to_check = $user_to_check_sender ]
+			trx_data_raw=`sed -n '4,8p' ${file_to_check}/trx/${trx_filename}`
+			trx_data=`echo $trx_data_raw|sed 's/ //g'`
+			trx_sender=`echo "${trx_data}"|cut -d ':' -f7`
+			if [ $user_to_check = $trx_sender ]
 			then
 				###VERIFY SIGNATURE OF TRANSACTION#################################
 				verify_signature $file_to_check $user_to_check
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME################
+					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX######## 
+					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
 					trx_date_filename=`echo $line|cut -d '.' -f3`
-					trx_date_inside=`sed -n '4p' ${file_to_check}|cut -d ':' -f2`
-					if [ $trx_date_filename = $trx_date_inside ]
+					trx_date_inside=`echo "${trx_data}"|cut -d ':' -f3`
+					trx_receiver_date=`echo "${trx_data}"|cut -d ':' -f9|cut -d '.' -f2`
+					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
 					then
-						###CHECK IF TRANSACTION WAS CREATED BEFORE RECEIVER EXISTED##############
-						user_to_check_receiver_date=`echo $user_to_check|cut -d '.' -f2`
-						if [ $trx_date_inside -gt $user_to_check_receiver_date ]
+						###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
+						trx_purpose=`echo "${trx_data}"|cut -d ':' -f10`
+						purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
+						if [ $purpose_contains_alnum = 0 ]
 						then
-							###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
-							trx_purpose=`sed -n '8p' ${file_to_check}|cut -d ':' -f2`
-							purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
-							if [ $purpose_contains_alnum = 0 ]
+							###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+							trx_amount=`echo "${trx_data}"|cut -d ':' -f4`
+							is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
+							is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
+							is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
+							
+							###CHECK IF USER HAS CREATED A INDEX FILE################################			
+							if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 							then
-								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=`sed -n '5p' ${file_to_check}|cut -d ':' -f2`
-								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
-								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
-								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-			
-								###CHECK IF USER HAS CREATED A INDEX FILE################################
-								if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+								####CHECK IF USER HAS INDEXED THE TRANSACTION############################
+								is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
+								if [ $is_trx_signed = 1 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
 								then
-									####CHECK IF USER HAS INDEXED THE TRANSACTION############################
-									is_trx_signed=`grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt`
-									if [ $is_trx_signed = 1 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
-									then
-										trx_acknowledged=1
-									else
-										if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
-										then
-											trx_acknowledged=1
-										fi
-									fi
+									trx_acknowledged=1
 								else
 									if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
 									then
 										trx_acknowledged=1
 									fi
+								fi
+							else
+								if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+								then
+									trx_acknowledged=1
 								fi
 							fi
 						fi
@@ -1471,7 +1472,7 @@ process_new_files(){
 										then
 											no_matches=$(( $no_matches + 1 ))
 										else
-											old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f2`
+											old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
 											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 											then
@@ -1486,7 +1487,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
 											if [ $is_file_there = 0 ]
 											then
-												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f2`
+												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
 												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
@@ -1509,7 +1510,7 @@ process_new_files(){
 										then
 											no_matches=$(( $no_matches + 1 ))
 										else
-											new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f2`
+											new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
 											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 											then
@@ -1524,7 +1525,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 											if [ $is_file_there = 0 ]
 											then
-												old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f2`
+												old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
@@ -1740,7 +1741,7 @@ get_dependencies(){
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
-						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f2 >>${user_path}/depend_user_list.tmp
+						sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f3 >>${user_path}/depend_user_list.tmp
 					done
 					for trx_file in `sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq`
 					do
@@ -1769,7 +1770,7 @@ get_dependencies(){
 			while read line
 			do
 				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
-				trx_sender=`sed -n '6p' ${script_path}/trx/${user_trx}|cut -d ':' -f2`
+				trx_sender=`sed -n '6p' ${script_path}/trx/${user_trx}|cut -d ':' -f3`
 				total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
@@ -2898,7 +2899,7 @@ do
 								then
 									trx_now=`date +%s`
 									order_purpose_hash=`printf "${handover_account}_${trx_now}_${order_purpose}"|sha224sum|cut -d ' ' -f1`
-									make_signature "TIME:${trx_now}\nAMNT:${order_amount_formatted}\nSNDR:${handover_account}\nRCVR:${order_receipient}\nPRPS:${order_purpose_hash}" ${trx_now} 0
+									make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -3481,11 +3482,13 @@ do
 								while read line
 								do
 									line_extracted=$line
-									sender=`sed -n '6p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
-									receiver=`sed -n '7p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+									data_raw=`sed -n '4,8p' ${script_path}/trx/${line_extracted}`
+									data=`echo $data_raw|sed 's/ //g'`
+									sender=`echo "${data}"|cut -d ':' -f7`
+									receiver=`echo "${data}"|cut -d ':' -f9`
 									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-			      						trx_amount=`sed -n '5p' ${script_path}/trx/${line_extracted}|cut -d ':' -f2`
+			      						trx_amount=`echo "${data}"|cut -d ':' -f5`
 									trx_hash=`sha256sum ${script_path}/trx/${line_extracted}|cut -d ' ' -f1`
 									trx_confirmations=`grep -l "trx/${line_extracted} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
@@ -3543,16 +3546,11 @@ do
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
-										sender=`sed -n '6p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
-										receiver=`sed -n '7p' ${script_path}/trx/${trx_file}|cut -d ':' -f2`
-										purpose=`sed -n '8p' ${script_path}/trx/${trx_file}`
-										purpose_size=`echo "${purpose}"|wc -c`
-										if [ $purpose_size -gt 6 ]
-										then
-											purpose_extracted=`echo $purpose|cut -c 6-$purpose_size`
-										else
-											purpose_extracted=""
-										fi
+										data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
+										data=`echo $data_raw|sed 's/ //g'`
+										sender=`echo "${data}"|cut -d ':' -f7`
+										receiver=`echo "${data}"|cut -d ':' -f9`
+										purpose=`echo "${data}"|cut -d ':' -f11`
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -3588,10 +3586,10 @@ do
 										trx_confirmations="${trx_confirmations_total} \/ ${user_total}"
 										if [ $sender = $handover_account ]
 										then
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose_extracted}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose_extracted}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
