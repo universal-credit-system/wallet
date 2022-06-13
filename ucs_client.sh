@@ -1369,12 +1369,12 @@ check_trx(){
 					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
-						trx_purpose=`echo "${trx_data}"|cut -d ':' -f10`
+						trx_purpose=`echo "${trx_data}"|cut -d ':' -f11`
 						purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
 						if [ $purpose_contains_alnum = 0 ]
 						then
 							###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-							trx_amount=`echo "${trx_data}"|cut -d ':' -f4`
+							trx_amount=`echo "${trx_data}"|cut -d ':' -f5`
 							is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 							is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
 							is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
