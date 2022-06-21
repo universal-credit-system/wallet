@@ -1351,7 +1351,7 @@ check_trx(){
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
-			trx_data_raw=`sed -n '4,8p' ${file_to_check}/trx/${trx_filename}`
+			trx_data_raw=`sed -n '4,8p' ${file_to_check}`
 			trx_data=`echo $trx_data_raw|sed 's/ //g'`
 			trx_sender=`echo "${trx_data}"|cut -d ':' -f7`
 			if [ $user_to_check = $trx_sender ]
