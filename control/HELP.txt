@@ -32,6 +32,10 @@ OPTIONS:
   -amount <AMOUNT>	amount of transaction. used only for action
 			create_trx
 
+  -asset <ASSET>	asset to be used. if no asset type is defined
+			the value $main_asset of control/config.conf is
+			used as default asset
+
   -purpose "<TEXT>"	purpose of the transaction. used only for action
 			create_trx
 
