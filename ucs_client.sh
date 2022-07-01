@@ -527,20 +527,36 @@ build_ledger(){
 		if [ -s ${user_path}/assets.tmp ]
 		then
 			cd ${script_path}/assets
+
 			###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
-			for non_fungible_asset in `grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp)`
+			for asset in `cat ${user_path}/assets.tmp`
 			do
-				asset_owner=`grep "asset_owner=" $non_fungible_asset|cut -d '=' -f2`
-				asset_quantity=`grep "asset_quantity=" $non_fungible_asset|cut -d '=' -f2`
-				already_exists=`grep -c "${non_fungible_asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat`
-				if [ $already_exists = 0 ]
+				if [ 1 $asset = $main_asset ]
 				then
-					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${previous_day}_ledger.dat
+					asset_fungible=`grep "asset_fungible=" $asset|cut -d '=' -f2`
+					if [ $asset_fungible = 0 ]
+					then
+						asset_owner=`grep "asset_owner=" $asset|cut -d '=' -f2`
+						asset_quantity=`grep "asset_quantity=" $asset|cut -d '=' -f2`
+						already_exists=`grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat`
+						if [ $already_exists = 0 ]
+						then
+							echo "${asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${previous_day}_ledger.dat
+						fi
+					else
+						already_exists=`grep -c "${main_asset}:${asset}=" ${user_path}/${previous_day}_ledger.dat`
+						if [ $already_exists = 0 ]
+						then
+							echo "${main_asset}:${asset}=0" >>${user_path}/${previous_day}_ledger.dat
+						fi
+						already_exists=`grep -c "${asset}:${main_asset}=" ${user_path}/${previous_day}_ledger.dat`
+						if [ $already_exists = 0 ]
+						then
+							echo "${asset}:${main_asset}=0" >>${user_path}/${previous_day}_ledger.dat
+						fi
+					fi
 				fi	
 			done
-			###CREATE LEDGER ENTRY FOR FUNGIBLE ASSET###################
-			grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' >>${user_path}/${previous_day}_ledger.dat
-			grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print $1"."$2":"main_asset_symbol"."main_asset_stamp"=0"}' >>${user_path}/${previous_day}_ledger.dat
 			rm ${user_path}/assets.tmp
 		fi
 
