@@ -539,7 +539,7 @@ build_ledger(){
 				fi	
 			done
 			###CREATE LEDGER ENTRY FOR FUNGIBLE ASSET###################
-			grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0' >>${user_path}/${previous_day}_ledger.dat
+			grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' >>${user_path}/${previous_day}_ledger.dat
 			grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print $1"."$2":"main_asset_symbol"."main_asset_stamp"=0"}' >>${user_path}/${previous_day}_ledger.dat
 			rm ${user_path}/assets.tmp
 		fi
