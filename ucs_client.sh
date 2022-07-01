@@ -2310,9 +2310,45 @@ send_uca(){
 		###ONLY CONTINUE IF SAVEFILE IS THERE########
 		if [ -s ${save_file} ]
 		then
+			rm ${user_path}/files_list.tmp 2>/dev/null
+
+			###WRITE ASSETS TO FILE LIST#################
+			while read line
+			do
+				echo "assets/${line}" >>${user_path}/files_list.tmp
+			done <${user_path}/all_assets.dat
+
+			###WRITE ACCOUNTS TO FILE LIST###############
+			while read line
+			do
+				echo "keys/${line}" >>${user_path}/files_list.tmp
+				tsa_query_there=`ls -1 ${script_path}/proofs/${line}/|grep -c ".tsq"`
+				tsa_response_there=`ls -1 ${script_path}/proofs/${line}/|grep -c ".tsq"`
+				index_there=`ls -1 ${script_path}/proofs/${line}/|grep -c "${line}.txt"`
+				if [ $tsa_query_there = $tsa_response_there -a $tsa_query_there -gt 0 -a $tsa_response_there -gt 0 ]
+				then
+					for tsa_files in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+					do
+						file=`basename $tsa_files`
+						echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
+					done
+					if [ $index_there = 1 ]
+					then
+						echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+
+					fi
+				fi
+			done <${user_path}/depend_accounts.dat
+
+			###WRITE TRX TO FILE LIST####################
+			while read line
+			do
+				echo "trx/${line}" >>${user_path}/files_list.tmp
+			done <${user_path}/depend_trx.dat
+
 			###STEP INTO HOMEDIR AND CREATE TARBALL######
 			cd ${script_path}/
-			tar -czf ${out_file} keys/ proofs/ trx/ --dereference --hard-dereference
+			tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -2383,6 +2419,7 @@ send_uca(){
 		fi
 		rm ${sync_file} 2>/dev/null
 		rm ${save_file} 2>/dev/null
+		rm ${user_path}/files_list.tmp 2>/dev/null
 }
 ##################
 #Main Menu Screen#
@@ -3099,7 +3136,7 @@ do
 			fi
 			case "$user_menu" in
 				"$dialog_send")	asset_found=0
-						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1 >${user_path}/menu_assets.tmp
+						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2,1 >${user_path}/menu_assets.tmp
 						while [ $asset_found = 0 ]
 						do
 							if [ $gui_mode = 1 ]
@@ -3268,7 +3305,7 @@ do
 													fi
 												done <${user_path}/all_assets.dat
 											fi
-											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
+											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|sort -t. -k2,1|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
 											order_receipient=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp`
 											rm ${user_path}/menu_addresses.tmp
 											rm ${user_path}/menu_addresses_fungible.tmp
