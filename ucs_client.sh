@@ -684,7 +684,7 @@ build_ledger(){
 							account_balance=`grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
 						
 							###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
-							account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc`
+							account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 							enough_balance=`echo "${account_check_balance} >= 0"|bc`
 
 							###CHECK IF ASSET#############################################
@@ -710,23 +710,13 @@ build_ledger(){
 
 								###SET BALANCE FOR SENDER#####################################
 								account_new_balance=$account_check_balance
-								is_greater_one=`echo "${account_new_balance} >= 1"|bc`
-								if [ $is_greater_one = 0 ]
-								then
-									account_new_balance="0${account_new_balance}"
-								fi
 								sed -i "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" ${user_path}/${focus}_ledger.dat
 								##############################################################
 
 								###SET SCORE FOR SENDER#######################################
 								if [ "${trx_asset}" = "${main_asset}" -a $is_asset = 0 ]
 								then
-									sender_new_score_balance=`echo "${sender_score_balance} - ${trx_amount}"|bc`
-									is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
-									if [ $is_greater_one = 0 ]
-									then
-										sender_new_score_balance="0${sender_new_score_balance}"
-									fi
+									sender_new_score_balance=`echo "${sender_score_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 									sed -i "s/${trx_asset}:${trx_sender}=${sender_score_balance}/${trx_asset}:${trx_sender}=${sender_new_score_balance}/g" ${user_path}/${focus}_scoretable.dat
 								fi
 								##############################################################
@@ -774,24 +764,13 @@ build_ledger(){
 										if [ "${trx_asset}" = "${main_asset}" -a $is_asset = 0 ]
 										then
 											sender_score_balance=`echo "scale=9; ${trx_amount} * 0.25"|bc`
-											sender_score_balance=`echo "scale=9; ${sender_new_score_balance} + ${sender_score_balance}"|bc`
-											is_greater_one=`echo "${sender_score_balance} >= 1"|bc`
-											if [ $is_greater_one = 0 ]
-											then
-												sender_score_balance="0${sender_score_balance}"
-											fi
-											
+											sender_score_balance=`echo "scale=9; ${sender_new_score_balance} + ${sender_score_balance}"|bc|sed 's/^\./0./g'`
 											sed -i "s/${trx_asset}:${trx_sender}=${sender_new_score_balance}/${trx_asset}:${trx_sender}=${sender_score_balance}/g" ${user_path}/${focus}_scoretable.dat
 										fi
 										##############################################################
 										###SET BALANCE FOR RECEIVER###################################
 										receiver_old_balance=`grep "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
-										receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc`
-										is_greater_one=`echo "${receiver_new_balance} >= 1"|bc`
-										if [ $is_greater_one = 0 ]
-										then
-											receiver_new_balance="0${receiver_new_balance}"
-										fi
+										receiver_new_balance=`echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g'`
 										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
 										##############################################################
 										###CHECK IF EXCHANGE REQUIRED#################################
@@ -800,7 +779,7 @@ build_ledger(){
 											###EXCHANGE###################################################
 											asset_type_price=`grep "asset_price=" $(grep "${trx_asset}" ${user_path}/all_assets.dat)|cut -d '=' -f2`
 											asset_price=`grep "asset_price=" $(grep "${trx_receiver}" ${user_path}/all_assets.dat)|cut -d '=' -f2`
-											asset_value=`echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc`
+											asset_value=`echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g'`
 											##############################################################
 
 											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
@@ -808,19 +787,9 @@ build_ledger(){
 											if [ $receiver_in_ledger = 1 ]
 											then
 												sender_old_balance=`grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
-												sender_new_balance=`echo "${sender_old_balance} + ${asset_value}"|bc`
-												is_greater_one=`echo "${sender_new_balance} >= 1"|bc`
-												if [ $is_greater_one = 0 ]
-												then
-													sender_new_balance="0${sender_new_balance}"
-												fi
+												sender_new_balance=`echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g'`
 												sed -i "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" ${user_path}/${focus}_ledger.dat
 											else
-												is_greater_one=`echo "${asset_value} >= 1"|bc`
-												if [ $is_greater_one = 0 ]
-												then
-													asset_value="0${asset_value}"
-												fi
 												echo "${trx_receiver}:${trx_sender}=${asset_value}" >>${user_path}/${focus}_ledger.dat
 											fi
 											##############################################################
@@ -3254,12 +3223,7 @@ do
 												if [ $order_amount_alnum = 0 ]
 												then
 													order_amount_formatted=`echo $order_amount|sed -e 's/,/./g' -e 's/ //g'`
-													order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc`
-													is_greater_one=`echo "${order_amount_formatted} >= 1"|bc`
-													if [ $is_greater_one = 0 ]
-													then
-														order_amount_formatted="0${order_amount_formatted}"
-													fi
+													order_amount_formatted=`echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g'`
 													is_amount_big_enough=`echo "${order_amount_formatted} >= 0.000000001"|bc`
 													amount_mod=`echo "${order_amount_formatted} % 0.000000001"|bc`
 													is_amount_mod=`echo "${amount_mod} == 0"|bc` 
@@ -3478,22 +3442,12 @@ do
 																if [ "${order_asset}" = "${main_asset}" ]
 																then
 																	###SET SCORE##################################################################
-																	sender_new_score_balance=`echo "${sender_score_balance_value} - ${order_amount_formatted}"|bc`
-																	is_greater_one=`echo "${sender_new_score_balance} >= 1"|bc`
-																	if [ $is_greater_one = 0 ]
-																	then
-																		sender_new_score_balance="0${sender_new_score_balance}"
-																	fi
+																	sender_new_score_balance=`echo "${sender_score_balance_value} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
 																	sed -i "s/${order_asset}:${handover_account}=${sender_score_balance_value}/${order_asset}:${handover_account}=${sender_new_score_balance}/g" ${user_path}/${now}_scoretable.dat
 																	##############################################################################
 																fi
 																###SET BALANCE################################################################
-																account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc`
-																is_greater_one=`echo "${account_new_balance} >= 1"|bc`
-																if [ $is_greater_one = 0 ]
-																then
-																	account_new_balance="0${account_new_balance}"
-																fi
+																account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
 																sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 																##############################################################################
 
