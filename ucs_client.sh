@@ -1087,11 +1087,11 @@ check_assets(){
 						if [ $symbol_check = 0 -a $symbol_size -le 10 ]
 						then
 							###CHECK IF ASSET ALREADY EXISTS IN ACK ASSETS#################
-							asset_already_exists=`grep -c -w "${asset_symbol}.${asset_stamp}" ${user_path}/ack_assets.dat`
+							asset_already_exists=`grep -c "${asset_symbol}.${asset_stamp}" ${user_path}/ack_assets.dat`
 							if [ $asset_already_exists = 0 ]
 							then
 								###CHECK IF ASSET EXISTS MORE THAT ONCE IN ALL ASSETS##########
-								asset_already_exists=`grep -c -w "${asset_symbol}.${asset_stamp}" ${user_path}/all_assets.dat`
+								asset_already_exists=`grep -c "${asset_symbol}.${asset_stamp}" ${user_path}/all_assets.dat`
 								if [ $asset_already_exists = 1 ]
 								then
 									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
@@ -1682,7 +1682,7 @@ check_trx(){
 						then
 							###CHECK IF ASSET TYPE EXISTS############################################
 							trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
-							asset_already_exists=`grep -c -w "${trx_asset}" ${user_path}/all_assets.dat`
+							asset_already_exists=`grep -c "${trx_asset}" ${user_path}/all_assets.dat`
 							if [ $asset_already_exists = 1 ]
 							then
 								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
@@ -3124,7 +3124,8 @@ do
 			fi
 			case "$user_menu" in
 				"$dialog_send")	asset_found=0
-						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2,1 >${user_path}/menu_assets.tmp
+						recipient_is_asset=0
+						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2 >${user_path}/menu_assets.tmp
 						while [ $asset_found = 0 ]
 						do
 							if [ $gui_mode = 1 ]
@@ -3133,7 +3134,7 @@ do
 								rt_query=$?
 							else
 								order_asset=$cmd_asset
-								asset_there=`grep -c -w "${order_asset}" ${user_path}/menu_assets.tmp`
+								asset_there=`grep -c "${order_asset}" ${user_path}/menu_assets.tmp`
 								if [ $asset_there = 1 ]
 								then
 									rt_query=0
@@ -3145,7 +3146,6 @@ do
 							then
 								currency_symbol=$order_asset
 								asset_found=1
-								recipient_is_asset=0
 								recipient_found=0
 								order_aborted=0
 								order_receipient=""
@@ -3163,20 +3163,18 @@ do
 									then
 										touch ${user_path}/keylist.tmp
 										cat ${user_path}/all_accounts.dat >${user_path}/keylist.tmp
-										key_there=`grep -c -w "${order_receipient}" ${user_path}/keylist.tmp`
+										key_there=`grep -c "${order_receipient}" ${user_path}/keylist.tmp`
 										if [ $key_there = 1 ]
 										then
-											receiver_file=`grep "${order_receipient}" ${user_path}/keylist.tmp|head -1`
 											recipient_found=1
 											amount_selected=0
 										else
-											asset_there=`grep -c -w "${order_receipient}" ${user_path}/all_assets.dat`
+											asset_there=`grep -c "${order_receipient}" ${user_path}/all_assets.dat`
 											asset=`grep "${order_receipient}" ${user_path}/all_assets.dat`
 											is_fungible=`cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null`
 											if [ $asset_there = 1 -a $is_fungible = 1 ]
 											then
 												recipient_is_asset=1
-												receiver_file=`grep "${order_receipient}" ${user_path}/keylist.tmp|head -1`
 												recipient_found=1
 												amount_selected=0
 											else
@@ -3288,7 +3286,7 @@ do
 													fi
 												done <${user_path}/all_assets.dat
 											fi
-											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|sort -t. -k2,1|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
+											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|sort -t. -k2|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
 											order_receipient=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp`
 											rm ${user_path}/menu_addresses.tmp
 											rm ${user_path}/menu_addresses_fungible.tmp
@@ -3300,19 +3298,24 @@ do
 								done
 								if [ $order_aborted = 0 ]
 								then
-									if [ $gui_mode = 1 ]
+									if [ $recipient_is_asset = 0 ]
 									then
-										order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
-										rt_query=$?
-									else
-										order_purpose=$cmd_purpose
-										order_purpose_size=`printf "${cmd_purpose}"|wc -m`
-										if [ $order_purpose_size -lt 75 ]
+										if [ $gui_mode = 1 ]
 										then
-											rt_query=0
+											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
+											rt_query=$?
 										else
-											exit 1
+											order_purpose=$cmd_purpose
+											order_purpose_size=`printf "${cmd_purpose}"|wc -m`
+											if [ $order_purpose_size -lt 75 ]
+											then
+												rt_query=0
+											else
+												exit 1
+											fi
 										fi
+									else
+										order_purpose="EXCHANGE"
 									fi
 									if [ $rt_query = 0 ]
 									then
@@ -3568,7 +3571,7 @@ do
 								asset_found=1
 							fi
 						done
-						rm ${user_path}/menu_assets.tmp
+						rm ${user_path}/menu_assets.tmp 2>/dev/null
 						;;
 				"$dialog_receive")	file_found=0
 							path_to_search=$trx_path_input
