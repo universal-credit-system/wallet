@@ -1943,6 +1943,7 @@ process_new_files(){
 				#############################################
 
 				###PURGE TEMP FILES##########################
+				rm -r ${user_path}/temp/assets/* 2>/dev/null
 				rm -r ${user_path}/temp/keys/* 2>/dev/null
 				rm -r ${user_path}/temp/trx/* 2>/dev/null
 				rm -r ${user_path}/temp/proofs/* 2>/dev/null
@@ -1990,6 +1991,7 @@ purge_files(){
 		###REMOVE KEYRING AND FILES########################################
 		rm ${script_path}/control/keyring.file 2>/dev/null
 		rm ${script_path}/control/keyring.file~ 2>/dev/null
+		rm ${script_path}/assets/* 2>/dev/null
 		rm ${script_path}/keys/* 2>/dev/null
 		rm ${script_path}/trx/* 2>/dev/null
 		rm -r ${script_path}/proofs/* 2>/dev/null
