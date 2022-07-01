@@ -533,11 +533,11 @@ build_ledger(){
 			do
 				if [ 1 $asset = $main_asset ]
 				then
-					asset_fungible=`grep "asset_fungible=" $asset|cut -d '=' -f2`
+					asset_fungible=`grep "asset_fungible=" ${script/path}/assets/${asset}|cut -d '=' -f2`
 					if [ $asset_fungible = 0 ]
 					then
-						asset_owner=`grep "asset_owner=" $asset|cut -d '=' -f2`
-						asset_quantity=`grep "asset_quantity=" $asset|cut -d '=' -f2`
+						asset_owner=`grep "asset_owner=" ${script/path}/assets/${asset}|cut -d '=' -f2`
+						asset_quantity=`grep "asset_quantity=" ${script/path}/assets/${asset}|cut -d '=' -f2`
 						already_exists=`grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat`
 						if [ $already_exists = 0 ]
 						then
