@@ -531,7 +531,7 @@ build_ledger(){
 			###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
 			for asset in `cat ${user_path}/assets.tmp`
 			do
-				if [ 1 $asset = $main_asset ]
+				if [ ! $asset = $main_asset ]
 				then
 					asset_data=`cat ${script/path}/assets/${asset}`
 					asset_fungible=`echo "$asset_data"|grep "asset_fungible="|cut -d '=' -f2`
