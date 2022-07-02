@@ -3890,10 +3890,10 @@ do
 									then
 										echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 									fi
-								done <${user_path}/depend_accounts.dat
+								done <${user_path}/all_accounts.dat
 
 								###GET TRX###################################################################
-								awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+								awk '{print "trx/" $1}' ${user_path}/all_trx.dat >>${user_path}/files_list.tmp
 
 								###GET CURRENT TIMESTAMP#################################
 								now_stamp=`date +%s`
