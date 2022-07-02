@@ -307,6 +307,14 @@ make_signature(){
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
 				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
+
+				###WRITE ASSETS TO INDEX FILE####################################
+				for asset in `${user_path}/all_assets.dat`
+				do
+					asset_hash=`sha256sum ${script_path}/assets/${asset}|cut -d ' ' -f1`
+					echo "assets/${asset} ${asset_hash}" >>${message_blank}
+				done
+
 				for key_file in `cat ${user_path}/all_accounts.dat`
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
@@ -3345,79 +3353,96 @@ do
 													fi
 													if [ ! $small_trx = 255 ]
 													then
-														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-														rm ${user_path}/files_list.tmp 2>/dev/null
-														if [ $small_trx = 0 -a -s $receipient_index_file ]
+														if [ $recipient_is_asset = 0 ]
 														then
-															###GET KEYS AND PROOFS##########################################
-															while read line
-															do
-																key_there=0
-																key_there=`grep -c "keys/${line}" $receipient_index_file`
-																if [ $key_there = 0 ]
-																then
+															receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
+															rm ${user_path}/files_list.tmp 2>/dev/null
+															if [ $small_trx = 0 -a -s $receipient_index_file ]
+															then
+																###GET ASSETS###################################################
+																while read line
+																do
+																	asset_there=`grep -c "assets/${line}" $receipient_index_file`
+																	if [ $asset_there = 0 ]
+																	then
+																		echo "keys/${line}" >>${user_path}/files_list.tmp
+																	fi
+																done <${user_path}/all_assets.dat
+
+																###GET KEYS AND PROOFS##########################################
+																while read line
+																do
+																	key_there=`grep -c "keys/${line}" $receipient_index_file`
+																	if [ $key_there = 0 ]
+																	then
+																		echo "keys/${line}" >>${user_path}/files_list.tmp
+																	fi
+
+																	for tsa_service in `ls -1 ${script_path}/certs`
+																	do
+																		tsa_req_there=0
+																		tsa_req_there=`grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file`
+																		if [ $tsa_req_there = 0 ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+																		fi
+																		tsa_res_there=0
+																		tsa_res_there=`grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file`
+																		if [ $tsa_res_there = 0 ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+																		fi
+																	done
+																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	then
+																		echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+																	fi
+																done <${user_path}/depend_accounts.dat
+
+																###GET TRX###################################################################
+																while read line
+																do
+																	trx_there=`grep -c "trx/${line}" $receipient_index_file`
+																	if [ $trx_there = 0 ]
+																	then
+																		echo "trx/${line}" >>${user_path}/files_list.tmp
+																	fi
+																done <${user_path}/depend_trx.dat
+															else
+																###GET ASSETS################################################################
+																awk '{print "assets/" $1}' ${user_path}/all_assets.dat >>${user_path}/files_list.tmp
+
+																###GET KEYS AND PROOFS#######################################################
+																while read line
+																do
 																	echo "keys/${line}" >>${user_path}/files_list.tmp
-																fi
+																	for tsa_service in `ls -1 ${script_path}/certs`
+																	do
+																		if [ -s "proofs/${line}/${tsa_service}.tsq" ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+																		fi
+																		if [ -s "proofs/${line}/${tsa_service}.tsr" ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+																		fi
+																	done
+																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	then
+																		echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+																	fi
+																done <${user_path}/depend_accounts.dat
 
-																for tsa_service in `ls -1 ${script_path}/certs`
-																do
-																	tsa_req_there=0
-																	tsa_req_there=`grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file`
-																	if [ $tsa_req_there = 0 ]
-																	then
-																		echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
-																	fi
-																	tsa_res_there=0
-																	tsa_res_there=`grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file`
-																	if [ $tsa_res_there = 0 ]
-																	then
-																		echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-																	fi
-																done
-																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-																then
-																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_accounts.dat
-
-															###GET TRX###################################################################
-															while read line
-															do
-																trx_there=`grep -c "trx/${line}" $receipient_index_file`
-																if [ $trx_there = 0 ]
-																then
-																	echo "trx/${line}" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_trx.dat
-														else
-															###GET KEYS AND PROOFS#######################################################
-															while read line
-															do
-																echo "keys/${line}" >>${user_path}/files_list.tmp
-																for tsa_service in `ls -1 ${script_path}/certs`
-																do
-																	if [ -s "proofs/${line}/${tsa_service}.tsq" ]
-																	then
-																		echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
-																	fi
-																	if [ -s "proofs/${line}/${tsa_service}.tsr" ]
-																	then
-																		echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-																	fi
-																done
-																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-																then
-																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_accounts.dat
-
-															###GET TRX###################################################################
-															awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+																###GET TRX###################################################################
+																awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+															fi
+															###GET LATEST TRX############################################################
+															echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
 														fi
+
 														###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 														trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
 														echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
-														echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
 														make_signature "none" ${trx_now} 1
 														rt_query=$?
 														if [ $rt_query = 0 ]
@@ -3427,8 +3452,8 @@ do
 																cd ${script_path}/
 																tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 																rt_query=$?
+																rm ${user_path}/files_list.tmp 2>/dev/null
 															fi
-															rm ${user_path}/files_list.tmp 2>/dev/null
 															if [ $rt_query = 0 ]
 															then
 																if [ "${order_asset}" = "${main_asset}" ]
@@ -3843,15 +3868,43 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
+								###GET ASSETS################################################################
+								awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+
+								###GET KEYS AND PROOFS#######################################################
+								while read line
+								do
+									echo "keys/${line}" >>${user_path}/files_list.tmp
+									for tsa_service in `ls -1 ${script_path}/certs`
+									do
+										if [ -s "proofs/${line}/${tsa_service}.tsq" ]
+										then
+											echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+										fi
+										if [ -s "proofs/${line}/${tsa_service}.tsr" ]
+										then
+											echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+										fi
+									done
+									if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+									then
+										echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+									fi
+								done <${user_path}/depend_accounts.dat
+
+								###GET TRX###################################################################
+								awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+
 								###GET CURRENT TIMESTAMP#################################
 								now_stamp=`date +%s`
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 								cd ${script_path}/
-								tar -czf ${handover_account}_${now_stamp}.sync keys/ proofs/ trx/ --dereference --hard-dereference
+								tar -czf ${handover_account}_${now_stamp}.sync -T ${user_path}/files_list.tmp --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
+									rm ${user_path}/files_list.tmp 2>/dev/null
 									###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
 									#cp ${script_path}/${handover_account}_${now_stamp}.sync ${user_path}/${handover_account}_${now_stamp}.sync
 									###################################################################################
