@@ -2301,10 +2301,7 @@ send_uca(){
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
 			###WRITE ASSETS TO FILE LIST#################
-			while read line
-			do
-				echo "assets/${line}" >>${user_path}/files_list.tmp
-			done <${user_path}/all_assets.dat
+			awk '{print "assets/" $1}' ${user_path}/all_assets.dat >>${user_path}/files_list.tmp
 
 			###WRITE ACCOUNTS TO FILE LIST###############
 			while read line
@@ -2329,10 +2326,7 @@ send_uca(){
 			done <${user_path}/depend_accounts.dat
 
 			###WRITE TRX TO FILE LIST####################
-			while read line
-			do
-				echo "trx/${line}" >>${user_path}/files_list.tmp
-			done <${user_path}/depend_trx.dat
+			awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 
 			###STEP INTO HOMEDIR AND CREATE TARBALL######
 			cd ${script_path}/
@@ -3380,9 +3374,7 @@ do
 																		echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
 																	fi
 																done
-
-																index_file="proofs/${line}/${line}.txt"
-																if [ -s ${script_path}/${index_file} ]
+																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																then
 																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 																fi
@@ -3420,10 +3412,7 @@ do
 															done <${user_path}/depend_accounts.dat
 
 															###GET TRX###################################################################
-															while read line
-															do
-																echo "trx/${line}" >>${user_path}/files_list.tmp
-															done <${user_path}/depend_trx.dat
+															awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 														fi
 														###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
 														trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
@@ -3940,20 +3929,20 @@ do
 							then
 								while read line
 								do
-									line_extracted=$line
-									data_raw=`sed -n '4,8p' ${script_path}/trx/${line_extracted}`
-									data=`echo $data_raw|sed 's/ //g'`
-									sender=`echo "${data}"|cut -d ':' -f7`
-									receiver=`echo "${data}"|cut -d ':' -f9`
-									trx_date_tmp=`echo "${line_extracted}"|cut -d '.' -f3`
+									trx_file=$line
+									trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
+									trx_data=`echo $trx_data_raw|sed 's/ //g'`
+									sender=`echo "${trx_data}"|cut -d ':' -f7`
+									receiver=`echo "${trx_data}"|cut -d ':' -f9`
+									trx_date_tmp=`echo "${trx_file}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-			      						trx_amount=`echo "${data}"|cut -d ':' -f5|cut -d '|' -f1`
-									trx_asset=`echo "${data}"|cut -d ':' -f5|cut -d '|' -f2`
-									trx_hash=`sha256sum ${script_path}/trx/${line_extracted}|cut -d ' ' -f1`
-									trx_confirmations=`grep -l "trx/${line_extracted} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+			      						trx_amount=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f1`
+									trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
+									trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
+									trx_confirmations=`grep -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
-										trx_signed=`grep -c "${line_extracted}" ${script_path}/proofs/${sender}/${sender}.txt`
+										trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
 									else
 										trx_signed=0
 									fi
@@ -3961,7 +3950,7 @@ do
 									then
 										if [ $trx_confirmations -ge $confirmations_from_users ]
 										then
-											trx_blacklisted=`grep -c "${line_extracted}" ${user_path}/blacklisted_trx.dat`
+											trx_blacklisted=`grep -c "${trx_file}" ${user_path}/blacklisted_trx.dat`
 											sender_blacklisted=`grep -c "${sender}" ${user_path}/blacklisted_accounts.dat`
 											receiver_blacklisted=`grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat`
 											if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
@@ -4006,11 +3995,11 @@ do
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
-										data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
-										data=`echo $data_raw|sed 's/ //g'`
-										sender=`echo "${data}"|cut -d ':' -f7`
-										receiver=`echo "${data}"|cut -d ':' -f9`
-										purpose=`echo "${data}"|cut -d ':' -f11`
+										trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
+										trx_data=`echo $trx_data_raw|sed 's/ //g'`
+										sender=`echo "${trx_data}"|cut -d ':' -f7`
+										receiver=`echo "${trx_data}"|cut -d ':' -f9`
+										purpose=`echo "${trx_data}"|cut -d ':' -f11`
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
