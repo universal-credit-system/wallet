@@ -614,12 +614,12 @@ build_ledger(){
 			cp ${user_path}/${previous_day}_index_trx.dat ${user_path}/${focus}_index_trx.dat
 
 			###GRANT COINLOAD OF THAT DAY####################
-			grep "${main_asset}:" ${user_path}/${focus}_ledger.dat|awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
+			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
 				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
 				touch ${user_path}/${focus}_ledger_others.tmp
-				grep -v "${main_asset}:" ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
+				grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -f - ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
 				cat ${user_path}/${focus}_ledger_others.tmp ${user_path}/${focus}_ledger.tmp|sort >${user_path}/${focus}_ledger.dat
 				rm ${user_path}/${focus}_ledger_others.tmp
 				rm ${user_path}/${focus}_ledger.tmp
@@ -635,7 +635,7 @@ build_ledger(){
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			touch ${user_path}/accounts.tmp
 			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
 			awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
@@ -643,7 +643,7 @@ build_ledger(){
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###CREATE LIST OF ASSETS CREATED THAT DAY########
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat >${user_path}/assets.tmp
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat >${user_path}/assets.tmp
 			
 			###MAKE LEDGER ENTRIES FOR ASSETS################
 			if [ -s ${user_path}/assets.tmp ]
