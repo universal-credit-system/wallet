@@ -614,12 +614,12 @@ build_ledger(){
 			cp ${user_path}/${previous_day}_index_trx.dat ${user_path}/${focus}_index_trx.dat
 
 			###GRANT COINLOAD OF THAT DAY####################
-			grep "${main_asset}:" ${user_path}/${focus}_ledger.dat|awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
+			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
 				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
 				touch ${user_path}/${focus}_ledger_others.tmp
-				grep -v "${main_asset}:" ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
+				grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -f - ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
 				cat ${user_path}/${focus}_ledger_others.tmp ${user_path}/${focus}_ledger.tmp|sort >${user_path}/${focus}_ledger.dat
 				rm ${user_path}/${focus}_ledger_others.tmp
 				rm ${user_path}/${focus}_ledger.tmp
