@@ -309,7 +309,7 @@ make_signature(){
 				touch ${message_blank}
 
 				###WRITE ASSETS TO INDEX FILE####################################
-				for asset in `${user_path}/all_assets.dat`
+				for asset in `cat ${user_path}/all_assets.dat`
 				do
 					asset_hash=`sha256sum ${script_path}/assets/${asset}|cut -d ' ' -f1`
 					echo "assets/${asset} ${asset_hash}" >>${message_blank}
