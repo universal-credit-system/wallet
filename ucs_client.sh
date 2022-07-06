@@ -1074,7 +1074,7 @@ check_assets(){
 				###SET VARIABLES###############################################
 				asset_acknowledged=0
 				asset_data=`grep "asset_" ${script_path}/assets/$line|grep "="`
-				asset_name=`echo "$asset_data"|grep "asset_name"|cut -d '=' -f2`
+				asset_description=`echo "$asset_data"|grep "asset_description"|cut -d '=' -f2`
 				asset_symbol=`echo "$line"|cut -d '.' -f1`
 				asset_stamp=`echo "$line"|cut -d '.' -f2`
 				asset_price=`echo "$asset_data"|grep "asset_price"|cut -d '=' -f2`
@@ -1087,7 +1087,7 @@ check_assets(){
 				if [ $stamp_only_digits = 0 -a $stamp_size -eq 11 ]
 				then
 					###CHECK IF ALL VARIABLES ARE SET##############################
-					if [ ! "${asset_name}" = "" -a ! "${asset_fungible}" = "" ]
+					if [ ! "${asset_description}" = "" -a ! "${asset_fungible}" = "" ]
 					then
 						###CHECK FOR ALNUM CHARS AND SIZE##############################
 						symbol_check=`echo $asset_symbol|grep -c '[^[:alnum:]]'`
