@@ -79,7 +79,7 @@ login_account(){
 				then
 					###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
 					dialog_login_welcome_display=`echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g"`
-					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_login_welcome_display" 0 0
+					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_login_welcome_display" 0 0
 					sleep 1
 				fi
 			else
@@ -87,7 +87,7 @@ login_account(){
 				then
 					###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
 					dialog_login_nokey_display="${dialog_login_nokey} (-> ${login_name})!"
-					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey_display" 0 0
+					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey_display" 0 0
 					clear
 				else
 					exit 1
@@ -98,7 +98,7 @@ login_account(){
 			then
 				###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
 				dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${login_name}/g"`
-				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey2_display" 0 0
+				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey2_display" 0 0
 				clear
 			else
 				exit 1
@@ -128,7 +128,7 @@ create_keys(){
 		if [ $gui_mode = 1 ]
 		then
 			###DISPLAY PROGRESS BAR######################################
-			echo "0"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name" --gauge "$dialog_keys_create1" 0 0 0
+			echo "0"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create1" 0 0 0
 		fi
 
 		###GENERATE KEY##############################################
@@ -139,7 +139,7 @@ create_keys(){
 			if [ $gui_mode = 1 ]
 			then
 				###DISPLAY PROGRESS ON STATUS BAR############################
-				echo "33"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name" --gauge "$dialog_keys_create2" 0 0 0
+				echo "33"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create2" 0 0 0
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
@@ -159,7 +159,7 @@ create_keys(){
 				if [ $gui_mode = 1 ]
 				then
 					###DISPLAY PROGRESS ON STATUS BAR############################
-					echo "66"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name" --gauge "$dialog_keys_create3" 0 0 0
+					echo "66"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create3" 0 0 0
 
 					###CLEAR SCREEN
 					clear
@@ -210,7 +210,7 @@ create_keys(){
 										if [ $gui_mode = 1 ]
 										then
 											###DISPLAY PROGRESS ON STATUS BAR############################
-											echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name" --gauge "$dialog_keys_create4" 0 0 0
+											echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
 											clear
 										fi
 										###CREATE PROOFS DIRECTORY AND COPY TSA FILES###################
@@ -228,7 +228,7 @@ create_keys(){
 										then
 											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
 											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
-											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_final_display" 0 0
+											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
 											clear
 										else
 											echo "USER:${create_name}"
@@ -404,7 +404,7 @@ check_input(){
 		then
 			if [ $gui_mode = 1 ]
 			then
-				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg2" 0 0
+				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg2" 0 0
 				rt_query=1
 			else
 				exit 1
@@ -421,7 +421,7 @@ check_input(){
 				then
 					if [ $gui_mode = 1 ]
 					then
-						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg3" 0 0
+						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 						rt_query=1
 					else
 						exit 1
@@ -443,7 +443,7 @@ check_input(){
 				then
 					if [ $gui_mode = 1 ]
 					then
-						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_check_msg1" 0 0
+						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg1" 0 0
 						rt_query=1
 					else
 						exit 1
@@ -832,7 +832,7 @@ build_ledger(){
 			focus=`date -u +%Y%m%d --date=@${date_stamp}`
 			day_counter=$(( $day_counter + 1 ))
 			##############################################################
-		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
+		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then
 			###CHECK IF BALANCE NEED TO BE DISPLAYED######################
@@ -1195,7 +1195,7 @@ check_blacklist(){
 				if [ $gui_mode = 1 ]
 				then
 					dialog_blacklisted_display=`echo $dialog_blacklisted|sed "s/<account_name>/${handover_account}/g"`
-					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name" --msgbox "$dialog_blacklisted_display" 0 0
+					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_blacklisted_display" 0 0
 				else
 					echo "WARNING:USER_BLACKLISTED"
 					exit 1
@@ -1395,7 +1395,7 @@ check_tsa(){
 						else
 							if [ $gui_mode = 1 ]
 							then
-								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --infobox "$dialog_no_network" 0 0
+								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_no_network" 0 0
 								sleep 10
 								exit 1
 							else
@@ -1573,7 +1573,7 @@ check_keys(){
 			       	if [ $rt_query -gt 0 ]
 			       	then
 					dialog_import_fail_display=`echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g"`
-		       			dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_import_fail_display" 0 0
+		       			dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_import_fail_display" 0 0
 				       	key_already_blacklisted=`grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat`
 				       	if [ $key_already_blacklisted = 0 ]
 				       	then
@@ -2165,7 +2165,7 @@ request_uca(){
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
-				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
 			fi
 
 			###GET RANDOM P AND RELATED G#####################
@@ -2278,7 +2278,7 @@ request_uca(){
 			then
 				current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
 				percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
-				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
 			fi
 
 			###PURGE TEMP FILES################################
@@ -2356,7 +2356,7 @@ send_uca(){
 					###STATUS BAR FOR GUI########################
 					if [ $gui_mode = 1 ]
 					then
-						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
 					fi
 
 					###GET STAMP#################################
@@ -2402,7 +2402,7 @@ send_uca(){
 					then
 						current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
 						percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
-						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
 					fi
 				done <${script_path}/control/uca.conf
 			fi
@@ -2585,7 +2585,7 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name ${core_system_version}" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_settings" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
+			main_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_settings" "" "$dialog_main_backup" "" "$dialog_main_end" ""`
 			rt_query=$?
 		else
 			rt_query=0
@@ -2604,7 +2604,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_name_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 ""`
+									account_name_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 ""`
 									rt_query=$?
 								else
 									if [ ! "${cmd_user}" = "" ]
@@ -2629,7 +2629,7 @@ do
 										do
 											if [ $gui_mode = 1 ]
 											then
-												account_pin_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
+												account_pin_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 ""`
 												rt_query=$?
 											else
 												if [ ! "${cmd_pin}" = "" ]
@@ -2654,7 +2654,7 @@ do
 	       												do
 														if [ $gui_mode = 1 ]
 														then
-															account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
+															account_password_entered=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 ""`
 															rt_query=$?
 														else
 															if [ ! "${cmd_pw}" = "" ]
@@ -2702,7 +2702,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_name=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}"`
+									account_name=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}"`
 									rt_query=$?
 								else
 									if [ "${cmd_user}" = "" ]
@@ -2757,7 +2757,7 @@ do
 				       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
 														then
 															clear
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pinmatch" 0 0
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pinmatch" 0 0
 															clear
 														else
 															account_password_entered_correct=0
@@ -2797,7 +2797,7 @@ do
 				       															if [ ! "${account_password_first}" = "${account_password_second}" ]
 																			then
 																				clear
-																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_pwmatch" 0 0
+																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pwmatch" 0 0
 																				clear
 																			else
 																				account_name_entered_correct=1
@@ -2807,9 +2807,9 @@ do
 																				rt_query=$?
 																				if [ $rt_query = 0 ]
 																				then
-																					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_keys_success" 0 0
+																					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_success" 0 0
 																				else
-																					dialog --title "$dialog_type_titel_error" --backtitle "$core_system_name" --msgbox "$dialog_keys_fail" 0 0
+																					dialog --title "$dialog_type_titel_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_fail" 0 0
 																				fi
 																			fi
 																		else
@@ -2849,7 +2849,7 @@ do
 				"$dialog_main_settings")	quit_settings=0
 								while [ $quit_settings -eq 0 ]
 								do
-									settings_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" ""`
+									settings_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" ""`
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -2860,7 +2860,7 @@ do
 															lang_ex_full=`echo $language_file|cut -d '_' -f3|cut -d '.' -f1`
 															printf "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
 														done
-														lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
+														lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -2879,7 +2879,7 @@ do
 															theme_name=`echo $theme_file|cut -d '.' -f1`
 															printf "$theme_name theme " >>${script_path}/theme_list.tmp
 														done
-														theme_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp`
+														theme_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp`
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -2904,7 +2904,7 @@ do
 								;;
 				"$dialog_main_backup")	if [ $gui_mode = 1 ]
 							then
-								dialog --yes-label "$dialog_backup_create" --no-label "$dialog_backup_restore" --title "$dialog_main_backup" --backtitle "$core_system_name" --yesno "$dialog_backup_text" 0 0
+								dialog --yes-label "$dialog_backup_create" --no-label "$dialog_backup_restore" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_backup_text" 0 0
 								rt_query=$?
 							else
 								case $cmd_action in
@@ -2927,7 +2927,7 @@ do
 									if [ $gui_mode = 1 ]
 									then
 										dialog_backup_success_display=`echo $dialog_backup_create_success|sed "s/<backup_file>/${backup_file}/g"`
-										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_backup_success_display" 0 0
+										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_success_display" 0 0
 									else
 										echo "BACKUP_FILE:${backup_file}"
 										exit 0
@@ -2936,7 +2936,7 @@ do
 									rm ${script_path}/backup/${now_stamp}.bcp 2>/dev/null
 									if [ $gui_mode = 1 ]
 									then
-										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_backup_create_fail" 0 0
+										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_create_fail" 0 0
 									else
 										exit 1
 									fi
@@ -2962,7 +2962,7 @@ do
 										else
 											printf "${dialog_history_noresult}" >${script_path}/backup_list.tmp
 										fi
-										backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
+										backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
@@ -2980,13 +2980,13 @@ do
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
 												then
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_backup_restore_fail" 0 0
+													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_restore_fail" 0 0
 												else
 													import_keys
-													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_backup_restore_success" 0 0
+													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_restore_success" 0 0
 												fi
 											else
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_backup_fail" 0 0
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_fail" 0 0
 											fi
 										else
 											rm ${script_path}/backups_list.tmp 2>/dev/null
@@ -3107,7 +3107,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=`echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g"`
-			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
+			user_menu=`dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" ""`
 			rt_query=$?
 		else
 			rt_query=0
@@ -3132,7 +3132,7 @@ do
 						do
 							if [ $gui_mode = 1 ]
 							then
-								order_asset=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_assets.tmp`
+								order_asset=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_assets.tmp`
 								rt_query=$?
 							else
 								order_asset=$cmd_asset
@@ -3155,7 +3155,7 @@ do
 								do
 									if [ $gui_mode = 1 ]
 									then
-										order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient"`
+										order_receipient=`dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient"`
 										rt_query=$?
 									else
 										rt_query=0
@@ -3183,7 +3183,7 @@ do
 												if [ $gui_mode = 1 ]
 												then
 													dialog_login_nokey2_display=`echo $dialog_login_nokey2|sed "s/<account_name>/${order_receipient}/g"`
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_login_nokey2_display" 0 0
+													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey2_display" 0 0
 												else
 													exit 1
 												fi
@@ -3211,7 +3211,7 @@ do
 											if [ $gui_mode = 1 ]
 											then
 												dialog_send_amount_display=`echo $dialog_send_amount|sed -e "s/<score>/${account_my_score}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g"`
-												order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000"`
+												order_amount=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000"`
 												rt_query=$?
 											else
 												rt_query=0
@@ -3244,7 +3244,7 @@ do
 														else
 															if [ $gui_mode = 1 ]
 															then
-																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_fail_nobalance" 0 0
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
 															else
 																exit 1
 															fi
@@ -3252,7 +3252,7 @@ do
 													else
 														if [ $gui_mode = 1 ]
 														then
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 														else
 															exit 1
 														fi
@@ -3260,7 +3260,7 @@ do
 												else
 													if [ $gui_mode = 1 ]
 													then
-														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_fail_amount" 0 0
+														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 													else
 														exit 1
 													fi
@@ -3289,7 +3289,7 @@ do
 												done <${user_path}/all_assets.dat
 											fi
 											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|sort -t. -k2|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
-											order_receipient=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp`
+											order_receipient=`dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp`
 											rm ${user_path}/menu_addresses.tmp
 											rm ${user_path}/menu_addresses_fungible.tmp
 										else
@@ -3304,7 +3304,7 @@ do
 									then
 										if [ $gui_mode = 1 ]
 										then
-											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
+											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
 											rt_query=$?
 										else
 											order_purpose=$cmd_purpose
@@ -3325,7 +3325,7 @@ do
 										then
 											currency_symbol=$order_asset
 											dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g" -e "s/<order_purpose>/${order_purpose}/g"`
-											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_overview_display" 0 0
+											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_overview_display" 0 0
 											rt_query=$?
 										else
 											rt_query=0
@@ -3347,7 +3347,7 @@ do
 													then
 														if [ $gui_mode = 1 ]
 														then
-															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_send_trx" 0 0
+															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_trx" 0 0
 															small_trx=$?
 														fi
 													fi
@@ -3509,7 +3509,7 @@ do
 																		else
 																			dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#/trx/${handover_account}.${trx_now}#g"`
 																		fi
-																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_send_success_display" 0 0
+																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																	else
 																		cmd_output=`grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat`
 																		echo "BALANCE_${trx_now}:${cmd_output}"
@@ -3538,7 +3538,7 @@ do
 																	rm ${last_trx} 2>/dev/null
 																	if [ $gui_mode = 1 ]
 																	then
-																		dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+																		dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 																	else
 																		exit 1
 																	fi
@@ -3548,7 +3548,7 @@ do
 																rm ${last_trx} 2>/dev/null
 																if [ $gui_mode = 1 ]
 																then
-																	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+																	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 																else
 																	exit 1
 																fi
@@ -3556,7 +3556,7 @@ do
 														else
 															if [ $gui_mode = 1 ]
 															then
-																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 															else
 																exit 1
 															fi
@@ -3565,7 +3565,7 @@ do
 												else
 													if [ $gui_mode = 1 ]
 													then
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 													else
 														exit 1
 													fi
@@ -3573,7 +3573,7 @@ do
 											else
 												if [ $gui_mode = 1 ]
 												then
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_send_fail" 0 0
+													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 												else
 													exit 1
 												fi
@@ -3593,7 +3593,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
+									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48`
 									rt_query=$?
 								else
 									rt_query=0
@@ -3685,7 +3685,7 @@ do
 													if [ $gui_mode = 1 ]
 													then
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
 														exit 1
 													fi
@@ -3694,7 +3694,7 @@ do
 												if [ $gui_mode = 1 ]
 												then
 													dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 												else
 													exit 1
 												fi
@@ -3704,7 +3704,7 @@ do
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
 												exit 1
 											fi
@@ -3713,7 +3713,7 @@ do
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
 											exit 1
 										fi
@@ -3725,7 +3725,7 @@ do
 							;;
 				"$dialog_sync")	if [ $gui_mode = 1 ]
 						then
-							dialog --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --title "$dialog_sync" --backtitle "$core_system_name" --yesno "$dialog_sync_io" 0 0
+							dialog --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --title "$dialog_sync" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_io" 0 0
 							rt_query=$?
 						else
 							case $cmd_action in
@@ -3745,7 +3745,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name" --output-fd 1 --fselect "$path_to_search" 20 48`
+									file_path=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48`
  						       			rt_query=$?
 								else
 									rt_query=0
@@ -3760,7 +3760,7 @@ do
 											cd ${script_path}
 											if [ $gui_mode = 1 ]
 											then
-					 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name" --yesno "$dialog_sync_add" 0 0
+					 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
 												all_extract=$?
 											else
 												case $cmd_type in
@@ -3835,7 +3835,7 @@ do
 													if [ $gui_mode = 1 ]
 													then
 														dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 													else
 														exit 1
 													fi
@@ -3847,7 +3847,7 @@ do
 											if [ $gui_mode = 1 ]
 											then
 												dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-    												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+    												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 											else
 												exit 1
 											fi
@@ -3856,7 +3856,7 @@ do
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=`echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g"`
-			       								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_import_fail_display" 0 0
+			       								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
 											exit 1
 										fi
@@ -3915,7 +3915,7 @@ do
 									if [ $gui_mode = 1 ]
 									then
 										dialog_sync_create_success_display=`echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g"`
-										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_success_display" 0 0
+										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
 										if [ ! "${cmd_path}" = "" -a ! "${sync_path_output}" = "${cmd_path}" ]
 										then
@@ -3929,7 +3929,7 @@ do
 		       						else
 									rm ${handover_account}_${now_stamp}.sync 2>/dev/null
 									dialog_sync_create_fail_display=`echo $dialog_sync_create_fail|sed "s#<file>#${script_path}/${handover_account}_${now_stamp}.sync#g"`
-									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name" --msgbox "$dialog_sync_create_fail_display" 0 0
+									dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_create_fail_display" 0 0
 								fi
 							fi
 						fi
@@ -4034,7 +4034,7 @@ do
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name" --output-fd 1 --default-item "${menu_item_selected}" --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp`
+								decision=`dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name $core_system_version" --output-fd 1 --default-item "${menu_item_selected}" --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp`
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -4090,13 +4090,13 @@ do
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
-											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_out_display" 0 0
+											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_show_trx_out_display" 0 0
 										else
 											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
-											dialog --title "$dialog_history_show" --backtitle "$core_system_name" --msgbox "$dialog_history_show_trx_in_display" 0 0
+											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_show_trx_in_display" 0 0
 										fi
 									else
-										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name" --msgbox "$dialog_history_fail" 0 0
+										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
 									fi
 								else
 									overview_quit=1
@@ -4117,7 +4117,7 @@ do
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
 								dialog_statistic_display=`echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g"`
-								dialog --title "$dialog_stats" --backtitle "$core_system_name" --msgbox "$dialog_statistic_display" 0 0
+								dialog --title "$dialog_stats" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
 								echo "ASSETS_TOTAL:${total_assets}"
