@@ -729,11 +729,8 @@ build_ledger(){
 								fi
 								##############################################################
 
-								###CHECK IF RECEIVER IS ASSET AND FUNGIBLE####################
-								if [ $is_asset = 1 ]
-								then
-									is_fungible=`grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver}`
-								fi
+								###CHECK IF RECEIVER IS FUNGIBLE##############################
+								is_fungible=`grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver}`
 
 								###CHECK IF RECEIVER IS IN LEDGER#############################
 								receiver_in_ledger=`grep -c "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat`
@@ -747,13 +744,11 @@ build_ledger(){
 										if [ $is_asset = 1 ]
 										then
 											###CHECK IF ASSET IS FUNGIBLE################################
-											asset=`cat ${user_path}/all_assets.dat`
-											is_fungible_asset=`echo "$asset"|grep -c "asset_fungible=1"`
-											if [ $is_fungible_asset = 1 ]
+											if [ $is_fungible = 1 ]
 											then
 												echo "${trx_asset}:${trx_receiver}=0" >>${user_path}/${focus}_ledger.dat
 											else
-												$receiver_in_ledger=0
+												receiver_in_ledger=0
 											fi
 										else
 											###WRITE LEDGER ENTRY########################################
@@ -785,8 +780,8 @@ build_ledger(){
 										if [ $is_asset = 1 -a $is_fungible = 1 ]
 										then
 											###EXCHANGE###################################################
-											asset_type_price=`grep "asset_price=" $(grep "${trx_asset}" ${user_path}/all_assets.dat)|cut -d '=' -f2`
-											asset_price=`grep "asset_price=" $(grep "${trx_receiver}" ${user_path}/all_assets.dat)|cut -d '=' -f2`
+											asset_type_price=`grep "asset_price=" ${script_path}/assets/${trx_asset}|cut -d '=' -f2`
+											asset_price=`grep "asset_price=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2`
 											asset_value=`echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g'`
 											##############################################################
 
