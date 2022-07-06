@@ -25,6 +25,7 @@ openssl
 printf
 rm
 sed
+sha224sum
 sha256sum
 sort
 stat
