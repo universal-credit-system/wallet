@@ -695,11 +695,11 @@ build_ledger(){
 							account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 							enough_balance=`echo "${account_check_balance} >= 0"|bc`
 
-							###CHECK IF ASSET#############################################
+							###CHECK IF RECEIVER IS ASSET#################################
 							is_asset=`grep -c "${trx_receiver}" ${user_path}/all_assets.dat`
 
 							###CHECK SCORE################################################
-							if [ "${trx_asset}" = "${main_asset}" -a $is_asset = 0 ]
+							if [ "${trx_asset}" = "${main_asset}" ]
 							then
 								###SCORING####################################################
 								sender_score_balance=`grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_scoretable.dat|cut -d '=' -f2`
@@ -722,7 +722,7 @@ build_ledger(){
 								##############################################################
 
 								###SET SCORE FOR SENDER#######################################
-								if [ "${trx_asset}" = "${main_asset}" -a $is_asset = 0 ]
+								if [ "${trx_asset}" = "${main_asset}" ]
 								then
 									sender_new_score_balance=`echo "${sender_score_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 									sed -i "s/${trx_asset}:${trx_sender}=${sender_score_balance}/${trx_asset}:${trx_sender}=${sender_new_score_balance}/g" ${user_path}/${focus}_scoretable.dat
@@ -764,7 +764,7 @@ build_ledger(){
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
 										###SET SCORE FOR SENDER#######################################
-										if [ "${trx_asset}" = "${main_asset}" -a $is_asset = 0 ]
+										if [ "${trx_asset}" = "${main_asset}" ]
 										then
 											sender_score_balance=`echo "scale=9; ${trx_amount} * 0.25"|bc`
 											sender_score_balance=`echo "scale=9; ${sender_new_score_balance} + ${sender_score_balance}"|bc|sed 's/^\./0./g'`
