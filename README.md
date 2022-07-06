@@ -46,8 +46,9 @@ The following programs are used:
 * **openssl** used for TSA stamp verification
 * **printf**  used to write output
 * **rm**      used to delete files
-* **sed**     used to read/modify files
-* **shasum**  used to hash files (i.e. shipped with PERL package)
+* **sed**     used to modify files
+* **sha224sum** used to hash files
+* **sha256sum** used to hash files
 * **sort**    used to sort files
 * **stat**    used to get permissions of files/directories
 * **tail**    used to display tailing lines of a file
