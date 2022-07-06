@@ -2430,6 +2430,10 @@ dialogrc_set="${theme_file}"
 ###SOURCE LANGUAGE FILE#####
 . ${script_path}/lang/${lang_file}
 
+###VERSION INFO#############
+core_system_name="Universal Credit System"
+core_system_version="v0.0.1"
+
 ###SET INITIAL VARIABLES####
 start_date="20210216"
 main_asset_symbol=`echo "${main_asset}"|cut -d '.' -f1`
