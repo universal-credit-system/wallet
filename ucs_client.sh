@@ -665,6 +665,7 @@ build_ledger(){
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			for trx_filename in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
+				is_fungible=0
 				###EXRACT DATA FOR CHECK######################################
 				trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_filename}`
 				trx_data=`echo $trx_data_raw|sed 's/ //g'`
@@ -694,9 +695,6 @@ build_ledger(){
 							###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
 							account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 							enough_balance=`echo "${account_check_balance} >= 0"|bc`
-
-							###CHECK IF RECEIVER IS ASSET#################################
-							is_asset=`grep -c "${trx_receiver}" ${user_path}/all_assets.dat`
 
 							###CHECK SCORE################################################
 							if [ "${trx_asset}" = "${main_asset}" ]
@@ -730,7 +728,11 @@ build_ledger(){
 								##############################################################
 
 								###CHECK IF RECEIVER IS FUNGIBLE##############################
-								is_fungible=`grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver}`
+								is_asset=`grep -c "${trx_receiver}" ${user_path}/all_assets.dat`
+								if [ $is_asset = 1 ]
+								then
+									is_fungible=`grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver}`
+								fi
 
 								###CHECK IF RECEIVER IS IN LEDGER#############################
 								receiver_in_ledger=`grep -c "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat`
@@ -1896,6 +1898,7 @@ process_new_files(){
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ $files_replaced = 1 ]
 				then
+					rm ${script_path}/userdata/${handover_account}/all_assets.dat
 					rm ${script_path}/userdata/${handover_account}/all_keys.dat
 					rm ${script_path}/userdata/${handover_account}/all_trx.dat
 					rm ${script_path}/userdata/${handover_account}/all_accounts.dat
@@ -2917,7 +2920,7 @@ do
 							then
 								cd ${script_path}
 								now_stamp=`date +%s`
-								tar -czf ${script_path}/backup/${now_stamp}.bcp control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
+								tar -czf ${script_path}/backup/${now_stamp}.bcp assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
