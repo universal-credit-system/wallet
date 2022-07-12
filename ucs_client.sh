@@ -727,7 +727,7 @@ build_ledger(){
 								fi
 								##############################################################
 
-								###CHECK IF RECEIVER IS FUNGIBLE##############################
+								###CHECK IF RECEIVER IS ASSET#################################
 								is_asset=`grep -c "${trx_receiver}" ${user_path}/all_assets.dat`
 								if [ $is_asset = 1 ]
 								then
@@ -781,21 +781,53 @@ build_ledger(){
 										###CHECK IF EXCHANGE REQUIRED#################################
 										if [ $is_asset = 1 -a $is_fungible = 1 ]
 										then
+											###CHECK IF ASSET HAS A OWNER#################################
+											has_owner=`grep -c "asset_owner=" ${script_path}/assets/${trx_receiver}`
+
 											###EXCHANGE###################################################
 											asset_type_price=`grep "asset_price=" ${script_path}/assets/${trx_asset}|cut -d '=' -f2`
 											asset_price=`grep "asset_price=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2`
 											asset_value=`echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g'`
 											##############################################################
-
-											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
-											receiver_in_ledger=`grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat`
-											if [ $receiver_in_ledger = 1 ]
+											if [ $has_owner = 0 ]
 											then
-												sender_old_balance=`grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
-												sender_new_balance=`echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g'`
-												sed -i "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" ${user_path}/${focus}_ledger.dat
+												###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
+												receiver_in_ledger=`grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat`
+												if [ $receiver_in_ledger = 1 ]
+												then
+													sender_old_balance=`grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
+													sender_new_balance=`echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g'`
+													sed -i "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" ${user_path}/${focus}_ledger.dat
+												else
+													echo "${trx_receiver}:${trx_sender}=${asset_value}" >>${user_path}/${focus}_ledger.dat
+												fi
+												##############################################################
 											else
-												echo "${trx_receiver}:${trx_sender}=${asset_value}" >>${user_path}/${focus}_ledger.dat
+												###EXCHANGE TO OWNERS OF ASSET THAT OWNS THE ASSET############
+												asset_owner=`grep "asset_owner=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2`
+												awk '{print ":"$1}' ${user_path}/all_assets.dat >${user_path}/filtered_assets.tmp
+												asset_quantity=`grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|grep -v -f ${user_path}/filtered_assets.tmp|awk -F= '{sum+=$2} END {print sum}'`
+												price_per_unit=`echo "scale=9; ${asset_value} / ${asset_quantity}"|bc|sed 's/^\./0./g'`
+												for nfa_owner in `grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|awk -F= '{if ($2 != 0) print $1"="$2}'|grep -v -f ${user_path}/filtered_assets.tmp|cut -d ':' -f2|cut -d '=' -f1`
+												do
+													receiver_asset_value=`grep "${asset_owner}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
+													receiver_asset_value=`echo "scale=9; ${receiver_asset_value} * ${price_per_unit}"|bc|sed 's/^\./0./g'`
+													receiver_in_ledger=`grep -c "${trx_receiver}:${nfa_owner}" ${user_path}/${focus}_ledger.dat`
+													is_amount_ok=`echo "$receiver_asset_value >= 0.000000001"|bc`
+													if [ $is_amount_ok = 1 ]
+													then
+														if [ $receiver_in_ledger = 0 ]
+														then
+															echo "${trx_receiver}:${nfa_owner}=${receiver_asset_value}" >>${user_path}/${focus}_ledger.dat
+														else
+															receiver_old_balance=`grep "${trx_receiver}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
+															receiver_new_balance=`echo "${receiver_old_balance} + ${receiver_asset_value}"|bc|sed 's/^\./0./g'`
+															sed -i "s/${trx_receiver}:${nfa_owner}=${receiver_old_balance}/${trx_receiver}:${nfa_owner}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
+														fi
+													fi
+												done
+												rm ${user_path}/filtered_assets.tmp
+												##############################################################
 											fi
 											##############################################################
 										fi
@@ -1070,10 +1102,11 @@ check_assets(){
 			do
 				###SET VARIABLES###############################################
 				asset_acknowledged=0
-				asset_data=`grep "asset_" ${script_path}/assets/$line|grep "="`
+				asset=$line
+				asset_data=`grep "asset_" ${script_path}/assets/${asset}|grep "="`
 				asset_description=`echo "$asset_data"|grep "asset_description"|cut -d '=' -f2`
-				asset_symbol=`echo "$line"|cut -d '.' -f1`
-				asset_stamp=`echo "$line"|cut -d '.' -f2`
+				asset_symbol=`echo "${asset}"|cut -d '.' -f1`
+				asset_stamp=`echo "${asset}"|cut -d '.' -f2`
 				asset_price=`echo "$asset_data"|grep "asset_price"|cut -d '=' -f2`
 				asset_quantity=`echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2`
 				asset_fungible=`echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2`
@@ -1091,58 +1124,70 @@ check_assets(){
 						symbol_size=`printf "${asset_symbol}"|wc -m`
 						if [ $symbol_check = 0 -a $symbol_size -le 10 ]
 						then
-							###CHECK IF ASSET ALREADY EXISTS IN ACK ASSETS#################
-							asset_already_exists=`grep -c "${asset_symbol}.${asset_stamp}" ${user_path}/ack_assets.dat`
-							if [ $asset_already_exists = 0 ]
+							###CHECK IF ASSET ALREADY EXISTS###############################
+							asset_already_exists=`grep -l "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|wc -l`
+							if [ $asset_already_exists -gt 0 ]
 							then
-								###CHECK IF ASSET EXISTS MORE THAT ONCE IN ALL ASSETS##########
-								asset_already_exists=`grep -c "${asset_symbol}.${asset_stamp}" ${user_path}/all_assets.dat`
-								if [ $asset_already_exists = 1 ]
+								###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
+								if [ $asset_fungible = 0 -o $asset_fungible = 1 ]
 								then
-									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
-									if [ $asset_fungible = 0 -o $asset_fungible = 1 ]
+									asset_owner_ok=0
+									asset_owner=`echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2`
+									if [ $asset_fungible = 0 ]
 									then
-										asset_owner_ok=0
-										if [ $asset_fungible = 0 ]
+										###CHECK ASSET HARDCAP#################################
+										if [ ! "${asset_quantity}" = "" -a ! "${asset_quantity}" = "*" ]
 										then
-											###CHECK ASSET HARDCAP#################################
-											if [ ! "${asset_quantity}" = "" -a ! "${asset_quantity}" = "*" ]
+											is_big_enough=`echo "${asset_quantity} > 0 "|bc`
+											if [ $is_big_enough = 1 ]
 											then
-												is_big_enough=`echo "${asset_quantity} > 0 "|bc`
-												if [ $is_big_enough = 1 ]
+												###CHECK IF ASSET OWNER IS SET#########################
+												if [ ! "${asset_owner}" = "" ]
 												then
-													###CHECK IF ASSET OWNER IS SET#########################
-													asset_owner=`echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2`
-													if [ ! "${asset_owner}" = "" ]
+													owner_exists=`ls -1 ${script_path}/keys|grep -c "${asset_owner}"`
+													if [ $owner_exists = 1 ]
 													then
-														owner_exists=`ls -1 ${script_path}/keys|grep -c "${asset_owner}"`
-														if [ $owner_exists = 1 ]
-														then
-															asset_owner_ok=1
-														fi
+														asset_owner_ok=1
+													fi
+												fi
+											fi
+										fi
+									else
+										###CHECK IF ASSET OWNER IS SET#########################
+										if [ ! "${asset_owner}" = "" ]
+										then
+											if [ ! "${asset_owner}" = "${asset}" ]
+											then
+												owner_exists=`grep -l "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|wc -l`
+												if [ $owner_exists -gt 0 ]
+												then
+													owner_blacklisted=`grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat`
+													if [ $owner_blacklisted = 0 ]
+													then
+														asset_owner_ok=1
 													fi
 												fi
 											fi
 										else
 											asset_owner_ok=1
 										fi
-										if [ $asset_owner_ok = 1 ]
+										#######################################################
+									fi
+									if [ $asset_owner_ok = 1 ]
+									then
+										if [ $asset_fungible = 0 ]
 										then
-											if [ $asset_fungible = 0 ]
-											then
-												check_value=$asset_quantity
-											else
-												check_value=$asset_price
-											fi
-											###CHECK ASSET PRICE###################################
-											is_amount_ok=`echo "$check_value >= 0.000000001"|bc`
-											is_amount_mod=`echo "$check_value % 0.000000001"|bc`
-											is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-											if [ $is_amount_ok = 1 -a $is_amount_mod = 0 ]
-											then
-												asset_acknowledged=1
-											fi
-											#######################################################
+											check_value=$asset_quantity
+										else
+											check_value=$asset_price
+										fi
+										###CHECK ASSET PRICE###################################
+										is_amount_ok=`echo "$check_value >= 0.000000001"|bc`
+										is_amount_mod=`echo "$check_value % 0.000000001"|bc`
+										is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
+										if [ $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+										then
+											asset_acknowledged=1
 										fi
 										#######################################################
 									fi
@@ -1770,79 +1815,42 @@ process_new_files(){
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							touch ${user_path}/new_index_filelist.tmp
-							grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
-							new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
-							new_trx_score_highest=0
-							touch ${user_path}/old_index_filelist.tmp
-							grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
-							old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
-							old_trx_score_highest=0
-							no_matches=0
-							if [ $old_trx -gt 0 -a $new_trx -gt 0 ]
-							then
-								if [ $old_trx -le $new_trx ]
+							assets_ok=1
+							for new_index_assets in `grep "assets/" ${user_path}/temp/${new_index_file}`
+							do
+								asset_file=`echo "${new_index_assets}"|cut -d ' ' -f1`
+								is_asset_there=`grep -c "${asset_file}" ${script_path}/${handover_account}/${handover_account}.txt`
+								if [ $is_assets_there = 1 ]
 								then
-									while read line
-									do
-										is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
-										if [ $is_file_there = 1 ]
-										then
-											no_matches=$(( $no_matches + 1 ))
-										else
-											old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
-											old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
-											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
-											then
-												old_trx_score_highest=$old_trx_confirmations
-											fi
-										fi
-									done <${user_path}/old_index_filelist.tmp
-									if [ $no_matches -lt $old_trx ]
+									is_asset_there=`grep -c "${new_index_assets}" ${script_path}/${handover_account}/${handover_account}.txt`
+									if [ $is_assets_there = 0 ]
 									then
-										while read line
-										do
-											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
-											if [ $is_file_there = 0 ]
-											then
-												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
-												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
-												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-												then
-													new_trx_score_highest=$new_trx_confirmations
-												fi
-											fi
-										done <${user_path}/new_index_filelist.tmp
-										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
-										then
-											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-										fi
-									else
-										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+										assets_ok=0
 									fi
-								else
-									while read line
-									do
-										is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
-										if [ $is_file_there = 1 ]
-										then
-											no_matches=$(( $no_matches + 1 ))
-										else
-											new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
-											new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
-											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-											then
-												new_trx_score_highest=$new_trx_confirmations
-											fi
-										fi
-									done <${user_path}/new_index_filelist.tmp
-									if [ $no_matches -lt $new_trx ]
+								fi
+							done
+							if [ $assets_ok = 1 ]
+							then
+								touch ${user_path}/new_index_filelist.tmp
+								grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
+								new_trx=`wc -l <${user_path}/new_index_filelist.tmp`
+								new_trx_score_highest=0
+								touch ${user_path}/old_index_filelist.tmp
+								grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
+								old_trx=`wc -l <${user_path}/old_index_filelist.tmp`
+								old_trx_score_highest=0
+								no_matches=0
+								if [ $old_trx -gt 0 -a $new_trx -gt 0 ]
+								then
+									if [ $old_trx -le $new_trx ]
 									then
 										while read line
 										do
 											is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
-											if [ $is_file_there = 0 ]
+											if [ $is_file_there = 1 ]
 											then
+												no_matches=$(( $no_matches + 1 ))
+											else
 												old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
@@ -1851,11 +1859,67 @@ process_new_files(){
 												fi
 											fi
 										done <${user_path}/old_index_filelist.tmp
-										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+										if [ $no_matches -lt $old_trx ]
 										then
+											while read line
+											do
+												is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
+												if [ $is_file_there = 0 ]
+												then
+													new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
+													new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
+													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+													then
+														new_trx_score_highest=$new_trx_confirmations
+													fi
+												fi
+											done <${user_path}/new_index_filelist.tmp
+											if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+											then
+												echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+											fi
+										else
 											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 										fi
+									else
+										while read line
+										do
+											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
+											if [ $is_file_there = 1 ]
+											then
+												no_matches=$(( $no_matches + 1 ))
+											else
+												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
+												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
+												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+												then
+													new_trx_score_highest=$new_trx_confirmations
+												fi
+											fi
+										done <${user_path}/new_index_filelist.tmp
+										if [ $no_matches -lt $new_trx ]
+										then
+											while read line
+											do
+												is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
+												if [ $is_file_there = 0 ]
+												then
+													old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
+													old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
+													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+													then
+														old_trx_score_highest=$old_trx_confirmations
+													fi
+												fi
+											done <${user_path}/old_index_filelist.tmp
+											if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+											then
+												echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+											fi
+										fi
 									fi
+								else
+									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 								fi
 							else
 								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
