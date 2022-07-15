@@ -2204,14 +2204,21 @@ get_dependencies(){
 			return $new_ledger
 }
 request_uca(){
-		###STATUS BAR FOR GUI##############################
+		###GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR########
 		if [ $gui_mode = 1 ]
 		then
-			number_ucas=`wc -l <${script_path}/control/uca.conf`
-			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
+			rm ${user_path}/uca_list.tmp 2>/dev/null
+			total_number_uca=`wc -l <${script_path}/control/uca.conf`
+			percent_per_uca=`echo "scale=10; 100 / $total_number_uca"|bc`
 			current_percent=0
 			percent_display=0
+			while read line
+			do
+				uca_info=`echo $line|cut -d ',' -f4`
+				printf "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+			done <${script_path}/control/uca.conf
 		fi
+		###################################################
 
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
@@ -2227,7 +2234,8 @@ request_uca(){
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
-				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
+				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			fi
 
 			###GET RANDOM P AND RELATED G#####################
@@ -2340,13 +2348,20 @@ request_uca(){
 			then
 				current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
 				percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
-				echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_request} ${uca_info}" 0 0 0
+				if [ $rt_query = 0 ]
+				then
+					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" ${user_path}/uca_list.tmp
+				else
+					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" ${user_path}/uca_list.tmp
+				fi
+				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			fi
 
 			###PURGE TEMP FILES################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
 		done <${script_path}/control/uca.conf
+		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
 send_uca(){
 		now_stamp=`date +%s`
@@ -2356,14 +2371,21 @@ send_uca(){
 		out_file="${user_path}/${handover_account}_${now_stamp}.out"
 		save_file="${user_path}/uca_save.dat"
 
-		###STATUS BAR FOR GUI########################
+		###GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR########
 		if [ $gui_mode = 1 ]
 		then
-			number_ucas=`wc -l <${script_path}/control/uca.conf`
-			percent_per_uca=`echo "scale=10; 100 / ${number_ucas}"|bc`
+			rm ${user_path}/uca_list.tmp 2>/dev/null
+			total_number_uca=`wc -l <${script_path}/control/uca.conf`
+			percent_per_uca=`echo "scale=10; 100 / $total_number_uca"|bc`
 			current_percent=0
 			percent_display=0
+			while read line
+			do
+				uca_info=`echo $line|cut -d ',' -f4`
+				printf "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+			done <${script_path}/control/uca.conf
 		fi
+		###################################################
 
 		###ONLY CONTINUE IF SAVEFILE IS THERE########
 		if [ -s ${save_file} ]
@@ -2415,10 +2437,11 @@ send_uca(){
 					uca_snd_port=`echo $line|cut -d ',' -f3`
 					uca_info=`echo $line|cut -d ',' -f4`
 
-					###STATUS BAR FOR GUI########################
+					###STATUS BAR FOR GUI##############################
 					if [ $gui_mode = 1 ]
 					then
-						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+						sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
+						dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 					fi
 
 					###GET STAMP#################################
@@ -2458,13 +2481,18 @@ send_uca(){
 						fi
 						rm ${user_path}/uca_header.tmp 2>/dev/null
 					fi
-
 					###STATUS BAR FOR GUI##############################
 					if [ $gui_mode = 1 ]
 					then
 						current_percent=`echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc`
 						percent_display=`echo "scale=0; ${current_percent} / 1"|bc`
-						echo "$percent_display"|dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --gauge "${dialog_uca_send} ${uca_info}" 0 0 0
+						if [ $rt_query = 0 ]
+						then
+							sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" ${user_path}/uca_list.tmp
+						else
+							sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" ${user_path}/uca_list.tmp
+						fi
+						dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 					fi
 				done <${script_path}/control/uca.conf
 			fi
@@ -2472,6 +2500,7 @@ send_uca(){
 		rm ${sync_file} 2>/dev/null
 		rm ${save_file} 2>/dev/null
 		rm ${user_path}/files_list.tmp 2>/dev/null
+		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
 ##################
 #Main Menu Screen#
