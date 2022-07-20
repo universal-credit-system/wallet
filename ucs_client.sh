@@ -201,44 +201,74 @@ create_keys(){
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
+									###MOVE LATEST CERTIFICATES INTO TSA FOLDER##############
 									mv ${script_path}/certs/tsa.crt ${script_path}/certs/${default_tsa}/tsa.crt
 									mv ${script_path}/certs/cacert.pem ${script_path}/certs/${default_tsa}/cacert.pem
+
+									###VERIFY TSA RESPONSE###################################
 									openssl ts -verify -queryfile ${user_path}/${default_tsa}.tsq -in ${user_path}/${default_tsa}.tsr -CAfile ${script_path}/certs/${default_tsa}/cacert.pem -untrusted ${script_path}/certs/${default_tsa}/tsa.crt 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										if [ $gui_mode = 1 ]
+										###WRITE OUTPUT OF RESPONSE TO FILE######################
+										openssl ts -reply -in ${user_path}/${default_tsa}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
 										then
-											###DISPLAY PROGRESS ON STATUS BAR############################
-											echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
-											clear
-										fi
-										###CREATE PROOFS DIRECTORY AND COPY TSA FILES###################
-										mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
-										mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsq
-										mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsr
+											###CHECK IF TSA RESPONSE IS WITHIN 120 SECONDS######################
+											date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
+											date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
+											creation_date_diff=$(( $date_to_verify_converted - $file_stamp ))
+											if [ $creation_date_diff -le 120 ]
+											then
+												if [ $gui_mode = 1 ]
+												then
+													###DISPLAY PROGRESS ON STATUS BAR###########################
+													echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
+													clear
+												fi
+												
+												###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
+												mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
+												mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsq
+												mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsr
 
-										###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER#######################
-										cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc ${script_path}/keys/${create_name_hashed}.${file_stamp}
+												###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
+												cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc ${script_path}/keys/${create_name_hashed}.${file_stamp}
 
-										###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-										cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc ${script_path}/control/keys/${create_name_hashed}.${file_stamp}
+												###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
+												cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc ${script_path}/control/keys/${create_name_hashed}.${file_stamp}
 
-										if [ $gui_mode = 1 ]
-										then
-											###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-											dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
-											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
-											clear
+												if [ $gui_mode = 1 ]
+												then
+													###DISPLAY WAIT PERIOD TO SECURE KEY########################
+													now_stamp=`date +%s`
+													seconds_passed=$(( $now_stamp - $file_stamp ))
+													seconds_remain=$(( 120 - $seconds_passed ))
+													if [ $seconds_remain -gt 0 ]
+													then
+														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next"--no-cancel "$dialog_keys_create4" 0 0 $seconds_remain
+													fi
+
+													###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
+													dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
+													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
+													clear
+												else
+													echo "USER:${create_name}"
+													echo "PIN:${create_pin}"
+													echo "PASSWORD:>${create_password}<"
+													echo "ADRESS:${create_name_hashed}.${file_stamp}"
+													echo "KEY:${create_name_hashed}.${file_stamp}"
+													echo "KEY_PUB:/keys/${create_name_hashed}.${file_stamp}"
+													echo "KEY_PRV:/control/keys/${create_name_hashed}.${file_stamp}"
+													exit 0
+												fi
+											else
+												key_remove=1
+											fi
 										else
-											echo "USER:${create_name}"
-											echo "PIN:${create_pin}"
-											echo "PASSWORD:>${create_password}<"
-											echo "ADRESS:${create_name_hashed}.${file_stamp}"
-											echo "KEY:${create_name_hashed}.${file_stamp}"
-											echo "KEY_PUB:/keys/${create_name_hashed}.${file_stamp}"
-											echo "KEY_PRV:/control/keys/${create_name_hashed}.${file_stamp}"
-											exit 0
+											key_remove=1
 										fi
 									else
 										key_remove=1
@@ -2399,21 +2429,15 @@ send_uca(){
 			while read line
 			do
 				echo "keys/${line}" >>${user_path}/files_list.tmp
-				tsa_query_there=`ls -1 ${script_path}/proofs/${line}/|grep -c ".tsq"`
-				tsa_response_there=`ls -1 ${script_path}/proofs/${line}/|grep -c ".tsq"`
-				index_there=`ls -1 ${script_path}/proofs/${line}/|grep -c "${line}.txt"`
-				if [ $tsa_query_there = $tsa_response_there -a $tsa_query_there -gt 0 -a $tsa_response_there -gt 0 ]
+				for tsa_files in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+				do
+					file=`basename $tsa_files`
+					echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
+				done
+				if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 				then
-					for tsa_files in `ls -1 ${script_path}/proofs/${line}/*.ts*`
-					do
-						file=`basename $tsa_files`
-						echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-					done
-					if [ $index_there = 1 ]
-					then
-						echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+					echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 
-					fi
 				fi
 			done <${user_path}/depend_accounts.dat
 
