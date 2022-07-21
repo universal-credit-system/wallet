@@ -251,7 +251,7 @@ create_keys(){
 													seconds_remain=$(( 120 - $seconds_passed ))
 													if [ $seconds_remain -gt 0 ]
 													then
-														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel "$dialog_keys_create4" --pause "" 0 0 $seconds_remain
+														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel --pause "$dialog_keys_create4" 0 0 $seconds_remain
 													fi
 													clear
 												else
