@@ -241,18 +241,18 @@ create_keys(){
 
 												if [ $gui_mode = 1 ]
 												then
+													###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
+													dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
+													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
+
 													###DISPLAY WAIT PERIOD TO SECURE KEY########################
 													now_stamp=`date +%s`
 													seconds_passed=$(( $now_stamp - $file_stamp ))
 													seconds_remain=$(( 120 - $seconds_passed ))
 													if [ $seconds_remain -gt 0 ]
 													then
-														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next"--no-cancel "$dialog_keys_create4" 0 0 $seconds_remain
+														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel "$dialog_keys_create4" --pause "" 0 0 $seconds_remain
 													fi
-
-													###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-													dialog_keys_final_display=`echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g"`
-													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
 													clear
 												else
 													echo "USER:${create_name}"
