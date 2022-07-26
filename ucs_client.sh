@@ -910,7 +910,7 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				for ledger_entry in `grep "${handover_account}" ${user_path}/${focus}_ledger.dat`
+				for balance in `grep "${handover_account}" ${user_path}/${focus}_ledger.dat`
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
 					asset_type=`echo "${balance}"|cut -d ':' -f1`	
