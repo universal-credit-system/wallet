@@ -910,13 +910,14 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				for balance in `grep "${handover_account}" ${user_path}/${focus}_ledger.dat`
+				last_ledger=`ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1`
+				for balance in `grep "${handover_account}" ${user_path}/${last_ledger}`
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
 					asset_type=`echo "${balance}"|cut -d ':' -f1`	
 					if [ "${asset_type}" = "${main_asset}" ]
 					then
-						cmd_output=`grep "${asset_type}:${handover_account}" ${user_path}/${focus}_scoretable.dat`
+						cmd_output=`grep "${asset_type}:${handover_account}" ${user_path}/${last_ledger}`
 					else
 						cmd_output=$balance
 					fi
