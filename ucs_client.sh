@@ -905,6 +905,8 @@ build_ledger(){
 						;;
 				"read_sync")	show_balance=1
 						;;
+				"show_balance")	show_balance=1
+						;;
 			esac
 			if [ $show_balance = 1 ]
 			then
@@ -920,6 +922,10 @@ build_ledger(){
 					fi
 				done
 				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
+				if [ "${cmd_action}" = "show_balance" ]
+				then
+					exit 0
+				fi
 			fi
 			##############################################################
 		fi
@@ -2636,6 +2642,8 @@ then
 												;;
 									"sync_uca")		main_menu=$dialog_main_logon
 												user_menu=$dialog_uca
+												;;
+									"show_balance")		main_menu=$dialog_main_logon
 												;;
 									"show_stats")		main_menu=$dialog_main_logon
 												user_menu=$dialog_stats
