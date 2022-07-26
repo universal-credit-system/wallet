@@ -6,14 +6,15 @@ OPTIONS:
 
   -action <ACTION>	possible actions:
 
+			create_backup	to create a backup
 			create_user	to create a user
 			create_trx	to create a transaction
+			create_sync	to create a sync file
+			read_sync	to read a sync file
 			read_trx	to read a transaction
-			create_sync	to create a syncronisation
-			read_sync	to read a syncronisation
-			sync_uca	to sync with UCAs
-			create_backup	to create a backup
 			restore_backup	to restore a backup
+			sync_uca	to sync with UCAs
+			show_balance	to show the users balance
 			show_stats	to display the statistics
 
   -user <USER>		name of the account.	
