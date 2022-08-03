@@ -2415,7 +2415,7 @@ send_uca(){
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
 			###WRITE ASSETS TO FILE LIST#################
-			awk '{print "assets/" $1}' ${user_path}/all_assets.dat >>${user_path}/files_list.tmp
+			awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
 
 			###WRITE ACCOUNTS TO FILE LIST###############
 			while read line
@@ -3523,7 +3523,7 @@ do
 																done <${user_path}/depend_trx.dat
 															else
 																###GET ASSETS################################################################
-																awk '{print "assets/" $1}' ${user_path}/all_assets.dat >>${user_path}/files_list.tmp
+																awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
 
 																###GET KEYS AND PROOFS#######################################################
 																while read line
@@ -3975,26 +3975,51 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
-								###GET ASSETS################################################################
-								awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+								if [ $gui_mode = 0 -a $cmd_type = "partial" ]
+								then
+									###WRITE ASSETS TO FILE LIST#################
+									awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
 
-								###GET KEYS AND PROOFS#######################################################
-								while read line
-								do
-									echo "keys/${line}" >>${user_path}/files_list.tmp
-									for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+									###WRITE ACCOUNTS TO FILE LIST###############
+									while read line
 									do
-										file=`basename $tsa_file`
-										echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-									done
-									if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-									then
-										echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-									fi
-								done <${user_path}/all_accounts.dat
+										echo "keys/${line}" >>${user_path}/files_list.tmp
+										for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+										do
+											file=`basename $tsa_file`
+											echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
+										done
+										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+										then
+											echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
 
-								###GET TRX###################################################################
-								awk '{print "trx/" $1}' ${user_path}/all_trx.dat >>${user_path}/files_list.tmp
+										fi
+									done <${user_path}/depend_accounts.dat
+
+									###WRITE TRX TO FILE LIST####################
+									awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
+								else
+									###GET ASSETS################################################################
+									awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+
+									###GET KEYS AND PROOFS#######################################################
+									while read line
+									do
+										echo "keys/${line}" >>${user_path}/files_list.tmp
+										for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+										do
+											file=`basename $tsa_file`
+											echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
+										done
+										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+										then
+											echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+										fi
+									done <${user_path}/all_accounts.dat
+
+									###GET TRX###################################################################
+									awk '{print "trx/" $1}' ${user_path}/all_trx.dat >>${user_path}/files_list.tmp
+								fi
 
 								###GET CURRENT TIMESTAMP#################################
 								now_stamp=`date +%s`
