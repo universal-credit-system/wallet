@@ -352,27 +352,12 @@ make_signature(){
 					echo "keys/${key_file} ${key_hash}" >>${message_blank}
 					#################################################################
 
-					for tsa_service in `ls -1 ${script_path}/certs`
+					###ADD TSA FILES#################################################
+					for tsa_file in `ls -1 ${script_path}/proofs/${key_file}/*.ts*`
 					do
-						###IF TSA QUERY FILE IS AVAILABLE ADD TO INDEX FILE#############
-						tsa_qfile="${script_path}/proofs/${key_file}/${tsa_service}.tsq"
-						if [ -s $tsa_qfile ]
-						then
-							tsa_qfile_path="proofs/${key_file}/${tsa_service}.tsq"
-							tsa_qfile_hash=`sha256sum ${script_path}/proofs/${key_file}/${tsa_service}.tsq|cut -d ' ' -f1`
-							echo "${tsa_qfile_path} ${tsa_qfile_hash}" >>${message_blank}
-						fi
-						#################################################################
-
-						###IF TSA RESPONSE FILE IS AVAILABLE ADD TO INDEX FILE###########
-						tsa_rfile="${script_path}/proofs/${key_file}/${tsa_service}.tsr"
-						if [ -s $tsa_rfile ]
-						then
-							tsa_rfile_path="proofs/${key_file}/${tsa_service}.tsr"
-							tsa_rfile_hash=`sha256sum ${script_path}/proofs/${key_file}/${tsa_service}.tsr|cut -d ' ' -f1`
-							echo "${tsa_rfile_path} ${tsa_rfile_hash}" >>${message_blank}
-						fi
-						#################################################################
+						file=`basename $tsa_file`
+						file_hash=`sha256sum ${script_path}/proofs/${key_file}/${file}|cut -d ' ' -f1`
+						echo "proofs/${key_file}/${file} ${file_hash}" >>${user_path}/files_list.tmp
 					done
 				done
 
@@ -2436,9 +2421,9 @@ send_uca(){
 			while read line
 			do
 				echo "keys/${line}" >>${user_path}/files_list.tmp
-				for tsa_files in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+				for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
 				do
-					file=`basename $tsa_files`
+					file=`basename $tsa_file`
 					echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
 				done
 				if [ -s ${script_path}/proofs/${line}/${line}.txt ]
@@ -3544,16 +3529,10 @@ do
 																while read line
 																do
 																	echo "keys/${line}" >>${user_path}/files_list.tmp
-																	for tsa_service in `ls -1 ${script_path}/certs`
+																	for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
 																	do
-																		if [ -s "proofs/${line}/${tsa_service}.tsq" ]
-																		then
-																			echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
-																		fi
-																		if [ -s "proofs/${line}/${tsa_service}.tsr" ]
-																		then
-																			echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-																		fi
+																		file=`basename $tsa_file`
+																		echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
 																	done
 																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																	then
@@ -4003,16 +3982,10 @@ do
 								while read line
 								do
 									echo "keys/${line}" >>${user_path}/files_list.tmp
-									for tsa_service in `ls -1 ${script_path}/certs`
+									for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
 									do
-										if [ -s "proofs/${line}/${tsa_service}.tsq" ]
-										then
-											echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
-										fi
-										if [ -s "proofs/${line}/${tsa_service}.tsr" ]
-										then
-											echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-										fi
+										file=`basename $tsa_file`
+										echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
 									done
 									if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 									then
