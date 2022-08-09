@@ -2191,6 +2191,7 @@ get_dependencies(){
 				then
 					new_ledger=0
 					touch ${user_path}/dates.tmp
+
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
 					depend_accounts_new_date=`sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1|cut -d '.' -f2`
 					if [ ! "${depend_accounts_new_date}" = "" ]
@@ -2215,10 +2216,11 @@ get_dependencies(){
 					fi
 
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
-					last_date=`date +%Y%m%d --date=@$(sort ${user_path}/dates.tmp|head -1)`
 					cd ${user_path}/
-					if [ "${last_date}" = "" ]
+					earliest_date=`sort ${user_path}/dates.tmp|head -1`
+					if [ ! "${earliest_date}" = "" ]
 					then
+						last_date=`date +%Y%m%d --date=@${earliest_date}`
 						rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
