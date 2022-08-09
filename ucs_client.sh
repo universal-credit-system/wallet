@@ -2172,7 +2172,7 @@ get_dependencies(){
 			do
 				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
 				trx_sender=`sed -n '6p' ${script_path}/trx/${user_trx}|cut -d ':' -f3`
-				total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+				total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
@@ -2190,7 +2190,7 @@ get_dependencies(){
 				if [ $first_start = 0 ]
 				then
 					new_ledger=0
-
+					touch ${user_path}/dates.tmp
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
 					depend_accounts_new_date=`sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1|cut -d '.' -f2`
 					if [ ! "${depend_accounts_new_date}" = "" ]
@@ -2217,9 +2217,12 @@ get_dependencies(){
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
 					last_date=`date +%Y%m%d --date=@$(sort ${user_path}/dates.tmp|head -1)`
 					cd ${user_path}/
-					rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-					rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-					rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					if [ "${last_date}" = "" ]
+					then
+						rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+						rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+						rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+					fi
 				fi
 			fi
 			rm ${user_path}/*.tmp 2>/dev/null
@@ -4119,7 +4122,7 @@ do
 			      						trx_amount=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f1`
 									trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
 									trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
-									trx_confirmations=`grep -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+									trx_confirmations=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -4211,7 +4214,7 @@ do
 											trx_status="OK"
 										fi
 										user_total=`wc -l ${user_path}/depend_accounts.dat|cut -d ' ' -f1`
-										trx_confirmations_total=`grep -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 										trx_confirmations="${trx_confirmations_total} \/ ${user_total}"
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
