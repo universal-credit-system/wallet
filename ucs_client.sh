@@ -696,7 +696,7 @@ build_ledger(){
 				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt -o $trx_sender = ${handover_account} ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=`grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt`
+					is_signed=`grep -s "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|wc -l`
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
@@ -778,7 +778,7 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###CHECK CONFIRMATIONS########################################
-									total_confirmations=`grep -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+									total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
 										###SET SCORE FOR SENDER#######################################
