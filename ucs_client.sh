@@ -44,11 +44,12 @@ login_account(){
 					mkdir ${script_path}/userdata/${handover_account}/temp/keys
 					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
 					mkdir ${script_path}/userdata/${handover_account}/temp/trx
-				else
-	       	 			rm ${user_path}/account.acc.gpg 2>/dev/null
-					rm ${user_path}/account.acc 2>/dev/null
 				fi
+				
+				###SET USERPATH AND CLEAN GPG TEST FILES#####################
 				user_path="${script_path}/userdata/${handover_account}"
+				rm ${user_path}/account.acc.gpg 2>/dev/null
+				rm ${user_path}/account.acc 2>/dev/null
 
 				###TEST KEY BY ENCRYPTING A MESSAGE##########################
 				echo $login_name >${user_path}/account.acc
