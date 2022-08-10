@@ -358,7 +358,7 @@ make_signature(){
 					do
 						file=`basename $tsa_file`
 						file_hash=`sha256sum ${script_path}/proofs/${key_file}/${file}|cut -d ' ' -f1`
-						echo "proofs/${key_file}/${file} ${file_hash}" >>${user_path}/files_list.tmp
+						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
 					done
 				done
 
