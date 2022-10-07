@@ -546,7 +546,7 @@ build_ledger(){
 		previous_day=`date +%Y%m%d --date="${focus} - 1 day"`
 		rm ${user_path}/assets.tmp 2>/dev/null
 		awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' ${user_path}/all_assets.dat >${user_path}/assets.tmp
-			
+
 		###MAKE LEDGER ENTRIES FOR ASSETS#####################
 		if [ -s ${user_path}/assets.tmp ]
 		then
@@ -654,8 +654,8 @@ build_ledger(){
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
-			awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
-			awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
+			awk -F. -v main_asset="${main_asset}" '{print main_asset":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
+			awk -F. -v main_asset="${main_asset}" '{print main_asset":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###CREATE LIST OF ASSETS CREATED THAT DAY########
@@ -673,8 +673,8 @@ build_ledger(){
 					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat				
 				done
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
-				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print main_asset_symbol"."main_asset_stamp":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
-				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset_symbol="${main_asset_symbol}" -v main_asset_stamp="${main_asset_stamp}" '{if ($1 != main_asset_symbol) print $1"."$2":"main_asset_symbol"."main_asset_stamp"=0"}' >>${user_path}/${focus}_ledger.dat
+				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
+				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print $1"."$2":"main_asset"=0"}' >>${user_path}/${focus}_ledger.dat
 				rm ${user_path}/assets.tmp
 			fi
 
@@ -682,6 +682,7 @@ build_ledger(){
 			for trx_filename in `awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat` 
 			do
 				is_fungible=0
+
 				###EXRACT DATA FOR CHECK######################################
 				trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_filename}`
 				trx_data=`echo $trx_data_raw|sed 's/ //g'`
@@ -1120,97 +1121,107 @@ check_assets(){
 
 			###CREATE LIST OF NEW ASSETS###################################
 			ls -1 ${script_path}/assets >${user_path}/all_assets.dat
+
+			###CREATE LIST OF NEW ASSETS###################################
 			cat ${user_path}/all_assets.dat ${user_path}/ack_assets.dat|sort -t . -k2|uniq -u >${user_path}/all_assets.tmp
 			while read line
 			do
-				###SET VARIABLES###############################################
-				asset_acknowledged=0
-				asset=$line
-				asset_data=`grep "asset_" ${script_path}/assets/${asset}|grep "="`
-				asset_description=`echo "$asset_data"|grep "asset_description"|cut -d '=' -f2`
-				asset_symbol=`echo "${asset}"|cut -d '.' -f1`
-				asset_stamp=`echo "${asset}"|cut -d '.' -f2`
-				asset_price=`echo "$asset_data"|grep "asset_price"|cut -d '=' -f2`
-				asset_quantity=`echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2`
-				asset_fungible=`echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2`
-				stamp_only_digits=`echo "${asset_stamp}"|grep -c '[^[:digit:]]'`
-				stamp_size=`echo "${asset_stamp}"|wc -m`
-
-				###CHECK IF STAMP IS OKAY######################################
-				if [ $stamp_only_digits = 0 -a $stamp_size -eq 11 ]
+				###CHECK IF ASSET IS MAIN ASSET################################
+				if [ "${line}" = "${main_asset}" ]
 				then
-					###CHECK IF ALL VARIABLES ARE SET##############################
-					if [ ! "${asset_description}" = "" -a ! "${asset_fungible}" = "" ]
+					###SET VARIABLE################################################
+					asset_acknowledged=1
+				else
+					###SET VARIABLES###############################################
+					asset_acknowledged=0
+					asset=$line
+					asset_data=`grep "asset_" ${script_path}/assets/${asset}|grep "="`
+					asset_description=`echo "$asset_data"|grep "asset_description"|cut -d '=' -f2`
+					asset_symbol=`echo "${asset}"|cut -d '.' -f1`
+					asset_stamp=`echo "${asset}"|cut -d '.' -f2`
+					asset_price=`echo "$asset_data"|grep "asset_price"|cut -d '=' -f2`
+					asset_quantity=`echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2`
+					asset_fungible=`echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2`
+					stamp_only_digits=`echo "${asset_stamp}"|grep -c '[^[:digit:]]'`
+					stamp_size=`echo "${asset_stamp}"|wc -m`
+
+					###CHECK IF STAMP IS OKAY######################################
+					if [ $stamp_only_digits = 0 -a $stamp_size -eq 11 ]
 					then
-						###CHECK FOR ALNUM CHARS AND SIZE##############################
-						symbol_check=`echo $asset_symbol|grep -c '[^[:alnum:]]'`
-						symbol_size=`printf "${asset_symbol}"|wc -m`
-						if [ $symbol_check = 0 -a $symbol_size -le 10 ]
+						###CHECK IF ALL VARIABLES ARE SET##############################
+						if [ ! "${asset_description}" = "" -a ! "${asset_fungible}" = "" ]
 						then
-							###CHECK IF ASSET ALREADY EXISTS###############################
-							asset_already_exists=`grep -l "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|wc -l`
-							if [ $asset_already_exists -gt 0 ]
+							###CHECK FOR ALNUM CHARS AND SIZE##############################
+							symbol_check=`echo $asset_symbol|grep -c '[^[:alnum:]]'`
+							symbol_size=`printf "${asset_symbol}"|wc -m`
+							if [ $symbol_check = 0 -a $symbol_size -le 10 ]
 							then
-								###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
-								if [ $asset_fungible = 0 -o $asset_fungible = 1 ]
+								###CHECK IF ASSET ALREADY EXISTS###############################
+								asset_already_exists=`grep -l "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|wc -l`
+								if [ $asset_already_exists -gt 0 ]
 								then
-									asset_owner_ok=0
-									asset_owner=`echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2`
-									if [ $asset_fungible = 0 ]
+									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
+									if [ $asset_fungible = 0 -o $asset_fungible = 1 ]
 									then
-										###CHECK ASSET HARDCAP#################################
-										if [ ! "${asset_quantity}" = "" -a ! "${asset_quantity}" = "*" ]
-										then
-											is_big_enough=`echo "${asset_quantity} > 0 "|bc`
-											if [ $is_big_enough = 1 ]
-											then
-												###CHECK IF ASSET OWNER IS SET#########################
-												if [ ! "${asset_owner}" = "" ]
-												then
-													owner_exists=`ls -1 ${script_path}/keys|grep -c "${asset_owner}"`
-													if [ $owner_exists = 1 ]
-													then
-														asset_owner_ok=1
-													fi
-												fi
-											fi
-										fi
-									else
-										###CHECK IF ASSET OWNER IS SET#########################
-										if [ ! "${asset_owner}" = "" ]
-										then
-											if [ ! "${asset_owner}" = "${asset}" ]
-											then
-												owner_exists=`grep -l "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|wc -l`
-												if [ $owner_exists -gt 0 ]
-												then
-													owner_blacklisted=`grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat`
-													if [ $owner_blacklisted = 0 ]
-													then
-														asset_owner_ok=1
-													fi
-												fi
-											fi
-										else
-											asset_owner_ok=1
-										fi
-										#######################################################
-									fi
-									if [ $asset_owner_ok = 1 ]
-									then
+										asset_owner_ok=0
+										asset_owner=`echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2`
 										if [ $asset_fungible = 0 ]
 										then
-											check_value=$asset_quantity
+											###CHECK ASSET HARDCAP#################################
+											if [ ! "${asset_quantity}" = "" -a ! "${asset_quantity}" = "*" ]
+											then
+												is_big_enough=`echo "${asset_quantity} > 0 "|bc`
+												if [ $is_big_enough = 1 ]
+												then
+													###CHECK IF ASSET OWNER IS SET#########################
+													if [ ! "${asset_owner}" = "" ]
+													then
+														owner_exists=`ls -1 ${script_path}/keys|grep -c "${asset_owner}"`
+														if [ $owner_exists = 1 ]
+														then
+															asset_owner_ok=1
+														fi
+													fi
+												fi
+											fi
 										else
-											check_value=$asset_price
+											###CHECK IF ASSET OWNER IS SET#########################
+											if [ ! "${asset_owner}" = "" ]
+											then
+												if [ ! "${asset_owner}" = "${asset}" ]
+												then
+													owner_exists=`grep -l "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|wc -l`
+													if [ $owner_exists -gt 0 ]
+													then
+														owner_blacklisted=`grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat`
+														if [ $owner_blacklisted = 0 ]
+														then
+															asset_owner_ok=1
+														fi
+													fi
+												fi
+											else
+												asset_owner_ok=1
+											fi
+											#######################################################
 										fi
-										###CHECK ASSET PRICE###################################
-										is_amount_ok=`echo "$check_value >= 0.000000001"|bc`
-										is_amount_mod=`echo "$check_value % 0.000000001"|bc`
-										is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-										if [ $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+										if [ $asset_owner_ok = 1 ]
 										then
-											asset_acknowledged=1
+											if [ $asset_fungible = 0 ]
+											then
+												check_value=$asset_quantity
+											else
+												check_value=$asset_price
+											fi
+											###CHECK ASSET PRICE###################################
+											is_amount_ok=`echo "$check_value >= 0.000000001"|bc`
+											is_amount_mod=`echo "$check_value % 0.000000001"|bc`
+											is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
+											if [ $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+											then
+												asset_acknowledged=1
+											fi
+											#######################################################
 										fi
 										#######################################################
 									fi
@@ -1220,7 +1231,7 @@ check_assets(){
 							fi
 							#######################################################
 						fi
-						#######################################################
+						######################################################
 					fi
 					######################################################
 				fi
@@ -2548,9 +2559,8 @@ core_system_name="Universal Credit System"
 core_system_version="v0.0.1"
 
 ###SET INITIAL VARIABLES####
+main_asset="UCC"
 start_date="20210216"
-main_asset_symbol=`echo "${main_asset}"|cut -d '.' -f1`
-main_asset_stamp=`echo "${main_asset}"|cut -d '.' -f2`
 now=`date -u +%Y%m%d`
 no_ledger=0
 user_logged_in=0
