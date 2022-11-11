@@ -102,6 +102,7 @@ login_account(){
 				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey2_display" 0 0
 				clear
 			else
+				rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
 				exit 1
 			fi
 		fi
