@@ -786,8 +786,14 @@ build_ledger(){
 										###SET SCORE FOR SENDER#######################################
 										if [ "${trx_asset}" = "${main_asset}" ]
 										then
-											sender_score_balance=`echo "scale=9; ${trx_amount} * 0.25"|bc`
-											sender_score_balance=`echo "scale=9; ${sender_new_score_balance} + ${sender_score_balance}"|bc|sed 's/^\./0./g'`
+											###CHECK IF NEW SCORE IS GREATER THAN BALANCE#################
+											is_greater_balance=`echo "${sender_new_score_balance} > ${account_new_balance}"|bc`
+											if [ $is_greater_balance = 1 ]
+											then
+												sender_score_balance="${account_new_balance}"
+											fi
+											##############################################################
+											sender_score_balance=`echo "${sender_score_balance}"|sed 's/^\./0./g'`
 											sed -i "s/${trx_asset}:${trx_sender}=${sender_new_score_balance}/${trx_asset}:${trx_sender}=${sender_score_balance}/g" ${user_path}/${focus}_scoretable.dat
 										fi
 										##############################################################
@@ -3347,7 +3353,7 @@ do
 												rt_query=0
 												order_amount=$cmd_amount
 											fi
-												if [ $rt_query = 0 ]
+											if [ $rt_query = 0 ]
 											then
 												order_amount_alnum=`echo $order_amount|grep -c '[[:alpha:]]'`
 												if [ $order_amount_alnum = 0 ]
