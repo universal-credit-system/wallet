@@ -7,7 +7,7 @@ login_account(){
 		handover_account=""
 
 		###READ LIST OF KEYS LINE BY LINE############################
-		for key_file in `ls -1 ${script_path}/keys/|sort -t . -k2`
+		for key_file in `ls -1 -X ${script_path}/keys/`
 		do
 			###EXTRACT KEY DATA##########################################
 			keylist_name=`echo $key_file|cut -d '.' -f1`
@@ -1130,7 +1130,7 @@ check_assets(){
 			ls -1 ${script_path}/assets >${user_path}/all_assets.dat
 
 			###CREATE LIST OF NEW ASSETS###################################
-			cat ${user_path}/all_assets.dat ${user_path}/ack_assets.dat|sort -t . -k2|uniq -u >${user_path}/all_assets.tmp
+			sort -t . -k2 ${user_path}/all_assets.dat ${user_path}/ack_assets.dat|uniq -u >${user_path}/all_assets.tmp
 			while read line
 			do
 				###CHECK IF ASSET IS MAIN ASSET################################
@@ -1502,8 +1502,8 @@ check_tsa(){
 			fi
 
 			###FLOCK######################################
-			flock ${script_path}/keys ls -1 ${script_path}/keys|sort -t . -k2 >${user_path}/all_accounts.dat
-			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.tmp
+			flock ${script_path}/keys ls -1 -X ${script_path}/keys >${user_path}/all_accounts.dat
+			sort -t . -k2 ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|uniq -u >${user_path}/all_accounts.tmp
 			while read line
 			do
 				###SET FLAG##############################################
@@ -1623,10 +1623,10 @@ check_tsa(){
 				#####################################################################################
 			fi
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-			cat ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_accounts.dat
+			sort -t . -k2 ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_accounts.dat
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-			cat ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|sort -t . -k2 >${user_path}/all_accounts.tmp
+			sort -t . -k2 ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat >${user_path}/all_accounts.tmp
 			mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			rm ${user_path}/ack_accounts.dat
 }
@@ -1640,7 +1640,7 @@ check_keys(){
 			touch ${user_path}/ack_keys.dat
 		fi
 		cp ${user_path}/all_accounts.dat ${user_path}/all_keys.dat
-		cat ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|sort -t . -k2|uniq -u >${user_path}/all_keys.tmp
+		sort -t . -k2 ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|uniq -u >${user_path}/all_keys.tmp
 
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
 		touch ${user_path}/keylist_gpg.tmp
@@ -1701,10 +1701,10 @@ check_keys(){
 			###################################################################
 		fi
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-		cat ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|sort -t . -k2|uniq -u >${user_path}/all_keys.dat
+		sort -t . -k2 ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_keys.dat
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-		cat ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|sort -t . -k2 >${user_path}/all_keys.tmp
+		sort -t . -k2 ${user_path}/all_keys.dat ${user_path}/ack_keys.dat >${user_path}/all_keys.tmp
 		mv ${user_path}/all_keys.tmp ${user_path}/all_keys.dat
 		cp ${user_path}/all_keys.dat ${user_path}/all_accounts.dat
 		rm ${user_path}/ack_keys.dat
