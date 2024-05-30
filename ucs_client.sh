@@ -631,7 +631,7 @@ build_ledger(){
 			cp ${user_path}/${previous_day}_index_trx.dat ${user_path}/${focus}_index_trx.dat
 
 			###GRANT COINLOAD OF THAT DAY####################
-			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
+			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
 				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
@@ -643,7 +643,7 @@ build_ledger(){
 			fi
 
 			###UPDATE SCORETABLE#############################
-			awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_scoretable.dat >${user_path}/${focus}_scoretable.tmp
+			LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_scoretable.dat >${user_path}/${focus}_scoretable.tmp
 			if [ -s ${user_path}/${focus}_scoretable.tmp ]
 			then
 				mv ${user_path}/${focus}_scoretable.tmp ${user_path}/${focus}_scoretable.dat 2>/dev/null
@@ -2545,22 +2545,6 @@ send_uca(){
 ##################
 #Main Menu Screen#
 ##################
-###GET SCRIPT PATH##########
-script_path=`dirname $(readlink -f ${0})`
-
-###GET PID##################
-my_pid=$$
-
-###SOURCE CONFIG FILE#######
-. ${script_path}/control/config.conf
-
-###SET THEME################
-export DIALOGRC="${script_path}/theme/${theme_file}"
-dialogrc_set="${theme_file}"
-
-###SOURCE LANGUAGE FILE#####
-. ${script_path}/lang/${lang_file}
-
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
 core_system_version="v0.0.1"
@@ -2576,6 +2560,18 @@ action_done=1
 make_ledger=1
 end_program=0
 small_trx=0
+script_path=`dirname $(readlink -f ${0})`
+my_pid=$$
+
+###SOURCE CONFIG FILE#######
+. ${script_path}/control/config.conf
+
+###SET THEME################
+export DIALOGRC="${script_path}/theme/${theme_file}"
+dialogrc_set="${theme_file}"
+
+###SOURCE LANGUAGE FILE#####
+. ${script_path}/lang/${lang_file}
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
@@ -3481,145 +3477,145 @@ do
 												then
 													if [ $recipient_is_asset = 0 ]
 													then
-														if [ $gui_mode = 1 ]
+														if [ $gui_mode = 1 -a ! $small_trx = 255 ]
 														then
 															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_trx" 0 0
 															small_trx=$?
 														fi
 													fi
-													if [ ! $small_trx = 255 ]
+													if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
 													then
-														if [ $recipient_is_asset = 0 ]
+														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
+														rm ${user_path}/files_list.tmp 2>/dev/null
+														if [ $small_trx = 0 -a -s $receipient_index_file ]
 														then
-															receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-															rm ${user_path}/files_list.tmp 2>/dev/null
-															if [ $small_trx = 0 -a -s $receipient_index_file ]
-															then
-																###GET ASSETS###################################################
-																while read line
-																do
-																	asset_there=`grep -c "assets/${line}" $receipient_index_file`
-																	if [ $asset_there = 0 ]
-																	then
-																		echo "keys/${line}" >>${user_path}/files_list.tmp
-																	fi
-																done <${user_path}/all_assets.dat
-
-																###GET KEYS AND PROOFS##########################################
-																while read line
-																do
-																	key_there=`grep -c "keys/${line}" $receipient_index_file`
-																	if [ $key_there = 0 ]
-																	then
-																		echo "keys/${line}" >>${user_path}/files_list.tmp
-																	fi
-
-																	for tsa_service in `ls -1 ${script_path}/certs`
-																	do
-																		tsa_req_there=0
-																		tsa_req_there=`grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file`
-																		if [ $tsa_req_there = 0 ]
-																		then
-																			echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
-																		fi
-																		tsa_res_there=0
-																		tsa_res_there=`grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file`
-																		if [ $tsa_res_there = 0 ]
-																		then
-																			echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-																		fi
-																	done
-																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-																	then
-																		echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-																	fi
-																done <${user_path}/depend_accounts.dat
-
-																###GET TRX###################################################################
-																while read line
-																do
-																	trx_there=`grep -c "trx/${line}" $receipient_index_file`
-																	if [ $trx_there = 0 ]
-																	then
-																		echo "trx/${line}" >>${user_path}/files_list.tmp
-																	fi
-																done <${user_path}/depend_trx.dat
-															else
-																###GET ASSETS################################################################
-																awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
-
-																###GET KEYS AND PROOFS#######################################################
-																while read line
-																do
+															###GET ASSETS###################################################
+															while read line
+															do
+																asset_there=`grep -c "assets/${line}" $receipient_index_file`
+																if [ $asset_there = 0 ]
+																then
 																	echo "keys/${line}" >>${user_path}/files_list.tmp
-																	for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
-																	do
-																		file=`basename $tsa_file`
-																		echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-																	done
-																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																fi
+															done <${user_path}/all_assets.dat
+
+															###GET KEYS AND PROOFS##########################################
+															while read line
+															do
+																key_there=`grep -c "keys/${line}" $receipient_index_file`
+																if [ $key_there = 0 ]
+																then
+																	echo "keys/${line}" >>${user_path}/files_list.tmp
+																fi
+
+																for tsa_service in `ls -1 ${script_path}/certs`
+																do
+																	tsa_req_there=0
+																	tsa_req_there=`grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file`
+																	if [ $tsa_req_there = 0 ]
 																	then
-																		echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+																		echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
 																	fi
-																done <${user_path}/depend_accounts.dat
+																	tsa_res_there=0
+																	tsa_res_there=`grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file`
+																	if [ $tsa_res_there = 0 ]
+																	then
+																		echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
+																	fi
+																done
+																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																then
+																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+																fi
+															done <${user_path}/depend_accounts.dat
 
-																###GET TRX###################################################################
-																awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
-															fi
-															###GET LATEST TRX############################################################
-															echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
+															###GET TRX###################################################################
+															while read line
+															do
+																trx_there=`grep -c "trx/${line}" $receipient_index_file`
+																if [ $trx_there = 0 ]
+																then
+																	echo "trx/${line}" >>${user_path}/files_list.tmp
+																fi
+															done <${user_path}/depend_trx.dat
+														else
+															###GET ASSETS################################################################
+															awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+
+															###GET KEYS AND PROOFS#######################################################
+															while read line
+															do
+																echo "keys/${line}" >>${user_path}/files_list.tmp
+																for tsa_file in `ls -1 ${script_path}/proofs/${line}/*.ts*`
+																do
+																	file=`basename $tsa_file`
+																	echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
+																done
+																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																then
+																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+																fi
+															done <${user_path}/depend_accounts.dat
+
+															###GET TRX###################################################################
+															awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 														fi
+														###GET LATEST TRX############################################################
+														echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
+													fi
 
-														###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-														trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
-														echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
-														make_signature "none" ${trx_now} 1
-														rt_query=$?
+													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
+													trx_hash=`sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1`
+													echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
+													make_signature "none" ${trx_now} 1
+													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+														then
+															cd ${script_path}/
+															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
+															rt_query=$?
+															rm ${user_path}/files_list.tmp 2>/dev/null
+														fi
 														if [ $rt_query = 0 ]
 														then
-															if [ $recipient_is_asset = 0 ]
+															if [ "${order_asset}" = "${main_asset}" ]
 															then
-																cd ${script_path}/
-																tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
+																###SET SCORE##################################################################
+																sender_new_score_balance=`echo "${sender_score_balance_value} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
+																sed -i "s/${order_asset}:${handover_account}=${sender_score_balance_value}/${order_asset}:${handover_account}=${sender_new_score_balance}/g" ${user_path}/${now}_scoretable.dat
+																##############################################################################
+															fi
+															###SET BALANCE################################################################
+															account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
+															sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
+															##############################################################################
+
+															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
+															echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
+															echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
+															echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
+															make_ledger=1
+															get_dependencies
+															build_new_ledger=$?
+															if [ $build_new_ledger = 0 ]
+															then
+																changes=0
+															else
+																changes=1
+															fi
+															#############################################################################
+
+															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
+															if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+															then
+																gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
 																rt_query=$?
-																rm ${user_path}/files_list.tmp 2>/dev/null
 															fi
 															if [ $rt_query = 0 ]
 															then
-																if [ "${order_asset}" = "${main_asset}" ]
-																then
-																	###SET SCORE##################################################################
-																	sender_new_score_balance=`echo "${sender_score_balance_value} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
-																	sed -i "s/${order_asset}:${handover_account}=${sender_score_balance_value}/${order_asset}:${handover_account}=${sender_new_score_balance}/g" ${user_path}/${now}_scoretable.dat
-																	##############################################################################
-																fi
-																###SET BALANCE################################################################
-																account_new_balance=`echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g'`
-																sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
-																##############################################################################
-
-																###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
-																echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
-																echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
-																echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
-																make_ledger=1
-																get_dependencies
-																build_new_ledger=$?
-																if [ $build_new_ledger = 0 ]
-																then
-																	changes=0
-																else
-																	changes=1
-																fi
-																#############################################################################
-
-																###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
-																if [ $recipient_is_asset = 0 ]
-																then
-																	gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
-																	rt_query=$?
-																fi
-																if [ $rt_query = 0 ]
+																if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
 																	rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
@@ -3627,28 +3623,32 @@ do
 																	###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 																	#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 																	#############################################################################
-																	if [ ! $trx_path_output = $script_path -a $recipient_is_asset = 0 ]
+																	
+																	if [ ! $trx_path_output = $script_path ]
 																	then
 																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
 																	fi
-																	if [ $gui_mode = 1 ]
+																fi
+																if [ $gui_mode = 1 ]
+																then
+																	if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
 																	then
-																		if [ $recipient_is_asset = 0 ]
-																		then
-																			dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
-																		else
-																			dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#/trx/${handover_account}.${trx_now}#g"`
-																		fi
-																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
+																		dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g"`
 																	else
-																		cmd_output=`grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat`
-																		echo "BALANCE_${trx_now}:${cmd_output}"
-																		if [ "${order_asset}" = "${main_asset}" ]
-																		then
-																			cmd_output=`grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat`
-																		fi
-																		echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
-																		if [ $recipient_is_asset = 0 ]
+																		dialog_send_success_display=`echo $dialog_send_success|sed "s#<file>#/trx/${handover_account}.${trx_now}#g"`
+																	fi
+																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
+																else
+																	cmd_output=`grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat`
+																	echo "BALANCE_${trx_now}:${cmd_output}"
+																	if [ "${order_asset}" = "${main_asset}" ]
+																	then
+																		cmd_output=`grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat`
+																	fi
+																	echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
+																	if [ $recipient_is_asset = 0 ]
+																	then
+																		if [ ! $small_trx = 255 ]
 																		then
 																			if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
@@ -3657,24 +3657,15 @@ do
 																			else
 																				echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
 																			fi
-																		else
-																			echo "FILE:trx/${handover_account}.${trx_now}"
 																		fi
-																		exit 0
-																	fi
-																else
-																	rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
-																	rm ${trx_path_output}/${handover_account}_${trx_now}.trx 2>/dev/null
-																	rm ${last_trx} 2>/dev/null
-																	if [ $gui_mode = 1 ]
-																	then
-																		dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 																	else
-																		exit 1
+																		echo "FILE:trx/${handover_account}.${trx_now}"
 																	fi
+																	exit 0
 																fi
 															else
-																rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+																rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+																rm ${trx_path_output}/${handover_account}_${trx_now}.trx 2>/dev/null
 																rm ${last_trx} 2>/dev/null
 																if [ $gui_mode = 1 ]
 																then
@@ -3684,12 +3675,21 @@ do
 																fi
 															fi
 														else
+															rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+															rm ${last_trx} 2>/dev/null
 															if [ $gui_mode = 1 ]
 															then
 																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 															else
 																exit 1
 															fi
+														fi
+													else
+														if [ $gui_mode = 1 ]
+														then
+															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
+														else
+															exit 1
 														fi
 													fi
 												else
