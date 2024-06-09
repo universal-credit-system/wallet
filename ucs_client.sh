@@ -685,12 +685,11 @@ build_ledger(){
 				is_fungible=0
 
 				###EXRACT DATA FOR CHECK######################################
-				trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_filename}`
-				trx_data=`echo $trx_data_raw|sed 's/ //g'`
-				trx_stamp=`echo "${trx_data}"|cut -d ':' -f3`
-				trx_sender=`echo "${trx_data}"|cut -d ':' -f7`
-				trx_receiver=`echo "${trx_data}"|cut -d ':' -f9`
-				trx_hash=`sha256sum ${script_path}/trx/${trx_filename}|cut -d ' ' -f1`
+				trx_file="${script_path}/trx/${trx_filename}"
+				trx_stamp=`awk -F: '/:TIME:/{print $3}' $trx_file`
+				trx_sender=`awk -F: '/:SNDR:/{print $3}' $trx_file`
+				trx_receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file`
+				trx_hash=`sha256sum $trx_file|cut -d ' ' -f1`
 				trx_path="trx/${trx_filename}"
 				##############################################################
 
@@ -702,8 +701,8 @@ build_ledger(){
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
-						trx_amount=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f1`
-						trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
+						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f1`
+						trx_asset=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f2`
 						sender_in_ledger=`grep -c "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat`
 						if [ $sender_in_ledger = 1 ]
 						then
@@ -1749,9 +1748,7 @@ check_trx(){
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
 			user_to_check=`echo $line|awk -F. '{print $1"."$2}'`
-			trx_data_raw=`sed -n '4,8p' ${file_to_check}`
-			trx_data=`echo $trx_data_raw|sed 's/ //g'`
-			trx_sender=`echo "${trx_data}"|cut -d ':' -f7`
+			trx_sender=`awk -F: '/:SNDR:/{print $3}' $file_to_check`
 			if [ $user_to_check = $trx_sender ]
 			then
 				###VERIFY SIGNATURE OF TRANSACTION#################################
@@ -1762,22 +1759,22 @@ check_trx(){
 					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX######## 
 					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
 					trx_date_filename=`echo $line|cut -d '.' -f3`
-					trx_date_inside=`echo "${trx_data}"|cut -d ':' -f3`
-					trx_receiver_date=`echo "${trx_data}"|cut -d ':' -f9|cut -d '.' -f2`
+					trx_date_inside=`awk -F: '/:TIME:/{print $3}' $file_to_check`
+					trx_receiver_date=`awk -F: '/:RCVR:/{print $3}' $file_to_check|cut -d '.' -f2`
 					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
-						trx_purpose=`echo "${trx_data}"|cut -d ':' -f11`
+						trx_purpose=`awk -F: '/:PRPS:/{print $3}' $file_to_check`
 						purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
 						if [ $purpose_contains_alnum = 0 ]
 						then
 							###CHECK IF ASSET TYPE EXISTS############################################
-							trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
+							trx_asset=`awk -F: '/:AMNT:/{print $3}' $file_to_check|cut -d '|' -f2`
 							asset_already_exists=`grep -c "${trx_asset}" ${user_path}/all_assets.dat`
 							if [ $asset_already_exists = 1 ]
 							then
 								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f1`
+								trx_amount=`awk -F: '/:AMNT:/{print $3}' $file_to_check|cut -d '|' -f1`
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
 								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
@@ -1892,7 +1889,7 @@ process_new_files(){
 											then
 												no_matches=$(( $no_matches + 1 ))
 											else
-												old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
+												old_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${script_path}/${line}`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
@@ -1907,7 +1904,7 @@ process_new_files(){
 												is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
 												if [ $is_file_there = 0 ]
 												then
-													new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
+													new_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line}`
 													new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 													then
@@ -1930,7 +1927,7 @@ process_new_files(){
 											then
 												no_matches=$(( $no_matches + 1 ))
 											else
-												new_trx_receiver=`sed -n '7p' ${user_path}/temp/${line}|cut -d ':' -f3`
+												new_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line}`
 												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
@@ -1945,7 +1942,7 @@ process_new_files(){
 												is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 												if [ $is_file_there = 0 ]
 												then
-													old_trx_receiver=`sed -n '7p' ${script_path}/${line}|cut -d ':' -f3`
+													old_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${script_path}/${line}`
 													old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
 													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 													then
@@ -2155,11 +2152,11 @@ get_dependencies(){
 					for user_trx in `grep "${user}" ${user_path}/all_trx.dat`
 					do
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
-						receiver=`sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f3`
+						receiver=`awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx}`
 						is_asset=`grep -c "$receiver" ${user_path}/all_assets.dat`
 						if [ $is_asset = 0 ]
 						then
-							sed -n '7p' ${script_path}/trx/${user_trx}|cut -d ':' -f3 >>${user_path}/depend_user_list.tmp
+							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
 					for trx_file in `sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq`
@@ -2189,7 +2186,7 @@ get_dependencies(){
 			while read line
 			do
 				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
-				trx_sender=`sed -n '6p' ${script_path}/trx/${user_trx}|cut -d ':' -f3`
+				trx_sender=`awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx}`
 				total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
@@ -4131,20 +4128,18 @@ do
 							then
 								while read line
 								do
-									trx_file=$line
-									trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
-									trx_data=`echo $trx_data_raw|sed 's/ //g'`
-									sender=`echo "${trx_data}"|cut -d ':' -f7`
-									receiver=`echo "${trx_data}"|cut -d ':' -f9`
-									trx_date_tmp=`echo "${trx_file}"|cut -d '.' -f3`
+									trx_file=${script_path}/trx/${line}
+									sender=`awk -F: '/:SNDR:/{print $3}' $trx_file`
+									receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file`
+									trx_date_tmp=`echo "${line}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-			      						trx_amount=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f1`
-									trx_asset=`echo "${trx_data}"|cut -d ':' -f5|cut -d '|' -f2`
-									trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
-									trx_confirmations=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+			      						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f1`
+									trx_asset=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f2`
+									trx_hash=`sha256sum $trx_file|cut -d ' ' -f1`
+									trx_confirmations=`grep -s -l "trx/${line} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
-										trx_signed=`grep -c "${trx_file}" ${script_path}/proofs/${sender}/${sender}.txt`
+										trx_signed=`grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt`
 									else
 										trx_signed=0
 									fi
@@ -4152,7 +4147,7 @@ do
 									then
 										if [ $trx_confirmations -ge $confirmations_from_users ]
 										then
-											trx_blacklisted=`grep -c "${trx_file}" ${user_path}/blacklisted_trx.dat`
+											trx_blacklisted=`grep -c "${line}" ${user_path}/blacklisted_trx.dat`
 											sender_blacklisted=`grep -c "${sender}" ${user_path}/blacklisted_accounts.dat`
 											receiver_blacklisted=`grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat`
 											if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
@@ -4197,11 +4192,10 @@ do
 										trx_file=`grep "${trx_date}" ${user_path}/my_trx.tmp`
 										trx_amount=`echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g'`
 										trx_hash=`sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1`
-										trx_data_raw=`sed -n '4,8p' ${script_path}/trx/${trx_file}`
-										trx_data=`echo $trx_data_raw|sed 's/ //g'`
-										sender=`echo "${trx_data}"|cut -d ':' -f7`
-										receiver=`echo "${trx_data}"|cut -d ':' -f9`
-										purpose=`echo "${trx_data}"|cut -d ':' -f11`
+										trx_file_path="${script_path}/trx/${trx_file}"
+										sender=`awk -F: '/:SNDR:/{print $3}' $trx_file_path`
+										receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file_path`
+										purpose=`awk -F: '/:PRPS:/{print $3}' $trx_file_path`
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
