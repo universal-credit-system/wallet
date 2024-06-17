@@ -701,8 +701,8 @@ build_ledger(){
 					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
-						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f1`
-						trx_asset=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f2`
+						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file`
+						trx_asset=`awk -F: '/:ASST:/{print $3}' $trx_file`
 						sender_in_ledger=`grep -c "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat`
 						if [ $sender_in_ledger = 1 ]
 						then
@@ -1769,12 +1769,12 @@ check_trx(){
 						if [ $purpose_contains_alnum = 0 ]
 						then
 							###CHECK IF ASSET TYPE EXISTS############################################
-							trx_asset=`awk -F: '/:AMNT:/{print $3}' $file_to_check|cut -d '|' -f2`
+							trx_asset=`awk -F: '/:ASST:/{print $3}' $file_to_check`
 							asset_already_exists=`grep -c "${trx_asset}" ${user_path}/all_assets.dat`
 							if [ $asset_already_exists = 1 ]
 							then
 								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=`awk -F: '/:AMNT:/{print $3}' $file_to_check|cut -d '|' -f1`
+								trx_amount=`awk -F: '/:AMNT:/{print $3}' $file_to_check`
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
 								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
@@ -3463,7 +3463,7 @@ do
 										then
 											trx_now=`date +%s`
 											order_purpose_hash=`printf "${handover_account}_${trx_now}_${order_purpose}"|sha224sum|cut -d ' ' -f1`
-											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}|${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
+											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -4133,8 +4133,8 @@ do
 									receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file`
 									trx_date_tmp=`echo "${line}"|cut -d '.' -f3`
 									trx_date=`date +'%F|%H:%M:%S' --date=@${trx_date_tmp}`
-			      						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f1`
-									trx_asset=`awk -F: '/:AMNT:/{print $3}' $trx_file|cut -d '|' -f2`
+			      						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file`
+									trx_asset=`awk -F: '/:ASST:/{print $3}' $trx_file`
 									trx_hash=`sha256sum $trx_file|cut -d ' ' -f1`
 									trx_confirmations=`grep -s -l "trx/${line} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
