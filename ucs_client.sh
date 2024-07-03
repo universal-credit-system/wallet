@@ -1763,9 +1763,13 @@ check_trx(){
 					trx_receiver_date=`awk -F: '/:RCVR:/{print $3}' $file_to_check|cut -d '.' -f2`
 					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
 					then
-						###CHECK IF PURPOSE CONTAINS ALNUM CHARS#################################
-						trx_purpose=`awk -F: '/:PRPS:/{print $3}' $file_to_check`
-						purpose_contains_alnum=`printf "${trx_purpose}"|grep -c '[^[:alnum:]]'`
+						###CHECK IF PURPOSE CONTAINS ALNUM##################################
+						purpose_start=`awk -F: '/:PRPS:/{print NR}' $file_to_check`
+						purpose_start=$(( $purpose_start + 1 ))
+						purpose_end=`awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check`
+						purpose_end=$(( $purpose_end - 1 ))
+						trx_purpose=`sed -n "${purpose_start},${purpose_end}p" $file_to_check`
+						purpose_contains_alnum=`printf "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]'`
 						if [ $purpose_contains_alnum = 0 ]
 						then
 							###CHECK IF ASSET TYPE EXISTS############################################
@@ -3429,32 +3433,44 @@ do
 								done
 								if [ $order_aborted = 0 ]
 								then
+									touch ${user_path}/trx_purpose_blank.tmp
 									if [ $recipient_is_asset = 0 ]
 									then
 										if [ $gui_mode = 1 ]
 										then
-											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
+											###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
+											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
 											rt_query=$?
+											
+											###IF USER WANTS EDITBOX##############################
+											if [ $rt_query = 1 ]
+											then
+												dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send_purpose" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/trx_purpose_blank.tmp 20 80 2>${user_path}/trx_purpose_edited.tmp
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													order_purpose=`cat ${user_path}/trx_purpose_edited.tmp`
+												fi
+											fi
 										else
 											order_purpose=$cmd_purpose
-											order_purpose_size=`printf "${cmd_purpose}"|wc -m`
-											if [ $order_purpose_size -lt 75 ]
-											then
-												rt_query=0
-											else
-												exit 1
-											fi
 										fi
 									else
 										order_purpose="EXCHANGE"
 									fi
 									if [ $rt_query = 0 ]
 									then
+										###ENCRYPT ORDER PURPOSE################################
+										printf "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
+										order_purpose_hash=`echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${handover_account} -r ${order_receipient} --passphrase "${login_password}" --pinentry-mode loopback --armor --output - --encrypt --sign ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)"`
+										rm ${user_path}/trx_purpose_blank.tmp
+										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
+										
 										if [ $gui_mode = 1 ]
 										then
 											currency_symbol=$order_asset
-											dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s/<order_receipient>/${order_receipient}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_amount_formatted>/${order_amount_formatted}/g" -e "s/<order_purpose>/${order_purpose}/g"`
-											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_overview_display" 0 0
+											dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s#<order_receipient>#${order_receipient}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g"`
+											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$(printf "${dialog_send_overview_display}\n${order_purpose}")" 0 0
 											rt_query=$?
 										else
 											rt_query=0
@@ -3462,7 +3478,6 @@ do
 										if [ $rt_query = 0 ]
 										then
 											trx_now=`date +%s`
-											order_purpose_hash=`printf "${handover_account}_${trx_now}_${order_purpose}"|sha224sum|cut -d ' ' -f1`
 											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
@@ -4195,7 +4210,24 @@ do
 										trx_file_path="${script_path}/trx/${trx_file}"
 										sender=`awk -F: '/:SNDR:/{print $3}' $trx_file_path`
 										receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file_path`
-										purpose=`awk -F: '/:PRPS:/{print $3}' $trx_file_path`
+										purpose=""
+										purpose_start=`awk -F: '/:PRPS:/{print NR}' $trx_file_path`
+										purpose_start=$(( $purpose_start + 1 ))
+										purpose_end=`awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path`
+										purpose_end=$(( $purpose_end - 1 ))
+										purpose_encrypted=`sed -n "${purpose_start},${purpose_end}p" $trx_file_path`
+										echo "-----BEGIN PGP MESSAGE-----" >${user_path}/history_purpose_encryped.tmp
+										echo "" >>${user_path}/history_purpose_encryped.tmp
+										echo "${purpose_encrypted}" >>${user_path}/history_purpose_encryped.tmp
+										echo "-----END PGP MESSAGE-----" >>${user_path}/history_purpose_encryped.tmp
+										gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decryped.tmp --decrypt ${user_path}/history_purpose_encryped.tmp 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											purpose=`cat ${user_path}/history_purpose_decryped.tmp`
+										fi
+										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
+										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -4232,12 +4264,15 @@ do
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
 										then
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
-											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_show_trx_out_display" 0 0
+											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx=$dialog_history_show_trx_out_display
 										else
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<order_purpose>/${purpose}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
-											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_show_trx_in_display" 0 0
+											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx=$dialog_history_show_trx_in_display
 										fi
+										overview_first_part=`printf "${dialog_history_show_trx_out_display}"|head -10`
+										overview_second_part=`printf "${dialog_history_show_trx_out_display}"|tail -12`
+										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf "${overview_first_part}\n${purpose}\n${overview_second_part}")" 0 0
 									else
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
 									fi
