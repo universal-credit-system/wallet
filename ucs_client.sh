@@ -4258,8 +4258,8 @@ do
 										then
 											trx_status="OK"
 										fi
-										user_total=`wc -l <${user_path}/depend_accounts.dat`
-										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${handover_account}\|${sender}"|wc -l`
+										user_total=`cat ${user_path}/depend_accounts.dat|grep -v "${handover_account}\|${sender}\|${receiver}"|wc -l`
+										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${handover_account}\|${sender}\|${receiver}"|wc -l`
 										trx_confirmations="${trx_confirmations_total} \/ ${user_total}"
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
