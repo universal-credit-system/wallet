@@ -778,8 +778,14 @@ build_ledger(){
 								##############################################################
 								if [ $receiver_in_ledger = 1 ]
 								then
+									###GET CONFIRMATIONS##########################################
+									total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l`
+									###ADD 1 CONFIRMATION FOR OWN#################################
+									if [ ! "${trx_sender}" = "${handover_account}" -a ! "${trx_receiver}" = "${handover_account}" ]
+									then
+										total_confirmations=$(( $total_confirmations + 1 ))
+									fi
 									###CHECK CONFIRMATIONS########################################
-									total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
 										###SET SCORE FOR SENDER#######################################
@@ -2191,7 +2197,8 @@ get_dependencies(){
 			do
 				trx_hash=`sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1`
 				trx_sender=`awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx}`
-				total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${handover_account}\|${trx_sender}"|wc -l`
+				trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx}`
+				total_confirmations=`grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l`
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
@@ -4173,7 +4180,7 @@ do
 			      						trx_amount=`awk -F: '/:AMNT:/{print $3}' $trx_file`
 									trx_asset=`awk -F: '/:ASST:/{print $3}' $trx_file`
 									trx_hash=`sha256sum $trx_file|cut -d ' ' -f1`
-									trx_confirmations=`grep -s -l "trx/${line} ${trx_hash}" proofs/*.*/*.txt|grep -v "${handover_account}\|${sender}"|wc -l`
+									trx_confirmations=`grep -s -l "trx/${line} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l`
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=`grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt`
@@ -4280,8 +4287,8 @@ do
 										then
 											trx_status="OK"
 										fi
-										user_total=`cat ${user_path}/depend_accounts.dat|grep -v "${handover_account}\|${sender}\|${receiver}"|wc -l`
-										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${handover_account}\|${sender}\|${receiver}"|wc -l`
+										user_total=`cat ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l`
+										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l`
 										trx_confirmations="${trx_confirmations_total} \/ ${user_total}"
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
