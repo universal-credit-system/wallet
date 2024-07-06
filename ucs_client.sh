@@ -2982,7 +2982,7 @@ do
 				"$dialog_main_settings")	quit_settings=0
 								while [ $quit_settings -eq 0 ]
 								do
-									settings_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" ""`
+									settings_menu=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" "" "config.conf" ""`
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -3028,6 +3028,28 @@ do
 															fi
 														fi
 														rm ${script_path}/theme_list.tmp
+														;;
+											"config.conf")		rm ${script_path}/config_*.tmp 2>/dev/null
+														config_changed=0
+														while [ $config_changed -eq 0 ]
+														do
+															### CREATE COPY OF CONFIG.CONF ##################
+															cat ${script_path}/control/config.conf|grep -v "###"|sed 's/=/= /g' >${script_path}/config_${my_pid}.tmp
+
+															### DISPLAY INPUTMENU DIALOG ####################
+															changed=`dialog --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp`
+															rt_query=$?
+															if [ $rt_query = 3 ]
+															then
+																entry=`echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}'`
+																old_value=`grep "${entry}" ${script_path}/config_${my_pid}.tmp|awk -F= '{print $2}'|sed 's/ //g'`
+																new_value=`echo "${changed}"|awk '{print $3}'`
+																sed -i "s#${entry}=${old_value}#${entry}=${new_value}#" ${script_path}/control/config.conf
+															else
+																config_changed=1
+															fi
+														done
+														rm ${script_path}/config_${my_pid}.tmp
 														;;
 										esac
 									else

@@ -34,17 +34,17 @@ then	############################
 	permissions_files=`stat -c '%a' ${script_path}/test.tmp`
 	rm ${script_path}/test.tmp
 	cp ${script_path}/control/install_config.conf ${script_path}/control/config.conf
-	sed -i "s/permissions_directories=<permissions_directories>/permissions_directories=${permissions_directories}/g" ${script_path}/control/config.conf
-	sed -i "s/permissions_files=<permissions_files>/permissions_files=${permissions_files}/g" ${script_path}/control/config.conf
+	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" ${script_path}/control/config.conf
+	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" ${script_path}/control/config.conf
 
 	###SET DEFAULT THEME########
-	sed -i "s#<theme_file>#debian.rc#g" ${script_path}/control/config.conf
+	sed -i "s#theme_file=theme_file#theme_file=debian.rc#g" ${script_path}/control/config.conf
 
 	###SET PATHS################
-	sed -i "s#<trx_path_input>#${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#<trx_path_output>#${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#<sync_path_input>#${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#<sync_path_output>#${script_path}#g" ${script_path}/control/config.conf
+	sed -i "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" ${script_path}/control/config.conf
+	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" ${script_path}/control/config.conf
+	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" ${script_path}/control/config.conf
+	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" ${script_path}/control/config.conf
 else
 	############################
 	###IF APPS ARE TO INSTALL###
