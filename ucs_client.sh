@@ -4287,9 +4287,11 @@ do
 										then
 											trx_status="OK"
 										fi
-										user_total=`cat ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l`
-										trx_confirmations_total=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l`
-										trx_confirmations="${trx_confirmations_total} \/ ${user_total}"
+										user_total_depend=`cat ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l`
+										user_total_all=`cat ${user_path}/all_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l`
+										trx_confirmations_depend=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l`
+										trx_confirmations_all=`grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l`
+										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
 										then
