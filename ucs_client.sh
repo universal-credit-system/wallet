@@ -3044,7 +3044,7 @@ do
 															cat ${script_path}/control/config.conf|grep -v "###"|sed 's/=/= /g' >${script_path}/config_${my_pid}.tmp
 
 															### DISPLAY INPUTMENU DIALOG ####################
-															changed=`dialog --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp`
+															changed=`dialog --cancel-label "$dialog_main_back" --extra-label "$dialog_main_choose" --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp`
 															rt_query=$?
 															if [ $rt_query = 3 ]
 															then
