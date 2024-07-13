@@ -3491,7 +3491,14 @@ do
 									then
 										###ENCRYPT ORDER PURPOSE################################
 										printf "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
-										order_purpose_hash=`echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${handover_account} -r ${order_receipient} --passphrase "${login_password}" --pinentry-mode loopback --armor --output - --encrypt --sign ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)"`
+										if [ $recipient_is_asset = 0 ]
+										then
+											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
+											order_purpose_hash=`echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${order_receipient} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)"`
+										else
+											###IF RECIPIENT IS ASSET USE USERS KEY##################
+											order_purpose_hash=`echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${handover_account} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)"`
+										fi
 										rm ${user_path}/trx_purpose_blank.tmp
 										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
 										
