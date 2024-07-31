@@ -3543,7 +3543,7 @@ do
 																asset_there=`grep -c "assets/${line}" $receipient_index_file`
 																if [ $asset_there = 0 ]
 																then
-																	echo "keys/${line}" >>${user_path}/files_list.tmp
+																	echo "assets/${line}" >>${user_path}/files_list.tmp
 																fi
 															done <${user_path}/all_assets.dat
 
