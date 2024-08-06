@@ -3490,7 +3490,7 @@ do
 									if [ $rt_query = 0 ]
 									then
 										###ENCRYPT ORDER PURPOSE################################
-										printf "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
+										echo "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
 										if [ $recipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
@@ -4260,7 +4260,7 @@ do
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											purpose=`cat ${user_path}/history_purpose_decryped.tmp`
+											purpose=`cat ${user_path}/history_purpose_decryped.tmp|sed 's/%/%%/g'`
 										fi
 										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
 										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
