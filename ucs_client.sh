@@ -3490,7 +3490,7 @@ do
 									if [ $rt_query = 0 ]
 									then
 										###ENCRYPT ORDER PURPOSE################################
-										echo "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
+										printf '%s' '"'"${order_purpose}"'"' >${user_path}/trx_purpose_edited.tmp
 										if [ $recipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
@@ -3501,7 +3501,7 @@ do
 										fi
 										rm ${user_path}/trx_purpose_blank.tmp
 										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
-										
+										########################################################
 										if [ $gui_mode = 1 ]
 										then
 											currency_symbol=$order_asset
@@ -4310,7 +4310,7 @@ do
 										fi
 										overview_first_part=`printf "${dialog_history_show_trx_out_display}"|head -10`
 										overview_second_part=`printf "${dialog_history_show_trx_out_display}"|tail -12`
-										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf "${overview_first_part}\n${purpose}\n${overview_second_part}")" 0 0
+										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf '"'"${overview_first_part}\n${purpose}\n${overview_second_part}"'"'|sed -e 's/^"//g' -e 's/"$//g')" 0 0
 									else
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
 									fi
