@@ -4307,8 +4307,8 @@ do
 											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog_history_show_trx=$dialog_history_show_trx_in_display
 										fi
-										overview_first_part=`printf '%s' "${dialog_history_show_trx_out_display}"|head -10`
-										overview_second_part=`printf '%s' "${dialog_history_show_trx_out_display}"|tail -12`
+										overview_first_part=`printf '%s' "${dialog_history_show_trx}"|head -10`
+										overview_second_part=`printf '%s' "${dialog_history_show_trx}"|tail -12`
 										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf '%s' '"'"${overview_first_part}\n${purpose}\n${overview_second_part}"'"'|sed -e 's/^"//g' -e 's/"$//g')" 0 0
 									else
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
