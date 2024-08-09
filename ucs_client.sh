@@ -2019,7 +2019,7 @@ process_new_files(){
 			fi
 			while read line
 			do
-				is_asset=`echo $line|grep -c "assets/"
+				is_asset=`echo $line|grep -c "assets/"`
 				is_fungible=`grep -c "asset_fungible=1" ${user_path}/temp/${line}`
 				is_asset=`echo $line|grep -c "assets/"
 				if [ -h ${user_path}/temp/${line} -o -x ${user_path}/temp/${line} -o $is_asset = 1 -a $is_fungible = 1 -a $import_fungible_assets = 0 -o $is_asset = 1 -a $is_fungible = 0 -a $import_non_fungible_assets = 0 ]
