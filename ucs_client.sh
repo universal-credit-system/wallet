@@ -1868,10 +1868,10 @@ process_new_files(){
 							do
 								asset_file=`echo "${new_index_assets}"|cut -d ' ' -f1`
 								is_asset_there=`grep -c "${asset_file}" ${script_path}/${handover_account}/${handover_account}.txt`
-								if [ $is_assets_there = 1 ]
+								if [ $is_asset_there = 1 ]
 								then
 									is_asset_there=`grep -c "${new_index_assets}" ${script_path}/${handover_account}/${handover_account}.txt`
-									if [ $is_assets_there = 0 ]
+									if [ $is_asset_there = 0 ]
 									then
 										assets_ok=0
 									fi
@@ -3113,7 +3113,6 @@ do
 										no_backups=`wc -l <${script_path}/backups_list.tmp`
 										if [ $no_backups -gt 0 ]
 										then
-											backup_display_text=""
 											while read line
 											do
 												backup_stamp=`echo $line|cut -d '.' -f1`
