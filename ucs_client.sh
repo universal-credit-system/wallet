@@ -414,10 +414,10 @@ check_input(){
 		length_counter=0
 
 		###CHECK LENGTH OF INPUT STRING########################################
-		length_counter=`echo "${input_string}"|wc -m`
+		length_counter=${#input_string}
 
 		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
-		if [ $length_counter -le 1 ]
+		if [ $length_counter -lt 1 ]
 		then
 			if [ $gui_mode = 1 ]
 			then
@@ -1155,17 +1155,17 @@ check_assets(){
 					asset_quantity=`echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2`
 					asset_fungible=`echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2`
 					stamp_only_digits=`echo "${asset_stamp}"|grep -c '[^[:digit:]]'`
-					stamp_size=`echo "${asset_stamp}"|wc -m`
+					stamp_size=${#asset_stamp}
 
 					###CHECK IF STAMP IS OKAY######################################
-					if [ $stamp_only_digits = 0 -a $stamp_size -eq 11 ]
+					if [ $stamp_only_digits = 0 -a $stamp_size -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
 						if [ ! "${asset_description}" = "" -a ! "${asset_fungible}" = "" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=`echo $asset_symbol|grep -c '[^[:alnum:]]'`
-							symbol_size=`printf "%s" "${asset_symbol}"|wc -m`
+							symbol_size=${#asset_symbol}
 							if [ $symbol_check = 0 -a $symbol_size -le 10 ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
