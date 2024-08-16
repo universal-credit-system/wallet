@@ -45,7 +45,7 @@ login_account(){
 					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
 					mkdir ${script_path}/userdata/${handover_account}/temp/trx
 				fi
-				
+
 				###SET USERPATH AND CLEAN GPG TEST FILES#####################
 				user_path="${script_path}/userdata/${handover_account}"
 				rm ${user_path}/account.acc.gpg 2>/dev/null
@@ -229,7 +229,7 @@ create_keys(){
 													echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
 													clear
 												fi
-												
+
 												###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
 												mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
 												mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsq
@@ -332,7 +332,7 @@ make_signature(){
 				message=${script_path}/trx/${handover_account}.${trx_now}
 				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
-				printf '%s' "${transaction_message}" >>${message_blank}
+				printf "%b" "${transaction_message}" >>${message_blank}
 				#################################################################
 			else
 				###IF YES.....###################################################
@@ -581,7 +581,7 @@ build_ledger(){
 							echo "${asset}:${main_asset}=0" >>${user_path}/${previous_day}_ledger.dat
 						fi
 					fi
-				fi	
+				fi
 			done
 			rm ${user_path}/assets.tmp
 		fi
@@ -661,7 +661,7 @@ build_ledger(){
 
 			###CREATE LIST OF ASSETS CREATED THAT DAY########
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat >${user_path}/assets.tmp
-			
+
 			###MAKE LEDGER ENTRIES FOR ASSETS################
 			if [ -s ${user_path}/assets.tmp ]
 			then
@@ -708,7 +708,7 @@ build_ledger(){
 						then
 							###GET ACCOUNT BALANCE########################################
 							account_balance=`grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2`
-						
+
 							###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
 							account_check_balance=`echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g'`
 							enough_balance=`echo "${account_check_balance} >= 0"|bc`
@@ -913,7 +913,7 @@ build_ledger(){
 				for balance in `grep "${handover_account}" ${user_path}/${last_ledger}`
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
-					asset_type=`echo "${balance}"|cut -d ':' -f1`	
+					asset_type=`echo "${balance}"|cut -d ':' -f1`
 					if [ "${asset_type}" = "${main_asset}" ]
 					then
 						cmd_output=`grep "${asset_type}:${handover_account}" ${user_path}/${last_ledger}`
@@ -1165,7 +1165,7 @@ check_assets(){
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=`echo $asset_symbol|grep -c '[^[:alnum:]]'`
-							symbol_size=`printf '%s' "${asset_symbol}"|wc -m`
+							symbol_size=`printf "%s" "${asset_symbol}"|wc -m`
 							if [ $symbol_check = 0 -a $symbol_size -le 10 ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
@@ -1261,7 +1261,7 @@ check_assets(){
 			if [ -s ${user_path}/blacklisted_assets.dat ]
 			then
 				while read line
-				do	
+				do
 					rm ${script_path}/assets/${line} 2>/dev/null
 				done <${user_path}/blacklisted_assets.dat
 			fi
@@ -1775,7 +1775,7 @@ check_trx(){
 						purpose_end=`awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check`
 						purpose_end=$(( $purpose_end - 1 ))
 						trx_purpose=`sed -n "${purpose_start},${purpose_end}p" $file_to_check`
-						purpose_contains_alnum=`printf '%s' "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]'`
+						purpose_contains_alnum=`printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]'`
 						if [ $purpose_contains_alnum = 0 ]
 						then
 							###CHECK IF ASSET TYPE EXISTS############################################
@@ -1788,8 +1788,8 @@ check_trx(){
 								is_amount_ok=`echo "${trx_amount} >= 0.000000001"|bc`
 								is_amount_mod=`echo "${trx_amount} % 0.000000001"|bc`
 								is_amount_mod=`echo "${is_amount_mod} > 0"|bc`
-								
-								###CHECK IF USER HAS CREATED A INDEX FILE################################			
+
+								###CHECK IF USER HAS CREATED A INDEX FILE################################
 								if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 								then
 									####CHECK IF USER HAS INDEXED THE TRANSACTION############################
@@ -1827,7 +1827,7 @@ check_trx(){
 		if [ -s ${user_path}/blacklisted_trx.dat ]
 		then
 			while read line
-			do	
+			do
 				rm ${script_path}/trx/${line} 2>/dev/null
 			done <${user_path}/blacklisted_trx.dat
 		fi
@@ -2268,7 +2268,7 @@ request_uca(){
 			while read line
 			do
 				uca_info=`echo $line|cut -d ',' -f4`
-				printf '%s' "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+				printf "%b" "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
 			done <${script_path}/control/uca.conf
 		fi
 		###################################################
@@ -2315,7 +2315,7 @@ request_uca(){
 			save_file="${user_path}/uca_save.dat"
 
 			###WRITE HEADER AND ENCRYPT#######################
-			printf '%s' "${usera_string}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+			printf "%b" "${usera_string}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -2435,7 +2435,7 @@ send_uca(){
 			while read line
 			do
 				uca_info=`echo $line|cut -d ',' -f4`
-				printf '%s' "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+				printf "%b" "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
 			done <${script_path}/control/uca.conf
 		fi
 		###################################################
@@ -2505,7 +2505,7 @@ send_uca(){
 						usera_session_id=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3`
 
 						###ENCRYPT HEADER CONTAINING SESSION ID############
-						printf '%s' "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+						printf "%b" "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
@@ -2772,7 +2772,7 @@ do
 												rt_query=$?
 											else
 												if [ ! "${cmd_pin}" = "" ]
-												then 
+												then
 													rt_query=0
 													account_pin_entered=$cmd_pin
 												else
@@ -2997,7 +2997,7 @@ do
 														do
 															lang_ex_short=`echo $language_file|cut -d '_' -f2`
 															lang_ex_full=`echo $language_file|cut -d '_' -f3|cut -d '.' -f1`
-															printf '%s' "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
+															printf "%s" "$lang_ex_short $lang_ex_full " >>${script_path}/lang_list.tmp
 														done
 														lang_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp`
 														rt_query=$?
@@ -3016,7 +3016,7 @@ do
 											"$dialog_main_theme")	for theme_file in `ls -1 ${script_path}/theme/`
 														do
 															theme_name=`echo $theme_file|cut -d '.' -f1`
-															printf '%s' "$theme_name theme " >>${script_path}/theme_list.tmp
+															printf "%s" "$theme_name theme " >>${script_path}/theme_list.tmp
 														done
 														theme_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp`
 														rt_query=$?
@@ -3117,10 +3117,10 @@ do
 											do
 												backup_stamp=`echo $line|cut -d '.' -f1`
 												backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
-												printf '%s' "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
+												printf "%s" "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
 											done <${script_path}/backups_list.tmp
 										else
-											printf '%s' "${dialog_history_noresult}" >${script_path}/backup_list.tmp
+											printf "%s" "${dialog_history_noresult}" >${script_path}/backup_list.tmp
 										fi
 										backup_decision=`dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp`
 										rt_query=$?
@@ -3468,7 +3468,7 @@ do
 											###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
 											order_purpose=`dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 ""`
 											rt_query=$?
-											
+
 											###IF USER WANTS EDITBOX##############################
 											if [ $rt_query = 1 ]
 											then
@@ -3504,7 +3504,7 @@ do
 										then
 											currency_symbol=$order_asset
 											dialog_send_overview_display=`echo $dialog_send_overview|sed -e "s#<order_receipient>#${order_receipient}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g"`
-											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$(printf '%s' "${dialog_send_overview_display}\n${order_purpose}")" 0 0
+											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$(printf "%b" "${dialog_send_overview_display}\n${order_purpose}")" 0 0
 											rt_query=$?
 										else
 											rt_query=0
@@ -3669,7 +3669,7 @@ do
 																	###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 																	#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 																	#############################################################################
-																	
+
 																	if [ ! $trx_path_output = $script_path ]
 																	then
 																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
@@ -4213,15 +4213,15 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										printf '%s' "${trx_date}|-${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${user_path}/history_list.tmp
+										printf "%s" "${trx_date}|-${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${user_path}/history_list.tmp
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										printf '%s' "${trx_date}|+${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${user_path}/history_list.tmp
+										printf "%s" "${trx_date}|+${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${user_path}/history_list.tmp
 									fi
 								done <${user_path}/my_trx.tmp
 							else
-								printf '%s' "${dialog_history_noresult}" >${user_path}/history_list.tmp
+								printf "%s" "${dialog_history_noresult}" >${user_path}/history_list.tmp
 							fi
 							menu_item_selected=`head -1 ${user_path}/history_list.tmp|cut -d ' ' -f1`
 							overview_quit=0
@@ -4258,7 +4258,7 @@ do
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											purpose=`cat ${user_path}/history_purpose_decryped.tmp|sed 's/%/%%/g'`
+											purpose=`cat ${user_path}/history_purpose_decryped.tmp`
 										fi
 										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
 										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
@@ -4300,15 +4300,15 @@ do
 										currency_symbol=`echo $decision|cut -d '|' -f4`
 										if [ $sender = $handover_account ]
 										then
-											dialog_history_show_trx_out_display=`echo $dialog_history_show_trx_out|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_out_display=`printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog_history_show_trx=$dialog_history_show_trx_out_display
 										else
-											dialog_history_show_trx_in_display=`echo $dialog_history_show_trx_in|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
+											dialog_history_show_trx_in_display=`printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g"`
 											dialog_history_show_trx=$dialog_history_show_trx_in_display
 										fi
-										overview_first_part=`printf '%s' "${dialog_history_show_trx}"|head -10`
-										overview_second_part=`printf '%s' "${dialog_history_show_trx}"|tail -12`
-										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf '%s' '"'"${overview_first_part}\n${purpose}\n${overview_second_part}"'"'|sed -e 's/^"//g' -e 's/"$//g')" 0 0
+										overview_first_part=`printf "%b" "${dialog_history_show_trx}"|head -10`
+										overview_second_part=`printf "%b" "${dialog_history_show_trx}"|tail -12`
+										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf '%b' '"'"${overview_first_part}\n${purpose}\n${overview_second_part}"'"'|sed -e 's/^"//g' -e 's/"$//g')" 0 0
 									else
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
 									fi
