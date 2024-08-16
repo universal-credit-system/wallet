@@ -449,7 +449,7 @@ check_input(){
 				string_check=`echo "${input_string}"|grep -c '[^[:digit:]]'`
 
 				###IF NOT CHECK IF ALPHA NUM ARE IN INPUT STRING#######################
-				if [ string_check = 0 ]
+				if [ $string_check = 0 ]
 				then
 					###CHECK IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION########
 					string_check=`echo "${input_string}"|grep -c '[^[:alnum:]]'`
