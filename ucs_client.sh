@@ -220,7 +220,7 @@ create_keys(){
 											###CHECK IF TSA RESPONSE IS WITHIN 120 SECONDS######################
 											date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
 											date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
-											creation_date_diff=$(( $date_to_verify_converted - $file_stamp ))
+											creation_date_diff=$(( date_to_verify_converted - file_stamp ))
 											if [ $creation_date_diff -le 120 ]
 											then
 												if [ $gui_mode = 1 ]
@@ -249,8 +249,8 @@ create_keys(){
 
 													###DISPLAY WAIT PERIOD TO SECURE KEY########################
 													now_stamp=`date +%s`
-													seconds_passed=$(( $now_stamp - $file_stamp ))
-													seconds_remain=$(( 120 - $seconds_passed ))
+													seconds_passed=$(( now_stamp - file_stamp ))
+													seconds_remain=$(( 120 - seconds_passed ))
 													if [ $seconds_remain -gt 0 ]
 													then
 														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel --pause "$dialog_keys_create4" 0 0 $seconds_remain
@@ -501,12 +501,12 @@ build_ledger(){
 			last_ledger_date_stamp=`date -u +%s --date="${last_ledger_date}"`
 
 			###SET DATESTAMP TO NEXTDAY OF LAST LEDGER##########
-			date_stamp=$(( $last_ledger_date_stamp + 86400 ))
+			date_stamp=$(( last_ledger_date_stamp + 86400 ))
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=`date -u +%s --date="${start_date}"`
-			no_seconds_last=$(( $date_stamp - $date_stamp_last ))
-			day_counter=`expr $no_seconds_last / 86400`
+			no_seconds_last=$(( date_stamp - date_stamp_last ))
+			day_counter=$(( no_seconds_last / 86400 ))
 		else
 			###SET DATESTAMP####################################
 			date_stamp=`date -u +%s --date=$(date -u +%Y%m%d --date=@$(sort -t . -k2 ${user_path}/depend_accounts.dat|head -1|cut -d '.' -f2))`
@@ -532,9 +532,9 @@ build_ledger(){
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=`date -u +%s --date="${start_date}"`
-			no_seconds_last=$(( $date_stamp_last - $date_stamp ))
-			day_counter=`expr $no_seconds_last / 86400`
-			day_counter=$(( $day_counter + 1 ))
+			no_seconds_last=$(( date_stamp_last - date_stamp ))
+			day_counter=$(( no_seconds_last / 86400 ))
+			day_counter=$(( day_counter + 1 ))
 		fi
 		####################################################
 
@@ -590,9 +590,9 @@ build_ledger(){
 		then
 			###INIT STATUS BAR##################################
 			now_date_status=`date -u +%s --date=${now}`
-			now_date_status=$(( $now_date_status + 86400 ))
-			no_seconds_total=$(( $now_date_status - $date_stamp ))
-			no_days_total=`expr $no_seconds_total / 86400`
+			now_date_status=$(( now_date_status + 86400 ))
+			no_seconds_total=$(( now_date_status - date_stamp ))
+			no_days_total=$(( no_seconds_total / 86400 ))
 			percent_per_day=`echo "scale=10; 100 / ${no_days_total}"|bc`
 			current_percent=0
 			current_percent_display=0
@@ -651,7 +651,7 @@ build_ledger(){
 
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			touch ${user_path}/accounts.tmp
-			date_stamp_tomorrow=$(( $date_stamp + 86400 ))
+			date_stamp_tomorrow=$(( date_stamp + 86400 ))
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
@@ -783,7 +783,7 @@ build_ledger(){
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" -a ! "${trx_receiver}" = "${handover_account}" ]
 									then
-										total_confirmations=$(( $total_confirmations + 1 ))
+										total_confirmations=$(( total_confirmations + 1 ))
 									fi
 									###CHECK CONFIRMATIONS########################################
 									if [ $total_confirmations -ge $confirmations_from_users ]
@@ -886,9 +886,9 @@ build_ledger(){
 			done
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
-			date_stamp=$(( $date_stamp + 86400 ))
+			date_stamp=$(( date_stamp + 86400 ))
 			focus=`date -u +%Y%m%d --date=@${date_stamp}`
-			day_counter=$(( $day_counter + 1 ))
+			day_counter=$(( day_counter + 1 ))
 			##############################################################
 		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
@@ -1468,7 +1468,7 @@ check_tsa(){
 											mv ${script_path}/certs/${tsa_service}/tsa.crt ${script_path}/certs/${tsa_service}/tsa.${cert_valid_from}-${crl_valid_from}.crt
 											tsa_available=1
 										fi
-										crl_retry_counter=$(( $crl_retry_counter + 1 ))
+										crl_retry_counter=$(( crl_retry_counter + 1 ))
 									fi
 								else
 									tsa_available=1
@@ -1476,7 +1476,7 @@ check_tsa(){
 							fi
 						fi
 					else
-						retry_counter=$(( $retry_counter + 1 ))
+						retry_counter=$(( retry_counter + 1 ))
 						if [ $retry_counter -le $retry_limit ]
 						then
 							sleep $retry_wait_seconds
@@ -1564,7 +1564,7 @@ check_tsa(){
 													date_to_verify=`grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37`
 													date_to_verify_converted=`date -u +%s --date="${date_to_verify}"`
 													accountdate_to_verify=`echo $line|cut -d '.' -f2`
-													creation_date_diff=$(( $date_to_verify_converted - $accountdate_to_verify ))
+													creation_date_diff=$(( date_to_verify_converted - accountdate_to_verify ))
 													if [ $creation_date_diff -ge 0 ]
 													then
 														if [ $creation_date_diff -le 120 ]
@@ -1771,9 +1771,9 @@ check_trx(){
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
 						purpose_start=`awk -F: '/:PRPS:/{print NR}' $file_to_check`
-						purpose_start=$(( $purpose_start + 1 ))
+						purpose_start=$(( purpose_start + 1 ))
 						purpose_end=`awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check`
-						purpose_end=$(( $purpose_end - 1 ))
+						purpose_end=$(( purpose_end - 1 ))
 						trx_purpose=`sed -n "${purpose_start},${purpose_end}p" $file_to_check`
 						purpose_contains_alnum=`printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]'`
 						if [ $purpose_contains_alnum = 0 ]
@@ -1897,7 +1897,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/new_index_filelist.tmp`
 											if [ $is_file_there = 1 ]
 											then
-												no_matches=$(( $no_matches + 1 ))
+												no_matches=$(( no_matches + 1 ))
 											else
 												old_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${script_path}/${line}`
 												old_trx_confirmations=`grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l`
@@ -1935,7 +1935,7 @@ process_new_files(){
 											is_file_there=`grep -c "${line}" ${user_path}/old_index_filelist.tmp`
 											if [ $is_file_there = 1 ]
 											then
-												no_matches=$(( $no_matches + 1 ))
+												no_matches=$(( no_matches + 1 ))
 											else
 												new_trx_receiver=`awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line}`
 												new_trx_confirmations=`grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l`
@@ -2294,8 +2294,8 @@ request_uca(){
 			###GET RANDOM P AND RELATED G#####################
 			numbers_total=`wc -l <${script_path}/control/dh.db`
 			number_urandom=`head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 6`
-			number_random=`expr ${number_urandom} % ${numbers_total}`
-			number_random=$(( $number_random + 1 ))
+			number_random=$(( number_urandom % numbers_total ))
+			number_random=$(( number_random + 1 ))
 			p_number=`sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f1`
 			g_number=`sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f2`
 
@@ -2330,7 +2330,7 @@ request_uca(){
 					###GET SIZE OF HEADER AND BODY######################
 					total_bytes_received=`wc -c <${out_file}`
 					total_bytes_header=`head -6 ${out_file}|wc -c`
-					total_bytes_count=$(( $total_bytes_received - $total_bytes_header ))
+					total_bytes_count=$(( total_bytes_received - total_bytes_header ))
 
 					###CALCULATE SHARED-SECRET##########################
 					userb_sent=`echo $header|cut -d ':' -f3`
@@ -2500,7 +2500,7 @@ send_uca(){
 					then
 						###GET KEY FROM SAVE-TABLE#########################
 						usera_ssecret=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2`
-						usera_ssecret=$(( $usera_ssecret + $usera_ssecret ))
+						usera_ssecret=$(( usera_ssecret + usera_ssecret ))
 						usera_hssecret=`echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1`
 						usera_session_id=`grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3`
 
@@ -4246,9 +4246,9 @@ do
 										receiver=`awk -F: '/:RCVR:/{print $3}' $trx_file_path`
 										purpose=""
 										purpose_start=`awk -F: '/:PRPS:/{print NR}' $trx_file_path`
-										purpose_start=$(( $purpose_start + 1 ))
+										purpose_start=$(( purpose_start + 1 ))
 										purpose_end=`awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path`
-										purpose_end=$(( $purpose_end - 1 ))
+										purpose_end=$(( purpose_end - 1 ))
 										purpose_encrypted=`sed -n "${purpose_start},${purpose_end}p" $trx_file_path`
 										echo "-----BEGIN PGP MESSAGE-----" >${user_path}/history_purpose_encryped.tmp
 										echo "" >>${user_path}/history_purpose_encryped.tmp
