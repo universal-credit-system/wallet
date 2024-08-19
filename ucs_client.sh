@@ -21,7 +21,7 @@ login_account(){
 			#############################################################
 
 			###IF ACCOUNT MATCHES########################################
-			if [ $keylist_name = $keylist_hash ]
+			if [ "${keylist_name}" = "${keylist_hash}" ]
 			then
 				account_found=1
 				echo "${keylist_hash}.${keylist_stamp}" >>${script_path}/logon_${my_pid}.tmp
