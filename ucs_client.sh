@@ -3488,7 +3488,7 @@ do
 									if [ $rt_query = 0 ]
 									then
 										###ENCRYPT ORDER PURPOSE################################
-										printf '%s' '"'"${order_purpose}"'"'|sed 's/\\"/"/g' >${user_path}/trx_purpose_edited.tmp
+										printf '%b' '"'"${order_purpose}"'"'|sed -e 's/^\"//g' -e 's/\"$//g' >${user_path}/trx_purpose_edited.tmp
 										if [ $recipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
