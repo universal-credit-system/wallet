@@ -10,11 +10,11 @@ login_account(){
 		for key_file in `ls -1 -X ${script_path}/keys/`
 		do
 			###EXTRACT KEY DATA##########################################
-			keylist_name=`echo $key_file|cut -d '.' -f1`
-			keylist_stamp=`echo $key_file|cut -d '.' -f2`
+			keylist_name=${key_file%%.*}
+			keylist_stamp=${key_file#*.}
 			if [ ! "${cmd_sender}" = "" ]
 			then
-				keylist_hash=`echo $cmd_sender|cut -d '.' -f1`
+				keylist_hash=${cmd_sender%%.*}
 			else
 				keylist_hash=`echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1`
 			fi
@@ -1149,8 +1149,8 @@ check_assets(){
 					asset=$line
 					asset_data=`grep "asset_" ${script_path}/assets/${asset}|grep "="`
 					asset_description=`echo "$asset_data"|grep "asset_description"|cut -d '=' -f2`
-					asset_symbol=`echo "${asset}"|cut -d '.' -f1`
-					asset_stamp=`echo "${asset}"|cut -d '.' -f2`
+					asset_symbol=${asset%%.*}
+					asset_stamp=${asset#*.}
 					asset_price=`echo "$asset_data"|grep "asset_price"|cut -d '=' -f2`
 					asset_quantity=`echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2`
 					asset_fungible=`echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2`
@@ -1853,8 +1853,9 @@ process_new_files(){
 				touch ${user_path}/temp_filelist.tmp
 				for new_index_file in `grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt"`
 				do
-					user_to_verify_name=`basename $new_index_file|cut -d '.' -f1`
-					user_to_verify_date=`basename $new_index_file|cut -d '.' -f2`
+					user_to_verify_base=`basename $new_index_file`
+					user_to_verify_name=${user_to_verify_base%%.*}
+					user_to_verify_date=${user_to_verify_base#*.}
 					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
 					user_already_there=`cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}"`
 					if [ $user_already_there = 1 ]
@@ -3015,7 +3016,7 @@ do
 														;;
 											"$dialog_main_theme")	for theme_file in `ls -1 ${script_path}/theme/`
 														do
-															theme_name=`echo $theme_file|cut -d '.' -f1`
+															theme_name=${theme_file%%.*}
 															printf "%s" "$theme_name theme " >>${script_path}/theme_list.tmp
 														done
 														theme_selection=`dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp`
@@ -3115,7 +3116,7 @@ do
 										then
 											while read line
 											do
-												backup_stamp=`echo $line|cut -d '.' -f1`
+												backup_stamp=${line%%.*}
 												backup_date=`date +'%F|%H:%M:%S' --date=@${backup_stamp}`
 												printf "%s" "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
 											done <${script_path}/backups_list.tmp
