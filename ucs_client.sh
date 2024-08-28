@@ -970,7 +970,7 @@ check_archive(){
 											if [ ! -d ${script_path}/$line ]
 											then
 												file_full=$(echo $line|cut -d '/' -f2)
-												file_ext=$(echo $file_full|cut -d '.' -f2)
+												file_ext=${file_full#*.}
 												file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 												if [ $file_ext_correct -gt 0 ]
 												then
@@ -992,7 +992,7 @@ check_archive(){
 								"keys")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=$(echo $line|cut -d '/' -f2)
-											file_ext=$(echo $file_full|cut -d '.' -f2)
+											file_ext=${file_full#*.}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
@@ -1013,13 +1013,13 @@ check_archive(){
 			       					"trx")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=$(echo $line|cut -d '/' -f2)
-											file_ext=$(echo $file_full|cut -d '.' -f2)
+											file_ext=${file_full#*.}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
 												rt_query=1
 											else
-												file_ext=$(echo $file_full|cut -d '.' -f3)
+												file_ext=${file_full#*.*.}
 												file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 												if [ $file_ext_correct = 0 ]
 												then
@@ -1515,8 +1515,8 @@ check_tsa(){
 				account_verified=0
 
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
-				accountname_key_name=$(echo $line)
-				accountname_key_stamp=$(echo $line|cut -d '.' -f2)
+				accountname_key_name="${line}"
+				accountname_key_stamp=${line#*.}
 				accountname_key_content=$(gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g')
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
@@ -1563,7 +1563,7 @@ check_tsa(){
 													###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
 													date_to_verify=$(grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37)
 													date_to_verify_converted=$(date -u +%s --date="${date_to_verify}")
-													accountdate_to_verify=$(echo $line|cut -d '.' -f2)
+													accountdate_to_verify=${line#*.}
 													creation_date_diff=$(( date_to_verify_converted - accountdate_to_verify ))
 													if [ $creation_date_diff -ge 0 ]
 													then
@@ -1764,7 +1764,7 @@ check_trx(){
 				then
 					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX######## 
 					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
-					trx_date_filename=$(echo $line|cut -d '.' -f3)
+					trx_date_filename=${line#*.*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check|cut -d '.' -f2)
 					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
@@ -4181,7 +4181,7 @@ do
 									trx_file=${script_path}/trx/${line}
 									sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 									receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
-									trx_date_tmp=$(echo "${line}"|cut -d '.' -f3)
+									trx_date_tmp=${line#*.*.}
 									trx_date=$(date +'%F|%H:%M:%S' --date=@${trx_date_tmp})
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
