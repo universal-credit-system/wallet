@@ -4299,7 +4299,7 @@ do
 										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
-										currency_symbol=$(echo $decision|cut -d '|' -f4)
+										currency_symbol=${decision#*|*|*|*}
 										if [ $sender = $handover_account ]
 										then
 											dialog_history_show_trx_out_display=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
