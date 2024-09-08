@@ -779,7 +779,7 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###GET CONFIRMATIONS##########################################
-									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
+									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" -a ! "${trx_receiver}" = "${handover_account}" ]
 									then
@@ -1901,7 +1901,7 @@ process_new_files(){
 												no_matches=$(( no_matches + 1 ))
 											else
 												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
-												old_trx_confirmations=$(grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
+												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
 													old_trx_score_highest=$old_trx_confirmations
@@ -1916,7 +1916,7 @@ process_new_files(){
 												if [ $is_file_there = 0 ]
 												then
 													new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
-													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
+													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
 													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 													then
 														new_trx_score_highest=$new_trx_confirmations
@@ -1939,7 +1939,7 @@ process_new_files(){
 												no_matches=$(( no_matches + 1 ))
 											else
 												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
-												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*.*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
+												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
 													new_trx_score_highest=$new_trx_confirmations
@@ -1954,7 +1954,7 @@ process_new_files(){
 												if [ $is_file_there = 0 ]
 												then
 													old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
-													old_trx_confirmations=$(grep -l "$line" proofs/*.*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
+													old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
 													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 													then
 														old_trx_score_highest=$old_trx_confirmations
@@ -2198,7 +2198,7 @@ get_dependencies(){
 				trx_hash=$(sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1)
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx})
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx})
-				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*.*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
+				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
@@ -4169,7 +4169,7 @@ do
 							touch ${user_path}/my_trx.tmp
 							touch ${user_path}/my_trx_sorted.tmp
 							cd ${script_path}/trx
-							grep -l ":${handover_account}" *.* >${user_path}/my_trx.tmp 2>/dev/null
+							grep -l ":${handover_account}" * >${user_path}/my_trx.tmp 2>/dev/null
 							cd ${script_path}
 							sort -r -t . -k3 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
@@ -4186,7 +4186,7 @@ do
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 									trx_hash=$(sha256sum $trx_file|cut -d ' ' -f1)
-									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
+									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=$(grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt)
@@ -4295,8 +4295,8 @@ do
 										fi
 										user_total_depend=$(cat ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
 										user_total_all=$(cat ${user_path}/all_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
-										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
-										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*.*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
+										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
+										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=$(echo $decision|cut -d '|' -f4)
 										if [ $sender = $handover_account ]
