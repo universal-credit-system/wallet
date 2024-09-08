@@ -493,7 +493,7 @@ build_ledger(){
 		###CHECK IF OLD SCORETABLE IS THERE#################
 		old_scoretable_there=$(ls -1 ${user_path}/|grep -c "scoretable.dat")
 
-		if [ $old_ledger_there -gt 0 -a $old_scoretable_there -gt 0 -a $new = 0 ]
+		if [ $old_ledger_there -gt 0 ] && [ $old_scoretable_there -gt 0 ] && [ $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1)
@@ -694,11 +694,11 @@ build_ledger(){
 				##############################################################
 
 				###CHECK IF INDEX-FILE EXISTS#################################
-				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt -o $trx_sender = ${handover_account} ]
+				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ $trx_sender = ${handover_account} ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
 					is_signed=$(grep -s "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|wc -l)
-					if [ $is_signed -gt 0 -o $trx_sender = $handover_account ]
+					if [ $is_signed -gt 0 ] || [ $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
 						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
@@ -725,7 +725,7 @@ build_ledger(){
 							fi
 
 							###CHECK IF BALANCE AND SCORE ARE OK##########################
-							if [ $enough_balance = 1 -a $is_score_ok = 1 ]
+							if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
 							then
 								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
 								echo "${trx_path} ${trx_hash}" >>${user_path}/${focus}_index_trx.dat
@@ -781,7 +781,7 @@ build_ledger(){
 									###GET CONFIRMATIONS##########################################
 									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
 									###ADD 1 CONFIRMATION FOR OWN#################################
-									if [ ! "${trx_sender}" = "${handover_account}" -a ! "${trx_receiver}" = "${handover_account}" ]
+									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
 									then
 										total_confirmations=$(( total_confirmations + 1 ))
 									fi
@@ -808,7 +808,7 @@ build_ledger(){
 										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
 										##############################################################
 										###CHECK IF EXCHANGE REQUIRED#################################
-										if [ $is_asset = 1 -a $is_fungible = 1 ]
+										if [ $is_asset = 1 ] && [ $is_fungible = 1 ]
 										then
 											###CHECK IF ASSET HAS A OWNER#################################
 											has_owner=$(grep -c "asset_owner=" ${script_path}/assets/${trx_receiver})
@@ -965,7 +965,7 @@ check_archive(){
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 							files_not_homedir=$(echo $line|cut -d '/' -f1)
 							case $files_not_homedir in
-								"assets")	if [ $import_fungible_assets = 1 -o $import_non_fungible_assets = 1 ]
+								"assets")	if [ $import_fungible_assets = 1 ] || [ $import_non_fungible_assets = 1 ]
 										then
 											if [ ! -d ${script_path}/$line ]
 											then
@@ -1158,29 +1158,29 @@ check_assets(){
 					stamp_size=${#asset_stamp}
 
 					###CHECK IF STAMP IS OKAY######################################
-					if [ $stamp_only_digits = 0 -a $stamp_size -eq 10 ]
+					if [ $stamp_only_digits = 0 ] && [ $stamp_size -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ ! "${asset_description}" = "" -a ! "${asset_fungible}" = "" ]
+						if [ ! "${asset_description}" = "" ] && [ ! "${asset_fungible}" = "" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo $asset_symbol|grep -c '[^[:alnum:]]')
 							symbol_size=${#asset_symbol}
-							if [ $symbol_check = 0 -a $symbol_size -le 10 ]
+							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
 								asset_already_exists=$(grep -l "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|wc -l)
 								if [ $asset_already_exists -gt 0 ]
 								then
 									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
-									if [ $asset_fungible = 0 -o $asset_fungible = 1 ]
+									if [ $asset_fungible = 0 ] || [ $asset_fungible = 1 ]
 									then
 										asset_owner_ok=0
 										asset_owner=$(echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2)
 										if [ $asset_fungible = 0 ]
 										then
 											###CHECK ASSET HARDCAP#################################
-											if [ ! "${asset_quantity}" = "" -a ! "${asset_quantity}" = "*" ]
+											if [ ! "${asset_quantity}" = "" ] && [ ! "${asset_quantity}" = "*" ]
 											then
 												is_big_enough=$(echo "${asset_quantity} > 0 "|bc)
 												if [ $is_big_enough = 1 ]
@@ -1229,7 +1229,7 @@ check_assets(){
 											is_amount_ok=$(echo "$check_value >= 0.000000001"|bc)
 											is_amount_mod=$(echo "$check_value % 0.000000001"|bc)
 											is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
-											if [ $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+											if [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 											then
 												asset_acknowledged=1
 											fi
@@ -1318,7 +1318,7 @@ check_tsa(){
 					then
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
+						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
 						then
 							tsa_cert_available=1
 						else
@@ -1339,7 +1339,7 @@ check_tsa(){
 						then
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
+							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
 								if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
 								then
@@ -1360,7 +1360,7 @@ check_tsa(){
 					then
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-						if [ $now_stamp -gt $old_cert_valid_from -a $now_stamp -lt $old_cert_valid_till ]
+						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
 						then
 							tsa_rootcert_available=1
 						else
@@ -1381,7 +1381,7 @@ check_tsa(){
 						then
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-							if [ $now_stamp -gt $new_cert_valid_from -a $now_stamp -lt $new_cert_valid_till ]
+							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
 								if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
 								then
@@ -1398,7 +1398,7 @@ check_tsa(){
 					fi
 
 					###IF BOTH TSA.CRT AND CACERT.PEM ARE THERE SET FLAG####################
-					if [ $tsa_cert_available = 1 -a $tsa_rootcert_available = 1 ]
+					if [ $tsa_cert_available = 1 ] && [ $tsa_rootcert_available = 1 ]
 					then
 						###GET TSA CRL URL FIRST BY CRT THEN BY CONFIG#######
 						tsa_crl_url=""
@@ -1429,7 +1429,7 @@ check_tsa(){
 									crl_new_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)")
 
 									###COMPARE VALID FROM AND VALID TILL####
-									if [ $crl_old_valid_from -eq $crl_new_valid_from -a $crl_old_valid_till -eq $crl_new_valid_till ]
+									if [ $crl_old_valid_from -eq $crl_new_valid_from ] && [ $crl_old_valid_till -eq $crl_new_valid_till ]
 									then
 										###GET HASHES TO COMPARE################
 										new_crl_hash=$(sha224sum ${script_path}/certs/root_ca.crl|cut -d ' ' -f1)
@@ -1452,7 +1452,7 @@ check_tsa(){
 							then
 								crl_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)")
 								crl_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)")
-								if [ $crl_valid_from -lt $now_stamp -a $crl_valid_till -gt $now_stamp ]
+								if [ $crl_valid_from -lt $now_stamp ] && [ $crl_valid_till -gt $now_stamp ]
 								then
 									cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
 									openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
@@ -1521,7 +1521,7 @@ check_tsa(){
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
 					###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
-					if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -a -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
+					if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
 					then
 						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
 						for tsa_service in $(ls -1 ${script_path}/certs)
@@ -1543,7 +1543,7 @@ check_tsa(){
 									fi
 
 									###IF CERT WAS VALID AT TIMESTAMP OF ACCOUNT CREATION..##
-									if [ $accountname_key_stamp -gt $valid_from -a $accountname_key_stamp -lt $valid_till ]
+									if [ $accountname_key_stamp -gt $valid_from ] && [ $accountname_key_stamp -lt $valid_till ]
 									then
 										###CHECK TSA QUERYFILE###################################
 										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
@@ -1767,7 +1767,7 @@ check_trx(){
 					trx_date_filename=${line#*.*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check|cut -d '.' -f2)
-					if [ $trx_date_filename = $trx_date_inside -a $trx_date_inside -gt $trx_receiver_date ]
+					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
 						purpose_start=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
@@ -1794,17 +1794,17 @@ check_trx(){
 								then
 									####CHECK IF USER HAS INDEXED THE TRANSACTION############################
 									is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
-									if [ $is_trx_signed = 1 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+									if [ $is_trx_signed = 1 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 									then
 										trx_acknowledged=1
 									else
-										if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+										if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 										then
 											trx_acknowledged=1
 										fi
 									fi
 								else
-									if [ $delete_trx_not_indexed = 0 -a $is_amount_ok = 1 -a $is_amount_mod = 0 ]
+									if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 									then
 										trx_acknowledged=1
 									fi
@@ -1889,7 +1889,7 @@ process_new_files(){
 								old_trx=$(wc -l <${user_path}/old_index_filelist.tmp)
 								old_trx_score_highest=0
 								no_matches=0
-								if [ $old_trx -gt 0 -a $new_trx -gt 0 ]
+								if [ $old_trx -gt 0 ] && [ $new_trx -gt 0 ]
 								then
 									if [ $old_trx -le $new_trx ]
 									then
@@ -2022,7 +2022,7 @@ process_new_files(){
 			do
 				is_asset=$(echo $line|grep -c "assets/")
 				is_fungible=$(grep -c "asset_fungible=1" ${user_path}/temp/${line})
-				if [ -h ${user_path}/temp/${line} -o -x ${user_path}/temp/${line} -o $is_asset = 1 -a $is_fungible = 1 -a $import_fungible_assets = 0 -o $is_asset = 1 -a $is_fungible = 0 -a $import_non_fungible_assets = 0 ]
+				if [ -h ${user_path}/temp/${line} ] || [ -x ${user_path}/temp/${line} ] || [ $is_asset = 1 ] && [ $is_fungible = 1 ] && [ $import_fungible_assets = 0 ] || [ $is_asset = 1 ] && [ $is_fungible = 0 ] && [ $import_non_fungible_assets = 0 ]
 				then
 					rm ${user_path}/temp/${line}
 				fi
@@ -2209,7 +2209,7 @@ get_dependencies(){
 			depend_accounts_new_hash=$(sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1)
 			depend_trx_new_hash=$(sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1)
 			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1)
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash -a $depend_trx_new_hash = $depend_trx_old_hash -a $depend_confirmations_new_hash = $depend_confirmations_old_hash -a $own_index_there = 1 ]
+			if [ $depend_accounts_new_hash = $depend_accounts_old_hash ] && [ $depend_trx_new_hash = $depend_trx_old_hash ] && [ $depend_confirmations_new_hash = $depend_confirmations_old_hash ] && [ $own_index_there = 1 ]
 			then
 				new_ledger=0
 			else
@@ -2224,7 +2224,7 @@ get_dependencies(){
 					then
 						echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
 					fi
-					if [ -e ${user_path}/depend_trx.dat -a ! "${depend_trx_old_hash}" = "X" ]
+					if [ -e ${user_path}/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
 					then
 						depend_trx_new_date=$(sort -t . -k3 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f3)
 						if [ ! "${depend_trx_new_date}" = "" ]
@@ -2232,7 +2232,7 @@ get_dependencies(){
 							echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
 						fi
 					fi
-					if [ -e ${user_path}/depend_confirmations.dat -a ! "${depend_confirmations_new_hash}" = "X" ]
+					if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
 					then
 						depend_confirmations_new_date=$(sort -t . -k3 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3)
 						if [ ! "${depend_confirmations_new_date}" = "" ]
@@ -3191,7 +3191,7 @@ do
 
 	else
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 -a $no_ledger = 0 ]
+		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ]
 		then
 			request_uca
 		fi
@@ -3253,7 +3253,7 @@ do
 		fi
 
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 -a $no_ledger = 0 ]
+		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ]
 		then
 			send_uca
 		fi
@@ -3335,7 +3335,7 @@ do
 											asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
 											asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
 											is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
-											if [ $asset_there = 1 -a $is_fungible = 1 ]
+											if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 											then
 												recipient_is_asset=1
 												recipient_found=1
@@ -3388,7 +3388,7 @@ do
 													is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
 													amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
 													is_amount_mod=$(echo "${amount_mod} == 0"|bc) 
-													if [ $is_amount_big_enough = 1 -a $is_amount_mod = 1 ]
+													if [ $is_amount_big_enough = 1 ] && [ $is_amount_mod = 1 ]
 													then
 														enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
 														if [ "${order_asset}" = "${main_asset}" ]
@@ -3399,7 +3399,7 @@ do
 														else
 															is_score_ok=1
 														fi
-														if [ $enough_balance = 1 -a $is_score_ok = 1 ]
+														if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
 														then
 															amount_selected=1
 														else
@@ -3524,17 +3524,17 @@ do
 												then
 													if [ $recipient_is_asset = 0 ]
 													then
-														if [ $gui_mode = 1 -a ! $small_trx = 255 ]
+														if [ $gui_mode = 1 ] && [ ! $small_trx = 255 ]
 														then
 															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_trx" 0 0
 															small_trx=$?
 														fi
 													fi
-													if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+													if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 													then
 														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
 														rm ${user_path}/files_list.tmp 2>/dev/null
-														if [ $small_trx = 0 -a -s $receipient_index_file ]
+														if [ $small_trx = 0 ] && [ -s $receipient_index_file ]
 														then
 															###GET ASSETS###################################################
 															while read line
@@ -3618,7 +3618,7 @@ do
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+														if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 														then
 															cd ${script_path}/
 															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
@@ -3655,14 +3655,14 @@ do
 															#############################################################################
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
-															if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+															if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 															then
 																gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
 																rt_query=$?
 															fi
 															if [ $rt_query = 0 ]
 															then
-																if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+																if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
 																	rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
@@ -3678,7 +3678,7 @@ do
 																fi
 																if [ $gui_mode = 1 ]
 																then
-																	if [ $recipient_is_asset = 0 -a ! $small_trx = 255 ]
+																	if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																	then
 																		dialog_send_success_display=$(echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g")
 																	else
@@ -3697,7 +3697,7 @@ do
 																	then
 																		if [ ! $small_trx = 255 ]
 																		then
-																			if [ ! "${cmd_path}" = "" -a ! "${trx_path_output}" = "${cmd_path}" ]
+																			if [ ! "${cmd_path}" = "" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
 																				mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
 																				echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
@@ -4045,7 +4045,7 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
-								if [ $gui_mode = 0 -a $cmd_type = "partial" ]
+								if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
 								then
 									###WRITE ASSETS TO FILE LIST#################
 									awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
@@ -4113,7 +4113,7 @@ do
 										dialog_sync_create_success_display=$(echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g")
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
-										if [ ! "${cmd_path}" = "" -a ! "${sync_path_output}" = "${cmd_path}" ]
+										if [ ! "${cmd_path}" = "" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
 										then
 											mv ${sync_path_output}/${handover_account}_${now_stamp}.sync ${cmd_path}/${handover_account}_${now_stamp}.sync
 											echo "FILE:${cmd_path}/${handover_account}_${now_stamp}.sync"
@@ -4200,7 +4200,7 @@ do
 											trx_blacklisted=$(grep -c "${line}" ${user_path}/blacklisted_trx.dat)
 											sender_blacklisted=$(grep -c "${sender}" ${user_path}/blacklisted_accounts.dat)
 											receiver_blacklisted=$(grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat)
-											if [ $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted = 0 ]
+											if [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted = 0 ]
 											then
 												trx_color="\Z2"
 											else
@@ -4289,7 +4289,7 @@ do
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
 										fi
-										if [ $trx_signed = 1 -a $trx_blacklisted = 0 -a $sender_blacklisted = 0 -a $receiver_blacklisted ]
+										if [ $trx_signed = 1 ] && [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted ]
 										then
 											trx_status="OK"
 										fi
