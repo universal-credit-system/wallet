@@ -697,7 +697,7 @@ build_ledger(){
 				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ $trx_sender = ${handover_account} ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=$(grep -s "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt|wc -l)
+					is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt)
 					if [ $is_signed -gt 0 ] || [ $trx_sender = $handover_account ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
@@ -779,7 +779,7 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###GET CONFIRMATIONS##########################################
-									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
+									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
 									then
@@ -1169,7 +1169,7 @@ check_assets(){
 							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
-								asset_already_exists=$(grep -l "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|wc -l)
+								asset_already_exists=$(grep -c "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat)
 								if [ $asset_already_exists -gt 0 ]
 								then
 									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
@@ -1202,7 +1202,7 @@ check_assets(){
 											then
 												if [ ! "${asset_owner}" = "${asset}" ]
 												then
-													owner_exists=$(grep -l "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|wc -l)
+													owner_exists=$(grep -c "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp)
 													if [ $owner_exists -gt 0 ]
 													then
 														owner_blacklisted=$(grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat)
@@ -1901,7 +1901,7 @@ process_new_files(){
 												no_matches=$(( no_matches + 1 ))
 											else
 												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
-												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
+												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
 													old_trx_score_highest=$old_trx_confirmations
@@ -1916,7 +1916,7 @@ process_new_files(){
 												if [ $is_file_there = 0 ]
 												then
 													new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
-													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
+													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
 													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 													then
 														new_trx_score_highest=$new_trx_confirmations
@@ -1939,7 +1939,7 @@ process_new_files(){
 												no_matches=$(( no_matches + 1 ))
 											else
 												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
-												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -v "${user_to_verify}\|${new_trx_receiver}"|wc -l)
+												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
 													new_trx_score_highest=$new_trx_confirmations
@@ -1954,7 +1954,7 @@ process_new_files(){
 												if [ $is_file_there = 0 ]
 												then
 													old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
-													old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -v "${user_to_verify}\|${old_trx_receiver}"|wc -l)
+													old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
 													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 													then
 														old_trx_score_highest=$old_trx_confirmations
@@ -2198,7 +2198,7 @@ get_dependencies(){
 				trx_hash=$(sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1)
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx})
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx})
-				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -v "${trx_sender}\|${trx_receiver}"|wc -l)
+				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
@@ -2353,7 +2353,7 @@ request_uca(){
 							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:" >${save_file}
 						fi
 						###WRITE SHARED SECRET TO DB########################
-						ssecret_there=$(grep "${uca_connect_string}" ${save_file}|wc -l)
+						ssecret_there=$(grep -c "${uca_connect_string}" ${save_file})
 						if [ $ssecret_there = 0 ]
 						then
 							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:" >>${save_file}
@@ -2496,7 +2496,7 @@ send_uca(){
 					now_stamp=$(date +%s)
 
 					###WRITE SHARED SECRET TO DB########################
-					ssecret_there=$(grep "${uca_connect_string}" ${save_file}|wc -l)
+					ssecret_there=$(grep -c "${uca_connect_string}" ${save_file})
 					if [ ! $ssecret_there = 0 ]
 					then
 						###GET KEY FROM SAVE-TABLE#########################
@@ -4186,7 +4186,7 @@ do
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 									trx_hash=$(sha256sum $trx_file|cut -d ' ' -f1)
-									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
+									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=$(grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt)
@@ -4293,10 +4293,10 @@ do
 										then
 											trx_status="OK"
 										fi
-										user_total_depend=$(cat ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
-										user_total_all=$(cat ${user_path}/all_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
-										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -v "${sender}\|${receiver}"|wc -l)
-										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -v "${sender}\|${receiver}"|wc -l)
+										user_total_depend=$(cat ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
+										user_total_all=$(cat ${user_path}/all_accounts.dat|grep -c -v "${sender}\|${receiver}")
+										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
+										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=$(echo $decision|cut -d '|' -f4)
 										if [ $sender = $handover_account ]
