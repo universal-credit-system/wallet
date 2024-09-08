@@ -1169,7 +1169,7 @@ check_assets(){
 							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
-								asset_already_exists=$(grep -c "${asset}" ${user_path}/ack_assets.dat ${user_path}/all_assets.dat)
+								asset_already_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|grep -c "${asset}")
 								if [ $asset_already_exists -gt 0 ]
 								then
 									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
@@ -1202,7 +1202,7 @@ check_assets(){
 											then
 												if [ ! "${asset_owner}" = "${asset}" ]
 												then
-													owner_exists=$(grep -c "${asset_owner}" ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp)
+													owner_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|grep -c "{$asset_owner}")
 													if [ $owner_exists -gt 0 ]
 													then
 														owner_blacklisted=$(grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat)
