@@ -4236,8 +4236,9 @@ do
 									dialog_history_noresults=$(echo $dialog_history_noresult|cut -d ' ' -f1)
 									if [ ! $decision = $dialog_history_noresults ]
 									then
-										trx_date_extracted=$(echo $decision|cut -d '|' -f1)
-										trx_time_extracted=$(echo $decision|cut -d '|' -f2)
+										trx_date_extracted=${decision%%|*}
+										trx_time_extracted=${decision#*|*}
+										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
 										trx_file=$(grep "${trx_date}" ${user_path}/my_trx.tmp)
 										trx_amount=$(echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g')
