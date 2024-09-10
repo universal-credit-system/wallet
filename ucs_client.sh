@@ -2295,7 +2295,7 @@ request_uca(){
 			###GET RANDOM P AND RELATED G#####################
 			numbers_total=$(wc -l <${script_path}/control/dh.db)
 			number_urandom=$(head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 6)
-			number_random=$(( number_urandom % numbers_total ))
+			number_random=$(echo "${number_urandom} % ${numbers_total}"|bc)
 			number_random=$(( number_random + 1 ))
 			p_number=$(sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f1)
 			g_number=$(sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f2)
@@ -2316,12 +2316,12 @@ request_uca(){
 			save_file="${user_path}/uca_save.dat"
 
 			###WRITE HEADER AND ENCRYPT#######################
-			printf "%b" "${usera_string}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+			printf "%s" "${usera_string}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
 				###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-				cat ${user_path}/uca_header.tmp|netcat -q0 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
+				cat ${user_path}/uca_header.tmp|netcat -q 120 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -2506,7 +2506,7 @@ send_uca(){
 						usera_session_id=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3)
 
 						###ENCRYPT HEADER CONTAINING SESSION ID############
-						printf "%b" "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+						printf "%s" "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
