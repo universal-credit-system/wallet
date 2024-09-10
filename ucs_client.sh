@@ -1855,7 +1855,8 @@ process_new_files(){
 				do
 					user_to_verify_base=$(basename $new_index_file)
 					user_to_verify_name=${user_to_verify_base%%.*}
-					user_to_verify_date=${user_to_verify_base#*.}
+					user_to_verify_base=${user_to_verify_base#*.}
+					user_to_verify_date=${user_to_verify_base%%.*}
 					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
 					user_already_there=$(cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}")
 					if [ $user_already_there = 1 ]
@@ -1868,10 +1869,10 @@ process_new_files(){
 							for new_index_assets in $(grep "assets/" ${user_path}/temp/${new_index_file})
 							do
 								asset_file=$(echo "${new_index_assets}"|cut -d ' ' -f1)
-								is_asset_there=$(grep -c "${asset_file}" ${script_path}/${handover_account}/${handover_account}.txt)
+								is_asset_there=$(grep -c "${asset_file}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
 								if [ $is_asset_there = 1 ]
 								then
-									is_asset_there=$(grep -c "${new_index_assets}" ${script_path}/${handover_account}/${handover_account}.txt)
+									is_asset_there=$(grep -c "${new_index_assets}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
 									if [ $is_asset_there = 0 ]
 									then
 										assets_ok=0
