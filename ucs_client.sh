@@ -2442,13 +2442,13 @@ send_uca(){
 		fi
 		###################################################
 	
-		###READ UCA.CONF LINE BY LINE################
+		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
 			###SET SESSION KEY################################
 			session_key=$(date -u +%Y%m%d)
 
-			###GET VALUES FROM UCA.CONF##################
+			###GET VALUES FROM UCA.CONF#######################
 			uca_connect_string=$(echo $line|cut -d ',' -f1)
 			uca_snd_port=$(echo $line|cut -d ',' -f3)
 			uca_info=$(echo $line|cut -d ',' -f4)
@@ -2461,17 +2461,17 @@ send_uca(){
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			fi
 
-			###GET STAMP#################################
+			###GET STAMP#######################################
 			now_stamp=$(date +%s)
 			
-			###ONLY CONTINUE IF SAVEFILE IS THERE########
+			###ONLY CONTINUE IF SAVEFILE IS THERE##############
 			if [ -s ${save_file} ]
 			then
 				rm ${user_path}/files_list.tmp 2>/dev/null
 				receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
 				if [ -s $receipient_index_file ]
 				then
-					###GET ASSETS###################################################
+					###GET ASSETS######################################
 					while read line
 					do
 						asset_there=$(grep -c "assets/${line}" $receipient_index_file)
@@ -2481,7 +2481,7 @@ send_uca(){
 						fi
 					done <${user_path}/all_assets.dat
 
-					###GET KEYS AND PROOFS##########################################
+					###GET KEYS AND PROOFS#############################
 					while read line
 					do
 						key_there=$(grep -c "keys/${line}" $receipient_index_file)
@@ -2511,7 +2511,7 @@ send_uca(){
 						fi
 					done <${user_path}/depend_accounts.dat
 
-					###GET TRX###################################################################
+					###GET TRX#########################################
 					while read line
 					do
 						trx_there=$(grep -c "trx/${line}" $receipient_index_file)
@@ -2521,10 +2521,10 @@ send_uca(){
 						fi
 					done <${user_path}/depend_trx.dat
 				else
-					###GET ASSETS################################################################
+					###GET ASSETS######################################
 					awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
 
-					###GET KEYS AND PROOFS#######################################################
+					###GET KEYS AND PROOFS#############################
 					while read line
 					do
 						echo "keys/${line}" >>${user_path}/files_list.tmp
@@ -2539,7 +2539,7 @@ send_uca(){
 						fi
 					done <${user_path}/depend_accounts.dat
 
-					###GET TRX###################################################################
+					###GET TRX#########################################
 					awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 				fi
 			fi
@@ -2560,12 +2560,14 @@ send_uca(){
 					usera_session_id=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3)
 
 					###ENCRYPT HEADER CONTAINING SESSION ID############
-					printf "%s" "${usera_session_id}\n"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+					printf "%s" "${usera_session_id}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+					lines=$(wc -l ${user_path}/uca_header.tmp)
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
 						###ENCRYPT SYNCFILE################################
 						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
+						lines=$(wc -l ${out_file})
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
