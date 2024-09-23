@@ -1014,6 +1014,7 @@ check_archive(){
 										then
 											file_full=$(echo $line|cut -d '/' -f2)
 											file_ext=${file_full#*.}
+											file_ext=${file_ext%%.*}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
