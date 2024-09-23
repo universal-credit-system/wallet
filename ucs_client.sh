@@ -2561,13 +2561,11 @@ send_uca(){
 
 					###ENCRYPT HEADER CONTAINING SESSION ID############
 					printf "%s" "${usera_session_id}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
-					lines=$(wc -l ${user_path}/uca_header.tmp)
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
 						###ENCRYPT SYNCFILE################################
 						gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
-						lines=$(wc -l ${out_file})
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
