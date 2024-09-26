@@ -1203,7 +1203,7 @@ check_assets(){
 											then
 												if [ ! "${asset_owner}" = "${asset}" ]
 												then
-													owner_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|grep -c "{$asset_owner}")
+													owner_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|grep -c "${asset_owner}")
 													if [ $owner_exists -gt 0 ]
 													then
 														owner_blacklisted=$(grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat)
