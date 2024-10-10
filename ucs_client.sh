@@ -154,6 +154,7 @@ create_keys(){
 			user_path="${script_path}/userdata/${create_name_hashed}.${file_stamp}"
 
 			###EXPORT PUBLIC KEY#########################################
+			key_remove=1
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc --passphrase ${create_password} --pinentry-mode loopback --export ${create_name_hashed}.${file_stamp}
 			rt_query=$?
 			if [ $rt_query = 0 ]
@@ -256,6 +257,7 @@ create_keys(){
 														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel --pause "$dialog_keys_create4" 0 0 $seconds_remain
 													fi
 													clear
+													key_remove=0
 												else
 													echo "USER:${create_name}"
 													echo "PIN:${create_pin}"
@@ -266,32 +268,14 @@ create_keys(){
 													echo "KEY_PRV:/control/keys/${create_name_hashed}.${file_stamp}"
 													exit 0
 												fi
-											else
-												key_remove=1
 											fi
-										else
-											key_remove=1
 										fi
-									else
-										key_remove=1
 									fi
-								else
-									key_remove=1
 								fi
-							else
-								key_remove=1
 							fi
-						else
-							key_remove=1
 						fi
-					else
-						key_remove=1
 					fi
-				else
-					key_remove=1
 				fi
-			else
-				key_remove=1
 			fi
 		fi
 		if [ ! $rt_query = 0 ]
@@ -750,6 +734,7 @@ build_ledger(){
 								then
 									is_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver})
 								fi
+								##############################################################
 
 								###CHECK IF RECEIVER IS IN LEDGER#############################
 								receiver_in_ledger=$(grep -c "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
