@@ -733,6 +733,12 @@ build_ledger(){
 								if [ $is_asset = 1 ]
 								then
 									is_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver})
+									is_dgm=$(grep -c "asset_owner=" ${script_path}/assets/${trx_receiver})
+									if [ $is_dgm = 1 ]
+									then
+										asset_owner=$(grep "asset_owner=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2)
+										is_owner_user=$(grep -c "${asset_owner}" ${user_path}/all_accounts.dat)
+									fi
 								fi
 								##############################################################
 
@@ -765,11 +771,13 @@ build_ledger(){
 								then
 									###GET CONFIRMATIONS##########################################
 									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+									
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
 									then
 										total_confirmations=$(( total_confirmations + 1 ))
 									fi
+									
 									###CHECK CONFIRMATIONS########################################
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
@@ -795,15 +803,12 @@ build_ledger(){
 										###CHECK IF EXCHANGE REQUIRED#################################
 										if [ $is_asset = 1 ] && [ $is_fungible = 1 ]
 										then
-											###CHECK IF ASSET HAS A OWNER#################################
-											has_owner=$(grep -c "asset_owner=" ${script_path}/assets/${trx_receiver})
-
 											###EXCHANGE###################################################
 											asset_type_price=$(grep "asset_price=" ${script_path}/assets/${trx_asset}|cut -d '=' -f2)
 											asset_price=$(grep "asset_price=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2)
 											asset_value=$(echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
 											##############################################################
-											if [ $has_owner = 0 ]
+											if [ $is_dgm = 0 ]
 											then
 												###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
 												receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
@@ -817,30 +822,46 @@ build_ledger(){
 												fi
 												##############################################################
 											else
-												###EXCHANGE TO OWNERS OF ASSET THAT OWNS THE ASSET############
-												asset_owner=$(grep "asset_owner=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2)
-												awk '{print ":"$1}' ${user_path}/all_assets.dat >${user_path}/filtered_assets.tmp
-												asset_quantity=$(grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|grep -v -f ${user_path}/filtered_assets.tmp|awk -F= '{sum+=$2} END {print sum}')
-												price_per_unit=$(echo "scale=9; ${asset_value} / ${asset_quantity}"|bc|sed 's/^\./0./g')
-												for nfa_owner in $(grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|awk -F= '{if ($2 != 0) print $1"="$2}'|grep -v -f ${user_path}/filtered_assets.tmp|cut -d ':' -f2|cut -d '=' -f1)
-												do
-													receiver_asset_value=$(grep "${asset_owner}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
-													receiver_asset_value=$(echo "scale=9; ${receiver_asset_value} * ${price_per_unit}"|bc|sed 's/^\./0./g')
-													receiver_in_ledger=$(grep -c "${trx_receiver}:${nfa_owner}" ${user_path}/${focus}_ledger.dat)
-													is_amount_ok=$(echo "$receiver_asset_value >= 0.000000001"|bc)
-													if [ $is_amount_ok = 1 ]
-													then
-														if [ $receiver_in_ledger = 0 ]
+												###CHECK IF OWNER IS A USER###################################
+												if [ $is_owner_user = 0 ]
+												then
+													###EXCHANGE TO OWNERS OF ASSET THAT OWNS THE ASSET############
+													awk '{print ":"$1}' ${user_path}/all_assets.dat >${user_path}/filtered_assets.tmp
+													asset_quantity=$(grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|grep -v -f ${user_path}/filtered_assets.tmp|awk -F= '{sum+=$2} END {print sum}')
+													price_per_unit=$(echo "scale=9; ${asset_value} / ${asset_quantity}"|bc|sed 's/^\./0./g')
+													for nfa_owner in $(grep "${asset_owner}:" ${user_path}/${focus}_ledger.dat|awk -F= '{if ($2 != 0) print $1"="$2}'|grep -v -f ${user_path}/filtered_assets.tmp|cut -d ':' -f2|cut -d '=' -f1)
+													do
+														receiver_asset_value=$(grep "${asset_owner}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+														receiver_asset_value=$(echo "scale=9; ${receiver_asset_value} * ${price_per_unit}"|bc|sed 's/^\./0./g')
+														receiver_in_ledger=$(grep -c "${trx_receiver}:${nfa_owner}" ${user_path}/${focus}_ledger.dat)
+														is_amount_ok=$(echo "$receiver_asset_value >= 0.000000001"|bc)
+														if [ $is_amount_ok = 1 ]
 														then
-															echo "${trx_receiver}:${nfa_owner}=${receiver_asset_value}" >>${user_path}/${focus}_ledger.dat
-														else
-															receiver_old_balance=$(grep "${trx_receiver}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
-															receiver_new_balance=$(echo "${receiver_old_balance} + ${receiver_asset_value}"|bc|sed 's/^\./0./g')
-															sed -i "s/${trx_receiver}:${nfa_owner}=${receiver_old_balance}/${trx_receiver}:${nfa_owner}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
+															if [ $receiver_in_ledger = 0 ]
+															then
+																echo "${trx_receiver}:${nfa_owner}=${receiver_asset_value}" >>${user_path}/${focus}_ledger.dat
+															else
+																receiver_old_balance=$(grep "${trx_receiver}:${nfa_owner}=" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+																receiver_new_balance=$(echo "${receiver_old_balance} + ${receiver_asset_value}"|bc|sed 's/^\./0./g')
+																sed -i "s/${trx_receiver}:${nfa_owner}=${receiver_old_balance}/${trx_receiver}:${nfa_owner}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
+															fi
 														fi
+													done
+													rm ${user_path}/filtered_assets.tmp
+													##############################################################
+												else
+													###IF OWNER IS A USER EXCHANGE TO USER########################
+													receiver_in_ledger=$(grep -c "${trx_receiver}:${asset_owner}" ${user_path}/${focus}_ledger.dat)
+													if [ $receiver_in_ledger = 1 ]
+													then
+														receiver_old_balance=$(grep "${trx_receiver}:${asset_owner}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+														receiver_new_balance=$(echo "${receiver_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g')
+														sed -i "s/${trx_receiver}:${asset_owner}=${receiver_old_balance}/${trx_receiver}:${asset_owner}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
+													else
+														echo "${trx_receiver}:${asset_owner}=${asset_value}" >>${user_path}/${focus}_ledger.dat
 													fi
-												done
-												rm ${user_path}/filtered_assets.tmp
+													##############################################################
+												fi
 												##############################################################
 											fi
 											##############################################################
@@ -1188,7 +1209,7 @@ check_assets(){
 											then
 												if [ ! "${asset_owner}" = "${asset}" ]
 												then
-													owner_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp|grep -c "${asset_owner}")
+													owner_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.tmp ${user_path}/all_accounts.dat|grep -c "${asset_owner}")
 													if [ $owner_exists -gt 0 ]
 													then
 														owner_blacklisted=$(grep -c "${asset_owner}" ${user_path}/blacklisted_assets.dat)
