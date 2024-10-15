@@ -3003,7 +3003,7 @@ do
 															new_lang_file=$(ls -1 ${script_path}/lang/|grep "lang_${lang_selection}_")
 															if [ ! $lang_file = $new_lang_file ]
 															then
-																sed -i "s/lang_file=\"${lang_file}\"/lang_file=\"${new_lang_file}\"/g" ${script_path}/control/config.conf
+																sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" ${script_path}/control/config.conf
 																. ${script_path}/control/config.conf
 																. ${script_path}/lang/${lang_file}
 															fi
@@ -3022,7 +3022,7 @@ do
 															new_theme_file=$(ls -1 ${script_path}/theme/|grep "${theme_selection}")
 															if [ ! $dialogrc_set = $new_theme_file ]
 															then
-																sed -i "s/theme_file=\"${dialogrc_set}\"/theme_file=\"${new_theme_file}\"/g" ${script_path}/control/config.conf
+																sed -i "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" ${script_path}/control/config.conf
 																. ${script_path}/control/config.conf
 																export DIALOGRC="${script_path}/theme/${theme_file}"
 																dialogrc_set="${theme_file}"
