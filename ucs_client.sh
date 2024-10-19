@@ -506,7 +506,6 @@ build_ledger(){
 
 			###EMPTY INDEX FILE#################################
 			rm ${user_path}/*_index_trx.dat 2>/dev/null
-			touch ${user_path}/${date_stamp_yesterday}_index_trx.dat
 			####################################################
 
 			###EMPTY IGNORE TRX#################################
