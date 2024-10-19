@@ -2046,7 +2046,7 @@ import_keys(){
 }
 get_dependencies(){
 			cd ${script_path}/trx
-			new_ledger=1
+			ledger_mode=1
 			own_index_there=0
 			first_start=0
 
@@ -2146,11 +2146,13 @@ get_dependencies(){
 			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1)
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash ] && [ $depend_trx_new_hash = $depend_trx_old_hash ] && [ $depend_confirmations_new_hash = $depend_confirmations_old_hash ] && [ $own_index_there = 1 ]
 			then
-				new_ledger=0
+				make_new_index=0
+				ledger_mode=0
 			else
+				make_new_index=1
 				if [ $first_start = 0 ]
 				then
-					new_ledger=0
+					ledger_mode=0
 					touch ${user_path}/dates.tmp
 
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
@@ -2190,7 +2192,7 @@ get_dependencies(){
 			fi
 			rm ${user_path}/*.tmp 2>/dev/null
 			cd ${script_path}/
-			return $new_ledger
+			return $ledger_mode
 }
 request_uca(){
 		###GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR########
@@ -2559,6 +2561,7 @@ user_logged_in=0
 uca_trigger=0
 action_done=1
 make_ledger=1
+make_new_index=1
 end_program=0
 small_trx=0
 script_path=$(dirname $(readlink -f ${0}))
@@ -3197,24 +3200,18 @@ do
 			check_assets
 			check_trx
 			get_dependencies
-			build_new_ledger=$?
-			if [ $build_new_ledger = 0 ]
-			then
-				changes=0
-			else
-				changes=1
-			fi
+			ledger_mode=$?
 			action_done=0
 		fi
 
 		if [ $no_ledger = 0 ]
 		then
-			now_stamp=$(date +%s)
 			if [ $make_ledger = 1 ]
 			then
-				build_ledger $changes
-				if [ $changes = 1 ]
+				build_ledger $ledger_mode
+				if [ $make_new_index = 1 ]
 				then
+					now_stamp=$(date +%s)
 					make_signature "none" $now_stamp 1
 				fi
 				make_ledger=0
@@ -3638,13 +3635,7 @@ do
 															echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 															make_ledger=1
 															get_dependencies
-															build_new_ledger=$?
-															if [ $build_new_ledger = 0 ]
-															then
-																changes=0
-															else
-																changes=1
-															fi
+															ledger_mode=$?
 															#############################################################################
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
@@ -3827,17 +3818,11 @@ do
 															check_assets
 															check_trx
 															get_dependencies
-															build_new_ledger=$?
-															if [ $build_new_ledger = 0 ]
+															ledger_mode=$?
+															build_ledger $ledger_mode
+															if [ $make_new_index = 1 ]
 															then
-																changes=0
-															else
-																changes=1
-															fi
-															now_stamp=$(date +%s)
-															build_ledger $changes
-															if [ $changes = 1 ]
-															then
+																now_stamp=$(date +%s)
 																make_signature "none" $now_stamp 1
 																rt_query=$?
 																if [ $rt_query -gt 0 ]
@@ -3977,17 +3962,11 @@ do
 															check_assets
 															check_trx
 															get_dependencies
-															build_new_ledger=$?
-															if [ $build_new_ledger = 0 ]
+															ledger_mode=$?
+															build_ledger $ledger_mode
+															if [ $make_new_index = 1 ]
 															then
-																changes=0
-															else
-																changes=1
-															fi
-															now_stamp=$(date +%s)
-															build_ledger $changes
-															if [ $changes = 1 ]
-															then
+																now_stamp=$(date +%s)
 																make_signature "none" $now_stamp 1
 																rt_query=$?
 																if [ $rt_query -gt 0 ]
@@ -4141,16 +4120,11 @@ do
 								check_assets
 								check_trx
 								get_dependencies
-								build_new_ledger=$?
-								if [ $build_new_ledger = 0 ]
+								ledger_mode=$?
+								build_ledger $ledger_mode
+								if [ $make_new_index = 1 ]
 								then
-									changes=0
-								else
-									changes=1
-								fi
-								build_ledger $changes
-								if [ $changes = 1 ]
-								then
+									now_stamp=$(date +%s)
 									make_signature "none" $now_stamp 1
 								fi
 								send_uca
