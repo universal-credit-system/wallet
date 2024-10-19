@@ -348,8 +348,7 @@ make_signature(){
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
-				last_index_file=$(ls -1 ${user_path}/|grep "index_trx.dat"|tail -1)
-				cat ${user_path}/${last_index_file} >>${message_blank}
+				cat ${user_path}/*_index_trx.dat >>${message_blank}
 			fi
 			#################################################################
 
@@ -612,7 +611,6 @@ build_ledger(){
 			previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
 			cp ${user_path}/${previous_day}_ledger.dat ${user_path}/${focus}_ledger.dat
 			cp ${user_path}/${previous_day}_scoretable.dat ${user_path}/${focus}_scoretable.dat
-			cp ${user_path}/${previous_day}_index_trx.dat ${user_path}/${focus}_index_trx.dat
 
 			###GRANT COINLOAD OF THAT DAY####################
 			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
