@@ -4181,11 +4181,11 @@ do
 									fi
 									if [ $sender = $handover_account ]
 									then
-										printf "%s" "${trx_date}|-${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_snd\ZB " >>${user_path}/history_list.tmp
+										echo "${trx_date}|-${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_snd\ZB" >>${user_path}/history_list.tmp
 									fi
 									if [ $receiver = $handover_account ]
 									then
-										printf "%s" "${trx_date}|+${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_rcv\ZB " >>${user_path}/history_list.tmp
+										echo "${trx_date}|+${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_rcv\ZB" >>${user_path}/history_list.tmp
 									fi
 								done <${user_path}/my_trx.tmp
 							else
