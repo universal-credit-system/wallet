@@ -28,10 +28,10 @@ then	############################
 	mkdir ${script_path}/userdata
 
 	###SAVE UMASK SETTINGS######
-	user_umask=`umask`
-	permissions_directories=`echo "777 - ${user_umask}"|bc`
+	user_umask=$(umask)
+	permissions_directories=$(( 777 - ${user_umask} ))
 	touch ${script_path}/test.tmp
-	permissions_files=`stat -c '%a' ${script_path}/test.tmp`
+	permissions_files=$(stat -c '%a' ${script_path}/test.tmp)
 	rm ${script_path}/test.tmp
 	cp ${script_path}/control/install_config.conf ${script_path}/control/config.conf
 	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" ${script_path}/control/config.conf
@@ -51,7 +51,7 @@ else
 	###########ABORT############
 
 	###DISPLAY APPS TO INSTALL##
-	no_of_programs=`wc -l <${script_path}/install_dep.tmp`
+	no_of_programs=$(wc -l <${script_path}/install_dep.tmp)
         echo "Found ${no_of_programs} programs that need to be installed:"
         cat ${script_path}/install_dep.tmp
 	echo "Install these programms first, then run install.sh again."
