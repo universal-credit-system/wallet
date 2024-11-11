@@ -29,7 +29,7 @@ then	############################
 
 	###SAVE UMASK SETTINGS######
 	user_umask=$(umask)
-	permissions_directories=$(( 777 - ${user_umask} ))
+	permissions_directories=$(echo "777 - ${user_umask}"|bc)
 	touch ${script_path}/test.tmp
 	permissions_files=$(stat -c '%a' ${script_path}/test.tmp)
 	rm ${script_path}/test.tmp
