@@ -1835,7 +1835,8 @@ process_new_files(){
 											then
 												no_matches=$(( no_matches + 1 ))
 											else
-												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
+												stripped_file=$(echo "${line}"|awk '{print $1}')
+												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
 												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
 												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 												then
@@ -1850,7 +1851,8 @@ process_new_files(){
 												is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
 												if [ $is_file_there = 0 ]
 												then
-													new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
+													stripped_file=$(echo "${line}"|awk '{print $1}')
+													new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
 													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
 													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 													then
@@ -1873,7 +1875,8 @@ process_new_files(){
 											then
 												no_matches=$(( no_matches + 1 ))
 											else
-												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${line})
+												stripped_file=$(echo "${line}"|awk '{print $1}')
+												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
 												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
 												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 												then
@@ -1888,7 +1891,8 @@ process_new_files(){
 												is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
 												if [ $is_file_there = 0 ]
 												then
-													old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${line})
+													stripped_file=$(echo "${line}"|awk '{print $1}')
+													old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
 													old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
 													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 													then
