@@ -4111,6 +4111,7 @@ do
 								auto_uca_start=1
 							fi
 							action_done=1
+							make_ledger=1
 						else
 							if [ $cmd_action = "sync_uca" ]
 							then
