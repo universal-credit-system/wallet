@@ -4218,21 +4218,26 @@ do
 										trx_file_path="${script_path}/trx/${trx_file}"
 										sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file_path)
 										receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file_path)
-										purpose=""
-										purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
-										purpose_start=$(( purpose_start + 1 ))
-										purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
-										purpose_end=$(( purpose_end - 1 ))
-										purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
-										echo "-----BEGIN PGP MESSAGE-----" >${user_path}/history_purpose_encryped.tmp
-										echo "" >>${user_path}/history_purpose_encryped.tmp
-										echo "${purpose_encrypted}" >>${user_path}/history_purpose_encryped.tmp
-										echo "-----END PGP MESSAGE-----" >>${user_path}/history_purpose_encryped.tmp
-										gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decryped.tmp --decrypt ${user_path}/history_purpose_encryped.tmp 2>/dev/null
-										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ "${receiver}" = "${handover_account}" ]
 										then
-											purpose=$(cat ${user_path}/history_purpose_decryped.tmp)
+											purpose=""
+											purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
+											purpose_start=$(( purpose_start + 1 ))
+											purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
+											purpose_end=$(( purpose_end - 1 ))
+											purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
+											echo "-----BEGIN PGP MESSAGE-----" >${user_path}/history_purpose_encryped.tmp
+											echo "" >>${user_path}/history_purpose_encryped.tmp
+											echo "${purpose_encrypted}" >>${user_path}/history_purpose_encryped.tmp
+											echo "-----END PGP MESSAGE-----" >>${user_path}/history_purpose_encryped.tmp
+											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decryped.tmp --decrypt ${user_path}/history_purpose_encryped.tmp 2>/dev/null
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												purpose=$(cat ${user_path}/history_purpose_decryped.tmp)
+											fi
+										else
+											purpose="-"
 										fi
 										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
 										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
