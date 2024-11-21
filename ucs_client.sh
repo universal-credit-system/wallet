@@ -2530,6 +2530,7 @@ send_uca(){
 						rm ${sync_file} 2>/dev/null
 						rm ${user_path}/files_list.tmp 2>/dev/null
 					fi
+					rm ${out_file} 2>/dev/null
 				fi
 			fi
 			###STATUS BAR FOR GUI##############################
@@ -3659,9 +3660,11 @@ do
 																	#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
 																	#############################################################################
 
-																	if [ ! $trx_path_output = $script_path ]
+																	if [ ! $trx_path_output = $script_path ] && [ -d $trx_path_output ]
 																	then
 																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
+																	else
+																		rm ${script_path}/${handover_account}_${trx_now}.trx
 																	fi
 																fi
 																if [ $gui_mode = 1 ]
