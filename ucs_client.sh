@@ -3664,7 +3664,10 @@ do
 																	then
 																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
 																	else
-																		rm ${script_path}/${handover_account}_${trx_now}.trx
+																		if [ "${trx_path_output}" = "" ]
+																		then
+																			rm ${script_path}/${handover_account}_${trx_now}.trx
+																		fi
 																	fi
 																fi
 																if [ $gui_mode = 1 ]
