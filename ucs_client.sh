@@ -16,7 +16,8 @@ login_account(){
 			then
 				keylist_hash=${cmd_sender%%.*}
 			else
-				keylist_hash=$(echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum|cut -d ' ' -f1)
+				keylist_hash=$(echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum)
+				keylist_hash=${keylist_hash%% *}
 			fi
 			#############################################################
 
@@ -125,7 +126,8 @@ create_keys(){
 		file_stamp=$(date +%s)
 
 		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
-		create_name_hashed=$(echo "${create_name}_${file_stamp}_${create_pin}"|sha256sum|cut -d ' ' -f1)
+		create_name_hashed=$(echo "${create_name}_${file_stamp}_${create_pin}"|sha256sum)
+		create_name_hashed=${create_name_hashed%% *}
 
 		if [ $gui_mode = 1 ]
 		then
@@ -327,14 +329,16 @@ make_signature(){
 				###WRITE ASSETS TO INDEX FILE####################################
 				for asset in $(cat ${user_path}/all_assets.dat)
 				do
-					asset_hash=$(sha256sum ${script_path}/assets/${asset}|cut -d ' ' -f1)
+					asset_hash=$(sha256sum ${script_path}/assets/${asset})
+					asset_hash=${asset_hash%% *}
 					echo "assets/${asset} ${asset_hash}" >>${message_blank}
 				done
 
 				for key_file in $(cat ${user_path}/all_accounts.dat)
 				do
 					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=$(sha256sum ${script_path}/keys/${key_file}|cut -d ' ' -f1)
+					key_hash=$(sha256sum ${script_path}/keys/${key_file})
+					key_hash=${key_hash%% *}
 					echo "keys/${key_file} ${key_hash}" >>${message_blank}
 					#################################################################
 
@@ -342,7 +346,8 @@ make_signature(){
 					for tsa_file in $(ls -1 ${script_path}/proofs/${key_file}/*.ts*)
 					do
 						file=$(basename $tsa_file)
-						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${file}|cut -d ' ' -f1)
+						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${file})
+						file_hash=${file_hash%% *}
 						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
 					done
 				done
@@ -541,11 +546,14 @@ build_ledger(){
 				if [ ! "${asset}" = "${main_asset}" ]
 				then
 					asset_data=$(cat ${script_path}/assets/${asset})
-					asset_fungible=$(echo "$asset_data"|grep "asset_fungible="|cut -d '=' -f2)
+					asset_fungible=$(echo "$asset_data"|grep "asset_fungible=")
+					asset_fungible=${asset_fungible#*=}
 					if [ $asset_fungible = 0 ]
 					then
-						asset_owner=$(echo "$asset_data"|grep "asset_owner="|cut -d '=' -f2)
-						asset_quantity=$(echo "$asset_data"|grep "asset_quantity="|cut -d '=' -f2)
+						asset_owner=$(echo "$asset_data"|grep "asset_owner=")
+						asset_owner=${asset_owner#*=}
+						asset_quantity=$(echo "$asset_data"|grep "asset_quantity=")
+						asset_quantity=${asset_quantity#*=}
 						already_exists=$(grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat)
 						if [ $already_exists = 0 ]
 						then
@@ -650,8 +658,10 @@ build_ledger(){
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
 				for non_fungible_asset in $(grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp))
 				do
-					asset_quantity=$(grep "asset_quantity=" $non_fungible_asset|cut -d '=' -f2)
-					asset_owner=$(grep "asset_owner=" $non_fungible_asset|cut -d '=' -f2)
+					asset_quantity=$(grep "asset_quantity=" $non_fungible_asset)
+					asset_quantity=${asset_quantity#*=}
+					asset_owner=$(grep "asset_owner=" $non_fungible_asset)
+					asset_owner=${asset_owner#*=}
 					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat				
 				done
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
@@ -670,7 +680,8 @@ build_ledger(){
 				trx_stamp=$(awk -F: '/:TIME:/{print $3}' $trx_file)
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
-				trx_hash=$(sha256sum $trx_file|cut -d ' ' -f1)
+				trx_hash=$(sha256sum $trx_file)
+				trx_hash=${trx_hash%% *}
 				trx_path="trx/${trx_filename}"
 				##############################################################
 
@@ -688,7 +699,8 @@ build_ledger(){
 						if [ $sender_in_ledger = 1 ]
 						then
 							###GET ACCOUNT BALANCE########################################
-							account_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+							account_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
+							account_balance=${account_balance#*=}
 
 							###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
 							account_check_balance=$(echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g')
@@ -698,7 +710,8 @@ build_ledger(){
 							if [ "${trx_asset}" = "${main_asset}" ]
 							then
 								###SCORING####################################################
-								sender_score_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_scoretable.dat|cut -d '=' -f2)
+								sender_score_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_scoretable.dat)
+								sender_score_balance=${sender_score_balance#*=}
 								is_score_ok=$(echo "${sender_score_balance} >= ${trx_amount}"|bc)
 								##############################################################
 							else
@@ -787,7 +800,8 @@ build_ledger(){
 										fi
 										##############################################################
 										###SET BALANCE FOR RECEIVER###################################
-										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
+										receiver_old_balance=${receiver_old_balance#*=}
 										receiver_new_balance=$(echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g')
 										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
 										##############################################################
@@ -795,15 +809,18 @@ build_ledger(){
 										if [ $is_asset = 1 ] && [ $is_fungible = 1 ]
 										then
 											###EXCHANGE###################################################
-											asset_type_price=$(grep "asset_price=" ${script_path}/assets/${trx_asset}|cut -d '=' -f2)
-											asset_price=$(grep "asset_price=" ${script_path}/assets/${trx_receiver}|cut -d '=' -f2)
+											asset_type_price=$(grep "asset_price=" ${script_path}/assets/${trx_asset})
+											asset_type_price=${asset_type_price#*=}
+											asset_price=$(grep "asset_price=" ${script_path}/assets/${trx_receiver})
+											asset_price=${asset_price#*=}
 											asset_value=$(echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
 											##############################################################
 											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
 											receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
 											if [ $receiver_in_ledger = 1 ]
 											then
-												sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat|cut -d '=' -f2)
+												sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
+												sender_old_balance=${sender_old_balance#*=}
 												sender_new_balance=$(echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g')
 												sed -i "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" ${user_path}/${focus}_ledger.dat
 											else
@@ -1100,12 +1117,16 @@ check_assets(){
 					asset_acknowledged=0
 					asset=$line
 					asset_data=$(grep "asset_" ${script_path}/assets/${asset}|grep "=")
-					asset_description=$(echo "$asset_data"|grep "asset_description"|cut -d '=' -f2)
+					asset_description=$(echo "$asset_data"|grep "asset_description")
+					asset_description=${asset_description#*=}
 					asset_symbol=${asset%%.*}
 					asset_stamp=${asset#*.}
-					asset_price=$(echo "$asset_data"|grep "asset_price"|cut -d '=' -f2)
-					asset_quantity=$(echo "$asset_data"|grep "asset_quantity"|cut -d '=' -f2)
-					asset_fungible=$(echo "$asset_data"|grep "asset_fungible"|cut -d '=' -f2)
+					asset_price=$(echo "$asset_data"|grep "asset_price")
+					asset_price=${asset_price#*=}
+					asset_quantity=$(echo "$asset_data"|grep "asset_quantity")
+					asset_quantity=${asset_quantity#*=}
+					asset_fungible=$(echo "$asset_data"|grep "asset_fungible")
+					asset_fungible=${asset_fungible#*=}
 					stamp_only_digits=$(echo "${asset_stamp}"|grep -c '[^[:digit:]]')
 					stamp_size=${#asset_stamp}
 
@@ -1128,7 +1149,8 @@ check_assets(){
 									if [ $asset_fungible = 0 ] || [ $asset_fungible = 1 ]
 									then
 										asset_owner_ok=0
-										asset_owner=$(echo "$asset_data"|grep "asset_owner"|cut -d '=' -f2)
+										asset_owner=$(echo "$asset_data"|grep "asset_owner")
+										asset_owner=${asset_owner#*=}
 										if [ $asset_fungible = 0 ]
 										then
 											###CHECK ASSET HARDCAP#################################
@@ -1366,8 +1388,10 @@ check_tsa(){
 									if [ $crl_old_valid_from -eq $crl_new_valid_from ] && [ $crl_old_valid_till -eq $crl_new_valid_till ]
 									then
 										###GET HASHES TO COMPARE################
-										new_crl_hash=$(sha224sum ${script_path}/certs/root_ca.crl|cut -d ' ' -f1)
-										old_crl_hash=$(sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl|cut -d ' ' -f1)
+										new_crl_hash=$(sha224sum ${script_path}/certs/root_ca.crl)
+										new_crl_hash=${new_crl_hash%% *}
+										old_crl_hash=$(sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl)
+										old_crl_hash=${old_crl_hash%% *}
 										if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
 										then
 											mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
@@ -1700,7 +1724,8 @@ check_trx(){
 					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
 					trx_date_filename=${line#*.*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
-					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check|cut -d '.' -f2)
+					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
+					trx_receiver_date=${trx_receiver_date#*.}
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
@@ -1802,7 +1827,7 @@ process_new_files(){
 							assets_ok=1
 							for new_index_assets in $(grep "assets/" ${user_path}/temp/${new_index_file})
 							do
-								asset_file=$(echo "${new_index_assets}"|cut -d ' ' -f1)
+								asset_file=${new_index_assets%% *}
 								is_asset_there=$(grep -c "${asset_file}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
 								if [ $is_asset_there = 1 ]
 								then
@@ -2067,7 +2092,8 @@ get_dependencies(){
 			depend_confirmations_old_hash="X"
 			if [ -e ${user_path}/depend_accounts.dat ]
 			then
-				depend_accounts_old_hash=$(sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1)
+				depend_accounts_old_hash=$(sha256sum ${user_path}/depend_accounts.dat)
+				depend_accounts_old_hash=${depend_accounts_old_hash%% *}
 				cp ${user_path}/depend_accounts.dat ${user_path}/depend_accounts_old.tmp
 			else
 				first_start=1
@@ -2076,12 +2102,14 @@ get_dependencies(){
 			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
-					depend_trx_old_hash=$(sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1)
+					depend_trx_old_hash=$(sha256sum ${user_path}/depend_trx.dat)
+					depend_trx_old_hash=${depend_trx_old_hash%% *}
 					cp ${user_path}/depend_trx.dat ${user_path}/depend_trx_old.tmp
 				fi
 				if [ -e ${user_path}/depend_confirmations.dat ]
 				then
-					depend_confirmations_old_hash=$(sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1)
+					depend_confirmations_old_hash=$(sha256sum ${user_path}/depend_confirmations.dat)
+					depend_confirmations_old_hash=${depend_confirmations_old_hash%% *}
 					cp ${user_path}/depend_confirmations.dat ${user_path}/depend_confirmations_old.tmp
 				fi
 			fi
@@ -2134,7 +2162,8 @@ get_dependencies(){
 			touch ${user_path}/depend_confirmations.dat
 			while read line
 			do
-				trx_hash=$(sha256sum ${script_path}/trx/${line}|cut -d ' ' -f1)
+				trx_hash=$(sha256sum ${script_path}/trx/${line})
+				trx_hash=${trx_hash%% *}
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx})
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx})
 				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
@@ -2145,9 +2174,12 @@ get_dependencies(){
 			done <${user_path}/depend_trx.dat
 
 			###GET HASH AND COMPARE#######################################################
-			depend_accounts_new_hash=$(sha256sum ${user_path}/depend_accounts.dat|cut -d ' ' -f1)
-			depend_trx_new_hash=$(sha256sum ${user_path}/depend_trx.dat|cut -d ' ' -f1)
-			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat|cut -d ' ' -f1)
+			depend_accounts_new_hash=$(sha256sum ${user_path}/depend_accounts.dat)
+			depend_accounts_new_hash=${depend_accounts_new_hash%% *}
+			depend_trx_new_hash=$(sha256sum ${user_path}/depend_trx.dat)
+			depend_trx_new_hash=${depend_trx_new_hash%% *}
+			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat)
+			depend_confirmations_new_hash=${depend_confirmations_new_hash%% *}
 			if [ $depend_accounts_new_hash = $depend_accounts_old_hash ] && [ $depend_trx_new_hash = $depend_trx_old_hash ] && [ $depend_confirmations_new_hash = $depend_confirmations_old_hash ] && [ $own_index_there = 1 ]
 			then
 				make_new_index=0
@@ -2160,7 +2192,8 @@ get_dependencies(){
 					touch ${user_path}/dates.tmp
 
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
-					depend_accounts_new_date=$(sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1|cut -d '.' -f2)
+					depend_accounts_new_date=$(sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1)
+					depend_accounts_new_date=${depend_accounts_new_date#*.}
 					if [ ! "${depend_accounts_new_date}" = "" ]
 					then
 						echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
@@ -2281,7 +2314,8 @@ request_uca(){
 					header=${header#*:}
 					usera_ssecret_tmp=$(echo "${userb_sent} ^ ${usera_random_integer_formatted}"|bc)
 					usera_ssecret=$(echo "${usera_ssecret_tmp} % ${p_number}"|bc)
-					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1)
+					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum)
+					usera_hssecret=${usera_hssecret%% *}
 					userb_uname=${header%%:*}
 
 					###CUT OUT BODY AND MOVE FILE#######################
@@ -2417,7 +2451,8 @@ send_uca(){
 					###GET KEY FROM SAVE-TABLE#########################
 					usera_ssecret=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2)
 					usera_ssecret=$(( usera_ssecret + usera_ssecret ))
-					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum|cut -d ' ' -f1)
+					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum)
+					usera_hssecret=${usera_hssecret%% *}
 					usera_session_id=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3)
 					uca_user=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f4)
 					
@@ -3128,8 +3163,8 @@ do
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											no_results=$(echo $dialog_history_noresult|cut -d ' ' -f1)
-											if [ ! $backup_decision = $no_results ]
+											no_results=${dialog_history_noresult%% *}
+											if [ ! "${backup_decision}" = "${no_results}" ]
 											then
 												bcp_date_extracted=$(echo $backup_decision|cut -d '|' -f1)
 												bcp_time_extracted=$(echo $backup_decision|cut -d '|' -f2)
@@ -3348,11 +3383,13 @@ do
 										rm ${user_path}/keylist.tmp
 										while [ $amount_selected = 0 ]
 										do
-											account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat|cut -d '=' -f2)
+											account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
+											account_my_balance=${account_my_balance#*=}
 											if [ "${order_asset}" = "${main_asset}" ]
 											then
 												###SCORE############################################################
-												account_my_score=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat|cut -d '=' -f2)
+												account_my_score=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
+												account_my_score=${account_my_score#*=}
 												sender_score_balance_value=$account_my_score
 												is_score_greater_balance=$(echo "${account_my_score}>${account_my_balance}"|bc)
 												if [ $is_score_greater_balance = 1 ]
@@ -3607,7 +3644,8 @@ do
 													fi
 
 													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
-													trx_hash=$(sha256sum ${script_path}/trx/${handover_account}.${trx_now}|cut -d ' ' -f1)
+													trx_hash=$(sha256sum ${script_path}/trx/${handover_account}.${trx_now})
+													trx_hash=${trx_hash%% *}
 													echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
 													make_signature "none" ${trx_now} 1
 													rt_query=$?
@@ -4163,7 +4201,8 @@ do
 									trx_date=$(date +'%F|%H:%M:%S' --date=@${trx_date_tmp})
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
-									trx_hash=$(sha256sum $trx_file|cut -d ' ' -f1)
+									trx_hash=$(sha256sum $trx_file)
+									trx_hash=${trx_hash%% *}
 									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
@@ -4202,7 +4241,8 @@ do
 							else
 								printf "%s" "${dialog_history_noresult}" >${user_path}/history_list.tmp
 							fi
-							menu_item_selected=$(head -1 ${user_path}/history_list.tmp|cut -d ' ' -f1)
+							menu_item_selected=$(head -1 ${user_path}/history_list.tmp)
+							menu_item_selected=${menu_item_selected%% *}
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
@@ -4211,7 +4251,7 @@ do
 								if [ $rt_query = 0 ]
 								then
 									menu_item_selected=$decision
-									dialog_history_noresults=$(echo $dialog_history_noresult|cut -d ' ' -f1)
+									dialog_history_noresults=${dialog_history_noresult%% *}
 									if [ ! $decision = $dialog_history_noresults ]
 									then
 										trx_date_extracted=${decision%%|*}
@@ -4220,7 +4260,8 @@ do
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
 										trx_file=$(grep "${trx_date}" ${user_path}/my_trx.tmp)
 										trx_amount=$(echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g')
-										trx_hash=$(sha256sum ${script_path}/trx/${trx_file}|cut -d ' ' -f1)
+										trx_hash=$(sha256sum ${script_path}/trx/${trx_file})
+										trx_hash=${trx_hash%% *}
 										trx_file_path="${script_path}/trx/${trx_file}"
 										sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file_path)
 										receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file_path)
