@@ -519,7 +519,7 @@ build_ledger(){
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=$(date -u +%s --date="${start_date}")
-			no_seconds_last=$(( date_stamp_last - date_stamp ))
+			no_seconds_last=$(( date_stamp - date_stamp_last ))
 			day_counter=$(( no_seconds_last / 86400 ))
 			day_counter=$(( day_counter + 1 ))
 		fi
