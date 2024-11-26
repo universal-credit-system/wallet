@@ -3732,7 +3732,7 @@ do
 																if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
-																	rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+																	rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
 
 																	###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 																	#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
