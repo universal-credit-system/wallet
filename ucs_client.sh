@@ -3394,9 +3394,12 @@ do
 									fi
 									if [ $rt_query = 0 ]
 									then
-										touch ${user_path}/keylist.tmp
-										cat ${user_path}/all_accounts.dat >${user_path}/keylist.tmp
-										key_there=$(grep -c "${order_receipient}" ${user_path}/keylist.tmp)
+										if [ ! "${order_receipient}" = "" ]
+										then
+											key_there=$(grep -c "${order_receipient}" ${user_path}/all_accounts.dat)
+										else
+											key_there=0
+										fi
 										if [ $key_there = 1 ]
 										then
 											recipient_found=1
@@ -3420,7 +3423,6 @@ do
 												fi
 											fi
 										fi
-										rm ${user_path}/keylist.tmp
 										while [ $amount_selected = 0 ]
 										do
 											account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
