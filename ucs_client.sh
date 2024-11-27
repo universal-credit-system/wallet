@@ -395,7 +395,7 @@ verify_signature(){
 			rm ${user_path}/gpg_verify.tmp 2>/dev/null
 			return $rt_query
 }
-check_input(){ 
+check_input(){
 		input_string=$1
 		check_mode=$2
 		rt_query=0
@@ -662,7 +662,7 @@ build_ledger(){
 					asset_quantity=${asset_quantity#*=}
 					asset_owner=$(grep "asset_owner=" $non_fungible_asset)
 					asset_owner=${asset_owner#*=}
-					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat				
+					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat
 				done
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
@@ -775,13 +775,13 @@ build_ledger(){
 								then
 									###GET CONFIRMATIONS##########################################
 									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
-									
+
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
 									then
 										total_confirmations=$(( total_confirmations + 1 ))
 									fi
-									
+
 									###CHECK CONFIRMATIONS########################################
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
@@ -1267,7 +1267,7 @@ check_tsa(){
 				tsa_rootcert_available=0
 				crl_retry_counter=0
 				retry_counter=0
-				
+
 				###CHECK IF TIMESTAMP-FILE IS THERE##############
 				if [ -s "${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat" ]
 				then
@@ -1279,7 +1279,7 @@ check_tsa(){
 					period_seconds=$(( check_period_tsa + 1 ))
 				fi
 				#################################################
-				
+
 				###CHECK TSA.CRT, CACERT.PEM AND ROOT_CA.CRL#####
 				while [ $tsa_checked = 0 ]
 				do
@@ -1289,7 +1289,7 @@ check_tsa(){
 						###GET DATES######################################
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-						
+
 						###CHECK IF CERT IS VALID#########################
 						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
 						then
@@ -1313,7 +1313,7 @@ check_tsa(){
 							###GET DATES######################################
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-							
+
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
@@ -1337,7 +1337,7 @@ check_tsa(){
 						###GET DATES######################################
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-						
+
 						###CHECK IF CERT IS VALID#########################
 						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
 						then
@@ -1361,7 +1361,7 @@ check_tsa(){
 							###GET DATES######################################
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-							
+
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
@@ -1759,7 +1759,7 @@ check_trx(){
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX######## 
+					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX########
 					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
 					trx_date_filename=${line#*.*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
@@ -2458,7 +2458,7 @@ send_uca(){
 			done <${script_path}/control/uca.conf
 		fi
 		###################################################
-	
+
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
@@ -2479,7 +2479,7 @@ send_uca(){
 
 			###GET STAMP#######################################
 			now_stamp=$(date +%s)
-			
+
 			###ONLY CONTINUE IF SAVEFILE IS THERE##############
 			if [ -s ${save_file} ]
 			then
@@ -2494,7 +2494,7 @@ send_uca(){
 					usera_hssecret=${usera_hssecret%% *}
 					usera_session_id=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3)
 					uca_user=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f4)
-					
+
 					###CREATE FILE LIST FOR SYNC FILE##################
 					rm ${user_path}/files_list.tmp 2>/dev/null
 					receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
@@ -2571,7 +2571,7 @@ send_uca(){
 						###GET TRX#########################################
 						awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
 					fi
-				
+
 					###STEP INTO HOMEDIR AND CREATE TARBALL######
 					cd ${script_path}/
 					tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
