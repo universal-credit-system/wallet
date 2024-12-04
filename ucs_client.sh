@@ -485,7 +485,7 @@ build_ledger(){
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
-			last_ledger_date=$(echo $last_ledger|cut -d '_' -f1)
+			last_ledger_date=${last_ledger%%_*}
 			last_ledger_date_stamp=$(date -u +%s --date="${last_ledger_date}")
 
 			###SET DATESTAMP TO NEXTDAY OF LAST LEDGER##########
@@ -881,7 +881,7 @@ build_ledger(){
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
-					asset_type=$(echo "${balance}"|cut -d ':' -f1)
+					asset_type=${balance%%:*}
 					if [ "${asset_type}" = "${main_asset}" ]
 					then
 						cmd_output=$(grep "${asset_type}:${handover_account}" ${user_path}/${last_ledger})
@@ -931,13 +931,13 @@ check_archive(){
 						while read line
 						do
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
-							files_not_homedir=$(echo $line|cut -d '/' -f1)
+							files_not_homedir=${line%%/*}
 							case $files_not_homedir in
 								"assets")	if [ $import_fungible_assets = 1 ] || [ $import_non_fungible_assets = 1 ]
 										then
 											if [ ! -d ${script_path}/$line ]
 											then
-												file_full=$(echo $line|cut -d '/' -f2)
+												file_full=${line#*/}
 												file_ext=${file_full#*.}
 												file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 												if [ $file_ext_correct -gt 0 ]
@@ -959,7 +959,7 @@ check_archive(){
 							      			;;
 								"keys")		if [ ! -d ${script_path}/$line ]
 										then
-											file_full=$(echo $line|cut -d '/' -f2)
+											file_full=${line#*/}
 											file_ext=${file_full#*.}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
@@ -980,7 +980,7 @@ check_archive(){
 							      			;;
 			       					"trx")		if [ ! -d ${script_path}/$line ]
 										then
-											file_full=$(echo $line|cut -d '/' -f2)
+											file_full=${line#*/}
 											file_ext=${file_full#*.}
 											file_ext=${file_ext%%.*}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
@@ -1009,14 +1009,15 @@ check_archive(){
 					       					;;
 								"proofs")	if [ ! -d ${script_path}/$line ]
 										then
-											file_usr=$(echo $line|cut -d '/' -f2)
+											file_usr=${line#*/}
+											file_usr=${file_usr%%/*}
 											file_usr_correct=$(echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]')
 											if [ $file_usr_correct = 0 ]
 											then
-												file_full=$(echo $line|cut -d '/' -f3)
-												file_ext=$(echo $line|cut -d '/' -f3|cut -d '.' -f2)
+												file_full=${line#*/*/}
+												file_ext=${file_full#*.}
 												case $file_ext in
-													"tsq")	tsa_name=$(echo $line|cut -d '/' -f3|cut -d '.' -f1)
+													"tsq")	tsa_name=${file_full%%.*}
 														for tsa_service in $(ls -1 ${script_path}/certs)
 														do
 															if [ "${tsa_service}" = "${tsa_name}" ]
@@ -1033,7 +1034,7 @@ check_archive(){
 															fi
 														done
 														;;
-													"tsr")	tsa_name=$(echo $line|cut -d '/' -f3|cut -d '.' -f1)
+													"tsr")	tsa_name=${file_full%%.*}
 														for tsa_service in $(ls -1 ${script_path}/certs)
 														do
 															if [ "${tsa_service}" = "${tsa_name}" ]
@@ -3207,8 +3208,8 @@ do
 											no_results=${dialog_history_noresult%% *}
 											if [ ! "${backup_decision}" = "${no_results}" ]
 											then
-												bcp_date_extracted=$(echo $backup_decision|cut -d '|' -f1)
-												bcp_time_extracted=$(echo $backup_decision|cut -d '|' -f2)
+												bcp_date_extracted=${backup_decision%%|*}
+												bcp_time_extracted=${backup_decision#*|}
 												bcp_stamp=$(date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}")
 												bcp_file=$(cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}")
 												file_path="${script_path}/backup/${bcp_file}"
