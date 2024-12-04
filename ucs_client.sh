@@ -484,7 +484,7 @@ build_ledger(){
 		if [ $old_ledger_there -gt 0 ] && [ $old_scoretable_there -gt 0 ] && [ $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
-			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1)
+			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
 			last_ledger_date=$(echo $last_ledger|cut -d '_' -f1)
 			last_ledger_date_stamp=$(date -u +%s --date="${last_ledger_date}")
 
@@ -877,7 +877,7 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|sort -t _ -k1|tail -1)
+				last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
