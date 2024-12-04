@@ -3303,13 +3303,14 @@ do
 			account_my_score=""
 			for ledger_entry in $(grep ":${handover_account}" ${user_path}/${now}_ledger.dat)
 			do
-				balance_asset=$(echo "${ledger_entry}"|cut -d ':' -f1)
-				balance_value=$(echo "${ledger_entry}"|cut -d '=' -f2)
+				balance_asset=${ledger_entry%%:*}
+				balance_value=${ledger_entry#*=}
 				account_my_balance="${account_my_balance}${balance_value} ${balance_asset}\n"
 				score_there=$(grep -c "${balance_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
 				if [ $score_there -eq 1 ]
 				then
-					score_value=$(grep "${balance_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat|cut -d '=' -f2)
+					score_value=$(grep "${balance_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
+					score_value=${score_value#*=}
 					is_score_greater_balance=$(echo "${score_value} > ${balance_value}"|bc)
 					if [ $is_score_greater_balance = 1 ]
 					then
