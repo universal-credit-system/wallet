@@ -2623,6 +2623,7 @@ send_uca(){
 		done <${script_path}/control/uca.conf
 		rm ${save_file} 2>/dev/null
 		rm ${user_path}/uca_list.tmp 2>/dev/null
+		sleep 1
 }
 ##################
 #Main Menu Screen#
