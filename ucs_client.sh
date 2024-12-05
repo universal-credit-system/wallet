@@ -2497,81 +2497,83 @@ send_uca(){
 					uca_user=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f4)
 
 					###CREATE FILE LIST FOR SYNC FILE##################
-					rm ${user_path}/files_list.tmp 2>/dev/null
 					receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
-					if [ -s $receipient_index_file ]
-					then
-						###GET ASSETS######################################
-						while read line
-						do
-							asset_there=$(grep -c "assets/${line}" $receipient_index_file)
-							if [ $asset_there = 0 ]
-							then
-								echo "assets/${line}" >>${user_path}/files_list.tmp
-							fi
-						done <${user_path}/all_assets.dat
-
-						###GET KEYS AND PROOFS#############################
-						while read line
-						do
-							key_there=$(grep -c "keys/${line}" $receipient_index_file)
-							if [ $key_there = 0 ]
-							then
-								echo "keys/${line}" >>${user_path}/files_list.tmp
-							fi
-
-							for tsa_service in $(ls -1 ${script_path}/certs)
+					###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+					{
+						if [ -s $receipient_index_file ]
+						then
+							###GET ASSETS######################################
+							while read line
 							do
-								tsa_req_there=0
-								tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
-								if [ $tsa_req_there = 0 ]
+								asset_there=$(grep -c "assets/${line}" $receipient_index_file)
+								if [ $asset_there = 0 ]
 								then
-									echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+									echo "assets/${line}"
 								fi
-								tsa_res_there=0
-								tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
-								if [ $tsa_res_there = 0 ]
-								then
-									echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-								fi
-							done
-							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-							then
-								echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-							fi
-						done <${user_path}/depend_accounts.dat
+							done <${user_path}/all_assets.dat
 
-						###GET TRX#########################################
-						while read line
-						do
-							trx_there=$(grep -c "trx/${line}" $receipient_index_file)
-							if [ $trx_there = 0 ]
-							then
-								echo "trx/${line}" >>${user_path}/files_list.tmp
-							fi
-						done <${user_path}/depend_trx.dat
-					else
-						###GET ASSETS######################################
-						awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
-
-						###GET KEYS AND PROOFS#############################
-						while read line
-						do
-							echo "keys/${line}" >>${user_path}/files_list.tmp
-							for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+							###GET KEYS AND PROOFS#############################
+							while read line
 							do
-								file=$(basename $tsa_file)
-								echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-							done
-							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-							then
-								echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-							fi
-						done <${user_path}/depend_accounts.dat
+								key_there=$(grep -c "keys/${line}" $receipient_index_file)
+								if [ $key_there = 0 ]
+								then
+									echo "keys/${line}"
+								fi
 
-						###GET TRX#########################################
-						awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
-					fi
+								for tsa_service in $(ls -1 ${script_path}/certs)
+								do
+									tsa_req_there=0
+									tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
+									if [ $tsa_req_there = 0 ]
+									then
+										echo "proofs/${line}/${tsa_service}.tsq"
+									fi
+									tsa_res_there=0
+									tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
+									if [ $tsa_res_there = 0 ]
+									then
+										echo "proofs/${line}/${tsa_service}.tsr"
+									fi
+								done
+								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+								then
+									echo "proofs/${line}/${line}.txt"
+								fi
+							done <${user_path}/depend_accounts.dat
+
+							###GET TRX#########################################
+							while read line
+							do
+								trx_there=$(grep -c "trx/${line}" $receipient_index_file)
+								if [ $trx_there = 0 ]
+								then
+									echo "trx/${line}"
+								fi
+							done <${user_path}/depend_trx.dat
+						else
+							###GET ASSETS######################################
+							awk '{print "assets/" $1}' ${user_path}/all_assets.dat
+
+							###GET KEYS AND PROOFS#############################
+							while read line
+							do
+								echo "keys/${line}"
+								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+								do
+									file=$(basename $tsa_file)
+									echo "proofs/${line}/${file}"
+								done
+								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+								then
+									echo "proofs/${line}/${line}.txt"
+								fi
+							done <${user_path}/depend_accounts.dat
+
+							###GET TRX#########################################
+							awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
+						fi
+					} >${user_path}/files_list.tmp
 
 					###STEP INTO HOMEDIR AND CREATE TARBALL######
 					cd ${script_path}/
@@ -3610,82 +3612,84 @@ do
 													if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 													then
 														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
-														rm ${user_path}/files_list.tmp 2>/dev/null
-														if [ $small_trx = 0 ] && [ -s $receipient_index_file ]
-														then
-															###GET ASSETS###################################################
-															while read line
-															do
-																asset_there=$(grep -c "assets/${line}" $receipient_index_file)
-																if [ $asset_there = 0 ]
-																then
-																	echo "assets/${line}" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/all_assets.dat
-
-															###GET KEYS AND PROOFS##########################################
-															while read line
-															do
-																key_there=$(grep -c "keys/${line}" $receipient_index_file)
-																if [ $key_there = 0 ]
-																then
-																	echo "keys/${line}" >>${user_path}/files_list.tmp
-																fi
-
-																for tsa_service in $(ls -1 ${script_path}/certs)
+														###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+														{
+															if [ $small_trx = 0 ] && [ -s $receipient_index_file ]
+															then
+																###GET ASSETS###################################################
+																while read line
 																do
-																	tsa_req_there=0
-																	tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
-																	if [ $tsa_req_there = 0 ]
+																	asset_there=$(grep -c "assets/${line}" $receipient_index_file)
+																	if [ $asset_there = 0 ]
 																	then
-																		echo "proofs/${line}/${tsa_service}.tsq" >>${user_path}/files_list.tmp
+																		echo "assets/${line}"
 																	fi
-																	tsa_res_there=0
-																	tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
-																	if [ $tsa_res_there = 0 ]
-																	then
-																		echo "proofs/${line}/${tsa_service}.tsr" >>${user_path}/files_list.tmp
-																	fi
-																done
-																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-																then
-																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_accounts.dat
+																done <${user_path}/all_assets.dat
 
-															###GET TRX###################################################################
-															while read line
-															do
-																trx_there=$(grep -c "trx/${line}" $receipient_index_file)
-																if [ $trx_there = 0 ]
-																then
-																	echo "trx/${line}" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_trx.dat
-														else
-															###GET ASSETS################################################################
-															awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
-
-															###GET KEYS AND PROOFS#######################################################
-															while read line
-															do
-																echo "keys/${line}" >>${user_path}/files_list.tmp
-																for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+																###GET KEYS AND PROOFS##########################################
+																while read line
 																do
-																	file=$(basename $tsa_file)
-																	echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-																done
-																if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-																then
-																	echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-																fi
-															done <${user_path}/depend_accounts.dat
+																	key_there=$(grep -c "keys/${line}" $receipient_index_file)
+																	if [ $key_there = 0 ]
+																	then
+																		echo "keys/${line}"
+																	fi
 
-															###GET TRX###################################################################
-															awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
-														fi
-														###GET LATEST TRX############################################################
-														echo "trx/${handover_account}.${trx_now}" >>${user_path}/files_list.tmp
+																	for tsa_service in $(ls -1 ${script_path}/certs)
+																	do
+																		tsa_req_there=0
+																		tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
+																		if [ $tsa_req_there = 0 ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsq"
+																		fi
+																		tsa_res_there=0
+																		tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
+																		if [ $tsa_res_there = 0 ]
+																		then
+																			echo "proofs/${line}/${tsa_service}.tsr"
+																		fi
+																	done
+																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	then
+																		echo "proofs/${line}/${line}.txt"
+																	fi
+																done <${user_path}/depend_accounts.dat
+
+																###GET TRX###################################################################
+																while read line
+																do
+																	trx_there=$(grep -c "trx/${line}" $receipient_index_file)
+																	if [ $trx_there = 0 ]
+																	then
+																		echo "trx/${line}"
+																	fi
+																done <${user_path}/depend_trx.dat
+															else
+																###GET ASSETS################################################################
+																awk '{print "assets/" $1}' ${user_path}/all_assets.dat
+
+																###GET KEYS AND PROOFS#######################################################
+																while read line
+																do
+																	echo "keys/${line}"
+																	for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+																	do
+																		file=$(basename $tsa_file)
+																		echo "proofs/${line}/${file}"
+																	done
+																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	then
+																		echo "proofs/${line}/${line}.txt"
+																	fi
+																done <${user_path}/depend_accounts.dat
+
+																###GET TRX###################################################################
+																awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
+															fi
+															###GET LATEST TRX############################################################
+															echo "trx/${handover_account}.${trx_now}"
+														} >${user_path}/files_list.tmp
 													fi
 
 													###COMMANDS TO REPLACE BUILD_LEDGER CALL#####################################
@@ -4110,51 +4114,54 @@ do
 						else
 							if [ ! $rt_query = 255 ]
 							then
-								if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
-								then
-									###WRITE ASSETS TO FILE LIST#################
-									awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+								{			
+									if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
+									then
+										###WRITE ASSETS TO FILE LIST#################
+										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
 
-									###WRITE ACCOUNTS TO FILE LIST###############
-									while read line
-									do
-										echo "keys/${line}" >>${user_path}/files_list.tmp
-										for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+										###WRITE ACCOUNTS TO FILE LIST###############
+										while read line
 										do
-											file=$(basename $tsa_file)
-											echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-										done
-										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-										then
-											echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
+											echo "keys/${line}"
+											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											do
+												file=$(basename $tsa_file)
+												echo "proofs/${line}/${file}"
+											done
+											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+											then
+												echo "proofs/${line}/${line}.txt"
 
-										fi
-									done <${user_path}/depend_accounts.dat
+											fi
+										done <${user_path}/depend_accounts.dat
 
-									###WRITE TRX TO FILE LIST####################
-									awk '{print "trx/" $1}' ${user_path}/depend_trx.dat >>${user_path}/files_list.tmp
-								else
-									###GET ASSETS################################################################
-									awk '{print "assets/" $1}' ${user_path}/all_assets.dat >${user_path}/files_list.tmp
+										###WRITE TRX TO FILE LIST####################
+										awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
+									else
+										###GET ASSETS################################################################
+										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
 
-									###GET KEYS AND PROOFS#######################################################
-									while read line
-									do
-										echo "keys/${line}" >>${user_path}/files_list.tmp
-										for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+										###GET KEYS AND PROOFS#######################################################
+										while read line
 										do
-											file=$(basename $tsa_file)
-											echo "proofs/${line}/${file}" >>${user_path}/files_list.tmp
-										done
-										if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-										then
-											echo "proofs/${line}/${line}.txt" >>${user_path}/files_list.tmp
-										fi
-									done <${user_path}/all_accounts.dat
+											echo "keys/${line}"
+											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											do
+												file=$(basename $tsa_file)
+												echo "proofs/${line}/${file}"
+											done
+											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+											then
+												echo "proofs/${line}/${line}.txt"
+											fi
+										done <${user_path}/all_accounts.dat
 
-									###GET TRX###################################################################
-									awk '{print "trx/" $1}' ${user_path}/all_trx.dat >>${user_path}/files_list.tmp
-								fi
+										###GET TRX###################################################################
+										awk '{print "trx/" $1}' ${user_path}/all_trx.dat
+									fi
+								} >${user_path}/files_list.tmp
 
 								###GET CURRENT TIMESTAMP#################################
 								now_stamp=$(date +%s)
@@ -4318,10 +4325,13 @@ do
 											purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
 											purpose_end=$(( purpose_end - 1 ))
 											purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
-											echo "-----BEGIN PGP MESSAGE-----" >${user_path}/history_purpose_encryped.tmp
-											echo "" >>${user_path}/history_purpose_encryped.tmp
-											echo "${purpose_encrypted}" >>${user_path}/history_purpose_encryped.tmp
-											echo "-----END PGP MESSAGE-----" >>${user_path}/history_purpose_encryped.tmp
+											###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+											{
+												echo "-----BEGIN PGP MESSAGE-----"
+												echo ""
+												echo "${purpose_encrypted}"
+												echo "-----END PGP MESSAGE-----"
+											} >${user_path}/history_purpose_encryped.tmp
 											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decryped.tmp --decrypt ${user_path}/history_purpose_encryped.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
