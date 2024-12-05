@@ -19,7 +19,6 @@ login_account(){
 				keylist_hash=$(echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum)
 				keylist_hash=${keylist_hash%% *}
 			fi
-			#############################################################
 
 			###IF ACCOUNT MATCHES########################################
 			if [ "${keylist_name}" = "${keylist_hash}" ]
@@ -27,16 +26,51 @@ login_account(){
 				account_found=1
 				echo "${keylist_hash}.${keylist_stamp}" >>${script_path}/logon_${my_pid}.tmp
 			fi
-			##############################################################
 		done
-		#############################################################
 
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
-			for each_user in $(cat ${script_path}/logon_${my_pid}.tmp)
+			for user in $(cat ${script_path}/logon_${my_pid}.tmp)
 			do
-				handover_account=$each_user
+				###TEST KEY BY ENCRYPTING A MESSAGE##########################
+				echo $login_name >${script_path}/account_${my_pid}.tmp
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${user} -r ${user} --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
+				rt_query=$?
+				if [ $rt_query = 0 ]
+				then
+					###REMOVE ENCRYPTION SOURCE FILE#############################
+					rm ${script_path}/account_${my_pid}.tmp
+
+					####TEST KEY BY DECRYPTING THE MESSAGE#######################
+					gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${script_path}/account_${my_pid}.tmp --decrypt ${script_path}/account_${my_pid}.tmp.gpg 1>/dev/null 2>/dev/null
+					rt_query=$?
+					if [ $rt_query = 0 ]
+					then
+						extracted_name=$(cat ${script_path}/account_${my_pid}.tmp)
+						if [ "${extracted_name}" = "${login_name}" ]
+						then
+							handover_account=$user
+							user_logged_in=1
+							break
+						fi
+					fi
+				else
+					rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
+				fi
+			done
+			###REMOVE TMP FILES##########################################
+			rm ${script_path}/account_${my_pid}.tmp 2>/dev/null
+			rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
+			rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
+			
+			###IF USER LOGGED IN#########################################
+			if [ $user_logged_in = 1 ]
+			then
+				###SET USERPATH##############################################
+				user_path="${script_path}/userdata/${handover_account}"
+				
+				###CHECK IF USERPATH EXISTS IF NOT SET UP####################
 				if [ ! -d ${script_path}/userdata/${handover_account} ]
 				then
 					mkdir ${script_path}/userdata/${handover_account}
@@ -46,37 +80,8 @@ login_account(){
 					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
 					mkdir ${script_path}/userdata/${handover_account}/temp/trx
 				fi
-
-				###SET USERPATH AND CLEAN GPG TEST FILES#####################
-				user_path="${script_path}/userdata/${handover_account}"
-				rm ${user_path}/account.acc.gpg 2>/dev/null
-				rm ${user_path}/account.acc 2>/dev/null
-
-				###TEST KEY BY ENCRYPTING A MESSAGE##########################
-				echo $login_name >${user_path}/account.acc
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${handover_account} -r ${handover_account} --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${user_path}/account.acc 1>/dev/null 2>/dev/null
-				rt_query=$?
-				if [ $rt_query = 0 ]
-				then
-					###REMOVE ENCRYPTION SOURCE FILE#############################
-					rm ${user_path}/account.acc
-
-					####TEST KEY BY DECRYPTING THE MESSAGE#######################
-					gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${user_path}/account.acc --decrypt ${user_path}/account.acc.gpg 1>/dev/null 2>/dev/null
-					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						extracted_name=$(cat ${user_path}/account.acc)
-						if [ "${extracted_name}" = "${login_name}" ]
-						then
-							user_logged_in=1
-							break
-						fi
-					fi
-				fi
-			done
-			if [ $user_logged_in = 1 ]
-			then
+				
+				####DISPLAY WELCOME MESSAGE################################################
 				if [ $gui_mode = 1 ]
 				then
 					###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
@@ -87,9 +92,8 @@ login_account(){
 			else
 				if [ $gui_mode = 1 ]
 				then
-					###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
-					dialog_login_nokey_display="${dialog_login_nokey} (-> ${login_name})!"
-					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey_display" 0 0
+					###DISPLAY MESSAGE THAT LOGIN FAILED#######################################
+					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
 					clear
 				else
 					exit 1
@@ -98,21 +102,15 @@ login_account(){
 		else
 			if [ $gui_mode = 1 ]
 			then
-				###DISPLAY MESSAGE THAT KEY HAS NOT BEEN FOUND###############
-				dialog_login_nokey2_display=$(echo $dialog_login_nokey2|sed "s/<account_name>/${login_name}/g")
-				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey2_display" 0 0
+				###DISPLAY MESSAGE THAT LOGIN FAILED#######################################
+				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
 				clear
 			else
-				rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
 				exit 1
 			fi
 		fi
-		rm ${user_path}/message_blank.dat.gpg 2>/dev/null
-		rm ${user_path}/account.acc.gpg 2>/dev/null
-		rm ${user_path}/account.acc 2>/dev/null
 		action_done=1
 		make_ledger=1
-		rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
 }
 create_keys(){
 		create_name=$1
