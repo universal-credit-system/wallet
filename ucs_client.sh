@@ -626,7 +626,7 @@ build_ledger(){
 				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
 				touch ${user_path}/${focus}_ledger_others.tmp
 				grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -f - ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
-				sort  ${user_path}/${focus}_ledger_others.tmp ${user_path}/${focus}_ledger.tmp >${user_path}/${focus}_ledger.dat
+				cat ${user_path}/${focus}_ledger.tmp ${user_path}/${focus}_ledger_others.tmp >${user_path}/${focus}_ledger.dat
 				rm ${user_path}/${focus}_ledger_others.tmp
 				rm ${user_path}/${focus}_ledger.tmp
 			fi
