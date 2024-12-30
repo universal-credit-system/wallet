@@ -6,25 +6,34 @@ login_account(){
 		account_found=0
 		handover_account=""
 
-		###READ LIST OF KEYS LINE BY LINE############################
-		for key_file in $(ls -1 -X ${script_path}/keys/)
+		###CALCULATE ADDRESS#########################################
+		if [ ! "${cmd_sender}" = "" ]
+		then
+			key_login=${cmd_sender}
+		fi
+		
+		###FOR EACH SECRET###########################################
+		for secret_file in $(ls -1 -X ${script_path}/control/keys/|grep ".sct")
 		do
-			###EXTRACT KEY DATA##########################################
-			keylist_name=${key_file%%.*}
-			keylist_stamp=${key_file#*.}
-			if [ ! "${cmd_sender}" = "" ]
+			###GET ADDRESS OF SECRET#####################################
+			key_file=${secret_file%%.*}
+			
+			###IF CMD_SENDER NOT SET#####################################
+			if [ "${cmd_sender}" = "" ]
 			then
-				keylist_hash=${cmd_sender%%.*}
-			else
-				keylist_hash=$(echo "${login_name}_${keylist_stamp}_${login_pin}"|sha256sum)
-				keylist_hash=${keylist_hash%% *}
+				###CALCULATE ADDRESS#########################################
+				random_secret=$(cat ${script_path}/control/keys/${secret_file})
+				key_login=$(echo "${login_name}_${random_secret}_${login_pin}"|sha224sum)
+				key_login=${key_login%% *}
+				key_login=$(echo "${key_login}_${login_pin}"|sha224sum)
+				key_login=${key_login%% *}
 			fi
-
+			
 			###IF ACCOUNT MATCHES########################################
-			if [ "${keylist_name}" = "${keylist_hash}" ]
+			if [ "${key_file}" = "${key_login}" ]
 			then
 				account_found=1
-				echo "${keylist_hash}.${keylist_stamp}" >>${script_path}/logon_${my_pid}.tmp
+				echo "${key_file}" >>${script_path}/logon_${my_pid}.tmp
 			fi
 		done
 
@@ -120,11 +129,12 @@ create_keys(){
 		###SET REMOVE TRIGGER TO 0###################################
 		key_remove=0
 
-		###SET FILESTAMP TO NOW######################################
-		file_stamp=$(date +%s)
-
-		###CREATE ADDRESS BY HASHING NAME,STAMP AND PIN##############
-		create_name_hashed=$(echo "${create_name}_${file_stamp}_${create_pin}"|sha256sum)
+		###CREATE ADDRESS BY HASHING NAME,PASSWORD AND PIN###########
+		random_secret=$(head -100 /dev/urandom|tr -dc "[:alnum:]"|head -c 512)
+		create_name_hashed=$(echo "${create_name}_${random_secret}_${create_pin}"|sha224sum)
+		create_name_hashed=${create_name_hashed%% *}
+		verify_secret=$create_name_hashed
+		create_name_hashed=$(echo "${create_name_hashed}_${create_pin}"|sha224sum)
 		create_name_hashed=${create_name_hashed%% *}
 
 		if [ $gui_mode = 1 ]
@@ -134,7 +144,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${create_password} --pinentry-mode loopback --quick-gen-key ${create_name_hashed}.${file_stamp} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${create_password} --pinentry-mode loopback --quick-gen-key ${create_name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -145,17 +155,17 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/assets
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/keys
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/proofs
-			mkdir ${script_path}/userdata/${create_name_hashed}.${file_stamp}/temp/trx
-			user_path="${script_path}/userdata/${create_name_hashed}.${file_stamp}"
+			mkdir ${script_path}/userdata/${create_name_hashed}
+			mkdir ${script_path}/userdata/${create_name_hashed}/temp
+			mkdir ${script_path}/userdata/${create_name_hashed}/temp/assets
+			mkdir ${script_path}/userdata/${create_name_hashed}/temp/keys
+			mkdir ${script_path}/userdata/${create_name_hashed}/temp/proofs
+			mkdir ${script_path}/userdata/${create_name_hashed}/temp/trx
+			user_path="${script_path}/userdata/${create_name_hashed}"
 
 			###EXPORT PUBLIC KEY#########################################
 			key_remove=1
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc --passphrase ${create_password} --pinentry-mode loopback --export ${create_name_hashed}.${file_stamp}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc --passphrase ${create_password} --pinentry-mode loopback --export ${create_name_hashed}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -169,7 +179,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc --pinentry-mode loopback --passphrase ${create_password} --export-secret-keys ${create_name_hashed}.${file_stamp}
+				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc --pinentry-mode loopback --passphrase ${create_password} --export-secret-keys ${create_name_hashed}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -177,7 +187,7 @@ create_keys(){
 					cd ${user_path}
 
 					###CREATE TSA QUERY FILE#####################################
-					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc -no_nonce -sha512 -out ${user_path}/${default_tsa}.tsq 1>/dev/null 2>/dev/null
+					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc -no_nonce -sha512 -out ${user_path}/${default_tsa}.tsq 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -218,56 +228,50 @@ create_keys(){
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###CHECK IF TSA RESPONSE IS WITHIN 120 SECONDS######################
-											date_to_verify=$(grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37)
-											date_to_verify_converted=$(date -u +%s --date="${date_to_verify}")
-											creation_date_diff=$(( date_to_verify_converted - file_stamp ))
-											if [ $creation_date_diff -le 120 ]
+											###GET FILE STAMP###########################################
+											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/timestamp_check.tmp|cut -c 13-37)")
+											if [ $gui_mode = 1 ]
 											then
-												if [ $gui_mode = 1 ]
-												then
-													###DISPLAY PROGRESS ON STATUS BAR###########################
-													echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
-													clear
-												fi
+												###DISPLAY PROGRESS ON STATUS BAR###########################
+												echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
+												clear
+											fi
+											rm ${user_path}/timestamp_check.tmp
 
-												###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
-												mkdir ${script_path}/proofs/${create_name_hashed}.${file_stamp}
-												mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsq
-												mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}.${file_stamp}/${default_tsa}.tsr
+											###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
+											mkdir ${script_path}/proofs/${create_name_hashed}
+											mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsq
+											mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsr
 
-												###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
-												cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_pub.asc ${script_path}/keys/${create_name_hashed}.${file_stamp}
+											###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
+											cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
 
-												###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-												cp ${user_path}/${create_name_hashed}_${create_pin}_${file_stamp}_priv.asc ${script_path}/control/keys/${create_name_hashed}.${file_stamp}
+											###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
+											cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
+											
+											###WRITE SECRETS####################################################
+											echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
+											echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
+											
+											###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED##############
+											cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
 
-												if [ $gui_mode = 1 ]
-												then
-													###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-													dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}.${file_stamp}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
-													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
-
-													###DISPLAY WAIT PERIOD TO SECURE KEY########################
-													now_stamp=$(date +%s)
-													seconds_passed=$(( now_stamp - file_stamp ))
-													seconds_remain=$(( 120 - seconds_passed ))
-													if [ $seconds_remain -gt 0 ]
-													then
-														dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --ok-label "$dialog_next" --no-cancel --pause "$dialog_keys_create4" 0 0 $seconds_remain
-													fi
-													clear
-													key_remove=0
-												else
-													echo "USER:${create_name}"
-													echo "PIN:${create_pin}"
-													echo "PASSWORD:>${create_password}<"
-													echo "ADRESS:${create_name_hashed}.${file_stamp}"
-													echo "KEY:${create_name_hashed}.${file_stamp}"
-													echo "KEY_PUB:/keys/${create_name_hashed}.${file_stamp}"
-													echo "KEY_PRV:/control/keys/${create_name_hashed}.${file_stamp}"
-													exit 0
-												fi
+											if [ $gui_mode = 1 ]
+											then
+												###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
+												dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
+												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
+												key_remove=0
+											else
+												echo "USER:${create_name}"
+												echo "PIN:${create_pin}"
+												echo "PASSWORD:>${create_password}<"
+												echo "ADRESS:${create_name_hashed}"
+												echo "KEY_PUB:/keys/${create_name_hashed}"
+												echo "KEY_PRV:/control/keys/${create_name_hashed}"
+												echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
+												echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
+												exit 0
 											fi
 										fi
 									fi
@@ -282,19 +286,22 @@ create_keys(){
 		then
 			if [ $key_remove = 1 ]
 			then
-				###REMOVE PROOFS DIRECTORY OF USER###########################
-				rm -r ${script_path}/proofs/${create_name_hashed}.${file_stamp} 2>/dev/null
-
-				###REMOVE USERDATA DIRECTORY OF USER#########################
-				rm -r ${script_path}/userdata/${create_name_hashed}.${file_stamp} 2>/dev/null
-
-				###REMOVE KEYS FROM KEYRING##################################
-				key_fp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${create_name_hashed}.${file_stamp}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
-				rt_query=$?
-				if [ $rt_query = 0 ]
+				if [ ! "${create_name_hashed}" = "" ]
 				then
-					gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
-					gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
+					###REMOVE PROOFS DIRECTORY OF USER###########################
+					rm -r ${script_path}/proofs/${create_name_hashed} 2>/dev/null
+
+					###REMOVE USERDATA DIRECTORY OF USER#########################
+					rm -r ${script_path}/userdata/${create_name_hashed} 2>/dev/null
+
+					###REMOVE KEYS FROM KEYRING##################################
+					key_fp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${create_name_hashed}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
+					rt_query=$?
+					if [ $rt_query = 0 ]
+					then
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
+						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
+					fi
 				fi
 				if [ $gui_mode = 0 ]
 				then
@@ -351,7 +358,7 @@ make_signature(){
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
-				cat ${user_path}/*_index_trx.dat >>${message_blank}
+				cat ${user_path}/*_index_trx.dat >>${message_blank} 2>/dev/null
 			fi
 			#################################################################
 
@@ -495,7 +502,7 @@ build_ledger(){
 			day_counter=$(( no_seconds_last / 86400 ))
 		else
 			###SET DATESTAMP####################################
-			date_stamp=$(date -u +%s --date=$(date -u +%Y%m%d --date=@$(sort -t . -k2 ${user_path}/depend_accounts.dat|head -1|cut -d '.' -f2)))
+			date_stamp=$(date -u +%s --date=$(date -u +%Y%m%d --date=@$(grep -f ${user_path}/depend_accounts.dat ${user_path}/all_accounts_dates.dat|sort -t ' ' -k2|head -1|cut -d ' ' -f2)))
 			date_stamp_yesterday=$(date +%Y%m%d --date="$(date -u +%Y%m%d --date=@${date_stamp}) - 1 day")
 
 			###EMPTY LEDGER#####################################
@@ -639,11 +646,11 @@ build_ledger(){
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			touch ${user_path}/accounts.tmp
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_accounts.dat >${user_path}/accounts.tmp
+			grep "$(cat ${user_path}/depend_accounts.dat)" ${user_path}/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
-			awk -F. -v main_asset="${main_asset}" '{print main_asset":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
-			awk -F. -v main_asset="${main_asset}" '{print main_asset":"$1"."$2"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
+			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
+			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###CREATE LIST OF ASSETS CREATED THAT DAY########
@@ -669,7 +676,7 @@ build_ledger(){
 			fi
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
-			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$3 > date_stamp && $3 < date_stamp_tomorrow' ${user_path}/depend_trx.dat) 
+			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_trx.dat) 
 			do
 				is_fungible=0
 
@@ -925,6 +932,9 @@ check_archive(){
 					then
 						files_not_homedir=""
 
+						###GET HASH LIST OF EXISTING KEYS#############################
+						sha224sum $(ls -1 ${script_path}/keys/*)|cut -d ' ' -f1 >${user_path}/files_to_fetch_keys.tmp
+						
 						###GO THROUGH CONTENT LIST LINE BY LINE#######################
 						while read line
 						do
@@ -958,7 +968,28 @@ check_archive(){
 								"keys")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=${line#*/}
-											file_ext=${file_full#*.}
+											file_full_correct=$(echo $file_full|grep -c '[^[:alnum:]]')
+											if [ $file_full_correct -gt 0 ]
+											then
+												rt_query=1
+											else
+												if [ $check_mode = 0 ]
+												then
+													key_exists=$(grep -c "$(sha224sum ${script_path}/$line|cut -d ' ' -f1)" ${user_path}/files_to_fetch_keys.tmp)
+													if [ ! -s ${script_path}/$line ] && [ ! ${key_exists} -gt 0 ]
+													then
+														echo "$line" >>${user_path}/files_to_fetch.tmp
+													fi
+												else
+													echo "$line" >>${user_path}/files_to_fetch.tmp
+												fi
+											fi
+										fi
+							      			;;
+			       					"trx")		if [ ! -d ${script_path}/$line ]
+										then
+											file_full=${line#*/}
+											file_ext=${file_ext%%.*}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
@@ -975,41 +1006,12 @@ check_archive(){
 												fi
 											fi
 										fi
-							      			;;
-			       					"trx")		if [ ! -d ${script_path}/$line ]
-										then
-											file_full=${line#*/}
-											file_ext=${file_full#*.}
-											file_ext=${file_ext%%.*}
-											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
-											if [ $file_ext_correct -gt 0 ]
-											then
-												rt_query=1
-											else
-												file_ext=${file_full#*.*.}
-												file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
-												if [ $file_ext_correct = 0 ]
-												then
-													if [ $check_mode = 0 ]
-													then
-														if [ ! -s ${script_path}/$line ]
-														then
-															echo "$line" >>${user_path}/files_to_fetch.tmp
-														fi
-													else
-														echo "$line" >>${user_path}/files_to_fetch.tmp
-													fi
-												else
-													rt_query=1
-												fi
-											fi
-										fi
 					       					;;
 								"proofs")	if [ ! -d ${script_path}/$line ]
 										then
 											file_usr=${line#*/}
 											file_usr=${file_usr%%/*}
-											file_usr_correct=$(echo $file_usr|cut -d '.' -f2|grep -c '[^[:digit:]]')
+											file_usr_correct=$(echo $file_usr|grep -c '[^[:alnum:]]')
 											if [ $file_usr_correct = 0 ]
 											then
 												file_full=${line#*/*/}
@@ -1067,6 +1069,7 @@ check_archive(){
 							esac
 							##############################################################
 						done <${user_path}/tar_check.tmp
+						rm ${user_path}/files_to_fetch_keys.tmp 2>/dev/null
 						##############################################################
 					else
 						rt_query=1
@@ -1223,10 +1226,10 @@ check_assets(){
 			###################################################################
 
 			###REMOVE BLACKLISTED ASSETS FROM ASSET LIST#######################
-			sort -t . -k3 ${user_path}/all_assets.tmp ${user_path}/blacklisted_assets.dat|uniq -u >${user_path}/all_assets.dat
+			sort -t . -k2 ${user_path}/all_assets.tmp ${user_path}/blacklisted_assets.dat|uniq -u >${user_path}/all_assets.dat
 
 			###ADD ACKNOWLEDGED ASSETS TO FINAL LIST###########################
-			sort -t . -k3 ${user_path}/all_assets.dat ${user_path}/ack_assets.dat >${user_path}/all_assets.tmp
+			sort -t . -k2 ${user_path}/all_assets.dat ${user_path}/ack_assets.dat >${user_path}/all_assets.tmp
 			mv ${user_path}/all_assets.tmp ${user_path}/all_assets.dat
 			rm ${user_path}/ack_assets.dat
 }
@@ -1504,7 +1507,7 @@ check_tsa(){
 
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 -X ${script_path}/keys >${user_path}/all_accounts.dat
-			sort -t . -k2 ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|uniq -u >${user_path}/all_accounts.tmp
+			sort ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|uniq -u >${user_path}/all_accounts.tmp
 			while read line
 			do
 				###SET FLAG##############################################
@@ -1512,7 +1515,6 @@ check_tsa(){
 
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 				accountname_key_name="${line}"
-				accountname_key_stamp=${line#*.}
 				accountname_key_content=$(gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g')
 				if [ $accountname_key_name = $accountname_key_content ]
 				then
@@ -1527,55 +1529,33 @@ check_tsa(){
 							do
 								for crt_file in $(ls -1 ${script_path}/certs/${tsa_service}/tsa.*)
 								do
-									###GET DATES FROM CERTIFICATE###########################
-									crt_file_base=$(basename ${crt_file})
-									if [ ! "${crt_file_base}" = "tsa.crt" ]
+									###CHECK TSA QUERYFILE###################################
+									openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
 									then
-										valid_from=$(echo $crt_file_base|cut -d '.' -f2|cut -d '-' -f1)
-										valid_till=$(echo $crt_file_base|cut -d '.' -f2|cut -d '-' -f2)
-									else
-										valid_from=$(date +%s --date="$(openssl x509 -in ${crt_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-										valid_till=$(date +%s --date="$(openssl x509 -in ${crt_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)")
-									fi
-
-									###IF CERT WAS VALID AT TIMESTAMP OF ACCOUNT CREATION..##
-									if [ $accountname_key_stamp -gt $valid_from ] && [ $accountname_key_stamp -lt $valid_till ]
-									then
-										###CHECK TSA QUERYFILE###################################
-										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+										###WRITE OUTPUT OF RESPONSE TO FILE######################
+										openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###WRITE OUTPUT OF RESPONSE TO FILE######################
-											openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+											###VERIFY TSA RESPONSE###################################
+											openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												###VERIFY TSA RESPONSE###################################
-												openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													###CHECK IF TSA RESPONSE WAS CREATED WITHIN 120 SECONDS AFTER KEY CREATION###########
-													date_to_verify=$(grep "Time stamp:" ${user_path}/timestamp_check.tmp|cut -c 13-37)
-													date_to_verify_converted=$(date -u +%s --date="${date_to_verify}")
-													accountdate_to_verify=${line#*.}
-													creation_date_diff=$(( date_to_verify_converted - accountdate_to_verify ))
-													if [ $creation_date_diff -ge 0 ]
-													then
-														if [ $creation_date_diff -le 120 ]
-														then
-															###SET VARIABLE THAT TSA HAS BEEN FOUND##################
-															account_verified=1
+												###WRITE TIMESTAMP TO FILE###############################
+												file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/timestamp_check.tmp|cut -c 13-37)")
+												echo "${accountname_key_name} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
+												
+												###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+												account_verified=1
 
-															###STEP OUT OF LOOP CACERT_FILE##########################
-															cacert_file_found=1
+												###STEP OUT OF LOOP CACERT_FILE##########################
+												cacert_file_found=1
 
-															###STEP OUT OF LOOP CRT_FILE#############################
-															break
-														fi
-													fi
-												fi
+												###STEP OUT OF LOOP CRT_FILE#############################
+												break
 											fi
 										fi
 									fi
@@ -1624,12 +1604,16 @@ check_tsa(){
 				#####################################################################################
 			fi
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
-			sort -t . -k2 ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_accounts.dat
+			sort ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_accounts.dat
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-			sort -t . -k2 ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat >${user_path}/all_accounts.tmp
+			sort ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat >${user_path}/all_accounts.tmp
 			mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			rm ${user_path}/ack_accounts.dat
+			
+			###SORT DATES LIST#################################################
+			sort -t ' ' -k2 ${user_path}/all_accounts_dates.dat|uniq >${user_path}/all_accounts_dates.tmp
+			mv ${user_path}/all_accounts_dates.tmp ${user_path}/all_accounts_dates.dat
 }
 check_keys(){
 		###SETUP ALL LIST#################################################
@@ -1641,7 +1625,7 @@ check_keys(){
 			touch ${user_path}/ack_keys.dat
 		fi
 		cp ${user_path}/all_accounts.dat ${user_path}/all_keys.dat
-		sort -t . -k2 ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|uniq -u >${user_path}/all_keys.tmp
+		sort ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|uniq -u >${user_path}/all_keys.tmp
 
 		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
 		touch ${user_path}/keylist_gpg.tmp
@@ -1702,10 +1686,10 @@ check_keys(){
 			###################################################################
 		fi
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
-		sort -t . -k2 ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_keys.dat
+		sort ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_keys.dat
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
-		sort -t . -k2 ${user_path}/all_keys.dat ${user_path}/ack_keys.dat >${user_path}/all_keys.tmp
+		sort ${user_path}/all_keys.dat ${user_path}/ack_keys.dat >${user_path}/all_keys.tmp
 		mv ${user_path}/all_keys.tmp ${user_path}/all_keys.dat
 		cp ${user_path}/all_keys.dat ${user_path}/all_accounts.dat
 		rm ${user_path}/ack_keys.dat
@@ -1739,7 +1723,7 @@ check_trx(){
 		###################################################################
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
-		sort -t . -k3 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|uniq -u >${user_path}/all_trx.tmp
+		sort -t . -k2 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|uniq -u >${user_path}/all_trx.tmp
 
 		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
 		while read line
@@ -1749,7 +1733,7 @@ check_trx(){
 
 			###CHECK IF HEADER MATCHES OWNER###################################
 			file_to_check=${script_path}/trx/${line}
-			user_to_check=$(echo $line|awk -F. '{print $1"."$2}')
+			user_to_check=$(echo $line|awk -F. '{print $1}')
 			trx_sender=$(awk -F: '/:SNDR:/{print $3}' $file_to_check)
 			if [ $user_to_check = $trx_sender ]
 			then
@@ -1760,10 +1744,11 @@ check_trx(){
 				then
 					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX########
 					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
-					trx_date_filename=${line#*.*.}
+					trx_date_filename=${line#*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
-					trx_receiver_date=${trx_receiver_date#*.}
+					trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
+					trx_receiver_date=${trx_receiver_date%% *}
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
@@ -1831,10 +1816,10 @@ check_trx(){
 		###################################################################
 
 		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST########################
-		sort -t . -k3 ${user_path}/all_trx.tmp ${user_path}/blacklisted_trx.dat|uniq -u >${user_path}/all_trx.dat
+		sort -t . -k2 ${user_path}/all_trx.tmp ${user_path}/blacklisted_trx.dat|uniq -u >${user_path}/all_trx.dat
 
 		###ADD ACKNOWLEDGED TRX TO FINAL LIST##############################
-		sort -t . -k3 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat >${user_path}/all_trx.tmp
+		sort -t . -k2 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat >${user_path}/all_trx.tmp
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		rm ${user_path}/ack_trx.dat
 
@@ -1850,11 +1835,8 @@ process_new_files(){
 				touch ${user_path}/temp_filelist.tmp
 				for new_index_file in $(grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt")
 				do
-					user_to_verify_base=$(basename $new_index_file)
-					user_to_verify_name=${user_to_verify_base%%.*}
-					user_to_verify_base=${user_to_verify_base#*.}
-					user_to_verify_date=${user_to_verify_base%%.*}
-					user_to_verify="${user_to_verify_name}.${user_to_verify_date}"
+					user_to_verify=$(basename $new_index_file)
+					user_to_verify=${user_to_verify%%.*}
 					user_already_there=$(cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}")
 					if [ $user_already_there = 1 ]
 					then
@@ -2163,7 +2145,7 @@ get_dependencies(){
 				do
 					touch ${user_path}/depend_user_list.tmp
 					user=$line
-					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|awk -F. '{print $1"."$2}'|sort|uniq >${user_path}/depend_user_list.tmp
+					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|sort|uniq >${user_path}/depend_user_list.tmp
 					for user_trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
@@ -2174,7 +2156,7 @@ get_dependencies(){
 							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
-					for trx_file in $(sort -t . -k2 ${user_path}/depend_user_list.tmp|uniq)
+					for trx_file in $(sort ${user_path}/depend_user_list.tmp|uniq)
 					do
 						already_there=$(grep -c "${trx_file}" ${user_path}/depend_accounts.dat)
 						if [ $already_there = 0 ]
@@ -2185,9 +2167,9 @@ get_dependencies(){
 				done <${user_path}/depend_accounts.dat
 
 				###SORT DEPENDENCIE LISTS#####################################################
-				sort -t . -k2 ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
+				sort ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
 				mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
-				sort -t . -k3 ${user_path}/depend_trx.dat|uniq >${user_path}/depend_trx.tmp
+				sort -t . -k2 ${user_path}/depend_trx.dat|uniq >${user_path}/depend_trx.tmp
 				mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 			else
 				###COPY FILES#################################################################
@@ -2230,15 +2212,15 @@ get_dependencies(){
 					touch ${user_path}/dates.tmp
 
 					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
-					depend_accounts_new_date=$(sort -t . -k2 ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u|head -1)
-					depend_accounts_new_date=${depend_accounts_new_date#*.}
+					depend_accounts_new_date=$(grep "$(sort ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u)" ${user_path}/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
+					depend_accounts_new_date=${depend_accounts_new_date#* }
 					if [ ! "${depend_accounts_new_date}" = "" ]
 					then
 						echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
 					fi
 					if [ -e ${user_path}/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
 					then
-						depend_trx_new_date=$(sort -t . -k3 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f3)
+						depend_trx_new_date=$(sort -t . -k2 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
 						if [ ! "${depend_trx_new_date}" = "" ]
 						then
 							echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
@@ -2246,7 +2228,7 @@ get_dependencies(){
 					fi
 					if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
 					then
-						depend_confirmations_new_date=$(sort -t . -k3 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3)
+						depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3)
 						if [ ! "${depend_confirmations_new_date}" = "" ]
 						then
 							echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
@@ -2636,7 +2618,7 @@ core_system_version="v0.0.1"
 ###SET INITIAL VARIABLES####
 check_period_tsa=21600
 main_asset="UCC"
-start_date="20210216"
+start_date="20241229"
 now=$(date -u +%Y%m%d)
 no_ledger=0
 user_logged_in=0
@@ -4237,7 +4219,7 @@ do
 							cd ${script_path}/trx
 							grep -l ":${handover_account}" * >${user_path}/my_trx.tmp 2>/dev/null
 							cd ${script_path}
-							sort -r -t . -k3 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
+							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
 							if [ $no_trx -gt 0 ]
@@ -4247,7 +4229,7 @@ do
 									trx_file=${script_path}/trx/${line}
 									sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 									receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
-									trx_date_tmp=${line#*.*.}
+									trx_date_tmp=${line#*.}
 									trx_date=$(date +'%F|%H:%M:%S' --date=@${trx_date_tmp})
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
