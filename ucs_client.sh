@@ -526,7 +526,6 @@ build_ledger(){
 			date_stamp_last=$(date -u +%s --date="${start_date}")
 			no_seconds_last=$(( date_stamp - date_stamp_last ))
 			day_counter=$(( no_seconds_last / 86400 ))
-			day_counter=$(( day_counter + 1 ))
 		fi
 		####################################################
 
@@ -646,7 +645,7 @@ build_ledger(){
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			touch ${user_path}/accounts.tmp
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
-			grep "$(cat ${user_path}/depend_accounts.dat)" ${user_path}/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >${user_path}/accounts.tmp
+			grep -f ${user_path}/depend_accounts.dat ${user_path}/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >${user_path}/accounts.tmp
 
 			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
 			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
