@@ -11,13 +11,13 @@ login_account(){
 		then
 			key_login=${cmd_sender}
 		fi
-		
+
 		###FOR EACH SECRET###########################################
 		for secret_file in $(ls -1 -X ${script_path}/control/keys/|grep ".sct")
 		do
 			###GET ADDRESS OF SECRET#####################################
 			key_file=${secret_file%%.*}
-			
+
 			###IF CMD_SENDER NOT SET#####################################
 			if [ "${cmd_sender}" = "" ]
 			then
@@ -28,7 +28,7 @@ login_account(){
 				key_login=$(echo "${key_login}_${login_pin}"|sha224sum)
 				key_login=${key_login%% *}
 			fi
-			
+
 			###IF ACCOUNT MATCHES########################################
 			if [ "${key_file}" = "${key_login}" ]
 			then
@@ -72,13 +72,13 @@ login_account(){
 			rm ${script_path}/account_${my_pid}.tmp 2>/dev/null
 			rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
 			rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
-			
+
 			###IF USER LOGGED IN#########################################
 			if [ $user_logged_in = 1 ]
 			then
 				###SET USERPATH##############################################
 				user_path="${script_path}/userdata/${handover_account}"
-				
+
 				###CHECK IF USERPATH EXISTS IF NOT SET UP####################
 				if [ ! -d ${script_path}/userdata/${handover_account} ]
 				then
@@ -89,7 +89,7 @@ login_account(){
 					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
 					mkdir ${script_path}/userdata/${handover_account}/temp/trx
 				fi
-				
+
 				####DISPLAY WELCOME MESSAGE################################################
 				if [ $gui_mode = 1 ]
 				then
@@ -248,11 +248,11 @@ create_keys(){
 
 											###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
 											cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
-											
+
 											###WRITE SECRETS####################################################
 											echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
 											echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
-											
+
 											###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED##############
 											cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
 
@@ -611,7 +611,7 @@ build_ledger(){
 			#################################################
 
 			###CALCULATE CURRENT COINLOAD####################
-			if [ $day_counter = 2 ]
+			if [ $day_counter = 1 ]
 			then
 				coinload=$initial_coinload
 			else
@@ -934,7 +934,7 @@ check_archive(){
 
 						###GET HASH LIST OF EXISTING KEYS#############################
 						sha224sum $(ls -1 ${script_path}/keys/*)|cut -d ' ' -f1 >${user_path}/files_to_fetch_keys.tmp
-						
+
 						###GO THROUGH CONTENT LIST LINE BY LINE#######################
 						while read line
 						do
@@ -1547,7 +1547,7 @@ check_tsa(){
 												###WRITE TIMESTAMP TO FILE###############################
 												file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/timestamp_check.tmp|cut -c 13-37)")
 												echo "${accountname_key_name} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
-												
+
 												###SET VARIABLE THAT TSA HAS BEEN FOUND##################
 												account_verified=1
 
@@ -1610,7 +1610,7 @@ check_tsa(){
 			sort ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat >${user_path}/all_accounts.tmp
 			mv ${user_path}/all_accounts.tmp ${user_path}/all_accounts.dat
 			rm ${user_path}/ack_accounts.dat
-			
+
 			###SORT DATES LIST#################################################
 			sort -t ' ' -k2 ${user_path}/all_accounts_dates.dat|uniq >${user_path}/all_accounts_dates.tmp
 			mv ${user_path}/all_accounts_dates.tmp ${user_path}/all_accounts_dates.dat
@@ -3499,7 +3499,7 @@ do
 											is_order_asset_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/${order_asset})
 											if [ $is_order_asset_fungible = 1 ]
 											then
-												while  read line 
+												while  read line
 												do
 													is_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/$line)
 													if [ $is_fungible = 1 ]
@@ -4095,7 +4095,7 @@ do
 							if [ ! $rt_query = 255 ]
 							then
 								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
-								{			
+								{
 									if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
 									then
 										###WRITE ASSETS TO FILE LIST#################
