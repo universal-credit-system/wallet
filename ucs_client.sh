@@ -1867,7 +1867,7 @@ process_new_files(){
 								old_trx=$(wc -l <${user_path}/old_index_filelist.tmp)
 								old_trx_score_highest=0
 								no_matches=0
-								if [ $old_trx -le $new_trx ]
+								if [ $old_trx -le $new_trx ] && [ $new_trx -gt 0 ]
 								then
 									while read line
 									do
