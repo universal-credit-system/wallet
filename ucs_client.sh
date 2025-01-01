@@ -632,12 +632,12 @@ build_ledger(){
 				grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -f - ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
 				cat ${user_path}/${focus}_ledger.tmp ${user_path}/${focus}_ledger_others.tmp >${user_path}/${focus}_ledger.dat
 				rm ${user_path}/${focus}_ledger_others.tmp
-				rm ${user_path}/${focus}_ledger.tmp
 			fi
+			rm ${user_path}/${focus}_ledger.tmp 2>/dev/null
 
 			###UPDATE SCORETABLE#############################
 			LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_scoretable.dat >${user_path}/${focus}_scoretable.tmp
-			if [ -s ${user_path}/${focus}_scoretable.tmp ]
+			if [ -s ${user_path}/${focus}_scoretable.tmp ] || [ -e ${user_path}/${focus}_scoretable.tmp ]
 			then
 				mv ${user_path}/${focus}_scoretable.tmp ${user_path}/${focus}_scoretable.dat 2>/dev/null
 			fi
