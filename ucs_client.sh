@@ -2157,7 +2157,11 @@ get_dependencies(){
 					done
 					for trx_file in $(sort ${user_path}/depend_user_list.tmp|uniq)
 					do
-						echo $trx_file >>${user_path}/depend_trx.dat
+						already_there=$(grep -c "${trx_file}" ${user_path}/depend_accounts.dat)
+						if [ $already_there = 0 ]
+						then
+							echo $trx_file >>${user_path}/depend_accounts.dat
+						fi
 					done
 				done <${user_path}/depend_accounts.dat
 
