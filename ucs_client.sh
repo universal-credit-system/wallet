@@ -2183,8 +2183,8 @@ get_dependencies(){
 			do
 				trx_hash=$(sha256sum ${script_path}/trx/${line})
 				trx_hash=${trx_hash%% *}
-				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${user_trx})
-				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx})
+				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${line})
+				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${line})
 				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
 				if [ $total_confirmations -lt $confirmations_from_users ]
 				then
