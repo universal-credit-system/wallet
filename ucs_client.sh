@@ -2223,7 +2223,7 @@ get_dependencies(){
 					fi
 					if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
 					then
-						depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f3)
+						depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f2)
 						if [ ! "${depend_confirmations_new_date}" = "" ]
 						then
 							echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
