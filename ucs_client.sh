@@ -1867,57 +1867,31 @@ process_new_files(){
 								old_trx=$(wc -l <${user_path}/old_index_filelist.tmp)
 								old_trx_score_highest=0
 								no_matches=0
-								if [ $old_trx -gt 0 ] && [ $new_trx -gt 0 ]
+								if [ $old_trx -le $new_trx ]
 								then
-									if [ $old_trx -le $new_trx ]
+									while read line
+									do
+										is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
+										if [ $is_file_there = 1 ]
+										then
+											no_matches=$(( no_matches + 1 ))
+										else
+											stripped_file=$(echo "${line}"|awk '{print $1}')
+											old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
+											old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
+											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+											then
+												old_trx_score_highest=$old_trx_confirmations
+											fi
+										fi
+									done <${user_path}/old_index_filelist.tmp
+									if [ $no_matches -lt $old_trx ]
 									then
 										while read line
 										do
-											is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
-											if [ $is_file_there = 1 ]
-											then
-												no_matches=$(( no_matches + 1 ))
-											else
-												stripped_file=$(echo "${line}"|awk '{print $1}')
-												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
-												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
-												then
-													old_trx_score_highest=$old_trx_confirmations
-												fi
-											fi
-										done <${user_path}/old_index_filelist.tmp
-										if [ $no_matches -lt $old_trx ]
-										then
-											while read line
-											do
-												is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
-												if [ $is_file_there = 0 ]
-												then
-													stripped_file=$(echo "${line}"|awk '{print $1}')
-													new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
-													new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
-													if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-													then
-														new_trx_score_highest=$new_trx_confirmations
-													fi
-												fi
-											done <${user_path}/new_index_filelist.tmp
-											if [ $old_trx_score_highest -ge $new_trx_score_highest ]
-											then
-												echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-											fi
-										else
-											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-										fi
-									else
-										while read line
-										do
 											is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
-											if [ $is_file_there = 1 ]
+											if [ $is_file_there = 0 ]
 											then
-												no_matches=$(( no_matches + 1 ))
-											else
 												stripped_file=$(echo "${line}"|awk '{print $1}')
 												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
 												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
@@ -1927,30 +1901,51 @@ process_new_files(){
 												fi
 											fi
 										done <${user_path}/new_index_filelist.tmp
-										if [ $no_matches -lt $new_trx ]
+										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
 										then
-											while read line
-											do
-												is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
-												if [ $is_file_there = 0 ]
-												then
-													stripped_file=$(echo "${line}"|awk '{print $1}')
-													old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-													old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
-													if [ $old_trx_confirmations -gt $old_trx_score_highest ]
-													then
-														old_trx_score_highest=$old_trx_confirmations
-													fi
-												fi
-											done <${user_path}/old_index_filelist.tmp
-											if [ $old_trx_score_highest -ge $new_trx_score_highest ]
-											then
-												echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-											fi
+											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 										fi
+									else
+										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 									fi
 								else
-									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+									while read line
+									do
+										is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
+										if [ $is_file_there = 1 ]
+										then
+											no_matches=$(( no_matches + 1 ))
+										else
+											stripped_file=$(echo "${line}"|awk '{print $1}')
+											new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
+											new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
+											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+											then
+												new_trx_score_highest=$new_trx_confirmations
+											fi
+										fi
+									done <${user_path}/new_index_filelist.tmp
+									if [ $no_matches -lt $new_trx ]
+									then
+										while read line
+										do
+											is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
+											if [ $is_file_there = 0 ]
+											then
+												stripped_file=$(echo "${line}"|awk '{print $1}')
+												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
+												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
+												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+												then
+													old_trx_score_highest=$old_trx_confirmations
+												fi
+											fi
+										done <${user_path}/old_index_filelist.tmp
+										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
+										then
+											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+										fi
+									fi
 								fi
 							else
 								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
@@ -2783,7 +2778,7 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "" "$dialog_main_create" "" "$dialog_main_settings" "" "$dialog_main_backup" "" "$dialog_main_end" "")
+			main_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-items --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "$dialog_main_create" "$dialog_main_settings" "$dialog_main_backup" "$dialog_main_end")
 			rt_query=$?
 		else
 			rt_query=0
@@ -3321,7 +3316,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g")
-			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "" "$dialog_receive" "" "$dialog_sync" "" "$dialog_uca" "" "$dialog_history" "" "$dialog_stats" "" "$dialog_logout" "")
+			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_history" "$dialog_stats" "$dialog_logout")
 			rt_query=$?
 		else
 			rt_query=0
