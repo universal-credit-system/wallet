@@ -536,7 +536,6 @@ build_ledger(){
 
 		###CREATE LIST OF ASSETS CREATED BEFORE THAT DAY####
 		previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
-		rm ${user_path}/assets.tmp 2>/dev/null
 		awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' ${user_path}/all_assets.dat >${user_path}/assets.tmp
 
 		###MAKE LEDGER ENTRIES FOR ASSETS#####################
@@ -577,8 +576,8 @@ build_ledger(){
 					fi
 				fi
 			done
-			rm ${user_path}/assets.tmp
 		fi
+		rm ${user_path}/assets.tmp 2>/dev/null
 
 		if [ $focus -le $now ]
 		then
