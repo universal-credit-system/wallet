@@ -3436,28 +3436,38 @@ do
 												if [ $order_amount_alnum = 0 ]
 												then
 													order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
-													order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
-													is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
 													amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
-													is_amount_mod=$(echo "${amount_mod} == 0"|bc) 
-													if [ $is_amount_big_enough = 1 ] && [ $is_amount_mod = 1 ]
+													amount_mod=$(echo "${amount_mod} > 0"|bc)
+													if [ $amount_mod = 0 ]
 													then
-														enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-														if [ "${order_asset}" = "${main_asset}" ]
+														order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
+														is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
+														if [ $is_amount_big_enough = 1 ]
 														then
-															###SCORE#############################################################
-															is_score_ok=$(echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc)
-															#####################################################################
-														else
-															is_score_ok=1
-														fi
-														if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
-														then
-															amount_selected=1
+															enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
+															if [ "${order_asset}" = "${main_asset}" ]
+															then
+																###SCORE#############################################################
+																is_score_ok=$(echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc)
+																#####################################################################
+															else
+																is_score_ok=1
+															fi
+															if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
+															then
+																amount_selected=1
+															else
+																if [ $gui_mode = 1 ]
+																then
+																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
+																else
+																	exit 1
+																fi
+															fi
 														else
 															if [ $gui_mode = 1 ]
 															then
-																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 															else
 																exit 1
 															fi
