@@ -3715,7 +3715,7 @@ do
 															##############################################################################
 															
 															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER AND SCORETABLE ARE DELETED##########
-															if [ $gui_mode = 1 ]
+															if [ $gui_mode = 0 ]
 															then
 																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
 																echo "BALANCE_${trx_now}:${cmd_output}"
