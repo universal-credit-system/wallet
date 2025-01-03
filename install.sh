@@ -45,6 +45,20 @@ then	############################
 	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" ${script_path}/control/config.conf
 	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" ${script_path}/control/config.conf
 	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" ${script_path}/control/config.conf
+
+	###GPG AGENT################
+	if [ -s ~/.gnupg/gpg-agent.conf ]
+	then
+		while read config_line
+		do
+			if [ $(grep -c "${config_line}" ~/.gnupg/gpg-agent.conf) -eq 0 ]
+			then
+				echo "${config_line}" >>~/.gnupg/gpg-agent.conf
+			fi
+		done <${script_path}/control/gpg-agent.conf
+	else
+		cat ${script_path}/control/gpg-agent.conf >~/.gnupg/gpg-agent.conf
+	fi
 else
 	############################
 	###IF APPS ARE TO INSTALL###
