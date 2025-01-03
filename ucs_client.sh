@@ -2151,7 +2151,8 @@ get_dependencies(){
 					done
 					for trx_file in $(sort ${user_path}/depend_user_list.tmp|uniq)
 					do
-						already_there=$(grep -c "${trx_file}" ${user_path}/depend_accounts.dat)
+						name="${trx_file%%.*}"
+						already_there=$(grep -c "${name}" ${user_path}/depend_accounts.dat)
 						if [ $already_there = 0 ]
 						then
 							echo $trx_file >>${user_path}/depend_accounts.dat
@@ -3692,6 +3693,8 @@ do
 														fi
 														if [ $rt_query = 0 ]
 														then
+															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
+															##############################################################################
 															if [ "${order_asset}" = "${main_asset}" ]
 															then
 																###SET SCORE##################################################################
@@ -3704,14 +3707,29 @@ do
 															sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
 															##############################################################################
 
-															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
+															###WRITE ENTRIES TO FILES#####################################################
 															echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
 															echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
 															echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
+															##############################################################################
+															##############################################################################
+															
+															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER AND SCORETABLE ARE DELETED##########
+															if [ $gui_mode = 1 ]
+															then
+																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
+																echo "BALANCE_${trx_now}:${cmd_output}"
+																if [ "${order_asset}" = "${main_asset}" ]
+																then
+																	cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
+																fi
+																echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
+															fi
+															
+															###SET VARIABLES FOR NEXT LOOP RUN###########################################
 															make_ledger=1
 															get_dependencies
 															ledger_mode=$?
-															#############################################################################
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
 															if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
@@ -3750,13 +3768,6 @@ do
 																	fi
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																else
-																	cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
-																	echo "BALANCE_${trx_now}:${cmd_output}"
-																	if [ "${order_asset}" = "${main_asset}" ]
-																	then
-																		cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-																	fi
-																	echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
 																	if [ $recipient_is_asset = 0 ]
 																	then
 																		if [ ! $small_trx = 255 ]
