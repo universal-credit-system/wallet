@@ -4323,7 +4323,7 @@ do
 										sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file_path)
 										receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file_path)
 										purpose_there=0
-										purpose=""
+										purpose_dialog_string="-"
 										if [ "${receiver}" = "${handover_account}" ]
 										then
 											purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
@@ -4344,14 +4344,10 @@ do
 											then
 												if [ -s ${user_path}/history_purpose_decryped.tmp ]
 												then
-													purpose_dialog_string="..."
 													purpose_there=1
-												else
-													purpose_dialog_string="-"
+													purpose_dialog_string="..."
 												fi
 											fi
-										else
-											purpose_dialog_string="-"
 										fi
 										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
 										trx_status=""
