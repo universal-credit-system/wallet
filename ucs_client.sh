@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 login_account(){
 		login_name=$1
 		login_pin=$2
@@ -1746,7 +1746,7 @@ check_trx(){
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
 					trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
-					trx_receiver_date=${trx_receiver_date%% *}
+					trx_receiver_date=${trx_receiver_date#* }
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
