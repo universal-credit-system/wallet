@@ -2652,6 +2652,7 @@ then
 	cmd_purpose=""
 	cmd_type=""
 	cmd_path=""
+	cmd_file=""
 
 	###GO THROUGH PARAMETERS ONE BY ONE############################
 	while [ $# -gt 0 ]
@@ -2678,9 +2679,13 @@ then
 					;;
 			"-purpose")	cmd_var=$1
 					;;
+			"-purpose")	cmd_var=$1
+					;;
 			"-type")	cmd_var=$1
 					;;
 			"-path")	cmd_var=$1
+					;;
+			"-file")	cmd_var=$1
 					;;
 			"-help")	more ${script_path}/control/HELP.txt
 					exit 0
@@ -2752,6 +2757,8 @@ then
 								esac
 								;;
 						"-path")	cmd_path=$1
+								;;
+						"-file")	cmd_file=$1
 								;;
 						*)		echo "ERROR! TRY THIS:"
 								echo "./ucs_client.sh -help"
@@ -3336,7 +3343,7 @@ do
 			fi
 			case "$user_menu" in
 				"$dialog_send")	asset_found=0
-						recipient_is_asset=0
+						receipient_is_asset=0
 						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2 >${user_path}/menu_assets.tmp
 						while [ $asset_found = 0 ]
 						do
@@ -3358,10 +3365,10 @@ do
 							then
 								currency_symbol=$order_asset
 								asset_found=1
-								recipient_found=0
+								receipient_found=0
 								order_aborted=0
 								order_receipient=""
-								while [ $recipient_found = 0 ]
+								while [ $receipient_found = 0 ]
 								do
 									if [ $gui_mode = 1 ]
 									then
@@ -3381,7 +3388,7 @@ do
 										fi
 										if [ $key_there = 1 ]
 										then
-											recipient_found=1
+											receipient_found=1
 											amount_selected=0
 										else
 											asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
@@ -3389,8 +3396,8 @@ do
 											is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
 											if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 											then
-												recipient_is_asset=1
-												recipient_found=1
+												receipient_is_asset=1
+												receipient_found=1
 												amount_selected=0
 											else
 												if [ $gui_mode = 1 ]
@@ -3491,7 +3498,7 @@ do
 												fi
 											else
 												amount_selected=1
-												recipient_found=1
+												receipient_found=1
 												order_aborted=1
 											fi
 										done
@@ -3517,7 +3524,7 @@ do
 											rm ${user_path}/menu_addresses.tmp
 											rm ${user_path}/menu_addresses_fungible.tmp
 										else
-											recipient_found=1
+											receipient_found=1
 											order_aborted=1
 										fi
 									fi
@@ -3525,7 +3532,7 @@ do
 								if [ $order_aborted = 0 ]
 								then
 									touch ${user_path}/trx_purpose_blank.tmp
-									if [ $recipient_is_asset = 0 ]
+									if [ $receipient_is_asset = 0 ]
 									then
 										if [ $gui_mode = 1 ]
 										then
@@ -3544,7 +3551,13 @@ do
 												fi
 											fi
 										else
-											order_purpose=$cmd_purpose
+											###CHECK IF FILE IS USED FOR PUPOSE###################
+											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
+											then
+												order_purpose=$(cat ${cmd_file})
+											else
+												order_purpose=$cmd_purpose
+											fi
 										fi
 									else
 										order_purpose="EXCHANGE"
@@ -3553,7 +3566,7 @@ do
 									then
 										###ENCRYPT ORDER PURPOSE################################
 										printf '%b' '"'"${order_purpose}"'"'|sed -e 's/^\"//g' -e 's/\"$//g' >${user_path}/trx_purpose_edited.tmp
-										if [ $recipient_is_asset = 0 ]
+										if [ $receipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
 											order_purpose_hash=$(echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${order_receipient} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)")
@@ -3585,7 +3598,7 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													if [ $recipient_is_asset = 0 ]
+													if [ $receipient_is_asset = 0 ]
 													then
 														if [ $gui_mode = 1 ] && [ ! $small_trx = 255 ]
 														then
@@ -3593,7 +3606,7 @@ do
 															small_trx=$?
 														fi
 													fi
-													if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
+													if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 													then
 														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
 														###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
@@ -3684,7 +3697,7 @@ do
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
+														if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 														then
 															cd ${script_path}/
 															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
@@ -3732,14 +3745,14 @@ do
 															ledger_mode=$?
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
-															if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
+															if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 															then
 																gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
 																rt_query=$?
 															fi
 															if [ $rt_query = 0 ]
 															then
-																if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
+																if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
 																	rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
@@ -3760,7 +3773,7 @@ do
 																fi
 																if [ $gui_mode = 1 ]
 																then
-																	if [ $recipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
+																	if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																	then
 																		dialog_send_success_display=$(echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g")
 																	else
@@ -3768,7 +3781,7 @@ do
 																	fi
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																else
-																	if [ $recipient_is_asset = 0 ]
+																	if [ $receipient_is_asset = 0 ]
 																	then
 																		if [ ! $small_trx = 255 ]
 																		then
