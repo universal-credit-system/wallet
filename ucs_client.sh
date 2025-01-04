@@ -4322,9 +4322,10 @@ do
 										trx_file_path="${script_path}/trx/${trx_file}"
 										sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file_path)
 										receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file_path)
+										purpose_there=0
+										purpose=""
 										if [ "${receiver}" = "${handover_account}" ]
 										then
-											purpose=""
 											purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
 											purpose_start=$(( purpose_start + 1 ))
 											purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
@@ -4341,13 +4342,18 @@ do
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												purpose=$(cat ${user_path}/history_purpose_decryped.tmp)
+												if [ -s ${user_path}/history_purpose_decryped.tmp ]
+												then
+													purpose_dialog_string="..."
+													purpose_there=1
+												else
+													purpose_dialog_string="-"
+												fi
 											fi
 										else
-											purpose="-"
+											purpose_dialog_string="-"
 										fi
 										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
-										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -4386,17 +4392,26 @@ do
 										currency_symbol=${decision#*|*|*|*}
 										if [ $sender = $handover_account ]
 										then
-											dialog_history_show_trx_out_display=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
+											dialog_history_show_trx_out_display=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 											dialog_history_show_trx=$dialog_history_show_trx_out_display
 										else
-											dialog_history_show_trx_in_display=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
+											dialog_history_show_trx_in_display=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 											dialog_history_show_trx=$dialog_history_show_trx_in_display
 										fi
-										overview_first_part=$(printf "%b" "${dialog_history_show_trx}"|head -10)
-										overview_second_part=$(printf "%b" "${dialog_history_show_trx}"|tail -12)
-										dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "$(printf '%b' '"'"${overview_first_part}\n${purpose}\n${overview_second_part}"'"'|sed -e 's/^"//g' -e 's/"$//g')" 0 0
+										if [ $purpose_there = 1 ]
+										then
+											dialog --help-button --help-label "$purpose_dialog_string" --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
+											rt_query=$?
+											if [ $rt_query = 2 ]
+											then
+												dialog --no-cancel --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decryped.tmp 0 0 2>/dev/null
+											fi
+										else
+											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
+										fi
+										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
 									else
-										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_fail" 0 0
+										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_fail}" 0 0
 									fi
 								else
 									overview_quit=1
