@@ -2679,8 +2679,6 @@ then
 					;;
 			"-purpose")	cmd_var=$1
 					;;
-			"-purpose")	cmd_var=$1
-					;;
 			"-type")	cmd_var=$1
 					;;
 			"-path")	cmd_var=$1
