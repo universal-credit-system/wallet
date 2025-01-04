@@ -39,6 +39,11 @@ OPTIONS:
 
   -purpose "<TEXT>"	purpose of the transaction. used only for action
 			create_trx
+			
+  -file <FILE>		When this is set and the file is bigger than zero 
+			-purpose will be ignored and the content of this
+			file will be used as purpose. used only for action
+			create_trx
 
   -type <TYPE>		possible values are "partial" or "full".
 
