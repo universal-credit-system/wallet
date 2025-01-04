@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 login_account(){
 		login_name=$1
 		login_pin=$2
