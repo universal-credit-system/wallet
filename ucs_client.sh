@@ -2181,7 +2181,7 @@ get_dependencies(){
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${line})
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${line})
 				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
-				if [ $total_confirmations -lt $confirmations_from_users ]
+				if [ $total_confirmations -ge $confirmations_from_users ]
 				then
 					echo "$line" >>${user_path}/depend_confirmations.dat
 				fi
@@ -2194,7 +2194,7 @@ get_dependencies(){
 			depend_trx_new_hash=${depend_trx_new_hash%% *}
 			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat)
 			depend_confirmations_new_hash=${depend_confirmations_new_hash%% *}
-			if [ $depend_accounts_new_hash = $depend_accounts_old_hash ] && [ $depend_trx_new_hash = $depend_trx_old_hash ] && [ $depend_confirmations_new_hash = $depend_confirmations_old_hash ] && [ $own_index_there = 1 ]
+			if [ "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ] && [ "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ] && [ "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ] && [ $own_index_there = 1 ]
 			then
 				make_new_index=0
 				ledger_mode=0
@@ -2205,27 +2205,36 @@ get_dependencies(){
 					ledger_mode=0
 					touch ${user_path}/dates.tmp
 
-					###CREATE LIST WITH DATE OF LEDGER CHANGES####################################
-					depend_accounts_new_date=$(grep "$(sort ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u)" ${user_path}/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
-					depend_accounts_new_date=${depend_accounts_new_date#* }
-					if [ ! "${depend_accounts_new_date}" = "" ]
+					###CREATE LISTS WITH DATE OF LEDGER CHANGES###################################
+					if [ ! "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ]
 					then
-						echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
-					fi
-					if [ -e ${user_path}/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
-					then
-						depend_trx_new_date=$(sort -t . -k2 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
-						if [ ! "${depend_trx_new_date}" = "" ]
+						depend_accounts_new_date=$(grep "$(sort ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u)" ${user_path}/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
+						depend_accounts_new_date=${depend_accounts_new_date#* }
+						if [ ! "${depend_accounts_new_date}" = "" ]
 						then
-							echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
+							echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
 						fi
 					fi
-					if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
+					if [ ! "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ]
 					then
-						depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f2)
-						if [ ! "${depend_confirmations_new_date}" = "" ]
+						if [ -e ${user_path}/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
 						then
-							echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
+							depend_trx_new_date=$(sort -t . -k2 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
+							if [ ! "${depend_trx_new_date}" = "" ]
+							then
+								echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
+							fi
+						fi
+					fi
+					if  [ ! "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ]
+					then
+						if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
+						then
+							depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f2)
+							if [ ! "${depend_confirmations_new_date}" = "" ]
+							then
+								echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
+							fi
 						fi
 					fi
 
@@ -3563,7 +3572,7 @@ do
 									if [ $rt_query = 0 ]
 									then
 										###ENCRYPT ORDER PURPOSE################################
-										printf '%b' '"'"${order_purpose}"'"'|sed -e 's/^\"//g' -e 's/\"$//g' >${user_path}/trx_purpose_edited.tmp
+										printf "%b" "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
 										if [ $receipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
@@ -4446,3 +4455,4 @@ do
 		fi
 	fi
 done
+
