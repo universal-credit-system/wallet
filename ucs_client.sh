@@ -3389,30 +3389,26 @@ do
 									then
 										if [ ! "${order_receipient}" = "" ]
 										then
-											key_there=$(grep -c "${order_receipient}" ${user_path}/all_accounts.dat)
-										else
-											key_there=0
-										fi
-										if [ $key_there = 1 ]
-										then
-											receipient_found=1
-											amount_selected=0
-										else
-											asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
-											asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
-											is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
-											if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
+											if [ $(grep -c "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
 											then
-												receipient_is_asset=1
 												receipient_found=1
 												amount_selected=0
 											else
-												if [ $gui_mode = 1 ]
+												asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
+												asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
+												is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
+												if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 												then
-													dialog_login_nokey2_display=$(echo $dialog_login_nokey2|sed "s/<account_name>/${order_receipient}/g")
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_nokey2_display" 0 0
+													receipient_is_asset=1
+													receipient_found=1
+													amount_selected=0
 												else
-													exit 1
+													if [ $gui_mode = 1 ]
+													then
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
+													else
+														exit 1
+													fi
 												fi
 											fi
 										fi
@@ -3543,20 +3539,39 @@ do
 									then
 										if [ $gui_mode = 1 ]
 										then
-											###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
-											order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
-											rt_query=$?
-
-											###IF USER WANTS EDITBOX##############################
-											if [ $rt_query = 1 ]
-											then
-												dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send_purpose" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/trx_purpose_blank.tmp 20 80 2>${user_path}/trx_purpose_edited.tmp
+											###LOOP UNTIL A PURPOSE HAS BEEN DEFINED##############
+											quit_purpose_loop=0
+											while [ $quit_purpose_loop = 0 ]
+											do
+												###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
+												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query = 1 ]
 												then
-													order_purpose=$(cat ${user_path}/trx_purpose_edited.tmp)
+													###IF USER WANTS EDITBOX##############################
+													dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send_purpose" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/trx_purpose_blank.tmp 20 80 2>${user_path}/trx_purpose_edited.tmp
+													rt_query=$?
+													if [ $rt_query = 0 ]
+													then
+														order_purpose=$(cat ${user_path}/trx_purpose_edited.tmp)
+														quit_purpose_loop=1
+													else
+														if [ $rt_query = 1 ]
+														then
+															###IF USER WANTS FILE##############################
+															file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "${script_path}/" 20 48)
+															rt_query=$?
+															if [ $rt_query = 0 ]
+															then
+																order_purpose=$(cat ${file_path})
+																quit_purpose_loop=1
+															fi
+														fi
+													fi
+												else
+													quit_purpose_loop=1
 												fi
-											fi
+											done
 										else
 											###CHECK IF FILE IS USED FOR PUPOSE###################
 											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
@@ -3567,6 +3582,7 @@ do
 											fi
 										fi
 									else
+										###SET PURPOSE TO EXCHANGE##############################
 										order_purpose="EXCHANGE"
 									fi
 									if [ $rt_query = 0 ]
@@ -3586,10 +3602,13 @@ do
 										########################################################
 										if [ $gui_mode = 1 ]
 										then
+											###ASK FOR FINAL CONFIRMATION############################
 											currency_symbol=$order_asset
 											dialog_send_overview_display=$(echo $dialog_send_overview|sed -e "s#<order_receipient>#${order_receipient}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g")
-											dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$(printf "%b" "${dialog_send_overview_display}\n${order_purpose}")" 0 0
+											printf "%b" "${dialog_send_overview_display}\n${order_purpose}" >${user_path}/order_confirm.tmp
+											dialog --exit-label "$dialog_yes" --help-button --help-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/order_confirm.tmp" 0 0
 											rt_query=$?
+											rm ${user_path}/order_confirm.tmp
 										else
 											rt_query=0
 										fi
