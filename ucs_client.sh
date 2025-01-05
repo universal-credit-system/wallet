@@ -4373,7 +4373,7 @@ do
 												if [ -s ${user_path}/history_purpose_decryped.tmp ]
 												then
 													purpose_there=1
-													purpose_dialog_string="..."
+													purpose_dialog_string="[...]"
 												fi
 											fi
 										fi
