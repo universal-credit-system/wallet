@@ -3389,25 +3389,32 @@ do
 									then
 										if [ ! "${order_receipient}" = "" ]
 										then
-											if [ $(grep -c "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
+											###CHECK IF INPUT CONTAINS ALNUM####################################
+											check_input $order_receipient 0
+											rt_query=$?
+											if [ $rt_query = 0 ]
 											then
-												receipient_found=1
-												amount_selected=0
-											else
-												asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
-												asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
-												is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
-												if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
+												###CHECK IF RECEIPIENT IS USER OR ASSET#############################
+												if [ $(grep -c "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
 												then
-													receipient_is_asset=1
 													receipient_found=1
 													amount_selected=0
 												else
-													if [ $gui_mode = 1 ]
+													asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
+													asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
+													is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
+													if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 													then
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
+														receipient_is_asset=1
+														receipient_found=1
+														amount_selected=0
 													else
-														exit 1
+														if [ $gui_mode = 1 ]
+														then
+															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
+														else
+															exit 1
+														fi
 													fi
 												fi
 											fi
