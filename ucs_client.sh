@@ -689,11 +689,11 @@ build_ledger(){
 				##############################################################
 
 				###CHECK IF INDEX-FILE EXISTS#################################
-				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ $trx_sender = ${handover_account} ]
+				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ "${trx_sender}" = "${handover_account}" ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
 					is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt)
-					if [ $is_signed -gt 0 ] || [ $trx_sender = $handover_account ]
+					if [ $is_signed -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
 					then
 						###EXTRACT TRX AMOUNT#########################################
 						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
