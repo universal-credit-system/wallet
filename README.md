@@ -34,6 +34,7 @@ The following programs are used:
 * **dirname** used to strip non-directory suffix from file name
 * **echo**    used to write output
 * **expr**    used for calculations
+* **file**    used to check file types
 * **find**    used to search files/directories
 * **flock**   used to manage read locks for multi user setups 
 * **gpg**     used for transaction signing
