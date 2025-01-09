@@ -3545,6 +3545,8 @@ do
 									touch ${user_path}/trx_purpose_blank.tmp
 									if [ $receipient_is_asset = 0 ]
 									then
+										is_text=0
+										is_file=0
 										if [ $gui_mode = 1 ]
 										then
 											###LOOP UNTIL A PURPOSE HAS BEEN DEFINED##############
@@ -3566,14 +3568,29 @@ do
 													else
 														if [ $rt_query = 1 ]
 														then
-															###IF USER WANTS FILE##############################
-															file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "${script_path}/" 20 48)
-															rt_query=$?
-															if [ $rt_query = 0 ]
-															then
-																order_purpose=$(cat ${file_path})
-																quit_purpose_loop=1
-															fi
+															quit_file_path=0
+															path_to_search=$script_path
+															while [ $quit_file_path = 0 ]
+															do
+																###IF USER WANTS FILE##############################
+																file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+																rt_query=$?
+																if [ $rt_query = 0 ]
+																then
+																	if [ ! -d "${file_path}" ] && [ -s "${file_path}" ]
+																	then
+																		quit_file_path=1
+																		quit_purpose_loop=1
+																		order_purpose_path=$file_path
+																		is_file=1
+																		is_text=$(file ${order_purpose_path}|grep -c -v "text")
+																	else
+																		path_to_search=$file_path
+																	fi
+																else
+																	quit_file_path=1
+																fi
+															done
 														fi
 													fi
 												else
@@ -3584,7 +3601,9 @@ do
 											###CHECK IF FILE IS USED FOR PUPOSE###################
 											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
 											then
-												order_purpose=$(cat ${cmd_file})
+												order_purpose_path=$cmd_file
+												is_file=1
+												is_text=$(file ${order_purpose_path}|grep -c -v "text")
 											else
 												order_purpose=$cmd_purpose
 											fi
@@ -3595,8 +3614,17 @@ do
 									fi
 									if [ $rt_query = 0 ]
 									then
-										###ENCRYPT ORDER PURPOSE################################
-										printf "%b" "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
+										if [ $is_text = 0 ] && [ $is_file = 0 ]
+										then
+											###ENCRYPT ORDER PURPOSE################################
+											printf "%b" "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
+										else
+											###CHANGE ORDER PURPOSE TO BINARY DATA##################
+											order_purpose="[data:${order_purpose_path}]"
+											
+											###COPY FILE TO SEND AS PURPOSE#########################
+											cp ${order_purpose_path} ${user_path}/trx_purpose_edited.tmp
+										fi
 										if [ $receipient_is_asset = 0 ]
 										then
 											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
@@ -4373,19 +4401,27 @@ do
 												echo ""
 												echo "${purpose_encrypted}"
 												echo "-----END PGP MESSAGE-----"
-											} >${user_path}/history_purpose_encryped.tmp
-											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decryped.tmp --decrypt ${user_path}/history_purpose_encryped.tmp 2>/dev/null
+											} >${user_path}/history_purpose_encrypted.tmp
+											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												if [ -s ${user_path}/history_purpose_decryped.tmp ]
+												if [ -s ${user_path}/history_purpose_decrypted.tmp ]
 												then
-													purpose_there=1
-													purpose_dialog_string="[...]"
+													###CHECK IF FILE CONTAINS TEXT OR ELSE######################################
+													is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
+													if [ $is_text = 0 ]
+													then
+														purpose_there=1
+														purpose_dialog_string="[...]"
+													else
+														purpose_there=2
+														purpose_dialog_string="[data]"
+													fi
 												fi
 											fi
 										fi
-										rm ${user_path}/history_purpose_encryped.tmp 2>/dev/null
+										rm ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 										trx_status=""
 										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -4430,18 +4466,55 @@ do
 											dialog_history_show_trx_in_display=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 											dialog_history_show_trx=$dialog_history_show_trx_in_display
 										fi
-										if [ $purpose_there = 1 ]
+										if [ $purpose_there = 1 ] || [ $purpose_there = 2 ]
 										then
 											dialog --help-button --help-label "$purpose_dialog_string" --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
 											rt_query=$?
 											if [ $rt_query = 2 ]
 											then
-												dialog --no-cancel --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decryped.tmp 0 0 2>/dev/null
+												open_write_dialog=0
+												if [ $purpose_there = 1 ]
+												then
+													dialog --cancel-label "[...]" --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decrypted.tmp 0 0 2>/dev/null
+													if [ $rt_query = 2 ]
+													then
+														open_write_dialog=1
+													fi
+												fi
+												if [ $purpose_there = 0 ] || [ $open_write_dialog = 1 ]
+												then
+													path_to_search=$script_path
+													quit_file_path=0
+													while [ $quit_file_path = 0 ]
+													do
+														###LET USER SELECT A PATH################################################
+														file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_choose" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+														rt_query=$?
+														if [ $rt_query = 0 ]
+														then
+															###CHECK IF ITS A DIRECTORY##############################################
+															if [ -d "${file_path}" ]
+															then
+																cp ${user_path}/history_purpose_decrypted.tmp ${file_path}/decrypted_$(date +%s)_${trx_file}
+															else
+																###CHECK IF ITS A FILE AND IF ITS EXIST##################################
+																if [ ! -e "${file_path}" ]
+																then
+																	###COPY THE FILE TO USER SELECTED PATH###################################
+																	cp ${user_path}/history_purpose_decrypted.tmp ${file_path}
+																	quit_file_path=1
+																fi
+															fi
+														else
+															quit_file_path=1
+														fi
+													done
+												fi
 											fi
 										else
 											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
 										fi
-										rm ${user_path}/history_purpose_decryped.tmp 2>/dev/null
+										rm ${user_path}/history_purpose_decrypted.tmp 2>/dev/null
 									else
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_fail}" 0 0
 									fi
