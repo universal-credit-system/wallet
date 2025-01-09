@@ -3373,13 +3373,14 @@ do
 								currency_symbol=$order_asset
 								asset_found=1
 								receipient_found=0
+								amount_selected=1
 								order_aborted=0
 								order_receipient=""
 								while [ $receipient_found = 0 ]
 								do
 									if [ $gui_mode = 1 ]
 									then
-										order_receipient=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient")
+										order_receipient=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 56 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient")
 										rt_query=$?
 									else
 										rt_query=0
@@ -3417,67 +3418,81 @@ do
 														fi
 													fi
 												fi
-											fi
-										fi
-										while [ $amount_selected = 0 ]
-										do
-											account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
-											account_my_balance=${account_my_balance#*=}
-											if [ "${order_asset}" = "${main_asset}" ]
-											then
-												###SCORE############################################################
-												account_my_score=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-												account_my_score=${account_my_score#*=}
-												sender_score_balance_value=$account_my_score
-												is_score_greater_balance=$(echo "${account_my_score}>${account_my_balance}"|bc)
-												if [ $is_score_greater_balance = 1 ]
-												then
-													account_my_score=$account_my_balance
-												fi
-												sender_score_balance_value=$account_my_score
-												####################################################################
-											else
-												account_my_score=$account_my_balance
-											fi
-											if [ $gui_mode = 1 ]
-											then
-												dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<score>/${account_my_score}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
-												order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
-												rt_query=$?
-											else
-												rt_query=0
-												order_amount=$cmd_amount
-											fi
-											if [ $rt_query = 0 ]
-											then
-												order_amount_alnum=$(echo $order_amount|grep -c '[[:alpha:]]')
-												if [ $order_amount_alnum = 0 ]
-												then
-													order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
-													amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
-													amount_mod=$(echo "${amount_mod} > 0"|bc)
-													if [ $amount_mod = 0 ]
+												while [ $amount_selected = 0 ]
+												do
+													account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
+													account_my_balance=${account_my_balance#*=}
+													if [ "${order_asset}" = "${main_asset}" ]
 													then
-														order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
-														is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
-														if [ $is_amount_big_enough = 1 ]
+														###SCORE############################################################
+														account_my_score=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
+														account_my_score=${account_my_score#*=}
+														sender_score_balance_value=$account_my_score
+														is_score_greater_balance=$(echo "${account_my_score}>${account_my_balance}"|bc)
+														if [ $is_score_greater_balance = 1 ]
 														then
-															enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-															if [ "${order_asset}" = "${main_asset}" ]
+															account_my_score=$account_my_balance
+														fi
+														sender_score_balance_value=$account_my_score
+														####################################################################
+													else
+														account_my_score=$account_my_balance
+													fi
+													if [ $gui_mode = 1 ]
+													then
+														dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<score>/${account_my_score}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
+														order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
+														rt_query=$?
+													else
+														rt_query=0
+														order_amount=$cmd_amount
+													fi
+													if [ $rt_query = 0 ]
+													then
+														order_amount_alnum=$(echo $order_amount|grep -c '[[:alpha:]]')
+														if [ $order_amount_alnum = 0 ]
+														then
+															order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
+															amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
+															amount_mod=$(echo "${amount_mod} > 0"|bc)
+															if [ $amount_mod = 0 ]
 															then
-																###SCORE#############################################################
-																is_score_ok=$(echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc)
-																#####################################################################
-															else
-																is_score_ok=1
-															fi
-															if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
-															then
-																amount_selected=1
+																order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
+																is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
+																if [ $is_amount_big_enough = 1 ]
+																then
+																	enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
+																	if [ "${order_asset}" = "${main_asset}" ]
+																	then
+																		###SCORE#############################################################
+																		is_score_ok=$(echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc)
+																		#####################################################################
+																	else
+																		is_score_ok=1
+																	fi
+																	if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
+																	then
+																		amount_selected=1
+																	else
+																		if [ $gui_mode = 1 ]
+																		then
+																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
+																		else
+																			exit 1
+																		fi
+																	fi
+																else
+																	if [ $gui_mode = 1 ]
+																	then
+																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																	else
+																		exit 1
+																	fi
+																fi
 															else
 																if [ $gui_mode = 1 ]
 																then
-																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
+																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 																else
 																	exit 1
 																fi
@@ -3485,33 +3500,19 @@ do
 														else
 															if [ $gui_mode = 1 ]
 															then
-																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 															else
 																exit 1
 															fi
 														fi
 													else
-														if [ $gui_mode = 1 ]
-														then
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
-														else
-															exit 1
-														fi
+														amount_selected=1
+														receipient_found=1
+														order_aborted=1
 													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
-													else
-														exit 1
-													fi
-												fi
-											else
-												amount_selected=1
-												receipient_found=1
-												order_aborted=1
+												done
 											fi
-										done
+										fi
 									else
 										if [ $rt_query = 1 ]
 										then
