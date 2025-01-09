@@ -4481,7 +4481,7 @@ do
 														open_write_dialog=1
 													fi
 												fi
-												if [ $purpose_there = 0 ] || [ $open_write_dialog = 1 ]
+												if [ $purpose_there = 2 ] || [ $open_write_dialog = 1 ]
 												then
 													path_to_search=$script_path
 													quit_file_path=0
