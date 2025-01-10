@@ -3396,13 +3396,13 @@ do
 											if [ $rt_query = 0 ]
 											then
 												###CHECK IF RECEIPIENT IS USER OR ASSET#############################
-												if [ $(grep -c "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
+												if [ $(grep -c -w "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
 												then
 													receipient_found=1
 													amount_selected=0
 												else
-													asset_there=$(grep -c "${order_receipient}" ${user_path}/all_assets.dat)
-													asset=$(grep "${order_receipient}" ${user_path}/all_assets.dat)
+													asset_there=$(grep -c -w "${order_receipient}" ${user_path}/all_assets.dat)
+													asset=$(grep -w "${order_receipient}" ${user_path}/all_assets.dat)
 													is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
 													if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 													then
