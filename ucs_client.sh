@@ -3366,7 +3366,7 @@ do
 									if [ $rt_query = 3 ]
 									then
 										###DISPLAY DETAILED ASSET INFORMATION############
-										dialog --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --prgbox "cat ${script_path}/assets/${order_asset}" 10 70						
+										dialog --no-cancel --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/assets/${order_asset}" 0 0						
 									else
 										quit_asset_loop=1
 									fi
@@ -4336,7 +4336,7 @@ do
 															if [ $rt_query = 0 ]
 															then
 																###DISPLAY DETAILED ASSET INFORMATION############)
-																dialog --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --prgbox "cat ${script_path}/assets/${asset}" 10 70
+																dialog --no-cancel --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/assets/${asset}" 0 0  ##10 70
 															else
 																asset_name=""
 																quit_asset_name=0
