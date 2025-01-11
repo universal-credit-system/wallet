@@ -3463,7 +3463,7 @@ do
 													fi
 													if [ $rt_query = 0 ]
 													then
-														order_amount_alnum=$(echo $order_amount|grep -c '[[:alpha:]]')
+														order_amount_alnum=$(echo $order_amount|grep -c '[^0-9.,]')
 														if [ $order_amount_alnum = 0 ]
 														then
 															order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
@@ -4379,8 +4379,8 @@ do
 																						rt_query=$?
 																						if [ $rt_query = 0 ]
 																						then
-																							asset_value_alnum=$(echo $order_amount|grep -c '[[:alpha:]]')
-																							if [ $asset_value_alnum = 0 ]
+																							asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
+																							if [ $asset_value_alnum = 0 ] 
 																							then
 																								asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
 																								value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
