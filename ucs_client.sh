@@ -915,7 +915,7 @@ check_archive(){
 			if [ $rt_query = 0 ]
 			then
 				###REMOVE DOUBLE-ENTRIES IN TAR-FILE##########################
-				sort ${user_path}/tar_check_temp.tmp|uniq >${user_path}/tar_check_full.tmp
+				sort -u ${user_path}/tar_check_temp.tmp >${user_path}/tar_check_full.tmp
 
 				###WRITE FILE LIST############################################
 				awk '{print $6}' ${user_path}/tar_check_full.tmp >${user_path}/tar_check.tmp
@@ -1108,7 +1108,7 @@ check_assets(){
 			while read line
 			do
 				###CHECK IF ASSET IS MAIN ASSET################################
-				if [ "${line}" = "${main_asset}" ]
+				if [ "${line}" = "${main_asset}" ] || [ "${line}" = "${main_token}" ]
 				then
 					###SET VARIABLE################################################
 					asset_acknowledged=1
@@ -1610,7 +1610,7 @@ check_tsa(){
 			rm ${user_path}/ack_accounts.dat
 
 			###SORT DATES LIST#################################################
-			sort -t ' ' -k2 ${user_path}/all_accounts_dates.dat|uniq >${user_path}/all_accounts_dates.tmp
+			sort -u -t ' ' -k2 ${user_path}/all_accounts_dates.dat >${user_path}/all_accounts_dates.tmp
 			mv ${user_path}/all_accounts_dates.tmp ${user_path}/all_accounts_dates.dat
 }
 check_keys(){
@@ -1963,7 +1963,7 @@ process_new_files(){
 				done
 				rm ${user_path}/new_index_filelist.tmp
 				rm ${user_path}/old_index_filelist.tmp
-				sort ${user_path}/remove_list.tmp|uniq >${user_path}/temp_filelist.tmp
+				sort -u ${user_path}/remove_list.tmp >${user_path}/temp_filelist.tmp
 				cat ${user_path}/files_to_fetch.tmp >>${user_path}/temp_filelist.tmp
 				sort ${user_path}/temp_filelist.tmp|uniq -u >${user_path}/files_to_fetch.tmp
 				rm ${user_path}/temp_filelist.tmp
@@ -2138,7 +2138,7 @@ get_dependencies(){
 				do
 					touch ${user_path}/depend_user_list.tmp
 					user=$line
-					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|sort|uniq|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
+					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|sort -u|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
 					for user_trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
@@ -2149,7 +2149,7 @@ get_dependencies(){
 							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
-					for trx_file in $(sort ${user_path}/depend_user_list.tmp|uniq)
+					for trx_file in $(sort -u ${user_path}/depend_user_list.tmp)
 					do
 						name="${trx_file%%.*}"
 						already_there=$(grep -c "${name}" ${user_path}/depend_accounts.dat)
@@ -2163,7 +2163,7 @@ get_dependencies(){
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
 				mv ${user_path}/depend_accounts.tmp ${user_path}/depend_accounts.dat
-				sort -t . -k2 ${user_path}/depend_trx.dat|uniq >${user_path}/depend_trx.tmp
+				sort -u -t . -k2 ${user_path}/depend_trx.dat >${user_path}/depend_trx.tmp
 				mv ${user_path}/depend_trx.tmp ${user_path}/depend_trx.dat
 			else
 				###COPY FILES#################################################################
@@ -2621,6 +2621,7 @@ core_system_version="v0.0.1"
 ###SET INITIAL VARIABLES####
 check_period_tsa=21600
 main_asset="UCC"
+main_token="UCT"
 start_date="20241229"
 now=$(date -u +%Y%m%d)
 no_ledger=0
@@ -3331,7 +3332,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g")
-			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_history" "$dialog_stats" "$dialog_logout")
+			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_browser" "$dialog_history" "$dialog_stats" "$dialog_logout")
 			rt_query=$?
 		else
 			rt_query=0
@@ -3356,8 +3357,20 @@ do
 						do
 							if [ $gui_mode = 1 ]
 							then
-								order_asset=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_assets.tmp)
-								rt_query=$?
+								quit_asset_loop=0
+								while [ $quit_asset_loop = 0 ]
+								do
+									###ASSET OVERVIEW################################
+									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
+									rt_query=$?
+									if [ $rt_query = 3 ]
+									then
+										###DISPLAY DETAILED ASSET INFORMATION############
+										dialog --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --prgbox "cat ${script_path}/assets/${order_asset}" 10 70						
+									else
+										quit_asset_loop=1
+									fi
+								done
 							else
 								order_asset=$cmd_asset
 								asset_there=$(grep -c "${order_asset}" ${user_path}/menu_assets.tmp)
@@ -3380,6 +3393,7 @@ do
 								do
 									if [ $gui_mode = 1 ]
 									then
+										###USER OVERVIEW####################################################
 										order_receipient=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 56 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receipient")
 										rt_query=$?
 									else
@@ -3542,11 +3556,11 @@ do
 								done
 								if [ $order_aborted = 0 ]
 								then
+									is_text=0
+									is_file=0
 									touch ${user_path}/trx_purpose_blank.tmp
 									if [ $receipient_is_asset = 0 ]
 									then
-										is_text=0
-										is_file=0
 										if [ $gui_mode = 1 ]
 										then
 											###LOOP UNTIL A PURPOSE HAS BEEN DEFINED##############
@@ -4302,6 +4316,206 @@ do
 							fi
 						fi
 						;;
+				"$dialog_browser")	quit_menu=0
+							while [ $quit_menu = 0 ]
+							do
+								###BROWSER OVERVIEW######################################
+								browse_type=$(dialog --cancel-label "$dialog_cancel" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									case $browse_type in
+										"$dialog_assets")	quit_asset_menu=0
+													while [ $quit_asset_menu = 0 ]
+													do
+														###ASSET OVERVIEW########################################
+														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
+														rt_query=$?
+														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
+														then
+															if [ $rt_query = 0 ]
+															then
+																###DISPLAY DETAILED ASSET INFORMATION############)
+																dialog --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --prgbox "cat ${script_path}/assets/${asset}" 10 70
+															else
+																asset_name=""
+																quit_asset_name=0
+																while [ $quit_asset_name = 0 ]
+																do
+																	###ASK FOR A NAME################################
+																	asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "${asset_name}")
+																	rt_query=$?
+																	if [ $rt_query = 0 ]
+																	then
+																		is_alnum=$(echo "${asset_name}"|grep -c '[^[:alnum:]]')
+																		if [ $is_alnum = 0 ]
+																		then
+																			###ASK FOR A DESCRIPTION#########################
+																			touch ${user_path}/asset_description_blank.tmp
+																			dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
+																			rt_query=$?
+																			if [ $rt_query = 0 ]
+																			then
+																				asset_description=$(cat ${user_path}/asset_description.tmp|sed 's/\"/\\"/g')
+																				rm ${user_path}/asset_description.tmp
+																				
+																				###ASK IF FUNGIBLE OR NOT########################
+																				dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
+																				fungible=$?
+																				if [ $fungible = 0 ] || [ $fungible = 1 ]
+																				then
+																					if [ $fungible = 0 ]
+																					then
+																						dialog_asset_add_value=$dialog_asset_quantity
+																					else
+																						dialog_asset_add_value=$dialog_asset_price
+																					fi
+																					
+																					quit_asset_value=0
+																					while [ $quit_asset_value = 0 ]
+																					do
+																						###GET QUANTITY OR PRICE#########################
+																						asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "")
+																						rt_query=$?
+																						if [ $rt_query = 0 ]
+																						then
+																							asset_value_alnum=$(echo $order_amount|grep -c '[[:alpha:]]')
+																							if [ $asset_value_alnum = 0 ]
+																							then
+																								asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
+																								value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
+																								value_mod=$(echo "${value_mod} > 0"|bc)
+																								if [ $value_mod = 0 ]
+																								then
+																									asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
+																									is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
+																									if [ $is_amount_big_enough = 1 ]
+																									then
+																										if [ $rt_query = 0 ]
+																										then
+																											###WRITE ASSET###########################
+																											asset_stamp=$(date +%s)
+																											{
+																											echo "asset_name=\"${asset_name}\""
+																											echo "asset_fungible=${fungible}"
+																											if [ $fungible = 0 ]
+																											then
+																												echo "asset_quantity=\"${asset_value_formatted}\""
+																												echo "asset_owner=\"${handover_account}\""
+																											else
+																												echo "asset_price=\"${asset_value_formatted}\""
+																											fi
+																											printf "%b" "'"'asset_description="'${asset_description}'"'"'"|sed -e "s/^'//g" -e "s/'$//g"
+																											} >${user_path}/${asset_name}.${asset_stamp}
+																											#########################################
+																											
+																											###CONFIRM###############################
+																											dialog --yes-label "$dialog_add" --no-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --output-fd 1 --yesno "$(cat ${user_path}/${asset_name}.${asset_stamp})" 15 80
+																											rt_query=$?
+																											if [ $rt_query = 0 ]
+																											then
+																												###COPY INTO ASSETS FOLDER###############
+																												mv ${user_path}/${asset_name}.${asset_stamp} ${script_path}/assets/${asset_name}.${asset_stamp}
+																												
+																												###DISPLAY SUCCESS MESSAGE###############
+																												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_asset_add_successfull" 0 0
+																												
+																												###CHECK ASSETS##########################
+																												check_assets
+																												if [ $fungible = 0 ]
+																												then
+																													###CREATE LEDGER ENTRY###################
+																													last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
+																													echo "${asset_name}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
+																												fi
+																											fi
+																											quit_asset_value=1
+																											quit_asset_name=1
+																										fi
+																									else
+																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																									fi
+																								else
+																									dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																								fi
+																							else
+																								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
+																							fi
+																						else
+																							quit_asset_value=1
+																						fi
+																					done
+																				fi
+																			fi
+																			rm ${user_path}/asset_description_blank.tmp
+																		else
+																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
+																		fi
+																	else
+																		quit_asset_name=1
+																	fi
+																done
+															fi
+														else
+															quit_asset_menu=1
+														fi
+													done
+													;;
+										"$dialog_users")	quit_user_menu=0
+													while [ $quit_user_menu = 0 ]
+													do
+														###USERS OVERVIEW########################################
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/depend_accounts.dat)
+														rt_query=$?
+														if [ $rt_query = 0 ]
+														then
+															quit_trx_menu=0
+															while [ $quit_trx_menu = 0 ]
+															do
+																###USERS TRX OVERVIEW####################################
+																grep "${user}" ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
+																if [ ! -s ${user_path}/dialog_browser_trx.tmp ]
+																then
+																	echo "0" >${user_path}/dialog_browser_trx.tmp
+																fi
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+																rt_query=$?
+																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
+																then
+																	dialog --no-cancel --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/trx/$selected_trx" 0 0 2>/dev/null
+																else
+																	quit_trx_menu=1	
+																fi
+																rm ${user_path}/dialog_browser_trx.tmp
+															done
+														else
+															quit_user_menu=1
+														fi
+													done
+													;;
+										"$dialog_trx")		###TRX OVERVIEW##########################################
+													if [ ! -s ${user_path}/depend_trx.dat ]
+													then
+														echo "0" >${user_path}/dialog_browser_trx.tmp
+													else
+														sort -r -t . -k2 ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
+													fi
+													selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+													rt_query=$?
+													if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
+													then
+														dialog --no-cancel --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/trx/${selected_trx}" 0 0 2>/dev/null
+													fi
+													rm ${user_path}/dialog_browser_trx.tmp
+													;;
+										*)	quit_menu=1
+											;;
+									esac
+								else
+									quit_menu=1
+								fi
+							done
+							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
 							touch ${user_path}/my_trx_sorted.tmp
