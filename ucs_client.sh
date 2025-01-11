@@ -4396,21 +4396,21 @@ do
 																											###WRITE ASSET###########################
 																											asset_stamp=$(date +%s)
 																											{
-																											echo "asset_name=\"${asset_name}\""
+																											echo "asset_name='${asset_name}'"
 																											echo "asset_fungible=${fungible}"
 																											if [ $fungible = 0 ]
 																											then
-																												echo "asset_quantity=\"${asset_value_formatted}\""
-																												echo "asset_owner=\"${handover_account}\""
+																												echo "asset_quantity='${asset_value_formatted}'"
+																												echo "asset_owner='${handover_account}'"
 																											else
-																												echo "asset_price=\"${asset_value_formatted}\""
+																												echo "asset_price='${asset_value_formatted}'"
 																											fi
-																											printf "%b" "'"'asset_description="'${asset_description}'"'"'"|sed -e "s/^'//g" -e "s/'$//g"
+																											echo "asset_description='${asset_description}'"
 																											} >${user_path}/${asset_name}.${asset_stamp}
 																											#########################################
 																											
 																											###CONFIRM###############################
-																											dialog --yes-label "$dialog_add" --no-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --output-fd 1 --yesno "$(cat ${user_path}/${asset_name}.${asset_stamp})" 15 80
+																											dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${user_path}/${asset_name}.${asset_stamp}" 0 0 2>/dev/null
 																											rt_query=$?
 																											if [ $rt_query = 0 ]
 																											then
