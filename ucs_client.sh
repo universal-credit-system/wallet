@@ -893,6 +893,7 @@ build_ledger(){
 					fi
 				done
 			fi
+			echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 		fi
 }
 check_archive(){
