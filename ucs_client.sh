@@ -892,13 +892,7 @@ build_ledger(){
 						cmd_output=$balance
 					fi
 				done
-				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
-				if [ "${cmd_action}" = "show_balance" ]
-				then
-					exit 0
-				fi
 			fi
-			##############################################################
 		fi
 }
 check_archive(){
@@ -3286,6 +3280,10 @@ do
 				then
 					now_stamp=$(date +%s)
 					make_signature "none" $now_stamp 1
+				fi
+				if [ "${cmd_action}" = "show_balance" ]
+				then
+					exit 0
 				fi
 				make_ledger=0
 			fi
