@@ -3366,7 +3366,7 @@ do
 									if [ $rt_query = 3 ]
 									then
 										###DISPLAY DETAILED ASSET INFORMATION############
-										dialog --no-cancel --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/assets/${order_asset}" 0 0						
+										dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${order_asset}" 0 0						
 									else
 										quit_asset_loop=1
 									fi
@@ -4336,7 +4336,7 @@ do
 															if [ $rt_query = 0 ]
 															then
 																###DISPLAY DETAILED ASSET INFORMATION############)
-																dialog --no-cancel --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/assets/${asset}" 0 0  ##10 70
+																dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${asset}" 0 0
 															else
 																asset_name=""
 																quit_asset_name=0
@@ -4410,7 +4410,7 @@ do
 																											#########################################
 																											
 																											###CONFIRM###############################
-																											dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${user_path}/${asset_name}.${asset_stamp}" 0 0 2>/dev/null
+																											dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
 																											rt_query=$?
 																											if [ $rt_query = 0 ]
 																											then
@@ -4482,7 +4482,7 @@ do
 																rt_query=$?
 																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
-																	dialog --no-cancel --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/trx/$selected_trx" 0 0 2>/dev/null
+																	dialog --exit-label "$dialog_main_back" --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --textbox "${script_path}/trx/$selected_trx" 0 0
 																else
 																	quit_trx_menu=1	
 																fi
@@ -4504,7 +4504,7 @@ do
 													rt_query=$?
 													if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 													then
-														dialog --no-cancel --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --editbox "${script_path}/trx/${selected_trx}" 0 0 2>/dev/null
+														dialog --exit-label "$dialog_main_back" --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/trx/${selected_trx}" 0 0
 													fi
 													rm ${user_path}/dialog_browser_trx.tmp
 													;;
