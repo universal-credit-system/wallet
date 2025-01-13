@@ -3328,6 +3328,10 @@ do
 				"$dialog_send")	asset_found=0
 						receipient_is_asset=0
 						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2 >${user_path}/menu_assets.tmp
+						if [ $gui_mode = 1 ]
+						then
+							def_string_asset=$(head -1 ${user_path}/menu_assets.tmp)
+						fi
 						while [ $asset_found = 0 ]
 						do
 							if [ $gui_mode = 1 ]
@@ -3340,6 +3344,9 @@ do
 									rt_query=$?
 									if [ $rt_query = 3 ]
 									then
+										###SET DEFAULT-ITEM OF DIALOG MENU#######################
+										def_string_asset=$order_asset
+										
 										###DISPLAY DETAILED ASSET INFORMATION############
 										dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${order_asset}" 0 0						
 									else
@@ -4300,24 +4307,29 @@ do
 								if [ $rt_query = 0 ]
 								then
 									case $browse_type in
-										"$dialog_assets")	quit_asset_menu=0
+										"$dialog_assets")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
+													def_string_asset=$(head -1 ${user_path}/all_assets.dat)
+													
+													quit_asset_menu=0
 													while [ $quit_asset_menu = 0 ]
 													do
 														###ASSET OVERVIEW########################################
-														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
+														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "${def_string_asset}" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
 														then
+															###SET DEFAULT-ITEM OF DIALOG MENU#######################
+															def_string_asset=$asset
 															if [ $rt_query = 0 ]
 															then
-																###DISPLAY DETAILED ASSET INFORMATION############)
+																###DISPLAY DETAILED ASSET INFORMATION####################
 																dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${asset}" 0 0
 															else
 																asset_name=""
 																quit_asset_name=0
 																while [ $quit_asset_name = 0 ]
 																do
-																	###ASK FOR A NAME################################
+																	###ASK FOR A NAME########################################
 																	asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "${asset_name}")
 																	rt_query=$?
 																	if [ $rt_query = 0 ]
@@ -4436,33 +4448,44 @@ do
 														fi
 													done
 													;;
-										"$dialog_users")	quit_user_menu=0
+										"$dialog_users")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
+													def_string_user=$(head -1 ${user_path}/depend_accounts.dat)
+														
+													quit_user_menu=0
 													while [ $quit_user_menu = 0 ]
 													do
 														###USERS OVERVIEW########################################
-														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/depend_accounts.dat)
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_user}" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/depend_accounts.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
+															###SET DEFAULT ITEM######################################
+															def_string_user=$user
+															
+															###USERS TRX OVERVIEW####################################
+															grep "${user}" ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
+															if [ ! -s ${user_path}/dialog_browser_trx.tmp ]
+															then
+																echo "0" >${user_path}/dialog_browser_trx.tmp
+															fi
+															
+															###SET DEFAULT-ITEM OF DIALOG MENU#######################
+															def_string_trx=$(head -1 ${user_path}/dialog_browser_trx.tmp)
+															
 															quit_trx_menu=0
 															while [ $quit_trx_menu = 0 ]
 															do
-																###USERS TRX OVERVIEW####################################
-																grep "${user}" ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
-																if [ ! -s ${user_path}/dialog_browser_trx.tmp ]
-																then
-																	echo "0" >${user_path}/dialog_browser_trx.tmp
-																fi
-																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_trx}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 																rt_query=$?
 																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
-																	dialog --exit-label "$dialog_main_back" --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --textbox "${script_path}/trx/$selected_trx" 0 0
+																	def_string_trx=$selected_trx
+																	dialog --exit-label "$dialog_main_back" --title "$dialog_browser:" --backtitle "$core_system_name $core_system_version" --textbox "${script_path}/trx/$selected_trx" 0 0
 																else
 																	quit_trx_menu=1	
 																fi
-																rm ${user_path}/dialog_browser_trx.tmp
 															done
+															rm ${user_path}/dialog_browser_trx.tmp
 														else
 															quit_user_menu=1
 														fi
@@ -4475,12 +4498,20 @@ do
 													else
 														sort -r -t . -k2 ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
 													fi
-													selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
-													rt_query=$?
-													if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
-													then
-														dialog --exit-label "$dialog_main_back" --title "$dialog_browser : $dialog_trx : $selected_trx" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/trx/${selected_trx}" 0 0
-													fi
+													quit_trx_loop=0
+													def_string=$(head -1 ${user_path}/dialog_browser_trx.tmp)
+													while [ $quit_trx_loop = 0 ]
+													do
+														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+														rt_query=$?
+														if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
+														then
+															def_string=$selected_trx
+															dialog --exit-label "$dialog_main_back" --title "$dialog_browser:" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/trx/${selected_trx}" 0 0
+														else
+															quit_trx_loop=1
+														fi
+													done
 													rm ${user_path}/dialog_browser_trx.tmp
 													;;
 										*)	quit_menu=1
