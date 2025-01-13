@@ -1746,9 +1746,15 @@ check_trx(){
 						trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
 						trx_receiver_date=${trx_receiver_date#* }
 					else
-						###IF RECEIVER IS ASSET GET DATE####################################
-						trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
-						trx_receiver_date=${trx_receiver_date#*.}
+						if [ ! "${trx_receiver_date}" = "${main_asset}" ] && [ ! "${trx_receiver_date}" = "${main_token}" ]
+						then
+							###IF RECEIVER IS ASSET GET DATE####################################
+							trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
+							trx_receiver_date=${trx_receiver_date#*.}
+						else
+							###MAIN ASSET OR MAIN TOKEN SET TO START DATE#######################
+							trx_receiver_date=$(date -u +%s --date="${start_date}")
+						fi
 					fi
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
