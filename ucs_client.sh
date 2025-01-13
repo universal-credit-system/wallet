@@ -1740,8 +1740,16 @@ check_trx(){
 					trx_date_filename=${line#*.}
 					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
-					trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
-					trx_receiver_date=${trx_receiver_date#* }
+					if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) = 0 ]
+					then
+						###IF RECEIVER IS USER##############################################
+						trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
+						trx_receiver_date=${trx_receiver_date#* }
+					else
+						###IF RECEIVER IS ASSET GET DATE####################################
+						trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
+						trx_receiver_date=${trx_receiver_date#*.}
+					fi
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
@@ -1822,28 +1830,31 @@ process_new_files(){
 			process_mode=$1
 			if [ $process_mode = 0 ]
 			then
-				touch ${user_path}/new_index_filelist.tmp
-				touch ${user_path}/old_index_filelist.tmp
+				###CREATE TMP FILE##################################
 				touch ${user_path}/remove_list.tmp
-				touch ${user_path}/temp_filelist.tmp
 				for new_index_file in $(grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt")
 				do
+					###CHECK IF USER ALREADY EXISTS#####################
 					user_to_verify=$(basename $new_index_file)
 					user_to_verify=${user_to_verify%%.*}
 					user_already_there=$(cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}")
 					if [ $user_already_there = 1 ]
 					then
+						###VERIFY SIGNATURE OF USER#########################
 						verify_signature ${user_path}/temp/${new_index_file} $user_to_verify
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
 							assets_ok=1
+							###GO THROUGH ALL ASSETS OF NEW INDEX FILE##########
 							for new_index_assets in $(grep "assets/" ${user_path}/temp/${new_index_file})
 							do
 								asset_file=${new_index_assets%% *}
+								###CHECK IF ASSET NAME IS ALREADY THERE#############
 								is_asset_there=$(grep -c "${asset_file}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
 								if [ $is_asset_there = 1 ]
 								then
+									###COMPARE HASHES###################################
 									is_asset_there=$(grep -c "${new_index_assets}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
 									if [ $is_asset_there = 0 ]
 									then
@@ -1853,94 +1864,54 @@ process_new_files(){
 							done
 							if [ $assets_ok = 1 ]
 							then
-								touch ${user_path}/new_index_filelist.tmp
-								grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
-								new_trx=$(wc -l <${user_path}/new_index_filelist.tmp)
+								###SET VARIABLES############################################
 								new_trx_score_highest=0
-								touch ${user_path}/old_index_filelist.tmp
-								grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
-								old_trx=$(wc -l <${user_path}/old_index_filelist.tmp)
 								old_trx_score_highest=0
-								no_matches=0
-								if [ $old_trx -le $new_trx ] && [ $new_trx -gt 0 ]
+								
+								###GET USER TRANSACTION OF OLD AND NEW INDEX FILE###########
+								grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
+								grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
+								
+								###GET UNIQUE USER TRANSACIONS OF OLD INDEX FILE############
+								sort ${user_path}/new_index_filelist.tmp ${user_path}/old_index_filelist.tmp ${user_path}/old_index_filelist.tmp|uniq -u >${user_path}/new_unique_filelist.tmp
+								
+								###GET UNIQUE USER TRANSACIONS OF NEW INDEX FILE############
+								sort ${user_path}/old_index_filelist.tmp ${user_path}/new_index_filelist.tmp ${user_path}/new_index_filelist.tmp|uniq -u >${user_path}/old_unique_filelist.tmp
+								
+								###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN OLD INDEX#####
+								while read line
+								do
+									stripped_file=$(echo "${line}"|awk '{print $1}')
+									if [ -s ${script_path}/${stripped_file} ]
+									then
+										old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
+										old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
+										if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+										then
+											old_trx_score_highest=$old_trx_confirmations
+										fi
+									fi
+								done <${user_path}/old_unique_filelist.tmp
+								
+								###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN NEW INDEX#####
+								while read line
+								do
+									stripped_file=$(echo "${line}"|awk '{print $1}')
+									if [ -s ${user_path}/temp/${stripped_file} ]
+									then
+										new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
+										new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
+										if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+										then
+											new_trx_score_highest=$new_trx_confirmations
+										fi
+									fi
+								done <${user_path}/new_unique_filelist.tmp
+								
+								###COMPARE BOTH############################################
+								if [ $old_trx_score_highest -ge $new_trx_score_highest ]
 								then
-									while read line
-									do
-										is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
-										if [ $is_file_there = 1 ]
-										then
-											no_matches=$(( no_matches + 1 ))
-										else
-											stripped_file=$(echo "${line}"|awk '{print $1}')
-											old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-											old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
-											if [ $old_trx_confirmations -gt $old_trx_score_highest ]
-											then
-												old_trx_score_highest=$old_trx_confirmations
-											fi
-										fi
-									done <${user_path}/old_index_filelist.tmp
-									if [ $no_matches -lt $old_trx ]
-									then
-										while read line
-										do
-											is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
-											if [ $is_file_there = 0 ]
-											then
-												stripped_file=$(echo "${line}"|awk '{print $1}')
-												new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
-												new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
-												if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-												then
-													new_trx_score_highest=$new_trx_confirmations
-												fi
-											fi
-										done <${user_path}/new_index_filelist.tmp
-										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
-										then
-											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-										fi
-									else
-										echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-									fi
-								else
-									while read line
-									do
-										is_file_there=$(grep -c "${line}" ${user_path}/old_index_filelist.tmp)
-										if [ $is_file_there = 1 ]
-										then
-											no_matches=$(( no_matches + 1 ))
-										else
-											stripped_file=$(echo "${line}"|awk '{print $1}')
-											new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
-											new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
-											if [ $new_trx_confirmations -gt $new_trx_score_highest ]
-											then
-												new_trx_score_highest=$new_trx_confirmations
-											fi
-										fi
-									done <${user_path}/new_index_filelist.tmp
-									if [ $no_matches -lt $new_trx ]
-									then
-										while read line
-										do
-											is_file_there=$(grep -c "${line}" ${user_path}/new_index_filelist.tmp)
-											if [ $is_file_there = 0 ]
-											then
-												stripped_file=$(echo "${line}"|awk '{print $1}')
-												old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-												old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
-												if [ $old_trx_confirmations -gt $old_trx_score_highest ]
-												then
-													old_trx_score_highest=$old_trx_confirmations
-												fi
-											fi
-										done <${user_path}/old_index_filelist.tmp
-										if [ $old_trx_score_highest -ge $new_trx_score_highest ]
-										then
-											echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
-										fi
-									fi
+									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 								fi
 							else
 								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
@@ -1956,12 +1927,11 @@ process_new_files(){
 						fi
 					fi
 				done
-				rm ${user_path}/new_index_filelist.tmp
-				rm ${user_path}/old_index_filelist.tmp
+				###CREATE LIST OF FILES TO FETCH##############
 				sort -u ${user_path}/remove_list.tmp >${user_path}/temp_filelist.tmp
 				cat ${user_path}/files_to_fetch.tmp >>${user_path}/temp_filelist.tmp
 				sort ${user_path}/temp_filelist.tmp|uniq -u >${user_path}/files_to_fetch.tmp
-				rm ${user_path}/temp_filelist.tmp
+				rm ${user_path}/*_filelist.tmp
 
 				###REMOVE FILES OF REMOVE LIST################
 				while read line
