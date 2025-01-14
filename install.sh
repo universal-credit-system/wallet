@@ -66,7 +66,7 @@ else
 
 	###DISPLAY APPS TO INSTALL##
 	no_of_programs=$(wc -l <${script_path}/install_dep.tmp)
-        echo "Found ${no_of_programs} programs that need to be installed:"
+        echo "Found ${no_of_programs} program(s) that need to be installed:"
         cat ${script_path}/install_dep.tmp
 	echo "Install these programms first, then run install.sh again."
 
