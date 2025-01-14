@@ -57,7 +57,7 @@ then	############################
 			fi
 		done <${script_path}/control/gpg-agent.conf
 	else
-		cat ${script_path}/control/gpg-agent.conf >~/.gnupg/gpg-agent.conf
+		cp ${script_path}/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf
 	fi
 else
 	############################
