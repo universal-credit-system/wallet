@@ -879,19 +879,14 @@ build_ledger(){
 			if [ $show_balance = 1 ]
 			then
 				last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
+				last_score=$(ls -1 ${user_path}/|grep "scoretable.dat"|tail -1)
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
-					asset_type=${balance%%:*}
-					if [ "${asset_type}" = "${main_asset}" ]
-					then
-						cmd_output=$(grep "${asset_type}:${handover_account}" ${user_path}/${last_ledger})
-					else
-						cmd_output=$balance
-					fi
 				done
+				cmd_output=$(grep "${main_asset}:${handover_account}" ${user_path}/${last_score})
+				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 			fi
-			echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 		fi
 }
 check_archive(){
@@ -3325,7 +3320,7 @@ do
 			case "$user_menu" in
 				"$dialog_send")	asset_found=0
 						receipient_is_asset=0
-						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k2 >${user_path}/menu_assets.tmp
+						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k1 -k2 >${user_path}/menu_assets.tmp
 						if [ $gui_mode = 1 ]
 						then
 							def_string_asset=$(head -1 ${user_path}/menu_assets.tmp)
