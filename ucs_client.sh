@@ -48,6 +48,14 @@ login_account(){
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
+					###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
+					name_hash=$(echo "${user_name}"|sha224sum)
+					name_hash=${name_hash%% *}
+					if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
+					then
+						echo "${name_hash}" >>${script_path}/control/accounts.db
+					fi
+					
 					###REMOVE ENCRYPTION SOURCE FILE#############################
 					rm ${script_path}/account_${my_pid}.tmp
 
@@ -252,8 +260,13 @@ create_keys(){
 											###WRITE SECRETS####################################################
 											echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
 											echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
+											
+											###WRITE ENTRY INTO ACCOUNTS.DB#####################################
+											name_hash=$(echo "${create_name}"|sha224sum)
+											name_hash=${name_hash%% *}
+											echo "${name_hash}" >>${script_path}/control/accounts.db
 
-											###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED##############
+											###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
 											cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
 
 											if [ $gui_mode = 1 ]
@@ -2892,121 +2905,134 @@ do
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										account_pin_inputbox=""
-										account_pin_entered_correct=0
-										while [ $account_pin_entered_correct = 0 ]
-										do
-											if [ $gui_mode = 1 ]
-											then
-												account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
-												rt_query=$?
-											else
-												if [ "${cmd_pin}" = "" ]
+										name_hash=$(echo "${account_name}"|sha224sum)
+										name_hash=${name_hash%% *}
+										already_there=$(grep -c "${name_hash}" ${script_path}/control/accounts.db)
+										if [ $already_there = 0 ]
+										then
+											account_pin_inputbox=""
+											account_pin_entered_correct=0
+											while [ $account_pin_entered_correct = 0 ]
+											do
+												if [ $gui_mode = 1 ]
 												then
-													account_pin_first=$(tr -dc 0-9 </dev/urandom|head -c 5)
-													account_pin_second=$account_pin_first
+													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
+													rt_query=$?
 												else
-													account_pin_first=$cmd_pin
-													account_pin_second=$cmd_pin
+													if [ "${cmd_pin}" = "" ]
+													then
+														account_pin_first=$(tr -dc 0-9 </dev/urandom|head -c 5)
+														account_pin_second=$account_pin_first
+													else
+														account_pin_first=$cmd_pin
+														account_pin_second=$cmd_pin
+													fi
+													rt_query=0
 												fi
-												rt_query=0
-											fi
-											if [ $rt_query = 0 ]
-											then
-												check_input "${account_pin_first}" 1
-												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													if [ $gui_mode = 1 ]
-													then
-														clear
-														account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
-														rt_query=$?
-													else
-														rt_query=0
-													fi
+													check_input "${account_pin_first}" 1
+													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-				       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
+														if [ $gui_mode = 1 ]
 														then
 															clear
-															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pinmatch" 0 0
-															clear
+															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
+															rt_query=$?
 														else
-															account_password_entered_correct=0
-	     														while [ $account_password_entered_correct = 0 ]
-	       														do
-																if [ $gui_mode = 1 ]
-																then
-																	account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
-																	rt_query=$?
-																else
-																	if [ "${cmd_pw}" = "" ]
+															rt_query=0
+														fi
+														if [ $rt_query = 0 ]
+														then
+					       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
+															then
+																clear
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pinmatch" 0 0
+																clear
+															else
+																account_password_entered_correct=0
+		     														while [ $account_password_entered_correct = 0 ]
+		       														do
+																	if [ $gui_mode = 1 ]
 																	then
-																		account_password_first=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 10)
-																		account_password_second=$account_password_first
+																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
+																		rt_query=$?
 																	else
-																		account_password_first=$cmd_pw
-																		account_password_second=$cmd_pw
+																		if [ "${cmd_pw}" = "" ]
+																		then
+																			account_password_first=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 10)
+																			account_password_second=$account_password_first
+																		else
+																			account_password_first=$cmd_pw
+																			account_password_second=$cmd_pw
+																		fi
+																		rt_query=0
 																	fi
-																	rt_query=0
-																fi
-																if [ $rt_query = 0 ]
-																then
-	       																check_input "${account_password_first}" 0
-																	rt_query=$?
 																	if [ $rt_query = 0 ]
 																	then
-																		if [ $gui_mode = 1 ]
-																		then
-																			clear
-																			account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
-																			rt_query=$?
-																		else
-																			rt_query=0
-																		fi
+		       																check_input "${account_password_first}" 0
+																		rt_query=$?
 																		if [ $rt_query = 0 ]
 																		then
-				       															if [ ! "${account_password_first}" = "${account_password_second}" ]
+																			if [ $gui_mode = 1 ]
 																			then
 																				clear
-																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pwmatch" 0 0
-																				clear
-																			else
-																				account_name_entered_correct=1
-																				account_pin_entered_correct=1
-																				account_password_entered_correct=1
-																				create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
+																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
 																				rt_query=$?
-																				if [ $rt_query = 0 ]
-																				then
-																					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_success" 0 0
-																				else
-																					dialog --title "$dialog_type_titel_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_fail" 0 0
-																				fi
+																			else
+																				rt_query=0
 																			fi
-																		else
-																			account_password_entered_correct=1
+																			if [ $rt_query = 0 ]
+																			then
+					       															if [ ! "${account_password_first}" = "${account_password_second}" ]
+																				then
+																					clear
+																					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_pwmatch" 0 0
+																					clear
+																				else
+																					account_name_entered_correct=1
+																					account_pin_entered_correct=1
+																					account_password_entered_correct=1
+																					create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
+																					rt_query=$?
+																					if [ $rt_query = 0 ]
+																					then
+																						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_success" 0 0
+																					else
+																						dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_fail" 0 0
+																					fi
+																				fi
+																			else
+																				account_password_entered_correct=1
+																			fi
 																		fi
+																	else
+																		account_password_entered_correct=1
 																	fi
-																else
-																	account_password_entered_correct=1
-																fi
-															done
+																done
+															fi
+														else
+															account_pin_entered_correct=1
 														fi
+													fi
+												else
+													if [ $rt_query = 3 ]
+													then
+														account_pin_inputbox=$(tr -dc 0-9 </dev/urandom|head -c 5)
 													else
 														account_pin_entered_correct=1
 													fi
 												fi
+											done
+										else
+											if [ $gui_mode = 1 ]
+											then
+												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_exists" 0 0
 											else
-												if [ $rt_query = 3 ]
-												then
-													account_pin_inputbox=$(tr -dc 0-9 </dev/urandom|head -c 5)
-												else
-													account_pin_entered_correct=1
-												fi
+												exit 1
 											fi
-										done
+										fi
 									fi
 								else
 									if [ $rt_query = 3 ]
