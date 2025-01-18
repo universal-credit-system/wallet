@@ -49,11 +49,14 @@ login_account(){
 				if [ $rt_query = 0 ]
 				then
 					###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
-					name_hash=$(echo "${login_name}"|sha224sum)
-					name_hash=${name_hash%% *}
-					if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
+					if [ "${cmd_sender}" = "" ]
 					then
-						echo "${name_hash}" >>${script_path}/control/accounts.db
+						name_hash=$(echo "${login_name}"|sha224sum)
+						name_hash=${name_hash%% *}
+						if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
+						then
+							echo "${name_hash}" >>${script_path}/control/accounts.db
+						fi
 					fi
 					
 					###REMOVE ENCRYPTION SOURCE FILE#############################
