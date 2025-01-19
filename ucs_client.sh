@@ -607,6 +607,8 @@ build_ledger(){
 			current_percent_display=0
 			current_percent=$(echo "scale=10;${current_percent} + ${percent_per_day}"|bc)
 			current_percent_display=$(echo "${current_percent} / 1"|bc)
+		else
+			progress_bar_redir="2"
 		fi
 		####################################################
 
@@ -616,7 +618,7 @@ build_ledger(){
 			###STATUS BAR####################################
 			if [ $gui_mode = 1 ]
 			then
-				echo "$current_percent_display"|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_ledger" 0 0 0
+				echo "$current_percent_display"
 				current_percent=$(echo "scale=10;${current_percent} + ${percent_per_day}"|bc)
 				current_percent_display=$(echo "${current_percent} / 1"|bc)
 			fi
@@ -875,7 +877,7 @@ build_ledger(){
 			focus=$(date -u +%Y%m%d --date=@${date_stamp})
 			day_counter=$(( day_counter + 1 ))
 			##############################################################
-		done
+		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
 		if [ $gui_mode = 0 ]
 		then
 			###CHECK IF BALANCE NEED TO BE DISPLAYED######################
