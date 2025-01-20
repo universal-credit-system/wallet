@@ -2627,6 +2627,12 @@ dialogrc_set="${theme_file}"
 ###SOURCE LANGUAGE FILE#####
 . ${script_path}/lang/${lang_file}
 
+###CHECK FOR STDIN INPUT####
+if [ ! -t 0 ]
+then
+	set -- $(cat) $*
+fi
+
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
 if [ $# -gt 0 ]
 then
