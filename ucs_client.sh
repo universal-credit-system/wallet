@@ -44,7 +44,7 @@ login_account(){
 			do
 				###TEST KEY BY ENCRYPTING A MESSAGE##########################
 				echo $login_name >${script_path}/account_${my_pid}.tmp
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${user} -r ${user} --passphrase ${login_password} --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
+				echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${user} -r ${user} --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -63,7 +63,7 @@ login_account(){
 					rm ${script_path}/account_${my_pid}.tmp
 
 					####TEST KEY BY DECRYPTING THE MESSAGE#######################
-					gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --output ${script_path}/account_${my_pid}.tmp --decrypt ${script_path}/account_${my_pid}.tmp.gpg 1>/dev/null 2>/dev/null
+					echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account_${my_pid}.tmp --decrypt ${script_path}/account_${my_pid}.tmp.gpg 1>/dev/null 2>/dev/null
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
@@ -155,7 +155,7 @@ create_keys(){
 		fi
 
 		###GENERATE KEY##############################################
-		gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase ${create_password} --pinentry-mode loopback --quick-gen-key ${create_name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
+		echo "${create_password}"|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${create_name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
 		if [ $rt_query = 0 ]
 		then
@@ -176,7 +176,7 @@ create_keys(){
 
 			###EXPORT PUBLIC KEY#########################################
 			key_remove=1
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc --passphrase ${create_password} --pinentry-mode loopback --export ${create_name_hashed}
+			echo "${create_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${create_name_hashed}
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -190,7 +190,7 @@ create_keys(){
 				fi
 
 				###EXPORT PRIVATE KEY########################################
-				gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc --pinentry-mode loopback --passphrase ${create_password} --export-secret-keys ${create_name_hashed}
+				echo "${create_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${create_name_hashed}
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
@@ -379,7 +379,7 @@ make_signature(){
 			#################################################################
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${login_password} --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
+			echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
@@ -3835,7 +3835,7 @@ do
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
 															if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 															then
-																gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase ${order_receipient} ${handover_account}_${trx_now}.trx.tmp
+																echo "${order_receipient}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase-fd 0 ${handover_account}_${trx_now}.trx.tmp
 																rt_query=$?
 															fi
 															if [ $rt_query = 0 ]
@@ -3967,7 +3967,7 @@ do
 											fi
 
 											###DECRYPT TRANSACTION FILE################################
-											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase ${handover_account} --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
+											echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -4553,10 +4553,8 @@ do
 							done
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
-							touch ${user_path}/my_trx.tmp
-							touch ${user_path}/my_trx_sorted.tmp
 							cd ${script_path}/trx
-							grep -l ":${handover_account}" * >${user_path}/my_trx.tmp 2>/dev/null
+							grep -s -l ":${handover_account}" * >${user_path}/my_trx.tmp
 							cd ${script_path}
 							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
@@ -4652,7 +4650,7 @@ do
 												echo "${purpose_encrypted}"
 												echo "-----END PGP MESSAGE-----"
 											} >${user_path}/history_purpose_encrypted.tmp
-											gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase "${login_password}" --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
+											echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -4726,6 +4724,7 @@ do
 												if [ $purpose_there = 1 ]
 												then
 													dialog --cancel-label "[...]" --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decrypted.tmp 0 0 2>/dev/null
+													rt_query=$?
 													if [ $rt_query = 2 ]
 													then
 														open_write_dialog=1
