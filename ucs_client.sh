@@ -3811,7 +3811,6 @@ do
 															###WRITE ENTRIES TO FILES#####################################################
 															echo "${handover_account}.${trx_now}" >>${user_path}/all_trx.dat
 															echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
-															echo "${handover_account}.${trx_now}" >>${user_path}/depend_confirmations.dat
 															##############################################################################
 															##############################################################################
 															
