@@ -1770,6 +1770,11 @@ check_trx(){
 					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 					then
 						###CHECK IF PURPOSE CONTAINS ALNUM##################################
+						purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' $file_to_check)
+						purpose_key_start=$(( purpose_key_start + 1 ))
+						purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
+						purpose_key_end=$(( purpose_key_end - 1 ))
+						trx_purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" $file_to_check)
 						purpose_start=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
 						purpose_start=$(( purpose_start + 1 ))
 						purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check)
@@ -3653,12 +3658,18 @@ do
 										fi
 										if [ $receipient_is_asset = 0 ]
 										then
-											###IF RECIPIENT IS NORMAL USER USE HIS KEY##############
-											order_purpose_hash=$(echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${order_receipient} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)")
+											receiver=$order_receipient
 										else
-											###IF RECIPIENT IS ASSET USE USERS KEY##################
-											order_purpose_hash=$(echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${handover_account} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)")
+											receiver=$handover_account
 										fi
+										###GET RANDOM KEY#######################################
+										random_key=$(head -50 /dev/urandom|tr -dc "[:alnum:]"|head -c 32)
+										echo "${random_key}" >${user_path}/trx_purpose_key.tmp
+										###ENCRYPT KEY##########################################
+										order_purpose_key=$(echo "\n$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${receiver} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_key.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)")
+										###ENCRYPT PURPOSE######################################
+										order_purpose_hash=$(echo "\n$(echo "${random_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)")
+										rm ${user_path}/trx_purpose_key.tmp
 										rm ${user_path}/trx_purpose_blank.tmp
 										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
 										########################################################
@@ -3677,7 +3688,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											trx_now=$(date +%s)
-											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
+											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPK:${order_purpose_key}\n:PRPS:${order_purpose_hash}" ${trx_now} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
@@ -4637,33 +4648,51 @@ do
 										purpose_dialog_string="-"
 										if [ "${receiver}" = "${handover_account}" ]
 										then
-											purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
-											purpose_start=$(( purpose_start + 1 ))
-											purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
-											purpose_end=$(( purpose_end - 1 ))
-											purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
+											purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' $trx_file_path)
+											purpose_key_start=$(( purpose_key_start + 1 ))
+											purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
+											purpose_key_end=$(( purpose_key_end - 1 ))
+											purpose_key_encrypted=$(sed -n "${purpose_key_start},${purpose_key_end}p" $trx_file_path)
 											###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 											{
 												echo "-----BEGIN PGP MESSAGE-----"
 												echo ""
-												echo "${purpose_encrypted}"
+												echo "${purpose_key_encrypted}"
 												echo "-----END PGP MESSAGE-----"
-											} >${user_path}/history_purpose_encrypted.tmp
-											echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
+											} >${user_path}/history_purpose_key_encrypted.tmp
+											echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/history_purpose_key_decrypted.tmp --decrypt ${user_path}/history_purpose_key_encrypted.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												if [ -s ${user_path}/history_purpose_decrypted.tmp ]
+												purpose_key=$(cat ${user_path}/history_purpose_key_decrypted.tmp)
+												purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
+												purpose_start=$(( purpose_start + 1 ))
+												purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
+												purpose_end=$(( purpose_end - 1 ))
+												purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
+												###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+												{
+													echo "-----BEGIN PGP MESSAGE-----"
+													echo ""
+													echo "${purpose_encrypted}"
+													echo "-----END PGP MESSAGE-----"
+												} >${user_path}/history_purpose_encrypted.tmp
+												echo "${purpose_key}"|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --passphrase-fd 0 --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
+												rt_query=$?
+												if [ $rt_query = 0 ]
 												then
-													###CHECK IF FILE CONTAINS TEXT OR ELSE######################################
-													is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
-													if [ $is_text = 0 ]
+													if [ -s ${user_path}/history_purpose_decrypted.tmp ]
 													then
-														purpose_there=1
-														purpose_dialog_string="[...]"
-													else
-														purpose_there=2
-														purpose_dialog_string="[data]"
+														###CHECK IF FILE CONTAINS TEXT OR ELSE######################################
+														is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
+														if [ $is_text = 0 ]
+														then
+															purpose_there=1
+															purpose_dialog_string="[...]"
+														else
+															purpose_there=2
+															purpose_dialog_string="[data]"
+														fi
 													fi
 												fi
 											fi
