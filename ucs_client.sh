@@ -282,7 +282,7 @@ create_keys(){
 												echo "USER:${create_name}"
 												echo "PIN:${create_pin}"
 												echo "PASSWORD:>${create_password}<"
-												echo "ADRESS:${create_name_hashed}"
+												echo "ADDRESS:${create_name_hashed}"
 												echo "KEY_PUB:/keys/${create_name_hashed}"
 												echo "KEY_PRV:/control/keys/${create_name_hashed}"
 												echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
