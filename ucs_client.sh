@@ -999,14 +999,17 @@ check_archive(){
 											then
 												rt_query=1
 											else
-												if [ $check_mode = 0 ]
+												if [ $(grep "${line}" ${user_path}/tar_check_full.tmp|awk '{print $3}' -) -le $trx_max_size_bytes ]
 												then
-													if [ ! -s ${script_path}/$line ]
+													if [ $check_mode = 0 ]
 													then
+														if [ ! -s ${script_path}/$line ]
+														then
+															echo "$line" >>${user_path}/files_to_fetch.tmp
+														fi
+													else
 														echo "$line" >>${user_path}/files_to_fetch.tmp
 													fi
-												else
-													echo "$line" >>${user_path}/files_to_fetch.tmp
 												fi
 											fi
 										fi
@@ -1735,83 +1738,88 @@ check_trx(){
 			###SET ACKNOWLEDGED VARIABLE###############################
 			trx_acknowledged=0
 
-			###CHECK IF HEADER MATCHES OWNER###################################
-			file_to_check=${script_path}/trx/${line}
-			user_to_check=$(echo $line|awk -F. '{print $1}')
-			trx_sender=$(awk -F: '/:SNDR:/{print $3}' $file_to_check)
-			if [ $user_to_check = $trx_sender ]
+			###CHECK SIZE##############################################
+			trx_size=$(wc -c <${script_path}/trx/${line})
+			if [ $trx_size -le $trx_max_size_bytes ]
 			then
-				###VERIFY SIGNATURE OF TRANSACTION#################################
-				verify_signature $file_to_check $user_to_check
-				rt_query=$?
-				if [ $rt_query = 0 ]
+				###CHECK IF HEADER MATCHES OWNER###################################
+				file_to_check=${script_path}/trx/${line}
+				user_to_check=$(echo $line|awk -F. '{print $1}')
+				trx_sender=$(awk -F: '/:SNDR:/{print $3}' $file_to_check)
+				if [ $user_to_check = $trx_sender ]
 				then
-					###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX########
-					###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
-					trx_date_filename=${line#*.}
-					trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
-					trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
-					if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) = 0 ]
+					###VERIFY SIGNATURE OF TRANSACTION#################################
+					verify_signature $file_to_check $user_to_check
+					rt_query=$?
+					if [ $rt_query = 0 ]
 					then
-						###IF RECEIVER IS USER##############################################
-						trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
-						trx_receiver_date=${trx_receiver_date#* }
-					else
-						if [ ! "${trx_receiver_date}" = "${main_asset}" ] && [ ! "${trx_receiver_date}" = "${main_token}" ]
+						###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX########
+						###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
+						trx_date_filename=${line#*.}
+						trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
+						trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
+						if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) = 0 ]
 						then
-							###IF RECEIVER IS ASSET GET DATE####################################
-							trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
-							trx_receiver_date=${trx_receiver_date#*.}
+							###IF RECEIVER IS USER##############################################
+							trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
+							trx_receiver_date=${trx_receiver_date#* }
 						else
-							###MAIN ASSET OR MAIN TOKEN SET TO START DATE#######################
-							trx_receiver_date=$(date -u +%s --date="${start_date}")
-						fi
-					fi
-					if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
-					then
-						###CHECK IF PURPOSE CONTAINS ALNUM##################################
-						purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' $file_to_check)
-						purpose_key_start=$(( purpose_key_start + 1 ))
-						purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
-						purpose_key_end=$(( purpose_key_end - 1 ))
-						trx_purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" $file_to_check)
-						purpose_start=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
-						purpose_start=$(( purpose_start + 1 ))
-						purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check)
-						purpose_end=$(( purpose_end - 1 ))
-						trx_purpose=$(sed -n "${purpose_start},${purpose_end}p" $file_to_check)
-						purpose_contains_alnum=$(printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
-						if [ $purpose_contains_alnum = 0 ]
-						then
-							###CHECK IF ASSET TYPE EXISTS############################################
-							trx_asset=$(awk -F: '/:ASST:/{print $3}' $file_to_check)
-							asset_already_exists=$(grep -c "${trx_asset}" ${user_path}/all_assets.dat)
-							if [ $asset_already_exists = 1 ]
+							if [ ! "${trx_receiver_date}" = "${main_asset}" ] && [ ! "${trx_receiver_date}" = "${main_token}" ]
 							then
-								###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
-								trx_amount=$(awk -F: '/:AMNT:/{print $3}' $file_to_check)
-								is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
-								is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
-								is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
-
-								###CHECK IF USER HAS CREATED A INDEX FILE################################
-								if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+								###IF RECEIVER IS ASSET GET DATE####################################
+								trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
+								trx_receiver_date=${trx_receiver_date#*.}
+							else
+								###MAIN ASSET OR MAIN TOKEN SET TO START DATE#######################
+								trx_receiver_date=$(date -u +%s --date="${start_date}")
+							fi
+						fi
+						if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
+						then
+							###CHECK IF PURPOSE CONTAINS ALNUM##################################
+							purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' $file_to_check)
+							purpose_key_start=$(( purpose_key_start + 1 ))
+							purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
+							purpose_key_end=$(( purpose_key_end - 1 ))
+							trx_purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" $file_to_check)
+							purpose_start=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
+							purpose_start=$(( purpose_start + 1 ))
+							purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check)
+							purpose_end=$(( purpose_end - 1 ))
+							trx_purpose=$(sed -n "${purpose_start},${purpose_end}p" $file_to_check)
+							purpose_contains_alnum=$(printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
+							if [ $purpose_contains_alnum = 0 ]
+							then
+								###CHECK IF ASSET TYPE EXISTS############################################
+								trx_asset=$(awk -F: '/:ASST:/{print $3}' $file_to_check)
+								asset_already_exists=$(grep -c "${trx_asset}" ${user_path}/all_assets.dat)
+								if [ $asset_already_exists = 1 ]
 								then
-									####CHECK IF USER HAS INDEXED THE TRANSACTION############################
-									is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
-									if [ $is_trx_signed = 1 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+									###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+									trx_amount=$(awk -F: '/:AMNT:/{print $3}' $file_to_check)
+									is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
+									is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
+									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
+
+									###CHECK IF USER HAS CREATED A INDEX FILE################################
+									if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 									then
-										trx_acknowledged=1
+										####CHECK IF USER HAS INDEXED THE TRANSACTION############################
+										is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
+										if [ $is_trx_signed = 1 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+										then
+											trx_acknowledged=1
+										else
+											if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+											then
+												trx_acknowledged=1
+											fi
+										fi
 									else
 										if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 										then
 											trx_acknowledged=1
 										fi
-									fi
-								else
-									if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
-									then
-										trx_acknowledged=1
 									fi
 								fi
 							fi
@@ -2607,6 +2615,8 @@ core_system_version="v0.0.1"
 
 ###SET INITIAL VARIABLES####
 check_period_tsa=21600
+trx_max_size_bytes=3164
+trx_max_size_purpose_bytes=1024
 main_asset="UCC"
 main_token="UCT"
 start_date="20241229"
@@ -3585,7 +3595,7 @@ do
 											while [ $quit_purpose_loop = 0 ]
 											do
 												###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
-												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 75 --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
+												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input $trx_max_purpose_bytes --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
 												rt_query=$?
 												if [ $rt_query = 1 ]
 												then
@@ -3594,8 +3604,15 @@ do
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
-														order_purpose=$(cat ${user_path}/trx_purpose_edited.tmp)
-														quit_purpose_loop=1
+														### CHECK FOR MAX PURPOSE SIZE #################################
+														if [ $(wc -c <${user_path}/trx_purpose_edited.tmp) -le $trx_max_purpose_bytes ]
+														then
+															order_purpose=$(cat ${user_path}/trx_purpose_edited.tmp)
+															quit_purpose_loop=1
+														else
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $trx_max_size_purpose_bytes Bytes!" 0 0		
+															cp ${user_path}/trx_purpose_edited.tmp ${user_path}/trx_purpose_blank.tmp
+														fi
 													else
 														if [ $rt_query = 1 ]
 														then
@@ -3610,11 +3627,17 @@ do
 																then
 																	if [ ! -d "${file_path}" ] && [ -s "${file_path}" ]
 																	then
-																		quit_file_path=1
-																		quit_purpose_loop=1
-																		order_purpose_path=$file_path
-																		is_file=1
-																		is_text=$(file ${order_purpose_path}|grep -c -v "text")
+																		### CHECK FOR MAX PURPOSE SIZE #################################
+																		if [ $(wc -c <${file_path}) -le $trx_max_purpose_bytes ]
+																		then
+																			quit_file_path=1
+																			quit_purpose_loop=1
+																			order_purpose_path=$file_path
+																			is_file=1
+																			is_text=$(file ${order_purpose_path}|grep -c -v "text")
+																		else
+																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $trx_max_size_purpose_bytes Bytes!" 0 0
+																		fi
 																	else
 																		path_to_search=$file_path
 																	fi
@@ -3632,10 +3655,20 @@ do
 											###CHECK IF FILE IS USED FOR PUPOSE###################
 											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
 											then
+												### CHECK SIZE #######################################
+												if [ $(wc -c <${cmd_file}) -gt $trx_max_purpose_bytes ] 
+												then
+													exit 1
+												fi
 												order_purpose_path=$cmd_file
 												is_file=1
 												is_text=$(file ${order_purpose_path}|grep -c -v "text")
 											else
+												### CHECK SIZE #######################################
+												if [ $(printf "%s" "${order_purpose}"|wc -c) -gt $trx_max_purpose_bytes ] 
+												then
+													exit 1
+												fi
 												order_purpose=$cmd_purpose
 											fi
 										fi
