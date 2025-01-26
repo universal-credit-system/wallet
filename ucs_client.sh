@@ -3636,6 +3636,7 @@ do
 																			is_file=1
 																			is_text=$(file ${order_purpose_path}|grep -c -v "text")
 																		else
+																			path_to_search=$file_path
 																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $trx_max_size_purpose_bytes Bytes!" 0 0
 																		fi
 																	else
