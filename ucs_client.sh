@@ -3595,7 +3595,7 @@ do
 											while [ $quit_purpose_loop = 0 ]
 											do
 												###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
-												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input $trx_max_purpose_bytes --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
+												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input $trx_max_size_purpose_bytes --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
 												rt_query=$?
 												if [ $rt_query = 1 ]
 												then
@@ -3605,7 +3605,7 @@ do
 													if [ $rt_query = 0 ]
 													then
 														### CHECK FOR MAX PURPOSE SIZE #################################
-														if [ $(wc -c <${user_path}/trx_purpose_edited.tmp) -le $trx_max_purpose_bytes ]
+														if [ $(wc -c <${user_path}/trx_purpose_edited.tmp) -le $trx_max_size_purpose_bytes ]
 														then
 															order_purpose=$(cat ${user_path}/trx_purpose_edited.tmp)
 															quit_purpose_loop=1
@@ -3628,7 +3628,7 @@ do
 																	if [ ! -d "${file_path}" ] && [ -s "${file_path}" ]
 																	then
 																		### CHECK FOR MAX PURPOSE SIZE #################################
-																		if [ $(wc -c <${file_path}) -le $trx_max_purpose_bytes ]
+																		if [ $(wc -c <${file_path}) -le $trx_max_size_purpose_bytes ]
 																		then
 																			quit_file_path=1
 																			quit_purpose_loop=1
@@ -3656,7 +3656,7 @@ do
 											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
 											then
 												### CHECK SIZE #######################################
-												if [ $(wc -c <${cmd_file}) -gt $trx_max_purpose_bytes ] 
+												if [ $(wc -c <${cmd_file}) -gt $trx_max_size_purpose_bytes ] 
 												then
 													exit 1
 												fi
@@ -3665,7 +3665,7 @@ do
 												is_text=$(file ${order_purpose_path}|grep -c -v "text")
 											else
 												### CHECK SIZE #######################################
-												if [ $(printf "%s" "${order_purpose}"|wc -c) -gt $trx_max_purpose_bytes ] 
+												if [ $(printf "%s" "${order_purpose}"|wc -c) -gt $trx_max_size_purpose_bytes ] 
 												then
 													exit 1
 												fi
