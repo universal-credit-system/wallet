@@ -499,10 +499,7 @@ build_ledger(){
 		###CHECK IF OLD LEDGER THERE########################
 		old_ledger_there=$(ls -1 ${user_path}/|grep -c "ledger.dat")
 
-		###CHECK IF OLD SCORETABLE IS THERE#################
-		old_scoretable_there=$(ls -1 ${user_path}/|grep -c "scoretable.dat")
-
-		if [ $old_ledger_there -gt 0 ] && [ $old_scoretable_there -gt 0 ] && [ $new = 0 ]
+		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
@@ -525,10 +522,6 @@ build_ledger(){
 			rm ${user_path}/*_ledger.dat 2>/dev/null
 			touch ${user_path}/${date_stamp_yesterday}_ledger.dat
 			####################################################
-
-			###EMPTY SCORE TABLE################################
-			rm ${user_path}/*_scoretable.dat 2>/dev/null
-			touch ${user_path}/${date_stamp_yesterday}_scoretable.dat
 
 			###EMPTY INDEX FILE#################################
 			rm ${user_path}/*_index_trx.dat 2>/dev/null
@@ -636,8 +629,7 @@ build_ledger(){
 			###MOVE FILENAMES TO NEXT DAY####################
 			previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
 			cp ${user_path}/${previous_day}_ledger.dat ${user_path}/${focus}_ledger.dat
-			cp ${user_path}/${previous_day}_scoretable.dat ${user_path}/${focus}_scoretable.dat
-
+			
 			###GRANT COINLOAD OF THAT DAY####################
 			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -s ${user_path}/${focus}_ledger.tmp ]
@@ -650,21 +642,13 @@ build_ledger(){
 			fi
 			rm ${user_path}/${focus}_ledger.tmp 2>/dev/null
 
-			###UPDATE SCORETABLE#############################
-			LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' ${user_path}/${focus}_scoretable.dat >${user_path}/${focus}_scoretable.tmp
-			if [ -s ${user_path}/${focus}_scoretable.tmp ] || [ -e ${user_path}/${focus}_scoretable.tmp ]
-			then
-				mv ${user_path}/${focus}_scoretable.tmp ${user_path}/${focus}_scoretable.dat 2>/dev/null
-			fi
-
 			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
 			touch ${user_path}/accounts.tmp
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
 			grep -f ${user_path}/depend_accounts.dat ${user_path}/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >${user_path}/accounts.tmp
 
-			###CREATE LEDGER AND SCORETABEL ENTRY FOR USER###
+			###CREATE LEDGER ENTRY FOR USER##################
 			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
-			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_scoretable.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
 			###CREATE LIST OF ASSETS CREATED THAT DAY########
@@ -725,36 +709,16 @@ build_ledger(){
 							account_check_balance=$(echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g')
 							enough_balance=$(echo "${account_check_balance} >= 0"|bc)
 
-							###CHECK SCORE################################################
-							if [ "${trx_asset}" = "${main_asset}" ]
+							###CHECK IF BALANCE IS OK#####################################
+							if [ $enough_balance = 1 ]
 							then
-								###SCORING####################################################
-								sender_score_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_scoretable.dat)
-								sender_score_balance=${sender_score_balance#*=}
-								is_score_ok=$(echo "${sender_score_balance} >= ${trx_amount}"|bc)
-								##############################################################
-							else
-								is_score_ok=1
-							fi
-
-							###CHECK IF BALANCE AND SCORE ARE OK##########################
-							if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
-							then
-								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)############
+								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)#############
 								echo "${trx_path} ${trx_hash}" >>${user_path}/${focus}_index_trx.dat
 								##############################################################
 
 								###SET BALANCE FOR SENDER#####################################
 								account_new_balance=$account_check_balance
 								sed -i "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" ${user_path}/${focus}_ledger.dat
-								##############################################################
-
-								###SET SCORE FOR SENDER#######################################
-								if [ "${trx_asset}" = "${main_asset}" ]
-								then
-									sender_new_score_balance=$(echo "${sender_score_balance} - ${trx_amount}"|bc|sed 's/^\./0./g')
-									sed -i "s/${trx_asset}:${trx_sender}=${sender_score_balance}/${trx_asset}:${trx_sender}=${sender_new_score_balance}/g" ${user_path}/${focus}_scoretable.dat
-								fi
 								##############################################################
 
 								###CHECK IF RECEIVER IS ASSET#################################
@@ -804,19 +768,6 @@ build_ledger(){
 									###CHECK CONFIRMATIONS########################################
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
-										###SET SCORE FOR SENDER#######################################
-										if [ "${trx_asset}" = "${main_asset}" ]
-										then
-											###CHECK IF NEW SCORE IS GREATER THAN BALANCE#################
-											is_greater_balance=$(echo "${sender_new_score_balance} > ${account_new_balance}"|bc)
-											if [ $is_greater_balance = 1 ]
-											then
-												sender_score_balance="${account_new_balance}"
-											fi
-											##############################################################
-											sender_score_balance=$(echo "${sender_score_balance}"|sed 's/^\./0./g')
-											sed -i "s/${trx_asset}:${trx_sender}=${sender_new_score_balance}/${trx_asset}:${trx_sender}=${sender_score_balance}/g" ${user_path}/${focus}_scoretable.dat
-										fi
 										##############################################################
 										###SET BALANCE FOR RECEIVER###################################
 										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
@@ -897,13 +848,10 @@ build_ledger(){
 			if [ $show_balance = 1 ]
 			then
 				last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
-				last_score=$(ls -1 ${user_path}/|grep "scoretable.dat"|tail -1)
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
 				done
-				cmd_output=$(grep "${main_asset}:${handover_account}" ${user_path}/${last_score})
-				echo "UNLOCKED_BALANCE_${now_stamp}:${cmd_output}"
 			fi
 		fi
 }
@@ -2240,7 +2188,6 @@ get_dependencies(){
 					then
 						last_date=$(date +%Y%m%d --date=@${earliest_date})
 						rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-						rm $(ls -1 ${user_path}/|grep "scoretable.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 					fi
 				fi
@@ -3311,28 +3258,11 @@ do
 			fi
 			check_blacklist
 			account_my_balance=""
-			account_my_score=""
 			for ledger_entry in $(grep ":${handover_account}" ${user_path}/${now}_ledger.dat)
 			do
 				balance_asset=${ledger_entry%%:*}
 				balance_value=${ledger_entry#*=}
 				account_my_balance="${account_my_balance}${balance_value} ${balance_asset}\n"
-				score_there=$(grep -c "${balance_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-				if [ $score_there -eq 1 ]
-				then
-					score_value=$(grep "${balance_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-					score_value=${score_value#*=}
-					is_score_greater_balance=$(echo "${score_value} > ${balance_value}"|bc)
-					if [ $is_score_greater_balance = 1 ]
-					then
-						account_my_score_tmp=$balance_value
-					else
-						account_my_score_tmp=$score_value
-					fi
-				else
-					account_my_score_tmp=$balance_value
-				fi
-				account_my_score="${account_my_score}${account_my_score_tmp} ${balance_asset}\n"
 			done
 		fi
 
@@ -3351,7 +3281,7 @@ do
 
 		if [ $gui_mode = 1 ]
 		then
-			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<account_my_score>/${account_my_score}/g")
+			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g")
 			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_browser" "$dialog_history" "$dialog_stats" "$dialog_logout")
 			rt_query=$?
 		else
@@ -3463,25 +3393,9 @@ do
 												do
 													account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
 													account_my_balance=${account_my_balance#*=}
-													if [ "${order_asset}" = "${main_asset}" ]
-													then
-														###SCORE############################################################
-														account_my_score=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-														account_my_score=${account_my_score#*=}
-														sender_score_balance_value=$account_my_score
-														is_score_greater_balance=$(echo "${account_my_score}>${account_my_balance}"|bc)
-														if [ $is_score_greater_balance = 1 ]
-														then
-															account_my_score=$account_my_balance
-														fi
-														sender_score_balance_value=$account_my_score
-														####################################################################
-													else
-														account_my_score=$account_my_balance
-													fi
 													if [ $gui_mode = 1 ]
 													then
-														dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<score>/${account_my_score}/g" -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
+														dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
 														order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
 														rt_query=$?
 													else
@@ -3503,15 +3417,7 @@ do
 																if [ $is_amount_big_enough = 1 ]
 																then
 																	enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-																	if [ "${order_asset}" = "${main_asset}" ]
-																	then
-																		###SCORE#############################################################
-																		is_score_ok=$(echo "${sender_score_balance_value} >= ${order_amount_formatted}"|bc)
-																		#####################################################################
-																	else
-																		is_score_ok=1
-																	fi
-																	if [ $enough_balance = 1 ] && [ $is_score_ok = 1 ]
+																	if [ $enough_balance = 1 ]
 																	then
 																		amount_selected=1
 																	else
@@ -3840,14 +3746,6 @@ do
 														if [ $rt_query = 0 ]
 														then
 															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
-															##############################################################################
-															if [ "${order_asset}" = "${main_asset}" ]
-															then
-																###SET SCORE##################################################################
-																sender_new_score_balance=$(echo "${sender_score_balance_value} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
-																sed -i "s/${order_asset}:${handover_account}=${sender_score_balance_value}/${order_asset}:${handover_account}=${sender_new_score_balance}/g" ${user_path}/${now}_scoretable.dat
-																##############################################################################
-															fi
 															###SET BALANCE################################################################
 															account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
 															sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" ${user_path}/${now}_ledger.dat
@@ -3859,16 +3757,11 @@ do
 															##############################################################################
 															##############################################################################
 															
-															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER AND SCORETABLE ARE DELETED##########
+															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER IS DELETED ARE DELETED##############
 															if [ $gui_mode = 0 ]
 															then
 																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
 																echo "BALANCE_${trx_now}:${cmd_output}"
-																if [ "${order_asset}" = "${main_asset}" ]
-																then
-																	cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_scoretable.dat)
-																fi
-																echo "UNLOCKED_BALANCE_${trx_now}:${cmd_output}"
 															fi
 															
 															###SET VARIABLES FOR NEXT LOOP RUN###########################################
