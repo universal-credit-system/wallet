@@ -235,59 +235,74 @@ create_keys(){
 									if [ $rt_query = 0 ]
 									then
 										###WRITE OUTPUT OF RESPONSE TO FILE######################
-										openssl ts -reply -in ${user_path}/${default_tsa}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+										openssl ts -reply -in ${user_path}/${default_tsa}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###GET FILE STAMP###########################################
-											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/timestamp_check.tmp|cut -c 13-37)")
-											if [ $gui_mode = 1 ]
+											###WRITE KEY DATA TO FILE################################
+											gpg --with-colons --import-options show-only --import ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc >${user_path}/gpg_check.tmp
+											rt_query=$?
+											if [ $rt_query = 0 ]
 											then
-												###DISPLAY PROGRESS ON STATUS BAR###########################
-												echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
-												clear
-											fi
-											rm ${user_path}/timestamp_check.tmp
+												###GET FILE STAMP########################################
+												file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
+												key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
+												rm ${user_path}/*.tmp 2>/dev/null
+														
+												###CHECK DIFFERENCE######################################
+												stamp_diff=$(( file_stamp - key_stamp ))
+												if [ $stamp_diff -lt 120 ]
+												then
+													if [ $gui_mode = 1 ]
+													then
+														###DISPLAY PROGRESS ON STATUS BAR###########################
+														echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
+														clear
+													fi
 
-											###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
-											mkdir ${script_path}/proofs/${create_name_hashed}
-											mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsq
-											mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsr
+													###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
+													mkdir ${script_path}/proofs/${create_name_hashed}
+													mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsq
+													mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsr
 
-											###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
-											cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
+													###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
+													cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
 
-											###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-											cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
+													###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
+													cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
 
-											###WRITE SECRETS####################################################
-											echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
-											echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
-											
-											###WRITE ENTRY INTO ACCOUNTS.DB#####################################
-											name_hash=$(echo "${create_name}"|sha224sum)
-											name_hash=${name_hash%% *}
-											echo "${name_hash}" >>${script_path}/control/accounts.db
+													###WRITE SECRETS####################################################
+													echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
+													echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
+													
+													###WRITE ENTRY INTO ACCOUNTS.DB#####################################
+													name_hash=$(echo "${create_name}"|sha224sum)
+													name_hash=${name_hash%% *}
+													echo "${name_hash}" >>${script_path}/control/accounts.db
 
-											###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
-											cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
+													###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
+													cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
 
-											if [ $gui_mode = 1 ]
-											then
-												###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-												dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
-												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
-												key_remove=0
-											else
-												echo "USER:${create_name}"
-												echo "PIN:${create_pin}"
-												echo "PASSWORD:>${create_password}<"
-												echo "ADDRESS:${create_name_hashed}"
-												echo "KEY_PUB:/keys/${create_name_hashed}"
-												echo "KEY_PRV:/control/keys/${create_name_hashed}"
-												echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
-												echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
-												exit 0
+													if [ $gui_mode = 1 ]
+													then
+														###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
+														dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
+														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
+														key_remove=0
+													else
+														echo "USER:${create_name}"
+														echo "PIN:${create_pin}"
+														echo "PASSWORD:>${create_password}<"
+														echo "ADDRESS:${create_name_hashed}"
+														echo "KEY_PUB:/keys/${create_name_hashed}"
+														echo "KEY_PRV:/control/keys/${create_name_hashed}"
+														echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
+														echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
+														exit 0
+													fi
+												else
+													rt_query=1
+												fi
 											fi
 										fi
 									fi
@@ -1470,61 +1485,76 @@ check_tsa(){
 
 				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 				accountname_key_name="${line}"
-				accountname_key_content=$(gpg --list-packets ${script_path}/keys/${line}|grep "user ID"|awk '{print $4}'|sed 's/"//g')
-				if [ $accountname_key_name = $accountname_key_content ]
+				gpg --with-colons --import-options show-only --import ${script_path}/keys/${line} >${user_path}/gpg_check.tmp
+				rt_query=$?
+				if [ $rt_query = 0 ]
 				then
-					###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
-					if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
+					accountname_key_content=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
+					if [ $accountname_key_name = $accountname_key_content ]
 					then
-						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
-						for tsa_service in $(ls -1 ${script_path}/certs)
-						do
-							cacert_file_found=0
-							for cacert_file in $(ls -1 ${script_path}/certs/${tsa_service}/cacert.*)
+						###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
+						if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
+						then
+							###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+							for tsa_service in $(ls -1 ${script_path}/certs)
 							do
-								for crt_file in $(ls -1 ${script_path}/certs/${tsa_service}/tsa.*)
+								cacert_file_found=0
+								for cacert_file in $(ls -1 ${script_path}/certs/${tsa_service}/cacert.*)
 								do
-									###CHECK TSA QUERYFILE###################################
-									openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
-									rt_query=$?
-									if [ $rt_query = 0 ]
-									then
-										###WRITE OUTPUT OF RESPONSE TO FILE######################
-										openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/timestamp_check.tmp 2>/dev/null
+									for crt_file in $(ls -1 ${script_path}/certs/${tsa_service}/tsa.*)
+									do
+										###CHECK TSA QUERYFILE###################################
+										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###VERIFY TSA RESPONSE###################################
-											openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+											###WRITE OUTPUT OF RESPONSE TO FILE######################
+											openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												###WRITE TIMESTAMP TO FILE###############################
-												file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/timestamp_check.tmp|cut -c 13-37)")
-												echo "${accountname_key_name} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
+												###VERIFY TSA RESPONSE###################################
+												openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													###GET STAMPS###############################
+													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
+													key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
+													
+													###CALCULATE DIFFERENCE#####################
+													stamp_diff=$(( file_stamp - key_stamp ))
+													
+													###CHECK IF CREATED WITHIN 120 SECONDS######
+													if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
+													then
+														###WRITE STAMP TO FILE###################################
+														echo "${accountname_key_name} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
 
-												###SET VARIABLE THAT TSA HAS BEEN FOUND##################
-												account_verified=1
+														###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+														account_verified=1
 
-												###STEP OUT OF LOOP CACERT_FILE##########################
-												cacert_file_found=1
+														###STEP OUT OF LOOP CACERT_FILE##########################
+														cacert_file_found=1
 
-												###STEP OUT OF LOOP CRT_FILE#############################
-												break
+														###STEP OUT OF LOOP CRT_FILE#############################
+														break
+													fi
+												fi
 											fi
 										fi
+									done
+									if [ $cacert_file_found = 1 ]
+									then
+										break
 									fi
 								done
-								if [ $cacert_file_found = 1 ]
+								if [ $account_verified = 1 ]
 								then
 									break
 								fi
 							done
-							if [ $account_verified = 1 ]
-							then
-								break
-							fi
-						done
+						fi
 					fi
 				fi
 				if [ $account_verified = 0 ]
@@ -1532,7 +1562,7 @@ check_tsa(){
 					echo $line >>${user_path}/blacklisted_accounts.dat
 				fi
 			done <${user_path}/all_accounts.tmp
-			rm ${user_path}/timestamp_check.tmp 2>/dev/null
+			rm ${user_path}/*_check.tmp 2>/dev/null
 
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
