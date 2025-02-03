@@ -59,7 +59,7 @@ then	##############################
 	if [ -s ${script_path}/control/config.bak ]
 	then
 		### GET VARIABLES ###########
-		grep "=" ${script_path}/control/config.bak >${script_path}/control/config.tmp
+		grep "path_input\|path_output\|theme_file" ${script_path}/control/config.bak >${script_path}/control/config.tmp
 		
 		### READ OLD CONFIG #########
 		while read config_line
