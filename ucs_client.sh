@@ -166,6 +166,7 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
+			mkdir ${script_path}/proofs/${create_name_hashed}
 			mkdir ${script_path}/userdata/${create_name_hashed}
 			mkdir ${script_path}/userdata/${create_name_hashed}/temp
 			mkdir ${script_path}/userdata/${create_name_hashed}/temp/assets
@@ -184,9 +185,6 @@ create_keys(){
 				then
 					###DISPLAY PROGRESS ON STATUS BAR############################
 					echo "66"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create3" 0 0 0
-
-					###CLEAR SCREEN
-					clear
 				fi
 
 				###EXPORT PRIVATE KEY########################################
@@ -197,124 +195,112 @@ create_keys(){
 					###STEP INTO USER DIRECTORY##################################
 					cd ${user_path}
 
-					###CREATE TSA QUERY FILE#####################################
-					openssl ts -query -data ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc -no_nonce -sha512 -out ${user_path}/${default_tsa}.tsq 1>/dev/null 2>/dev/null
-					rt_query=$?
+					###WRITE KEY DATA TO FILE####################################
+					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
 					if [ $rt_query = 0 ]
 					then
-						###GET TSA DATA##############################################
-						tsa_config_line=$(grep "${default_tsa}" ${script_path}/control/tsa.conf)
-						tsa_connect_string=$(echo "${tsa_config_line}"|cut -d ',' -f5)
-
-						###SENT QUERY TO TSA#########################################
-						curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${default_tsa}.tsq ${tsa_connect_string} >${user_path}/${default_tsa}.tsr
+						###CREATE TSA QUERY FILE#####################################
+						openssl ts -query -data ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc -no_nonce -sha512 -out ${user_path}/${create_name_hashed}.tsq 1>/dev/null 2>/dev/null
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###STEP INTO CERTS DIRECTORY#################################
-							cd ${script_path}/certs
+							###FOR EACH TSA WITH DEFAULT TSA FIRST#######################
+							for tsa_service in $(ls -1 ${script_path}/certs|grep "${default_tsa}\|")
+							do
+								###COPY QUERYFILE############################################
+								cp ${user_path}/${create_name_hashed}.tsq ${user_path}/${tsa_service}.tsq
+								
+								###GET TSA CONNECTION STRING#################################
+								tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
+								tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
+								tsa_cert_file=$(basename $tsa_cert_url)
+								tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
+								tsa_cacert_file=$(basename $tsa_cacert_url)
+								tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
 
-							###DOWNLOAD LATEST TSA CERTIFICATES##########################
-							tsa_cert_url=$(echo "${tsa_config_line}"|cut -d ',' -f2)
-							wget -q -O tsa.crt ${tsa_cert_url}
-							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								tsa_cert_url=$(echo "${tsa_config_line}"|cut -d ',' -f3)
-								wget -q -O cacert.pem ${tsa_cert_url}
+								###SENT QUERY TO TSA#########################################
+								curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${tsa_service}.tsq ${tsa_connect_string} >${user_path}/${tsa_service}.tsr
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									###MOVE LATEST CERTIFICATES INTO TSA FOLDER##############
-									mv ${script_path}/certs/tsa.crt ${script_path}/certs/${default_tsa}/tsa.crt
-									mv ${script_path}/certs/cacert.pem ${script_path}/certs/${default_tsa}/cacert.pem
-
 									###VERIFY TSA RESPONSE###################################
-									openssl ts -verify -queryfile ${user_path}/${default_tsa}.tsq -in ${user_path}/${default_tsa}.tsr -CAfile ${script_path}/certs/${default_tsa}/cacert.pem -untrusted ${script_path}/certs/${default_tsa}/tsa.crt 1>/dev/null 2>/dev/null
+									openssl ts -verify -queryfile ${user_path}/${tsa_service}.tsq -in ${user_path}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
 										###WRITE OUTPUT OF RESPONSE TO FILE######################
-										openssl ts -reply -in ${user_path}/${default_tsa}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
+										openssl ts -reply -in ${user_path}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###WRITE KEY DATA TO FILE################################
-											gpg --with-colons --import-options show-only --import ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc >${user_path}/gpg_check.tmp
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then
-												###GET FILE STAMP########################################
-												file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-												key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
-												rm ${user_path}/*.tmp 2>/dev/null
-														
-												###CHECK DIFFERENCE######################################
-												stamp_diff=$(( file_stamp - key_stamp ))
-												if [ $stamp_diff -lt 120 ]
-												then
-													if [ $gui_mode = 1 ]
-													then
-														###DISPLAY PROGRESS ON STATUS BAR###########################
-														echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
-														clear
-													fi
-
-													###CREATE PROOFS DIRECTORY AND COPY TSA FILES#######################
-													mkdir ${script_path}/proofs/${create_name_hashed}
-													mv ${user_path}/${default_tsa}.tsq ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsq
-													mv ${user_path}/${default_tsa}.tsr ${script_path}/proofs/${create_name_hashed}/${default_tsa}.tsr
-
-													###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
-													cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
-
-													###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-													cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
-
-													###WRITE SECRETS####################################################
-													echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
-													echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
+											###GET FILE STAMP########################################
+											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
 													
-													###WRITE ENTRY INTO ACCOUNTS.DB#####################################
-													name_hash=$(echo "${create_name}"|sha224sum)
-													name_hash=${name_hash%% *}
-													echo "${name_hash}" >>${script_path}/control/accounts.db
-
-													###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
-													cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
-
-													if [ $gui_mode = 1 ]
-													then
-														###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE#############
-														dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
-														dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
-														key_remove=0
-													else
-														echo "USER:${create_name}"
-														echo "PIN:${create_pin}"
-														echo "PASSWORD:>${create_password}<"
-														echo "ADDRESS:${create_name_hashed}"
-														echo "KEY_PUB:/keys/${create_name_hashed}"
-														echo "KEY_PRV:/control/keys/${create_name_hashed}"
-														echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
-														echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
-														exit 0
-													fi
-												else
-													rt_query=1
-												fi
+											###CHECK DIFFERENCE######################################
+											stamp_diff=$(( file_stamp - key_stamp ))
+											if [ $stamp_diff -lt 120 ]
+											then
+												###COPY TSA FILES###################################################
+												mv ${user_path}/${tsa_service}.tsq ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq
+												mv ${user_path}/${tsa_service}.tsr ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr
+												break
+											else
+												rt_query=1
 											fi
 										fi
 									fi
 								fi
-							fi
+							done
+							rm ${user_path}/tsa_check.tmp
+							rm ${user_path}/${create_name_hashed}.tsq
 						fi
 					fi
 				fi
 			fi
 		fi
-		if [ ! $rt_query = 0 ]
+		if [ $rt_query = 0 ]
 		then
+			###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
+			cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
+
+			###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
+			cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc ${script_path}/control/keys/${create_name_hashed}
+
+			###WRITE SECRETS####################################################
+			echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
+			echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
+			
+			###WRITE ENTRY INTO ACCOUNTS.DB#####################################
+			name_hash=$(echo "${create_name}"|sha224sum)
+			name_hash=${name_hash%% *}
+			echo "${name_hash}" >>${script_path}/control/accounts.db
+
+			###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
+			cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
+
+			if [ $gui_mode = 1 ]
+			then
+				###DISPLAY PROGRESS ON STATUS BAR###########################
+				echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
+				sleep 1
+				clear
+				
+				###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE############
+				dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
+				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
+				key_remove=0
+			else
+				echo "USER:${create_name}"
+				echo "PIN:${create_pin}"
+				echo "PASSWORD:>${create_password}<"
+				echo "ADDRESS:${create_name_hashed}"
+				echo "KEY_PUB:/keys/${create_name_hashed}"
+				echo "KEY_PRV:/control/keys/${create_name_hashed}"
+				echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
+				echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
+				exit 0
+			fi
+		else
 			if [ $key_remove = 1 ]
 			then
 				if [ ! "${create_name_hashed}" = "" ]
@@ -1218,7 +1204,7 @@ check_blacklist(){
 				fi
 			fi
 }
-check_tsa(){
+update_tsa(){
 			cd ${script_path}/certs
 
 			###SET NOW STAMP#################################
@@ -1255,12 +1241,20 @@ check_tsa(){
 				###CHECK TSA.CRT, CACERT.PEM AND ROOT_CA.CRL#####
 				while [ $tsa_checked = 0 ]
 				do
+					###GET TSA CONFIG################################
+					tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
+					tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
+					tsa_cert_file=$(basename $tsa_cert_url)
+					tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
+					tsa_cacert_file=$(basename $tsa_cacert_url)
+					tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
+					
 					###IF TSA.CRT FILE AVAILABLE...##################
-					if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
+					if [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
 					then
 						###GET DATES######################################
-						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
+						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 						###CHECK IF CERT IS VALID#########################
 						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
@@ -1274,41 +1268,40 @@ check_tsa(){
 					fi
 					if [ $tsa_update_required = 1 ]
 					then
-						###GET URL FROM TSA.CONF##########################
-						tsa_cert_url=$(grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f2)
-
 						###DOWNLOAD TSA.CRT###############################
-						wget -q -O tsa.crt ${tsa_cert_url}
+						wget -q -O ${tsa_cert_file} ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
 							###GET DATES######################################
-							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/tsa.crt -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
+							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cert_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
-								if [ -s ${script_path}/certs/${tsa_service}/tsa.crt ]
+								if [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
 								then
-									mv ${script_path}/certs/${tsa_service}/tsa.crt ${script_path}/certs/${tsa_service}/tsa.${old_cert_valid_from}-${old_cert_valid_till}.crt
+									file_name=${tsa_cert_file%%.*}
+									file_ext=${tsa_cert_file#*.}
+									mv ${script_path}/certs/${tsa_service}/${tsa_cert_file} ${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}
 								fi
-								mv ${script_path}/certs/tsa.crt ${script_path}/certs/${tsa_service}/tsa.crt
+								mv ${script_path}/certs/${tsa_cert_file} ${script_path}/certs/${tsa_service}/${tsa_cert_file}
 								tsa_cert_available=1
 							else
-								rm ${script_path}/certs/tsa.crt 2>/dev/null
+								rm ${script_path}/certs/${tsa_cert_file} 2>/dev/null
 							fi
 						fi
-						rm ${script_path}/certs/tsa.crt 2>/dev/null
+						rm ${script_path}/certs/${tsa_cert_file} 2>/dev/null
 						tsa_update_required=0
 					fi
 
 					###IF CACERT.PEM FILE AVAILABLE...################
-					if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+					if [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
 					then
 						###GET DATES######################################
-						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
+						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 						###CHECK IF CERT IS VALID#########################
 						if [ $now_stamp -gt $old_cert_valid_from ] && [ $now_stamp -lt $old_cert_valid_till ]
@@ -1322,32 +1315,31 @@ check_tsa(){
 					fi
 					if [ $tsa_update_required = 1 ]
 					then
-						###GET URL FROM TSA.CONF##########################
-						tsa_cert_url=$(grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f3)
-
 						###DOWNLOAD CACERT.PEM############################
-						wget -q -O cacert.pem ${tsa_cert_url}
+						wget -q -O ${tsa_cacert_file} ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
 							###GET DATES######################################
-							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/cacert.pem -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cacert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
+							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cacert_file} -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
-								if [ -s ${script_path}/certs/${tsa_service}/cacert.pem ]
+								if [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
 								then
-									mv ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/cacert.${old_cert_valid_from}-${old_cert_valid_till}.pem
+									file_name=${tsa_cacert_file%%.*}
+									file_ext=${tsa_cacert_file#*.}
+									mv ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}
 								fi
-								mv ${script_path}/certs/cacert.pem ${script_path}/certs/${tsa_service}/cacert.pem
+								mv ${script_path}/certs/${tsa_cacert_file} ${script_path}/certs/${tsa_service}/${tsa_cacert_file}
 								tsa_rootcert_available=1
 							else
-								rm ${script_path}/certs/cacert.pem
+								rm ${script_path}/certs/${tsa_cacert_file}
 							fi
 						fi
-						rm ${script_path}/certs/cacert.pem 2>/dev/null
+						rm ${script_path}/certs/${tsa_cacert_file} 2>/dev/null
 						tsa_update_required=0
 					fi
 
@@ -1356,11 +1348,11 @@ check_tsa(){
 					then
 						###GET TSA CRL URL FIRST BY CRT THEN BY CONFIG####
 						tsa_crl_url=""
-						tsa_crl_url=$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A4 "X509v3 CRL Distribution Points:"|grep "URI"|awk -F: '{print $2":"$3}')
+						tsa_crl_url=$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -text -noout|grep -A4 "X509v3 CRL Distribution Points:"|grep "URI"|awk -F: '{print $2":"$3}')
 						if [ "${tsa_crl_url}" = "" ]
 						then
 							###GET CRL URL FROM TSA.CONF######################
-							tsa_crl_url=$(grep "${tsa_service}" ${script_path}/control/tsa.conf|cut -d ',' -f4)
+							tsa_crl_url=$(echo "${tsa_config}"|cut -d ',' -f4)
 							if [ "${tsa_crl_url}" = "" ]
 							then
 								###IF NO CRL IS THERE#############################
@@ -1369,54 +1361,59 @@ check_tsa(){
 						fi
 						if [ $tsa_checked = 0 ]
 						then
+							###GET CRL FILE###########################################
+							tsa_crl_file=$(basename $tsa_crl_url)
+
 							###CHECK WAIT PERIOD######################################
-							if [ $period_seconds -gt $check_period_tsa ] || [ ! -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
+							if [ $period_seconds -gt $check_period_tsa ] || [ ! -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 							then
 								###DOWNLOAD CURRENT CRL FILE##############################
-								wget -q -O root_ca.crl ${tsa_crl_url}
-								if [ -s ${script_path}/certs/root_ca.crl ]
+								wget -q -O ${tsa_crl_file} ${tsa_crl_url}
+								if [ -s ${script_path}/certs/${tsa_crl_file} ]
 								then
 									###CHECK IF OLD CRL IS THERE##############################
-									if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
+									if [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 									then
 										###GET CRL DATES##########################################
-										crl_old_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)")
-										crl_old_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)")
-										crl_new_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)")
-										crl_new_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)")
+										crl_old_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Last Update:"|cut -c 22-45)")
+										crl_old_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Next Update:"|cut -c 22-45)")
+										crl_new_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_crl_file} -text|grep "Last Update:"|cut -c 22-45)")
+										crl_new_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_crl_file} -text|grep "Next Update:"|cut -c 22-45)")
 
 										###COMPARE VALID FROM AND VALID TILL######################
 										if [ $crl_old_valid_from -eq $crl_new_valid_from ] && [ $crl_old_valid_till -eq $crl_new_valid_till ]
 										then
 											###GET HASHES TO COMPARE##################################
-											new_crl_hash=$(sha224sum ${script_path}/certs/root_ca.crl)
+											new_crl_hash=$(sha224sum ${script_path}/certs/${tsa_crl_file})
 											new_crl_hash=${new_crl_hash%% *}
-											old_crl_hash=$(sha224sum ${script_path}/certs/${tsa_service}/root_ca.crl)
+											old_crl_hash=$(sha224sum ${script_path}/certs/${tsa_service}/${tsa_crl_file})
 											old_crl_hash=${old_crl_hash%% *}
 											if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
 											then
-												mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+												mv ${script_path}/certs/${tsa_crl_file} ${script_path}/certs/${tsa_service}/${tsa_crl_file}
 											fi
 										else
 											###UNCOMMENT TO ENABLE SAVESTORE OF CRL###################
-											mv ${script_path}/certs/${tsa_service}/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.${crl_old_valid_from}-${crl_old_valid_till}.crl
-											mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+											file_name=${tsa_cacert_file%%.*}
+											file_ext=${tsa_cacert_file#*.}
+											mv ${script_path}/certs/${tsa_service}/${tsa_crl_file} ${script_path}/certs/${tsa_service}/${file_name}.${crl_old_valid_from}-${crl_old_valid_till}.${file_ext}
+											mv ${script_path}/certs/${tsa_crl_file} ${script_path}/certs/${tsa_service}/${tsa_crl_file}
 										fi
 									else
-										mv ${script_path}/certs/root_ca.crl ${script_path}/certs/${tsa_service}/root_ca.crl
+										mv ${script_path}/certs/${tsa_crl_file} ${script_path}/certs/${tsa_service}/${tsa_crl_file}
 									fi
 								fi
-								rm ${script_path}/certs/root_ca.crl 2>/dev/null
-								if [ -s ${script_path}/certs/${tsa_service}/root_ca.crl ]
+								rm ${script_path}/certs/${tsa_crl_file} 2>/dev/null
+								if [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 								then
 									###GET CRL DATES########################
-									crl_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Last Update:"|cut -c 22-45)")
-									crl_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/root_ca.crl -text|grep "Next Update:"|cut -c 22-45)")
+									crl_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Last Update:"|cut -c 22-45)")
+									crl_valid_till=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Next Update:"|cut -c 22-45)")
 									if [ $crl_valid_from -lt $now_stamp ] && [ $crl_valid_till -gt $now_stamp ]
 									then
 										###CHECK CERTIFICATE AGAINST CRL########
-										cat ${script_path}/certs/${tsa_service}/cacert.pem ${script_path}/certs/${tsa_service}/root_ca.crl >${script_path}/certs/${tsa_service}/crl_chain.pem
-										openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/tsa.crt >/dev/null 2>/dev/null
+										cat ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ${script_path}/certs/${tsa_service}/${tsa_crl_file} >${script_path}/certs/${tsa_service}/crl_chain.pem
+										openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/${tsa_cert_file} >/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
@@ -1425,8 +1422,10 @@ check_tsa(){
 											tsa_update_required=1
 											if [ $crl_retry_counter = 1 ]
 											then
-												cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/tsa.crt -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)")
-												mv ${script_path}/certs/${tsa_service}/tsa.crt ${script_path}/certs/${tsa_service}/tsa.${cert_valid_from}-${crl_valid_from}.crt
+												file_name=${tsa_cert_file%%.*}
+												file_ext=${tsa_cert_file#*.}
+												cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)")
+												mv ${script_path}/certs/${tsa_service}/${tsa_cert_file} ${script_path}/certs/${tsa_service}/${file_name}.${cert_valid_from}-${crl_valid_from}.${file_ext}
 												tsa_checked=1
 											fi
 											crl_retry_counter=$(( crl_retry_counter + 1 ))
@@ -1463,7 +1462,8 @@ check_tsa(){
 				done
 			done
 			cd ${script_path}/
-
+}
+check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
@@ -1483,78 +1483,68 @@ check_tsa(){
 				###SET FLAG##############################################
 				account_verified=0
 
-				###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
-				accountname_key_name="${line}"
+				###GET KEY DATA FROM GPG#################################
 				gpg --with-colons --import-options show-only --import ${script_path}/keys/${line} >${user_path}/gpg_check.tmp
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					accountname_key_content=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
-					if [ $accountname_key_name = $accountname_key_content ]
+					###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
+					account="${line}"
+					account_key=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
+					if [ $account = $account_key ]
 					then
-						###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
-						if [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr ]
-						then
-							###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
-							for tsa_service in $(ls -1 ${script_path}/certs)
-							do
-								cacert_file_found=0
-								for cacert_file in $(ls -1 ${script_path}/certs/${tsa_service}/cacert.*)
-								do
-									for crt_file in $(ls -1 ${script_path}/certs/${tsa_service}/tsa.*)
-									do
-										###CHECK TSA QUERYFILE###################################
-										openssl ts -verify -queryfile ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsq -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
+						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
+						for tsa_service in $(ls -1 ${script_path}/proofs/${account}/|grep ".tsr"|cut -d '.' -f1)
+						do
+							###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
+							if [ -s ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsr ]
+							then
+								###GET TSA CONFIG################################
+								tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
+								tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
+								tsa_cert_file=$(basename $tsa_cert_url)
+								tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
+								tsa_cacert_file=$(basename $tsa_cacert_url)
+
+								###CHECK TSA QUERYFILE###################################
+								openssl ts -verify -queryfile ${script_path}/proofs/${account}/${tsa_service}.tsq -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									###WRITE OUTPUT OF RESPONSE TO FILE######################
+									openssl ts -reply -in ${script_path}/proofs/${account}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										###VERIFY TSA RESPONSE###################################
+										openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###WRITE OUTPUT OF RESPONSE TO FILE######################
-											openssl ts -reply -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
-											rt_query=$?
-											if [ $rt_query = 0 ]
+											###GET STAMPS###############################
+											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
+											key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
+											
+											###CALCULATE DIFFERENCE#####################
+											stamp_diff=$(( file_stamp - key_stamp ))
+											
+											###CHECK IF CREATED WITHIN 120 SECONDS######
+											if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
 											then
-												###VERIFY TSA RESPONSE###################################
-												openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${accountname_key_name}/${tsa_service}.tsr -CAfile ${cacert_file} -untrusted ${crt_file} 1>/dev/null 2>/dev/null
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													###GET STAMPS###############################
-													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-													key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
-													
-													###CALCULATE DIFFERENCE#####################
-													stamp_diff=$(( file_stamp - key_stamp ))
-													
-													###CHECK IF CREATED WITHIN 120 SECONDS######
-													if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
-													then
-														###WRITE STAMP TO FILE###################################
-														echo "${accountname_key_name} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
+												###WRITE STAMP TO FILE###################################
+												echo "${account} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
 
-														###SET VARIABLE THAT TSA HAS BEEN FOUND##################
-														account_verified=1
+												###SET VARIABLE THAT TSA HAS BEEN FOUND##################
+												account_verified=1
 
-														###STEP OUT OF LOOP CACERT_FILE##########################
-														cacert_file_found=1
-
-														###STEP OUT OF LOOP CRT_FILE#############################
-														break
-													fi
-												fi
+												###STEP OUT OF LOOP######################################
+												break
 											fi
 										fi
-									done
-									if [ $cacert_file_found = 1 ]
-									then
-										break
 									fi
-								done
-								if [ $account_verified = 1 ]
-								then
-									break
 								fi
-							done
-						fi
+							fi
+						done
 					fi
 				fi
 				if [ $account_verified = 0 ]
@@ -2997,6 +2987,7 @@ do
 																					account_name_entered_correct=1
 																					account_pin_entered_correct=1
 																					account_password_entered_correct=1
+																					update_tsa
 																					create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
 																					rt_query=$?
 																					if [ $rt_query = 0 ]
@@ -3261,6 +3252,7 @@ do
 		###ON EACH START AND AFTER EACH ACTION...
 		if [ $action_done = 1 ]
 		then
+			update_tsa
 			check_tsa
 			check_keys
 			check_assets
@@ -3972,6 +3964,7 @@ do
 															action_done=1
 															make_ledger=1
 														else
+															update_tsa
 															check_tsa
 															check_keys
 															check_assets
@@ -4116,6 +4109,7 @@ do
 															action_done=1
 															make_ledger=1
 														else
+															update_tsa
 															check_tsa
 															check_keys
 															check_assets
@@ -4278,6 +4272,7 @@ do
 							if [ $cmd_action = "sync_uca" ]
 							then
 								request_uca
+								update_tsa
 								check_tsa
 								check_keys
 								check_assets
