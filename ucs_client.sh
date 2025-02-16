@@ -213,7 +213,7 @@ create_keys(){
 							while [ $is_stamped = 0 ]
 							do
 								###FOR EACH TSA WITH DEFAULT TSA FIRST#######################
-								for tsa_service in $(echo "${tsa_pattern}"|cat - ${user_path}/tsa_list.tmp|uniq -d)
+								for tsa_service in $(echo "${tsa_pattern}"|sort - ${user_path}/tsa_list.tmp|uniq -d)
 								do
 									###COPY QUERYFILE############################################
 									cp ${user_path}/${create_name_hashed}.tsq ${user_path}/${tsa_service}.tsq
