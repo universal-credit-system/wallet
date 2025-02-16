@@ -204,54 +204,88 @@ create_keys(){
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###FOR EACH TSA WITH DEFAULT TSA FIRST#######################
-							for tsa_service in $(ls -1 ${script_path}/certs|grep "${default_tsa}\|")
+							###CREATE LIST OF ALL TSAS AND SET GREP PATTERN##############
+							ls -1 ${script_path}/certs >${user_path}/tsa_list.tmp
+							tsa_pattern=$(grep "${default_tsa}" ${user_path}/tsa_list.tmp)
+							
+							###AS LONG AS NOT MINIMUM SIGNED ONCE########################
+							is_stamped=0
+							while [ $is_stamped = 0 ]
 							do
-								###COPY QUERYFILE############################################
-								cp ${user_path}/${create_name_hashed}.tsq ${user_path}/${tsa_service}.tsq
-								
-								###GET TSA CONNECTION STRING#################################
-								tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
-								tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
-								tsa_cert_file=$(basename $tsa_cert_url)
-								tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
-								tsa_cacert_file=$(basename $tsa_cacert_url)
-								tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
+								###FOR EACH TSA WITH DEFAULT TSA FIRST#######################
+								for tsa_service in $(echo "${tsa_pattern}"|cat - ${user_path}/tsa_list.tmp|uniq -d)
+								do
+									###COPY QUERYFILE############################################
+									cp ${user_path}/${create_name_hashed}.tsq ${user_path}/${tsa_service}.tsq
+									
+									###GET TSA CONNECTION STRING#################################
+									tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
+									tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
+									tsa_cert_file=$(basename $tsa_cert_url)
+									tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
+									tsa_cacert_file=$(basename $tsa_cacert_url)
+									tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
 
-								###SENT QUERY TO TSA#########################################
-								curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${tsa_service}.tsq ${tsa_connect_string} >${user_path}/${tsa_service}.tsr
-								rt_query=$?
-								if [ $rt_query = 0 ]
-								then
-									###VERIFY TSA RESPONSE###################################
-									openssl ts -verify -queryfile ${user_path}/${tsa_service}.tsq -in ${user_path}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
-									rt_query=$?
-									if [ $rt_query = 0 ]
-									then
-										###WRITE OUTPUT OF RESPONSE TO FILE######################
-										openssl ts -reply -in ${user_path}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
+									retry_counter=0
+									while [ $retry_counter -le $retry_limit ]
+									do
+										###SENT QUERY TO TSA#########################################
+										curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${tsa_service}.tsq ${tsa_connect_string} >${user_path}/${tsa_service}.tsr
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###GET FILE STAMP########################################
-											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-													
-											###CHECK DIFFERENCE######################################
-											stamp_diff=$(( file_stamp - key_stamp ))
-											if [ $stamp_diff -lt 120 ]
+											###VERIFY TSA RESPONSE###################################
+											openssl ts -verify -queryfile ${user_path}/${tsa_service}.tsq -in ${user_path}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
+											rt_query=$?
+											if [ $rt_query = 0 ]
 											then
-												###COPY TSA FILES###################################################
-												mv ${user_path}/${tsa_service}.tsq ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq
-												mv ${user_path}/${tsa_service}.tsr ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr
-												break
-											else
-												rt_query=1
+												###WRITE OUTPUT OF RESPONSE TO FILE######################
+												openssl ts -reply -in ${user_path}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													###GET FILE STAMP########################################
+													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
+															
+													###CHECK DIFFERENCE######################################
+													stamp_diff=$(( file_stamp - key_stamp ))
+													if [ $stamp_diff -lt 120 ]
+													then
+														###COPY TSA FILES###################################################
+														mv ${user_path}/${tsa_service}.tsq ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq
+														mv ${user_path}/${tsa_service}.tsr ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr
+														is_stamped=1
+														break
+													else
+														rt_query=1
+													fi
+												fi
 											fi
 										fi
-									fi
+										if [ $rt_query = 1 ]
+										then
+											###IF FAILED RETRY#########################
+											retry_counter=$(( retry_counter + 1 ))
+											if [ $retry_counter -le $retry_limit ]
+											then
+												sleep $retry_wait_seconds
+											fi
+										else
+											break
+										fi
+									done
+								done
+								###IF DEFAULT TSA WAS A DEFINED PATTERN BUT NOT AVAILABLE#####
+								if [ $is_stamped = 0 ] && [ "${tsa_pattern}" = "${default_tsa}" ]
+								then
+									###ENHANCE PATTERN TO ALL TSAS EXCEPT DEFAULT#################
+									tsa_pattern=$(grep -v "${default_tsa}" ${user_path}/tsa_list.tmp)
+								else
+									break
 								fi
 							done
 							rm ${user_path}/tsa_check.tmp
+							rm ${user_path}/tsa_list.tmp
 							rm ${user_path}/${create_name_hashed}.tsq
 						fi
 					fi
@@ -2586,6 +2620,7 @@ trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
 main_asset="UCC"
 main_token="UCT"
+default_tsa=""
 start_date="20241229"
 now=$(date -u +%Y%m%d)
 no_ledger=0
