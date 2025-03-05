@@ -919,9 +919,6 @@ check_archive(){
 					then
 						files_not_homedir=""
 
-						###GET HASH LIST OF EXISTING KEYS#############################
-						sha224sum $(ls -1 ${script_path}/keys/*)|cut -d ' ' -f1 >${user_path}/files_to_fetch_keys.tmp
-
 						###GO THROUGH CONTENT LIST LINE BY LINE#######################
 						while read line
 						do
@@ -962,8 +959,7 @@ check_archive(){
 											else
 												if [ $check_mode = 0 ]
 												then
-													key_exists=$(grep -c "$(sha224sum ${script_path}/$line|cut -d ' ' -f1)" ${user_path}/files_to_fetch_keys.tmp)
-													if [ ! -s ${script_path}/$line ] && [ ! ${key_exists} -gt 0 ]
+													if [ ! -s ${script_path}/$line ]
 													then
 														echo "$line" >>${user_path}/files_to_fetch.tmp
 													fi
@@ -1057,20 +1053,14 @@ check_archive(){
 								*)		rt_query=1
 										;;
 							esac
-							##############################################################
 						done <${user_path}/tar_check.tmp
-						rm ${user_path}/files_to_fetch_keys.tmp 2>/dev/null
-						##############################################################
 					else
 						rt_query=1
 					fi
-					##############################################################
 				else
 					rt_query=1
 				fi
-				##############################################################
 			fi
-			##############################################################
 
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
 			rm ${user_path}/tar_check_temp.tmp 2>/dev/null
