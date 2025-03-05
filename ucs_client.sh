@@ -2499,20 +2499,13 @@ send_uca(){
 								then
 									echo "keys/${line}"
 								fi
-
-								for tsa_service in $(ls -1 ${script_path}/certs)
+								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 								do
-									tsa_req_there=0
-									tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
-									if [ $tsa_req_there = 0 ]
+									file=$(basename $tsa_file)
+									tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
+									if [ $tsa_file_there = 0 ]
 									then
-										echo "proofs/${line}/${tsa_service}.tsq"
-									fi
-									tsa_res_there=0
-									tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
-									if [ $tsa_res_there = 0 ]
-									then
-										echo "proofs/${line}/${tsa_service}.tsr"
+										echo "proofs/${line}/${file}"
 									fi
 								done
 								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
