@@ -1053,6 +1053,10 @@ check_archive(){
 								*)		rt_query=1
 										;;
 							esac
+							if [ $rt_query = 1 ]
+							then
+								break
+							fi
 						done <${user_path}/tar_check.tmp
 					else
 						rt_query=1
