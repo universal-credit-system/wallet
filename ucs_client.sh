@@ -972,7 +972,7 @@ check_archive(){
 			       					"trx")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=${line#*/}
-											file_ext=${file_full%%.*}
+											file_ext=${file_full#*.}
 											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
