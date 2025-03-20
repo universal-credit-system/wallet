@@ -1777,14 +1777,16 @@ check_trx(){
 							purpose_key_start=$(( purpose_key_start + 1 ))
 							purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
 							purpose_key_end=$(( purpose_key_end - 1 ))
-							trx_purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" $file_to_check)
+							purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" $file_to_check)
+							purpose_key_contains_alnum=$(printf "%s" "${purpose_key}"|grep -c -v '[a-zA-Z0-9+/=]')
+							purpose_contains_alnum=$(printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
 							purpose_start=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
 							purpose_start=$(( purpose_start + 1 ))
 							purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $file_to_check)
 							purpose_end=$(( purpose_end - 1 ))
-							trx_purpose=$(sed -n "${purpose_start},${purpose_end}p" $file_to_check)
-							purpose_contains_alnum=$(printf "%s" "${trx_purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
-							if [ $purpose_contains_alnum = 0 ]
+							purpose=$(sed -n "${purpose_start},${purpose_end}p" $file_to_check)
+							purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
+							if [ $purpose_key_contains_alnum = 0 ] && [ $purpose_contains_alnum = 0 ]
 							then
 								###CHECK IF ASSET TYPE EXISTS############################################
 								trx_asset=$(awk -F: '/:ASST:/{print $3}' $file_to_check)
