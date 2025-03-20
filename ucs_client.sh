@@ -193,7 +193,7 @@ create_keys(){
 				if [ $rt_query = 0 ]
 				then
 					###STEP INTO USER DIRECTORY##################################
-					cd ${user_path}
+					cd ${user_path} || exit 1
 
 					###WRITE KEY DATA TO FILE####################################
 					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
@@ -585,7 +585,7 @@ build_ledger(){
 		###MAKE LEDGER ENTRIES FOR ASSETS#####################
 		if [ -s ${user_path}/assets.tmp ]
 		then
-			cd ${script_path}/assets
+			cd ${script_path}/assets || exit 1
 
 			###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
 			for asset in $(cat ${user_path}/assets.tmp)
@@ -692,7 +692,8 @@ build_ledger(){
 			###MAKE LEDGER ENTRIES FOR ASSETS################
 			if [ -s ${user_path}/assets.tmp ]
 			then
-				cd ${script_path}/assets
+				cd ${script_path}/assets || exit 1
+				
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
 				for non_fungible_asset in $(grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp))
 				do
@@ -1233,7 +1234,7 @@ check_blacklist(){
 			fi
 }
 update_tsa(){
-			cd ${script_path}/certs
+			cd ${script_path}/certs || exit 1
 
 			###SET NOW STAMP#################################
 			now_stamp=$(date +%s)
@@ -1489,7 +1490,7 @@ update_tsa(){
 					fi
 				done
 			done
-			cd ${script_path}/
+			cd ${script_path} || exit 1
 }
 check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
@@ -1587,7 +1588,7 @@ check_tsa(){
 			###############################WITH FLOCK############################################
 			if [ -s ${user_path}/blacklisted_accounts.dat ]
 			then
-				cd ${user_path}/
+				cd ${user_path} || exit 1
 				flock ${script_path}/keys/ -c '
 				user_path=$(pwd)
 				base_dir=$(dirname $user_path)
@@ -1603,7 +1604,7 @@ check_tsa(){
 					fi
 				done <${user_path}/blacklisted_accounts.dat
 				'
-				cd ${script_path}
+				cd ${script_path} || exit 1
 				#####################################################################################
 			fi
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
@@ -1670,7 +1671,7 @@ check_keys(){
 		###############################WITH FLOCK############################################
 		if [ -s ${user_path}/blacklisted_accounts.dat ]
 		then
-			cd ${user_path}/
+			cd ${user_path} || exit 1
 			flock ${script_path}/keys/ -c '
 			user_path=$(pwd)
 			base_dir=$(dirname $user_path)
@@ -1851,7 +1852,7 @@ check_trx(){
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		rm ${user_path}/ack_trx.dat
 
-		cd ${script_path}/
+		cd ${script_path} || exit 1
 }
 process_new_files(){
 			process_mode=$1
@@ -2002,7 +2003,7 @@ process_new_files(){
 				#############################################
 				############  COPY FILES TO TARGET###########
 				##################WITH FLOCK#################
-				cd ${user_path}/
+				cd ${user_path} || exit 1
 				flock ${script_path}/keys/ -c '
 				user_path=$(pwd)
 				base_dir=$(dirname $user_path)
@@ -2012,7 +2013,7 @@ process_new_files(){
 				cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
 				cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
 				'
-				cd ${script_path}/
+				cd ${script_path} || exit 1
 				#############################################
 
 				###PURGE TEMP FILES##########################
@@ -2071,15 +2072,15 @@ purge_files(){
 		rm -r ${script_path}/userdata/* 2>/dev/null
 }
 import_keys(){
-		cd ${script_path}/control/keys
+		cd ${script_path}/control/keys || exit 1
 		for key_file in $(ls -1 ${script_path}/control/keys)
 		do
 			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${key_file}
 		done
-		cd ${script_path}/
+		cd ${script_path} || exit 1
 }
 get_dependencies(){
-			cd ${script_path}/trx
+			cd ${script_path}/trx || exit 1
 			ledger_mode=1
 			own_index_there=0
 			first_start=0
@@ -2231,7 +2232,7 @@ get_dependencies(){
 					fi
 
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
-					cd ${user_path}/
+					cd ${user_path} || exit 1
 					earliest_date=$(sort ${user_path}/dates.tmp|head -1)
 					if [ ! "${earliest_date}" = "" ]
 					then
@@ -2242,7 +2243,7 @@ get_dependencies(){
 				fi
 			fi
 			rm ${user_path}/*.tmp 2>/dev/null
-			cd ${script_path}/
+			cd ${script_path} || exit 1
 			return $ledger_mode
 }
 request_uca(){
@@ -2363,7 +2364,7 @@ request_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
-							cd ${user_path}/temp
+							cd ${user_path}/temp || exit 1
 
 							###EXTRACT FILE#####################################
 							tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
@@ -2543,7 +2544,7 @@ send_uca(){
 					} >${user_path}/files_list.tmp
 
 					###STEP INTO HOMEDIR AND CREATE TARBALL######
-					cd ${script_path}/
+					cd ${script_path} || exit 1
 					tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
 					rt_query=$?
 					if [ $rt_query = 0 ]
@@ -3154,13 +3155,13 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
-								cd ${script_path}
+								cd ${script_path} || exit 1
 								now_stamp=$(date +%s)
 								tar -czf ${script_path}/backup/${now_stamp}.bcp assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									cd ${script_path}/backup
+									cd ${script_path}/backup || exit 1
 									backup_file=$(find . -maxdepth 1 -type f|sed "s#./##g"|sort -t . -k1|tail -1)
 									if [ $gui_mode = 1 ]
 									then
@@ -3184,7 +3185,7 @@ do
 								then
 									if [ $gui_mode = 1 ]
 									then
-										cd ${script_path}/backup
+										cd ${script_path}/backup || exit 1
 										touch ${script_path}/backups_list.tmp
 										find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
 										no_backups=$(wc -l <${script_path}/backups_list.tmp)
@@ -3211,7 +3212,7 @@ do
 												bcp_stamp=$(date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}")
 												bcp_file=$(cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}")
 												file_path="${script_path}/backup/${bcp_file}"
-												cd ${script_path}
+												cd ${script_path} || exit 1
 												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
@@ -3233,7 +3234,7 @@ do
 										then
 											exit 1
 										else
-											cd ${script_path}
+											cd ${script_path} || exit 1
 											file_path=$cmd_path
 											tar -tf $file_path >/dev/null
 											rt_query=$?
@@ -3783,7 +3784,7 @@ do
 													then
 														if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 														then
-															cd ${script_path}/
+															cd ${script_path} || exit 1
 															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 															rt_query=$?
 															rm ${user_path}/files_list.tmp 2>/dev/null
@@ -3940,7 +3941,7 @@ do
 									then
 										if [ -s $file_path ]
 										then
-											cd ${script_path}
+											cd ${script_path} || exit 1
 											if [ $gui_mode = 1 ]
 											then
 												all_extract=0
@@ -3969,7 +3970,7 @@ do
 												###UNPACK ARCHIVE##########################################
 												if [ $rt_query = 0 ]
 												then
-													cd ${user_path}/temp
+													cd ${user_path}/temp || exit 1
 													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
@@ -4087,7 +4088,7 @@ do
 		  							then
 										if [ -s $file_path ]
 										then
-											cd ${script_path}
+											cd ${script_path} || exit 1
 											if [ $gui_mode = 1 ]
 											then
 					 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
@@ -4114,7 +4115,7 @@ do
 												fi
 												if [ $rt_query = 0 ]
 												then
-													cd ${user_path}/temp
+													cd ${user_path}/temp || exit 1
 								       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 													rt_query=$?
 													if [ $rt_query = 0 ]
@@ -4246,7 +4247,7 @@ do
 								now_stamp=$(date +%s)
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
-								cd ${script_path}/
+								cd ${script_path} || exit 1
 								tar -czf ${handover_account}_${now_stamp}.sync -T ${user_path}/files_list.tmp --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -4323,8 +4324,7 @@ do
 								then
 									case $browse_type in
 										"$dialog_assets")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
-													def_string_asset=$(head -1 ${user_path}/all_assets.dat)
-													
+													def_string_asset=$(head -1 ${user_path}/all_assets.dat)								
 													quit_asset_menu=0
 													while [ $quit_asset_menu = 0 ]
 													do
@@ -4538,9 +4538,9 @@ do
 							done
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
-							cd ${script_path}/trx
+							cd ${script_path}/trx || exit 1
 							grep -s -l ":${handover_account}" * >${user_path}/my_trx.tmp
-							cd ${script_path}
+							cd ${script_path} || exit 1
 							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
