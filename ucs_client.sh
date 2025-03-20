@@ -3654,7 +3654,7 @@ do
 										###ENCRYPT KEY##########################################
 										order_purpose_key=$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${receiver} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_key.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
 										###ENCRYPT PURPOSE######################################
-										order_purpose_hash=$(echo "${random_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
+										order_purpose_encrypted=$(echo "${random_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
 										rm ${user_path}/trx_purpose_key.tmp
 										rm ${user_path}/trx_purpose_blank.tmp
 										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
@@ -3674,7 +3674,7 @@ do
 										if [ $rt_query = 0 ]
 										then
 											trx_now=$(date +%s)
-											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_hash}" ${trx_now} 0
+											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" ${trx_now} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
