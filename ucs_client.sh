@@ -1,5 +1,6 @@
 #!/bin/sh
 login_account(){
+		set +f
 		login_name=$1
 		login_pin=$2
 		login_password=$3
@@ -13,7 +14,7 @@ login_account(){
 		fi
 
 		###FOR EACH SECRET###########################################
-		for secret_file in $(ls -1 -X ${script_path}/control/keys/|grep ".sct")
+		for secret_file in $(basename -a ${script_path}/control/keys/*.sct)
 		do
 			###GET ADDRESS OF SECRET#####################################
 			key_file=${secret_file%%.*}
@@ -537,7 +538,7 @@ build_ledger(){
 		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
-			last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
+			last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
 			last_ledger_date=${last_ledger%%_*}
 			last_ledger_date_stamp=$(date -u +%s --date="${last_ledger_date}")
 
@@ -883,7 +884,7 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
-				last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
+				last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
@@ -1523,7 +1524,7 @@ check_tsa(){
 					if [ $account = $account_key ]
 					then
 						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
-						for tsa_service in $(ls -1 ${script_path}/proofs/${account}/|grep ".tsr"|cut -d '.' -f1)
+						for tsa_service in $(basename -a ${script_path}/proofs/${account}/*.tsr|cut -d '.' -f1)
 						do
 							###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
 							if [ -s ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsr ]
@@ -2237,8 +2238,14 @@ get_dependencies(){
 					if [ ! "${earliest_date}" = "" ]
 					then
 						last_date=$(date +%Y%m%d --date=@${earliest_date})
-						rm $(ls -1 ${user_path}/|grep "ledger.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
-						rm $(ls -1 ${user_path}/|grep "index_trx.dat"|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+						for ledger in $(basename -a ${user_path}/*_ledger.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+						do
+							rm $ledger
+						done
+						for index in $(basename -a ${user_path}/*_index_trx.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
+						do
+							rm $index
+						done
 					fi
 				fi
 			fi
@@ -3514,7 +3521,7 @@ do
 											is_order_asset_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/${order_asset})
 											if [ $is_order_asset_fungible = 1 ]
 											then
-												while  read line
+												while read line
 												do
 													is_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/$line)
 													if [ $is_fungible = 1 ]
@@ -4427,7 +4434,7 @@ do
 																												if [ $fungible = 0 ]
 																												then
 																													###CREATE LEDGER ENTRY###################
-																													last_ledger=$(ls -1 ${user_path}/|grep "ledger.dat"|tail -1)
+																													last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
 																													echo "${asset_name}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
 																												fi
 																											fi
