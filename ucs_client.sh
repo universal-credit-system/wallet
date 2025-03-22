@@ -1,6 +1,5 @@
 #!/bin/sh
 login_account(){
-		set +f
 		login_name=$1
 		login_pin=$2
 		login_password=$3
@@ -14,7 +13,7 @@ login_account(){
 		fi
 
 		###FOR EACH SECRET###########################################
-		for secret_file in $(basename -a ${script_path}/control/keys/*.sct)
+		for secret_file in $(ls -1 -X ${script_path}/control/keys/|grep ".sct")
 		do
 			###GET ADDRESS OF SECRET#####################################
 			key_file=${secret_file%%.*}
@@ -400,11 +399,12 @@ make_signature(){
 					#################################################################
 
 					###ADD TSA FILES#################################################
-					for tsa_file in $(basename -a ${script_path}/proofs/${key_file}/*.ts*)
+					for tsa_file in $(ls -1 ${script_path}/proofs/${key_file}/*.ts*)
 					do
-						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${tsa_file})
+						file=$(basename ${tsa_file})
+						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${file})
 						file_hash=${file_hash%% *}
-						echo "proofs/${key_file}/${tsa_file} ${file_hash}" >>${message_blank}
+						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
 					done
 				done
 
@@ -532,7 +532,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###CHECK IF OLD LEDGER THERE########################
-		old_ledger_there=$(basename -a ${user_path}/*_ledger.dat|wc -l)
+		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat|wc -l)
 
 		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
@@ -1522,8 +1522,8 @@ check_tsa(){
 					account_key=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
 					if [ $account = $account_key ]
 					then
-						###FOR EACH TSA-SERVUCE IN CERTS/-FOLDER#################
-						for tsa_service in $(basename -a ${script_path}/proofs/${account}/*.tsr|cut -d '.' -f1)
+						###FOR EACH TSA-SERVICE USED BY USER#####################
+						for tsa_service in $(ls -1 ${script_path}/proofs/${account}/|grep ".tsr"|cut -d '.' -f1)
 						do
 							###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
 							if [ -s ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsr ]
@@ -2501,12 +2501,13 @@ send_uca(){
 								then
 									echo "keys/${line}"
 								fi
-								for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
+								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 								do
-									tsa_file_there=$(grep -c "proofs/${line}/${tsa_file}" $receipient_index_file)
+									file=$(basename $tsa_file)
+									tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
 									if [ $tsa_file_there = 0 ]
 									then
-										echo "proofs/${line}/${tsa_file}"
+										echo "proofs/${line}/${file}"
 									fi
 								done
 								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
@@ -2532,9 +2533,10 @@ send_uca(){
 							while read line
 							do
 								echo "keys/${line}"
-								for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
+								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 								do
-									echo "proofs/${line}/${tsa_file}"
+									file=$(basename $tsa_file)
+									echo "proofs/${line}/${file}"
 								done
 								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 								then
@@ -3759,9 +3761,10 @@ do
 																while read line
 																do
 																	echo "keys/${line}"
-																	for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
+																	for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 																	do
-																		echo "proofs/${line}/${tsa_file}"
+																		file=$(basename $tsa_file)
+																		echo "proofs/${line}/${file}"
 																	done
 																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																	then
@@ -4208,9 +4211,10 @@ do
 										while read line
 										do
 											echo "keys/${line}"
-											for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
+											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 											do
-												echo "proofs/${line}/${tsa_file}"
+												file=$(basename $tsa_file)
+												echo "proofs/${line}/${file}"
 											done
 											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
@@ -4229,9 +4233,10 @@ do
 										while read line
 										do
 											echo "keys/${line}"
-											for tsa_file in $(basename ${script_path}/proofs/${line}/*.ts*)
+											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 											do
-												echo "proofs/${line}/${tsa_file}"
+												file=$(basename $tsa_file)
+												echo "proofs/${line}/${file}"
 											done
 											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
