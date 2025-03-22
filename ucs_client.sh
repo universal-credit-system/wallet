@@ -400,12 +400,11 @@ make_signature(){
 					#################################################################
 
 					###ADD TSA FILES#################################################
-					for tsa_file in $(ls -1 ${script_path}/proofs/${key_file}/*.ts*)
+					for tsa_file in $(basename -a ${script_path}/proofs/${key_file}/*.ts*)
 					do
-						file=$(basename $tsa_file)
-						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${file})
+						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${tsa_file})
 						file_hash=${file_hash%% *}
-						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
+						echo "proofs/${key_file}/${tsa_file} ${file_hash}" >>${message_blank}
 					done
 				done
 
@@ -533,7 +532,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###CHECK IF OLD LEDGER THERE########################
-		old_ledger_there=$(ls -1 ${user_path}/|grep -c "ledger.dat")
+		old_ledger_there=$(basename -a ${user_path}/*_ledger.dat|wc -l)
 
 		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
@@ -2502,13 +2501,12 @@ send_uca(){
 								then
 									echo "keys/${line}"
 								fi
-								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+								for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
 								do
-									file=$(basename $tsa_file)
-									tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
+									tsa_file_there=$(grep -c "proofs/${line}/${tsa_file}" $receipient_index_file)
 									if [ $tsa_file_there = 0 ]
 									then
-										echo "proofs/${line}/${file}"
+										echo "proofs/${line}/${tsa_file}"
 									fi
 								done
 								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
@@ -2534,10 +2532,9 @@ send_uca(){
 							while read line
 							do
 								echo "keys/${line}"
-								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+								for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
 								do
-									file=$(basename $tsa_file)
-									echo "proofs/${line}/${file}"
+									echo "proofs/${line}/${tsa_file}"
 								done
 								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 								then
@@ -3762,10 +3759,9 @@ do
 																while read line
 																do
 																	echo "keys/${line}"
-																	for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+																	for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
 																	do
-																		file=$(basename $tsa_file)
-																		echo "proofs/${line}/${file}"
+																		echo "proofs/${line}/${tsa_file}"
 																	done
 																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																	then
@@ -4212,10 +4208,9 @@ do
 										while read line
 										do
 											echo "keys/${line}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											for tsa_file in $(basename -a ${script_path}/proofs/${line}/*.ts*)
 											do
-												file=$(basename $tsa_file)
-												echo "proofs/${line}/${file}"
+												echo "proofs/${line}/${tsa_file}"
 											done
 											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
@@ -4234,10 +4229,9 @@ do
 										while read line
 										do
 											echo "keys/${line}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											for tsa_file in $(basename ${script_path}/proofs/${line}/*.ts*)
 											do
-												file=$(basename $tsa_file)
-												echo "proofs/${line}/${file}"
+												echo "proofs/${line}/${tsa_file}"
 											done
 											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
 											then
@@ -4546,7 +4540,7 @@ do
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							cd ${script_path}/trx || exit 1
-							grep -s -l ":${handover_account}" * >${user_path}/my_trx.tmp
+							grep -s -l ":${handover_account}" -- * >${user_path}/my_trx.tmp
 							cd ${script_path} || exit 1
 							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
