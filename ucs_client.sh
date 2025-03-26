@@ -532,7 +532,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###CHECK IF OLD LEDGER THERE########################
-		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat|wc -l)
+		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat|wc -l 2>/dev/null)
 
 		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
@@ -2253,7 +2253,7 @@ get_dependencies(){
 			return $ledger_mode
 }
 request_uca(){
-		###GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR########
+		### GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR ######
 		if [ $gui_mode = 1 ]
 		then
 			rm ${user_path}/uca_list.tmp 2>/dev/null
@@ -2269,134 +2269,125 @@ request_uca(){
 		fi
 		###################################################
 
+		### WRITE USERNAME TO FILE ########################
+		echo "${handover_account}" >${user_path}/dhuser.dat
+		
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
-			###SET SESSION KEY################################
-			session_key=$(date -u +%Y%m%d)
-
 			###GET VALUES FROM UCA.CONF#######################
 			uca_connect_string=$(echo $line|cut -d ',' -f1)
 			uca_rcv_port=$(echo $line|cut -d ',' -f2)
 			uca_info=$(echo $line|cut -d ',' -f4)
+			uca_info_hashed=$(echo "${uca_info}"|sha224sum)
+			uca_info_hashed=${uca_info_hashed%% *}
+			
+			###SET FILES#######################################
+			sync_file="${user_path}/uca_${uca_info_hashed}.sync"
+			out_file="${user_path}/uca_${uca_info_hashed}.out"
 
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
-			fi
+			fi	
 
-			###GET RANDOM P AND RELATED G#####################
-			numbers_total=$(wc -l <${script_path}/control/dh.db)
-			number_urandom=$(head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 6)
-			number_random=$(echo "${number_urandom} % ${numbers_total}"|bc)
-			number_random=$(( number_random + 1 ))
-			p_number=$(sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f1)
-			g_number=$(sed -n "${number_random}p" ${script_path}/control/dh.db|cut -d ':' -f2)
-
-			###CALCULATE VALUE FOR A##########################
-			usera_random_integer_unformatted=$(head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 5)
-			usera_random_integer_formatted=$(echo "${usera_random_integer_unformatted} / 1"|bc)
-			usera_send_tmp=$(echo "${g_number} ^ ${usera_random_integer_formatted}"|bc)
-			usera_send=$(echo "${usera_send_tmp} % ${p_number}"|bc)
-			usera_session_id=$(head -10 /dev/urandom|tr -dc "[:digit:]"|head -c 20)
-			usera_string="${p_number}:${g_number}:${usera_send}:${usera_session_id}:${handover_account}:"
-			##################################################
-
-			###SET VALUES#####################################
-			now_stamp=$(date +%s)
-			sync_file="${user_path}/uca_${now_stamp}.sync"
-			out_file="${user_path}/uca_${now_stamp}.out"
-			save_file="${user_path}/uca_save.dat"
-
-			###WRITE HEADER AND ENCRYPT#######################
-			printf "%s" "${usera_string}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+			### GENERATE DIFFIE-HELLMAN GLOBAL PUBLIC #########
+			#openssl genpkey -genparam -algorithm DH -out - >${user_path}/dhparams.pem 2>/dev/null
+			openssl dhparam -dsaparam -out - $dh_key_length >${user_path}/dhparams.pem 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
 			then
-				###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-				cat ${user_path}/uca_header.tmp|netcat -q 120 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
+				### GENERATE KEY ##################################
+				openssl genpkey -paramfile ${user_path}/dhparams.pem -out - >${user_path}/dhkey_send.pem
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					###DECRYPT HEADER RECEIVED#########################
-					header=$(head -7 ${out_file}|gpg --batch --no-tty --output - --passphrase ${session_key} --decrypt - 2>/dev/null)
-
-					###GET SIZE OF HEADER AND BODY######################
-					total_bytes_received=$(wc -c <${out_file})
-					total_bytes_header=$(head -7 ${out_file}|wc -c)
-					total_bytes_count=$(( total_bytes_received - total_bytes_header ))
-
-					###CALCULATE SHARED-SECRET##########################
-					header=${header#*:}
-					header=${header#*:}
-					userb_sent=${header%%:*}
-					header=${header#*:}
-					usera_ssecret_tmp=$(echo "${userb_sent} ^ ${usera_random_integer_formatted}"|bc)
-					usera_ssecret=$(echo "${usera_ssecret_tmp} % ${p_number}"|bc)
-					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum)
-					usera_hssecret=${usera_hssecret%% *}
-					userb_uname=${header%%:*}
-
-					###CUT OUT BODY AND MOVE FILE#######################
-					dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
-					mv ${out_file}.tmp ${out_file}
-
-					###DECRYPT SENT FILE################################
-					gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase ${usera_hssecret} --decrypt ${out_file} 2>/dev/null
+					### GET PUBLIC KEY ################################
+					openssl pkey -in ${user_path}/dhkey_send.pem -pubout -out - >${user_path}/dhpub_send.pem
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						if [ ! -s ${save_file} ]
-						then
-							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:${userb_uname}:" >${save_file}
-						fi
-						###WRITE SHARED SECRET TO DB########################
-						ssecret_there=$(grep -c "${uca_connect_string}" ${save_file})
-						if [ $ssecret_there = 0 ]
-						then
-							echo "${uca_connect_string}:${usera_ssecret}:${usera_session_id}:" >>${save_file}
-						else
-							same_key=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2)
-							if [ ! $same_key = $usera_ssecret ]
-							then
-								sed -i "s/${uca_connect_string}:${same_key}:/${uca_connect_string}:${usera_ssecret}/g" ${save_file}
-							fi
-						fi
-						###CHECK SENT FILE##################################
-						check_archive ${sync_file} 0
+						###ENCRYPT USERNAME################################
+						session_key=$(date -u +%Y%m%d)
+						echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/dhuser.dat >${user_path}/dhuser.tmp
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
-							cd ${user_path}/temp || exit 1
-
-							###EXTRACT FILE#####################################
-							tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+							###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
+							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 120 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								process_new_files 0
-								set_permissions
+								###GET SIZE OF HEADER AND BODY######################
+								total_lines_header=$(grep -n "END PUBLIC KEY" ${out_file}|cut -d ':' -f1)
+								total_lines_header_user=$(grep -n "END PGP MESSAGE" ${out_file}|cut -d ':' -f1|head -1)
+								total_lines_header_param=$(( total_lines_header - total_lines_header_user ))
+								total_bytes_received=$(wc -c <${out_file})
+								total_bytes_header=$(head -$total_lines_header ${out_file}|wc -c)
+								total_bytes_count=$(( total_bytes_received - total_bytes_header ))
+								
+								###EXTRACT USERNAME#################################
+								head -$total_lines_header_user ${out_file} >${user_path}/dhuser_${uca_info_hashed}.tmp
+								
+								###EXTRACT PUBKEY###################################
+								head -$total_lines_header ${out_file}|tail -$total_lines_header_param >${user_path}/dhpub_receive.pem
+								
+								###CALCULATE SHARED SECRET##########################
+								openssl pkeyutl -derive -inkey ${user_path}/dhkey_send.pem -peerkey ${user_path}/dhpub_receive.pem -out - >${user_path}/dhsecret_${uca_info_hashed}.dat
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									###EXTRACT SHARED SECRET############################
+									shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
+									shared_secret=${shared_secret%% *}
+
+									###DECRYPT USERNAME#################################
+									echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output - --passphrase-fd 0 --decrypt ${user_path}/dhuser_${uca_info_hashed}.tmp >${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										###CUT OUT BODY AND MOVE FILE#######################
+										dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
+										mv ${out_file}.tmp ${out_file}
+
+										###DECRYPT RECEIVED FILE############################
+										echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase-fd 0 --decrypt ${out_file} 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											###CHECK FILE#######################################
+											check_archive ${sync_file} 0
+											rt_query=$?
+											if [ $rt_query = 0 ]
+											then
+												###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
+												cd ${user_path}/temp || exit 1
+
+												###EXTRACT FILE#####################################
+												tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
+												if [ $rt_query = 0 ]
+												then
+													process_new_files 0
+													set_permissions
+												fi
+											fi
+										fi
+									fi
+								fi
 							fi
 						fi
 					fi
-				else
-					if [ $gui_mode = 0 ]
-					then
-						echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
-					fi
-				fi
-			else
-				if [ $gui_mode = 0 ]
-				then
-					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 				fi
 			fi
-			###REMOVE TMP HEADER FILE##########################
-			rm ${user_path}/uca_header.tmp 2>/dev/null
-
+			
+			###PURGE TEMP FILES################################
+			rm ${out_file} 2>/dev/null
+			rm ${sync_file} 2>/dev/null
+			rm ${user_path}/dhuser.tmp 2>/dev/null
+			
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
@@ -2409,23 +2400,22 @@ request_uca(){
 					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" ${user_path}/uca_list.tmp
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
-			fi
-
-			###PURGE TEMP FILES################################
-			rm ${out_file} 2>/dev/null
-			rm ${sync_file} 2>/dev/null
+			else
+				if [ ! $rt_query = 0 ]
+				then
+					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
+				fi
+			fi	
 		done <${script_path}/control/uca.conf
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
 send_uca(){
+		### SET VARIABLES ###################################
 		now_stamp=$(date +%s)
-
-		###SET VARIABLES#############################
 		sync_file="${user_path}/${handover_account}_${now_stamp}.sync"
 		out_file="${user_path}/${handover_account}_${now_stamp}.out"
-		save_file="${user_path}/uca_save.dat"
 
-		###GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR########
+		### GET TOTAL NUMBER FOR PROGRESSBAR ################
 		if [ $gui_mode = 1 ]
 		then
 			rm ${user_path}/uca_list.tmp 2>/dev/null
@@ -2439,152 +2429,138 @@ send_uca(){
 				printf "%b" "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
 			done <${script_path}/control/uca.conf
 		fi
-		###################################################
+		#####################################################
 
-		###READ UCA.CONF LINE BY LINE######################
+		### READ UCA.CONF LINE BY LINE ######################
 		while read line
 		do
-			###SET SESSION KEY################################
-			session_key=$(date -u +%Y%m%d)
-
-			###GET VALUES FROM UCA.CONF#######################
+			### GET VALUES FROM UCA.CONF ########################
 			uca_connect_string=$(echo $line|cut -d ',' -f1)
 			uca_snd_port=$(echo $line|cut -d ',' -f3)
 			uca_info=$(echo $line|cut -d ',' -f4)
+			uca_info_hashed=$(echo "${uca_info}"|sha224sum)
+			uca_info_hashed=${uca_info_hashed%% *}
 
-			###STATUS BAR FOR GUI##############################
+			### STATUS BAR FOR GUI ##############################
 			if [ $gui_mode = 1 ]
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			fi
 
-			###GET STAMP#######################################
-			now_stamp=$(date +%s)
-
-			###ONLY CONTINUE IF SAVEFILE IS THERE##############
-			if [ -s ${save_file} ]
+			### ONLY CONTINUE IF SECRET IS THERE ################
+			if [ -s ${user_path}/dhsecret_${uca_info_hashed}.dat ]
 			then
-				###GET CONNECTION DATA#############################
-				ssecret_there=$(grep -c "${uca_connect_string}" ${save_file})
-				if [ ! $ssecret_there = 0 ]
-				then
-					###GET KEY FROM SAVE-TABLE#########################
-					usera_ssecret=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f2)
-					usera_ssecret=$(( usera_ssecret + usera_ssecret ))
-					usera_hssecret=$(echo "${usera_ssecret}_${session_key}"|sha256sum)
-					usera_hssecret=${usera_hssecret%% *}
-					usera_session_id=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f3)
-					uca_user=$(grep "${uca_connect_string}" ${save_file}|cut -d ':' -f4)
+				### GET CONNECTION DATA #############################
+				shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
+				shared_secret=${shared_secret%% *}
+				uca_user=$(cat ${user_path}/dhuser_${uca_info_hashed}.dat)
 
-					###CREATE FILE LIST FOR SYNC FILE##################
-					receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
-					###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
-					{
-						if [ -s $receipient_index_file ]
-						then
-							###GET ASSETS######################################
-							while read line
-							do
-								asset_there=$(grep -c "assets/${line}" $receipient_index_file)
-								if [ $asset_there = 0 ]
-								then
-									echo "assets/${line}"
-								fi
-							done <${user_path}/all_assets.dat
+				### CREATE FILE LIST FOR SYNC FILE ##################
+				receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
+				
+				### GROUP COMMANDS TO OPEN FILE ONLY ONCE ###################
+				{
+					if [ -s $receipient_index_file ]
+					then
+						### GET ASSETS ######################################
+						while read line
+						do
+							asset_there=$(grep -c "assets/${line}" $receipient_index_file)
+							if [ $asset_there = 0 ]
+							then
+								echo "assets/${line}"
+							fi
+						done <${user_path}/all_assets.dat
 
-							###GET KEYS AND PROOFS#############################
-							while read line
-							do
-								key_there=$(grep -c "keys/${line}" $receipient_index_file)
-								if [ $key_there = 0 ]
-								then
-									echo "keys/${line}"
-								fi
-								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
-								do
-									file=$(basename $tsa_file)
-									tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
-									if [ $tsa_file_there = 0 ]
-									then
-										echo "proofs/${line}/${file}"
-									fi
-								done
-								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-								then
-									echo "proofs/${line}/${line}.txt"
-								fi
-							done <${user_path}/depend_accounts.dat
-
-							###GET TRX#########################################
-							while read line
-							do
-								trx_there=$(grep -c "trx/${line}" $receipient_index_file)
-								if [ $trx_there = 0 ]
-								then
-									echo "trx/${line}"
-								fi
-							done <${user_path}/depend_trx.dat
-						else
-							###GET ASSETS######################################
-							awk '{print "assets/" $1}' ${user_path}/all_assets.dat
-
-							###GET KEYS AND PROOFS#############################
-							while read line
-							do
+						### GET KEYS AND PROOFS #############################
+						while read line
+						do
+							key_there=$(grep -c "keys/${line}" $receipient_index_file)
+							if [ $key_there = 0 ]
+							then
 								echo "keys/${line}"
-								for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
-								do
-									file=$(basename $tsa_file)
-									echo "proofs/${line}/${file}"
-								done
-								if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+							fi
+							for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+							do
+								file=$(basename $tsa_file)
+								tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
+								if [ $tsa_file_there = 0 ]
 								then
-									echo "proofs/${line}/${line}.txt"
+									echo "proofs/${line}/${file}"
 								fi
-							done <${user_path}/depend_accounts.dat
+							done
+							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+							then
+								echo "proofs/${line}/${line}.txt"
+							fi
+						done <${user_path}/depend_accounts.dat
 
-							###GET TRX#########################################
-							awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
-						fi
-					} >${user_path}/files_list.tmp
+						### GET TRX #########################################
+						while read line
+						do
+							trx_there=$(grep -c "trx/${line}" $receipient_index_file)
+							if [ $trx_there = 0 ]
+							then
+								echo "trx/${line}"
+							fi
+						done <${user_path}/depend_trx.dat
+					else
+						### GET ASSETS ######################################
+						awk '{print "assets/" $1}' ${user_path}/all_assets.dat
 
-					###STEP INTO HOMEDIR AND CREATE TARBALL######
-					cd ${script_path} || exit 1
-					tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
+						### GET KEYS AND PROOFS #############################
+						while read line
+						do
+							echo "keys/${line}"
+							for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+							do
+								file=$(basename $tsa_file)
+								echo "proofs/${line}/${file}"
+							done
+							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+							then
+								echo "proofs/${line}/${line}.txt"
+							fi
+						done <${user_path}/depend_accounts.dat
+
+						### GET TRX #########################################
+						awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
+					fi
+				} >${user_path}/files_list.tmp
+
+				### STEP INTO HOMEDIR AND CREATE TARBALL ######
+				cd ${script_path} || exit 1
+				tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
+				rt_query=$?
+				if [ $rt_query = 0 ]
+				then
+					### ENCRYPT USER ################################
+					echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/dhuser.tmp --passphrase-fd 0 ${user_path}/dhuser.dat
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###ENCRYPT HEADER CONTAINING SESSION ID############
-						printf "%s" "${usera_session_id}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/uca_header.tmp --passphrase ${session_key} - 2>/dev/null
+						### ENCRYPT SYNCFILE #############################
+						echo "${shared_secret}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase-fd 0 ${out_file}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###ENCRYPT SYNCFILE################################
-							gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase ${usera_hssecret} ${out_file}
+							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
+							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
 							rt_query=$?
-							if [ $rt_query = 0 ]
-							then
-								###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-								cat ${user_path}/uca_header.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
-								rt_query=$?
-								if [ ! $rt_query = 0 ]
-								then
-									if [ $gui_mode = 0 ]
-									then
-										echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
-									fi
-								fi
-							fi
 						fi
-						rm ${user_path}/uca_header.tmp 2>/dev/null
-						rm ${sync_file} 2>/dev/null
-						rm ${user_path}/files_list.tmp 2>/dev/null
 					fi
-					rm ${out_file} 2>/dev/null
 				fi
+			else
+				rt_query=1
 			fi
-			###STATUS BAR FOR GUI##############################
+			###PURGE TEMP FILES###############################
+			rm ${out_file} 2>/dev/null
+			rm ${sync_file} 2>/dev/null
+			rm ${user_path}/dhuser.tmp 2>/dev/null
+			rm ${user_path}/files_list.tmp 2>/dev/null
+			
+			### STATUS BAR ###################################
 			if [ $gui_mode = 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
@@ -2596,9 +2572,13 @@ send_uca(){
 					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" ${user_path}/uca_list.tmp
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
+			else
+				if [ ! $rt_query = 0 ]
+				then
+					echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
+				fi
 			fi
 		done <${script_path}/control/uca.conf
-		rm ${save_file} 2>/dev/null
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 		sleep 1
 }
@@ -2613,6 +2593,7 @@ core_system_version="v0.0.1"
 check_period_tsa=21600
 trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
+dh_key_length=2048
 main_asset="UCC"
 main_token="UCT"
 default_tsa=""
