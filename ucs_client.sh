@@ -2316,7 +2316,7 @@ request_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
-							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 120 -w60 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
+							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 0 -w 120 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -2546,7 +2546,7 @@ send_uca(){
 						if [ $rt_query = 0 ]
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
-							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -q0 -w5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
+							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -q 0 -w 5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
 							rt_query=$?
 						fi
 					fi
