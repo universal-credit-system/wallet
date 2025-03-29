@@ -2676,9 +2676,6 @@ then
 					;;
 			"-file")	cmd_var=$1
 					;;
-			"-debug")	set -x
-					set -v
-					;;
 			"-help")	more ${script_path}/control/HELP.txt
 					exit 0
 					;;
