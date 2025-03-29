@@ -58,7 +58,7 @@ login_account(){
 							echo "${name_hash}" >>${script_path}/control/accounts.db
 						fi
 					fi
-					
+
 					###REMOVE ENCRYPTION SOURCE FILE#############################
 					rm ${script_path}/account_${my_pid}.tmp
 
@@ -207,7 +207,7 @@ create_keys(){
 							###CREATE LIST OF ALL TSAS AND SET GREP PATTERN##############
 							ls -1 ${script_path}/certs >${user_path}/tsa_list.tmp
 							tsa_pattern=$(grep "${default_tsa}" ${user_path}/tsa_list.tmp)
-							
+
 							###AS LONG AS NOT MINIMUM SIGNED ONCE########################
 							is_stamped=0
 							while [ $is_stamped = 0 ]
@@ -217,7 +217,7 @@ create_keys(){
 								do
 									###COPY QUERYFILE############################################
 									cp ${user_path}/${create_name_hashed}.tsq ${user_path}/${tsa_service}.tsq
-									
+
 									###GET TSA CONNECTION STRING#################################
 									tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
 									tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
@@ -246,7 +246,7 @@ create_keys(){
 												then
 													###GET FILE STAMP########################################
 													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-															
+
 													###CHECK DIFFERENCE######################################
 													stamp_diff=$(( file_stamp - key_stamp ))
 													if [ $stamp_diff -lt 120 ]
@@ -303,14 +303,14 @@ create_keys(){
 			###WRITE SECRETS####################################################
 			echo "${random_secret}" >${user_path}/${create_name_hashed}.sct
 			echo "${verify_secret}" >${user_path}/${create_name_hashed}.scv
-			
+
 			###WRITE ENTRY INTO ACCOUNTS.DB#####################################
 			name_hash=$(echo "${create_name}"|sha224sum)
 			name_hash=${name_hash%% *}
 			echo "${name_hash}" >>${script_path}/control/accounts.db
 
 			###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
-			cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct 
+			cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct
 
 			if [ $gui_mode = 1 ]
 			then
@@ -318,7 +318,7 @@ create_keys(){
 				echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
 				sleep 1
 				clear
-				
+
 				###DISPLAY NOTIFICATION THAT EVERYTHING WAS FINE############
 				dialog_keys_final_display=$(echo $dialog_keys_final|sed -e "s/<create_name>/${create_name}/g" -e "s/<create_name_hashed>/${create_name_hashed}/g" -e "s/<create_pin>/${create_pin}/g" -e "s/<file_stamp>/${file_stamp}/g")
 				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_final_display" 0 0
@@ -664,7 +664,7 @@ build_ledger(){
 			###MOVE FILENAMES TO NEXT DAY####################
 			previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
 			cp ${user_path}/${previous_day}_ledger.dat ${user_path}/${focus}_ledger.dat
-			
+
 			###GRANT COINLOAD OF THAT DAY####################
 			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -s ${user_path}/${focus}_ledger.tmp ]
@@ -693,7 +693,7 @@ build_ledger(){
 			if [ -s ${user_path}/assets.tmp ]
 			then
 				cd ${script_path}/assets || exit 1
-				
+
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
 				for non_fungible_asset in $(grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp))
 				do
@@ -1277,7 +1277,7 @@ update_tsa(){
 					tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
 					tsa_cacert_file=$(basename $tsa_cacert_url)
 					tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
-					
+
 					###IF TSA.CRT FILE AVAILABLE...##################
 					if [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
 					then
@@ -1553,10 +1553,10 @@ check_tsa(){
 											###GET STAMPS###############################
 											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
 											key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
-											
+
 											###CALCULATE DIFFERENCE#####################
 											stamp_diff=$(( file_stamp - key_stamp ))
-											
+
 											###CHECK IF CREATED WITHIN 120 SECONDS######
 											if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
 											then
@@ -1895,17 +1895,17 @@ process_new_files(){
 								###SET VARIABLES############################################
 								new_trx_score_highest=0
 								old_trx_score_highest=0
-								
+
 								###GET USER TRANSACTION OF OLD AND NEW INDEX FILE###########
 								grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
 								grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
-								
+
 								###GET UNIQUE USER TRANSACIONS OF OLD INDEX FILE############
 								sort ${user_path}/new_index_filelist.tmp ${user_path}/old_index_filelist.tmp ${user_path}/old_index_filelist.tmp|uniq -u >${user_path}/new_unique_filelist.tmp
-								
+
 								###GET UNIQUE USER TRANSACIONS OF NEW INDEX FILE############
 								sort ${user_path}/old_index_filelist.tmp ${user_path}/new_index_filelist.tmp ${user_path}/new_index_filelist.tmp|uniq -u >${user_path}/old_unique_filelist.tmp
-								
+
 								###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN OLD INDEX#####
 								while read line
 								do
@@ -1920,7 +1920,7 @@ process_new_files(){
 										fi
 									fi
 								done <${user_path}/old_unique_filelist.tmp
-								
+
 								###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN NEW INDEX#####
 								while read line
 								do
@@ -1935,7 +1935,7 @@ process_new_files(){
 										fi
 									fi
 								done <${user_path}/new_unique_filelist.tmp
-								
+
 								###COMPARE BOTH############################################
 								if [ $old_trx_score_highest -ge $new_trx_score_highest ]
 								then
@@ -2271,7 +2271,7 @@ request_uca(){
 
 		### WRITE USERNAME TO FILE ########################
 		echo "${handover_account}" >${user_path}/dhuser.dat
-		
+
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
 		do
@@ -2281,7 +2281,7 @@ request_uca(){
 			uca_info=$(echo $line|cut -d ',' -f4)
 			uca_info_hashed=$(echo "${uca_info}"|sha224sum)
 			uca_info_hashed=${uca_info_hashed%% *}
-			
+
 			###SET FILES#######################################
 			sync_file="${user_path}/uca_${uca_info_hashed}.sync"
 			out_file="${user_path}/uca_${uca_info_hashed}.out"
@@ -2291,7 +2291,7 @@ request_uca(){
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
-			fi	
+			fi
 
 			### GENERATE DIFFIE-HELLMAN GLOBAL PUBLIC #########
 			#openssl genpkey -genparam -algorithm DH -out - >${user_path}/dhparams.pem 2>/dev/null
@@ -2317,7 +2317,6 @@ request_uca(){
 						then
 							###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
 							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 10 -w 120 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
-							
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
@@ -2328,13 +2327,13 @@ request_uca(){
 								total_bytes_received=$(wc -c <${out_file})
 								total_bytes_header=$(head -$total_lines_header ${out_file}|wc -c)
 								total_bytes_count=$(( total_bytes_received - total_bytes_header ))
-								
+
 								###EXTRACT USERNAME#################################
 								head -$total_lines_header_user ${out_file} >${user_path}/dhuser_${uca_info_hashed}.tmp
-								
+
 								###EXTRACT PUBKEY###################################
 								head -$total_lines_header ${out_file}|tail -$total_lines_header_param >${user_path}/dhpub_receive.pem
-								
+
 								###CALCULATE SHARED SECRET##########################
 								openssl pkeyutl -derive -inkey ${user_path}/dhkey_send.pem -peerkey ${user_path}/dhpub_receive.pem -out - >${user_path}/dhsecret_${uca_info_hashed}.dat
 								rt_query=$?
@@ -2383,12 +2382,12 @@ request_uca(){
 					fi
 				fi
 			fi
-			
+
 			###PURGE TEMP FILES################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
 			rm ${user_path}/dhuser.tmp 2>/dev/null
-			
+
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
 			then
@@ -2406,7 +2405,7 @@ request_uca(){
 				then
 					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 				fi
-			fi	
+			fi
 		done <${script_path}/control/uca.conf
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
@@ -2459,7 +2458,7 @@ send_uca(){
 
 				### CREATE FILE LIST FOR SYNC FILE ##################
 				receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
-				
+
 				### GROUP COMMANDS TO OPEN FILE ONLY ONCE ###################
 				{
 					if [ -s $receipient_index_file ]
@@ -2548,7 +2547,6 @@ send_uca(){
 						then
 							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
 							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -w 5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
-							
 							rt_query=$?
 						fi
 					fi
@@ -2561,7 +2559,7 @@ send_uca(){
 			rm ${sync_file} 2>/dev/null
 			rm ${user_path}/dhuser.tmp 2>/dev/null
 			rm ${user_path}/files_list.tmp 2>/dev/null
-			
+
 			### STATUS BAR ###################################
 			if [ $gui_mode = 1 ]
 			then
