@@ -396,7 +396,6 @@ make_signature(){
 					key_hash=$(sha256sum ${script_path}/keys/${key_file})
 					key_hash=${key_hash%% *}
 					echo "keys/${key_file} ${key_hash}" >>${message_blank}
-					#################################################################
 
 					###ADD TSA FILES#################################################
 					for tsa_file in $(ls -1 ${script_path}/proofs/${key_file}/*.ts*)
@@ -406,6 +405,14 @@ make_signature(){
 						file_hash=${file_hash%% *}
 						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
 					done
+					
+					###ADD INDEX FILE IF EXISTING####################################
+					if [ -s ${script_path}/proofs/${key_file}/${key_file}.txt ]
+					then
+						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${key_file}.txt)
+						file_hash=${file_hash%% *}
+						echo "proofs/${key_file}/${key_file}.txt ${file_hash}" >>${message_blank}
+					fi
 				done
 
 				####WRITE TRX LIST TO INDEX FILE#################################
@@ -2253,6 +2260,10 @@ get_dependencies(){
 			return $ledger_mode
 }
 request_uca(){
+		### MAKE CLEAN START ##############################
+		rm ${user_path}/dhuser_*.* 2>/dev/null
+		rm ${user_path}/dhsecret_*.* 2>/dev/null
+		
 		### GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR ######
 		if [ $gui_mode = 1 ]
 		then
@@ -2269,8 +2280,12 @@ request_uca(){
 		fi
 		###################################################
 
-		### WRITE USERNAME TO FILE ########################
-		echo "${handover_account}" >${user_path}/dhuser.dat
+		### WRITE USERDATA TO FILE ########################
+		unique_id=$(mktemp -u XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
+		echo "${unique_id}" >${user_path}/dhuser_id.dat
+		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt >${user_path}/dhuser_data.tmp 2>/dev/null
+		cat ${user_path}/dhuser_id.dat ${user_path}/dhuser_data.tmp >${user_path}/dhuser.dat
+		rm ${user_path}/dhuser_data.tmp 2>/dev/null
 
 		###READ UCA.CONF LINE BY LINE######################
 		while read line
@@ -2309,7 +2324,7 @@ request_uca(){
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###ENCRYPT USERNAME################################
+						###ENCRYPT USERDATA################################
 						session_key=$(date -u +%Y%m%d)
 						echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/dhuser.dat >${user_path}/dhuser.tmp
 						rt_query=$?
@@ -2343,7 +2358,7 @@ request_uca(){
 									shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
 									shared_secret=${shared_secret%% *}
 
-									###DECRYPT USERNAME#################################
+									###DECRYPT USERDATA#################################
 									echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output - --passphrase-fd 0 --decrypt ${user_path}/dhuser_${uca_info_hashed}.tmp >${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
@@ -2386,7 +2401,6 @@ request_uca(){
 			###PURGE TEMP FILES################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
-			rm ${user_path}/dhuser.tmp 2>/dev/null
 
 			###STATUS BAR FOR GUI##############################
 			if [ $gui_mode = 1 ]
@@ -2407,6 +2421,10 @@ request_uca(){
 				fi
 			fi
 		done <${script_path}/control/uca.conf
+		rm ${user_path}/dhuser.* 2>/dev/null
+		rm ${user_path}/dhparams.pem 2>/dev/null
+		rm ${user_path}/dhkey_send.pem 2>/dev/null
+		rm ${user_path}/dhpub_send.pem 2>/dev/null
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
 send_uca(){
@@ -2454,98 +2472,36 @@ send_uca(){
 				### GET CONNECTION DATA #############################
 				shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
 				shared_secret=${shared_secret%% *}
-				uca_user=$(cat ${user_path}/dhuser_${uca_info_hashed}.dat)
 
-				### CREATE FILE LIST FOR SYNC FILE ##################
-				receipient_index_file="${script_path}/proofs/${uca_user}/${uca_user}.txt"
+				### COLLECT DATA ####################################
+				user_data_lines=$(wc -l <${user_path}/dhuser_${uca_info_hashed}.dat)
+				user_data_lines=$(( user_data_lines - 1 ))
+				user_dataset=$(tail -$user_data_lines ${user_path}/dhuser_${uca_info_hashed}.dat)
+				own_dataset=$(gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt 2>/dev/null)
+				shared_dataset=$(echo "${user_dataset}${own_dataset}"|sort -|uniq -d)
+				echo "${own_dataset}${shared_dataset}"|sort -|uniq -u|cut -d ' ' -f1 >${user_path}/files_list.tmp
+				if [ ! -s ${user_path}/files_list.tmp ]
+				then
+					echo "proofs/${user_account}/${user_account}.txt" >${user_path}/files_list.tmp
+				fi
 
-				### GROUP COMMANDS TO OPEN FILE ONLY ONCE ###################
-				{
-					if [ -s $receipient_index_file ]
-					then
-						### GET ASSETS ######################################
-						while read line
-						do
-							asset_there=$(grep -c "assets/${line}" $receipient_index_file)
-							if [ $asset_there = 0 ]
-							then
-								echo "assets/${line}"
-							fi
-						done <${user_path}/all_assets.dat
-
-						### GET KEYS AND PROOFS #############################
-						while read line
-						do
-							key_there=$(grep -c "keys/${line}" $receipient_index_file)
-							if [ $key_there = 0 ]
-							then
-								echo "keys/${line}"
-							fi
-							for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
-							do
-								file=$(basename $tsa_file)
-								tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
-								if [ $tsa_file_there = 0 ]
-								then
-									echo "proofs/${line}/${file}"
-								fi
-							done
-							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-							then
-								echo "proofs/${line}/${line}.txt"
-							fi
-						done <${user_path}/depend_accounts.dat
-
-						### GET TRX #########################################
-						while read line
-						do
-							trx_there=$(grep -c "trx/${line}" $receipient_index_file)
-							if [ $trx_there = 0 ]
-							then
-								echo "trx/${line}"
-							fi
-						done <${user_path}/depend_trx.dat
-					else
-						### GET ASSETS ######################################
-						awk '{print "assets/" $1}' ${user_path}/all_assets.dat
-
-						### GET KEYS AND PROOFS #############################
-						while read line
-						do
-							echo "keys/${line}"
-							for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
-							do
-								file=$(basename $tsa_file)
-								echo "proofs/${line}/${file}"
-							done
-							if [ -s ${script_path}/proofs/${line}/${line}.txt ]
-							then
-								echo "proofs/${line}/${line}.txt"
-							fi
-						done <${user_path}/depend_accounts.dat
-
-						### GET TRX #########################################
-						awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
-					fi
-				} >${user_path}/files_list.tmp
-
-				### STEP INTO HOMEDIR AND CREATE TARBALL ######
+				### STEP INTO HOMEDIR AND CREATE TARBALL ############
 				cd ${script_path} || exit 1
 				tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					### ENCRYPT USER ################################
-					echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/dhuser.tmp --passphrase-fd 0 ${user_path}/dhuser.dat
+					### ENCRYPT USERDATA ################################
+					echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/dhuser.tmp --passphrase-fd 0 ${user_path}/dhuser_id.dat
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						### ENCRYPT SYNCFILE #############################
+						### ENCRYPT SYNCFILE ################################
 						echo "${shared_secret}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase-fd 0 ${out_file}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN########
+							### SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN ########
 							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -w 5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
 							rt_query=$?
 						fi
@@ -2557,6 +2513,7 @@ send_uca(){
 			###PURGE TEMP FILES###############################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
+			rm ${user_path}/dhuser_id.dat 2>/dev/null
 			rm ${user_path}/dhuser.tmp 2>/dev/null
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
