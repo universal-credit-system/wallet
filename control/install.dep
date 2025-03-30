@@ -18,6 +18,7 @@ grep
 head
 ls
 mkdir
+mktemp
 mv
 netcat
 openssl
