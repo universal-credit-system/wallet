@@ -66,5 +66,7 @@ OPTIONS:
 			setting in control/config.conf is disabled.
 			
 			Option will be ignored for action create_trx.
+			
+  -debug		enable debug mode
   
   -help			Display this HELP
