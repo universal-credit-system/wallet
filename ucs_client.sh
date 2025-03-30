@@ -2630,6 +2630,7 @@ fi
 if [ $# -gt 0 ]
 then
 	###IF ANY VARIABLES ARE HANDED OVER SET INITAL VALUES##########
+	main_menu=$dialog_main_logon
 	gui_mode=0
 	cmd_var=""
 	cmd_action=""
@@ -2676,6 +2677,9 @@ then
 					;;
 			"-file")	cmd_var=$1
 					;;
+			"-debug")	set -x
+					set -v
+					;;
 			"-help")	more ${script_path}/control/HELP.txt
 					exit 0
 					;;
@@ -2689,25 +2693,19 @@ then
 												;;
 									"restore_backup")	main_menu=$dialog_main_backup
 												;;
-									"create_trx")		main_menu=$dialog_main_logon
-												user_menu=$dialog_send
+									"create_trx")		user_menu=$dialog_send
 												;;
-									"read_trx")		main_menu=$dialog_main_logon
-												user_menu=$dialog_receive
+									"read_trx")		user_menu=$dialog_receive
 												;;
-									"create_sync")		main_menu=$dialog_main_logon
-												user_menu=$dialog_sync
+									"create_sync")		user_menu=$dialog_sync
 												;;
-									"read_sync")		main_menu=$dialog_main_logon
-												user_menu=$dialog_sync
+									"read_sync")		user_menu=$dialog_sync
 												;;
-									"sync_uca")		main_menu=$dialog_main_logon
-												user_menu=$dialog_uca
+									"sync_uca")		user_menu=$dialog_uca
 												;;
 									"show_balance")		main_menu=$dialog_main_logon
 												;;
-									"show_stats")		main_menu=$dialog_main_logon
-												user_menu=$dialog_stats
+									"show_stats")		user_menu=$dialog_stats
 												;;
 									*)			echo "ERROR! TRY THIS:"
 												echo "./ucs_client.sh -help"
