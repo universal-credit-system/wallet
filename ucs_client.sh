@@ -2274,34 +2274,40 @@ request_uca(){
 			percent_display=0
 			while read line
 			do
-				uca_info=$(echo $line|cut -d ',' -f4)
-				printf "%b" "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+				uca_info=${line#*,*,*,*}
+				printf "%b" "\"${uca_info%%,*}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
 			done <${script_path}/control/uca.conf
 		fi
 		###################################################
 
-		### WRITE USERDATA TO FILE ########################
+		### GET A UNIQUE ID AND WRITE TO FILE #############
 		unique_id=$(mktemp -u XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
 		echo "${unique_id}" >${user_path}/dhuser_id.dat
+		
+		### WRITE PLAIN INDEX TO FILE #####################
 		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt >${user_path}/dhuser_data.tmp 2>/dev/null
+		
+		### MERGE ID AND PLAIN INDEX ######################
 		cat ${user_path}/dhuser_id.dat ${user_path}/dhuser_data.tmp >${user_path}/dhuser.dat
 		rm ${user_path}/dhuser_data.tmp 2>/dev/null
 
-		###READ UCA.CONF LINE BY LINE######################
+		### READ UCA.CONF LINE BY LINE ####################
 		while read line
 		do
-			###GET VALUES FROM UCA.CONF#######################
-			uca_connect_string=$(echo $line|cut -d ',' -f1)
-			uca_rcv_port=$(echo $line|cut -d ',' -f2)
-			uca_info=$(echo $line|cut -d ',' -f4)
+			### GET VALUES FROM UCA.CONF #######################
+			uca_connect_string=${line%%,*}
+			uca_rcv_port=${line#*,}
+			uca_rcv_port=${uca_rcv_port%%,*}
+			uca_info=${line#*,*,*,*}
+			uca_info=${uca_info%%,*}
 			uca_info_hashed=$(echo "${uca_info}"|sha224sum)
 			uca_info_hashed=${uca_info_hashed%% *}
 
-			###SET FILES#######################################
+			### SET FILES #######################################
 			sync_file="${user_path}/uca_${uca_info_hashed}.sync"
 			out_file="${user_path}/uca_${uca_info_hashed}.out"
 
-			###STATUS BAR FOR GUI##############################
+			### STATUS BAR FOR GUI ##############################
 			if [ $gui_mode = 1 ]
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
@@ -2324,18 +2330,18 @@ request_uca(){
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###ENCRYPT USERDATA################################
+						### ENCRYPT ID AND INDEX ##########################
 						session_key=$(date -u +%Y%m%d)
 						echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/dhuser.dat >${user_path}/dhuser.tmp
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
-							###SEND KEY VIA DIFFIE-HELLMAN AND WRITE RESPONSE TO FILE####################
+							### SEND CLIENT INFO, DH PARAMS AND PUBKEY ########
 							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 10 -w 120 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 							rt_query=$?
 							if [ $rt_query = 0 ]
 							then
-								###GET SIZE OF HEADER AND BODY######################
+								### GET SIZE OF HEADER AND BODY ###################
 								total_lines_header=$(grep -n "END PUBLIC KEY" ${out_file}|cut -d ':' -f1)
 								total_lines_header_user=$(grep -n "END PGP MESSAGE" ${out_file}|head -1|cut -d ':' -f1)
 								total_lines_header_param=$(( total_lines_header - total_lines_header_user ))
@@ -2343,44 +2349,44 @@ request_uca(){
 								total_bytes_header=$(head -$total_lines_header ${out_file}|wc -c)
 								total_bytes_count=$(( total_bytes_received - total_bytes_header ))
 
-								###EXTRACT USERNAME#################################
+								### EXTRACT SERVER INFO ###########################
 								head -$total_lines_header_user ${out_file} >${user_path}/dhuser_${uca_info_hashed}.tmp
 
-								###EXTRACT PUBKEY###################################
+								### EXTRACT PUBKEY ################################
 								head -$total_lines_header ${out_file}|tail -$total_lines_header_param >${user_path}/dhpub_receive.pem
 
-								###CALCULATE SHARED SECRET##########################
+								### CALCULATE SHARED SECRET #######################
 								openssl pkeyutl -derive -inkey ${user_path}/dhkey_send.pem -peerkey ${user_path}/dhpub_receive.pem -out - >${user_path}/dhsecret_${uca_info_hashed}.dat
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									###EXTRACT SHARED SECRET############################
+									### EXTRACT SHARED SECRET #########################
 									shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
 									shared_secret=${shared_secret%% *}
 
-									###DECRYPT USERDATA#################################
+									### DECRYPT SERVER INFO ###########################
 									echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output - --passphrase-fd 0 --decrypt ${user_path}/dhuser_${uca_info_hashed}.tmp >${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
-										###CUT OUT BODY AND MOVE FILE#######################
+										### CUT OUT BODY AND MOVE FILE ####################
 										dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
 										mv ${out_file}.tmp ${out_file}
 
-										###DECRYPT RECEIVED FILE############################
+										### DECRYPT RECEIVED DATA #########################
 										echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase-fd 0 --decrypt ${out_file} 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###CHECK FILE#######################################
+											### CHECK FILE ####################################
 											check_archive ${sync_file} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
 											then
-												###STEP INTO USERDATA/USER/TEMP AND EXTRACT FILE####
+												### STEP INTO USERDATA/USER/TEMP ##################
 												cd ${user_path}/temp || exit 1
 
-												###EXTRACT FILE#####################################
+												### EXTRACT FILE ##################################
 												tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query = 0 ]
@@ -2398,11 +2404,11 @@ request_uca(){
 				fi
 			fi
 
-			###PURGE TEMP FILES################################
+			### PURGE TEMP FILES ################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
 
-			###STATUS BAR FOR GUI##############################
+			### PROGRESSBAR FOR GUI #############################
 			if [ $gui_mode = 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
@@ -2421,6 +2427,8 @@ request_uca(){
 				fi
 			fi
 		done <${script_path}/control/uca.conf
+
+		### CLEAN UP FILES ##################################
 		rm ${user_path}/dhuser.* 2>/dev/null
 		rm ${user_path}/dhparams.pem 2>/dev/null
 		rm ${user_path}/dhkey_send.pem 2>/dev/null
@@ -2443,8 +2451,8 @@ send_uca(){
 			percent_display=0
 			while read line
 			do
-				uca_info=$(echo $line|cut -d ',' -f4)
-				printf "%b" "\"${uca_info}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
+				uca_info=${line#*,*,*,*}
+				printf "%b" "\"${uca_info%%,*}\" \"WAITING\"\n" >>${user_path}/uca_list.tmp
 			done <${script_path}/control/uca.conf
 		fi
 		#####################################################
@@ -2453,9 +2461,11 @@ send_uca(){
 		while read line
 		do
 			### GET VALUES FROM UCA.CONF ########################
-			uca_connect_string=$(echo $line|cut -d ',' -f1)
-			uca_snd_port=$(echo $line|cut -d ',' -f3)
-			uca_info=$(echo $line|cut -d ',' -f4)
+			uca_connect_string=${line%%,*}
+			uca_snd_port=${line#*,*,*}
+			uca_snd_port=${uca_snd_port%%,*}
+			uca_info=${line#*,*,*,*}
+			uca_info=${uca_info%%,*}
 			uca_info_hashed=$(echo "${uca_info}"|sha224sum)
 			uca_info_hashed=${uca_info_hashed%% *}
 
@@ -2517,7 +2527,7 @@ send_uca(){
 			rm ${user_path}/dhuser.tmp 2>/dev/null
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
-			### STATUS BAR ###################################
+			### PROGRESS BAR ###################################
 			if [ $gui_mode = 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
@@ -4548,7 +4558,7 @@ do
 								then
 									menu_item_selected=$decision
 									dialog_history_noresults=${dialog_history_noresult%% *}
-									if [ ! $decision = $dialog_history_noresults ]
+									if [ ! "${decision}" = "${dialog_history_noresults}" ]
 									then
 										trx_date_extracted=${decision%%|*}
 										trx_time_extracted=${decision#*|*}
