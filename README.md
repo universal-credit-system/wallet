@@ -42,6 +42,7 @@ The following programs are used:
 * **head**    used to display heading lines/bytes of a file
 * **ls**      used to list files and directories
 * **mkdir**   used to create folders and subfolders
+* **mktemp**  used to create files with unique IDs
 * **mv**      used to move files
 * **netcat**  used to send/request files
 * **openssl** used for TSA stamp verification
