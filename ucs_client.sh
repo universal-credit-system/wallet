@@ -2557,6 +2557,7 @@ core_system_name="Universal Credit System"
 core_system_version="v0.0.1"
 
 ###SET INITIAL VARIABLES####
+initial_coinload=365250
 check_period_tsa=21600
 trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
