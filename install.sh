@@ -81,7 +81,12 @@ then	##############################
 		rm ${script_path}/control/config.tmp
 	fi
 
-	### GPG AGENT ################
+	### IF USER NEVER RAN GPG UNTIL NOW ######
+	if [ ! -d ~/.gnupg/ ]
+	then
+		### RUN GPG ###################
+		gpg '?' 2>/dev/null
+	fi
 	if [ -s ~/.gnupg/gpg-agent.conf ]
 	then
 		while read config_line
