@@ -375,9 +375,8 @@ make_signature(){
 				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
 				printf "%b" "${transaction_message}" >>${message_blank}
-				#################################################################
 			else
-				###IF YES.....###################################################
+				###IF YES WRITE INDEX############################################
 				message=${script_path}/proofs/${handover_account}/${handover_account}.txt
 				message_blank=${user_path}/message_blank.dat
 				touch ${message_blank}
@@ -405,7 +404,7 @@ make_signature(){
 						file_hash=${file_hash%% *}
 						echo "proofs/${key_file}/${file} ${file_hash}" >>${message_blank}
 					done
-					
+
 					###ADD INDEX FILE IF EXISTING####################################
 					if [ -s ${script_path}/proofs/${key_file}/${key_file}.txt ]
 					then
@@ -418,7 +417,6 @@ make_signature(){
 				####WRITE TRX LIST TO INDEX FILE#################################
 				cat ${user_path}/*_index_trx.dat >>${message_blank} 2>/dev/null
 			fi
-			#################################################################
 
 			###SIGN FILE AND REMOVE GPG WRAPPER##############################
 			echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
@@ -427,7 +425,6 @@ make_signature(){
 			then
 				mv ${message_blank}.asc ${message}
 			fi
-			#################################################################
 
 			###PURGE FILES###################################################
 			rm ${message_blank} 2>/dev/null
@@ -478,7 +475,6 @@ check_input(){
 				exit 1
 			fi
 		fi
-		#######################################################################
 
 		case $check_mode in
 			 0 )	###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
@@ -517,7 +513,6 @@ check_input(){
 						exit 1
 					fi
 				fi
-				#######################################################################
 				;;
 			*)	exit 1
 				;;
@@ -563,15 +558,12 @@ build_ledger(){
 			###EMPTY LEDGER#####################################
 			rm ${user_path}/*_ledger.dat 2>/dev/null
 			touch ${user_path}/${date_stamp_yesterday}_ledger.dat
-			####################################################
 
 			###EMPTY INDEX FILE#################################
 			rm ${user_path}/*_index_trx.dat 2>/dev/null
-			####################################################
 
 			###EMPTY IGNORE TRX#################################
 			rm ${user_path}/ignored_trx.dat 2>/dev/null
-			####################################################
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=$(date -u +%s --date="${start_date}")
@@ -583,7 +575,6 @@ build_ledger(){
 		###SET FOCUS########################################
 		focus=$(date -u +%Y%m%d --date=@${date_stamp})
 		now_stamp=$(date +%s)
-		####################################################
 
 		###CREATE LIST OF ASSETS CREATED BEFORE THAT DAY####
 		previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
@@ -666,7 +657,6 @@ build_ledger(){
 			else
 				coinload=1
 			fi
-			#################################################
 
 			###MOVE FILENAMES TO NEXT DAY####################
 			previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
@@ -796,7 +786,6 @@ build_ledger(){
 										fi
 									fi
 								fi
-								##############################################################
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###GET CONFIRMATIONS##########################################
@@ -811,13 +800,12 @@ build_ledger(){
 									###CHECK CONFIRMATIONS########################################
 									if [ $total_confirmations -ge $confirmations_from_users ]
 									then
-										##############################################################
 										###SET BALANCE FOR RECEIVER###################################
 										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
 										receiver_old_balance=${receiver_old_balance#*=}
 										receiver_new_balance=$(echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g')
 										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
-										##############################################################
+
 										###CHECK IF EXCHANGE REQUIRED#################################
 										if [ $is_asset = 1 ] && [ $is_fungible = 1 ]
 										then
@@ -827,7 +815,7 @@ build_ledger(){
 											asset_price=$(grep "asset_price=" ${script_path}/assets/${trx_receiver})
 											asset_price=${asset_price#*=}
 											asset_value=$(echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
-											##############################################################
+
 											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
 											receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
 											if [ $receiver_in_ledger = 1 ]
@@ -839,31 +827,23 @@ build_ledger(){
 											else
 												echo "${trx_receiver}:${trx_sender}=${asset_value}" >>${user_path}/${focus}_ledger.dat
 											fi
-											##############################################################
 										fi
-										##############################################################
 									fi
-									##############################################################
 								else
 									echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 								fi
-								##############################################################
 							else
 								echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 							fi
-							##############################################################
 						else
 							echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 						fi
-						##############################################################
 					else
 						echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 					fi
-					##############################################################
 				else
 					echo "${trx_filename}" >>${user_path}/ignored_trx.dat
 				fi
-				##############################################################
 			done
 
 			###RAISE VARIABLES FOR NEXT RUN###############################
@@ -1092,7 +1072,6 @@ check_assets(){
 				rm ${user_path}/ack_assets.dat 2>/dev/null
 				touch ${user_path}/ack_assets.dat
 			fi
-			###############################################################
 
 			###CREATE LIST OF NEW ASSETS###################################
 			ls -1 ${script_path}/assets >${user_path}/all_assets.dat
@@ -1183,28 +1162,19 @@ check_assets(){
 											then
 												asset_acknowledged=1
 											fi
-											#######################################################
 										fi
-										#######################################################
 									fi
-									#######################################################
 								fi
-								#######################################################
 							fi
-							#######################################################
 						fi
-						######################################################
 					fi
-					######################################################
 				fi
-				######################################################
 
 				###WRITE ENTY TO BLACKLIST IF NOT ACKNOWLEDGED########
 				if [ $asset_acknowledged = 0 ]
 				then
 					echo "$line" >>${user_path}/blacklisted_assets.dat
 				fi
-				#######################################################
 			done <${user_path}/all_assets.tmp
 
 			###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
@@ -1215,7 +1185,6 @@ check_assets(){
 					rm ${script_path}/assets/${line} 2>/dev/null
 				done <${user_path}/blacklisted_assets.dat
 			fi
-			###################################################################
 
 			###REMOVE BLACKLISTED ASSETS FROM ASSET LIST#######################
 			sort -t . -k2 ${user_path}/all_assets.tmp ${user_path}/blacklisted_assets.dat|uniq -u >${user_path}/all_assets.dat
@@ -1272,7 +1241,6 @@ update_tsa(){
 					###IF NOT SET STAMP##############################
 					period_seconds=$(( check_period_tsa + 1 ))
 				fi
-				#################################################
 
 				###CHECK TSA.CRT, CACERT.PEM AND ROOT_CA.CRL#####
 				while [ $tsa_checked = 0 ]
@@ -1731,7 +1699,6 @@ check_trx(){
 			grep "${line}" ${user_path}/trx_list_all.tmp >>${user_path}/all_trx.dat
 		done <${user_path}/all_accounts.dat
 		rm ${user_path}/trx_list_all.tmp 2>/dev/null
-		###################################################################
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
 		sort -t . -k2 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|uniq -u >${user_path}/all_trx.tmp
@@ -1849,7 +1816,6 @@ check_trx(){
 				rm ${script_path}/trx/${line} 2>/dev/null
 			done <${user_path}/blacklisted_trx.dat
 		fi
-		###################################################################
 
 		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST########################
 		sort -t . -k2 ${user_path}/all_trx.tmp ${user_path}/blacklisted_trx.dat|uniq -u >${user_path}/all_trx.dat
@@ -2263,7 +2229,7 @@ request_uca(){
 		### MAKE CLEAN START ##############################
 		rm ${user_path}/dhuser_*.* 2>/dev/null
 		rm ${user_path}/dhsecret_*.* 2>/dev/null
-		
+
 		### GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR ######
 		if [ $gui_mode = 1 ]
 		then
@@ -2283,10 +2249,10 @@ request_uca(){
 		### GET A UNIQUE ID AND WRITE TO FILE #############
 		unique_id=$(mktemp -u XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
 		echo "${unique_id}" >${user_path}/dhuser_id.dat
-		
+
 		### WRITE PLAIN INDEX TO FILE #####################
 		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt >${user_path}/dhuser_data.tmp 2>/dev/null
-		
+
 		### MERGE ID AND PLAIN INDEX ######################
 		cat ${user_path}/dhuser_id.dat ${user_path}/dhuser_data.tmp >${user_path}/dhuser.dat
 		rm ${user_path}/dhuser_data.tmp 2>/dev/null
@@ -3320,7 +3286,7 @@ do
 									then
 										###SET DEFAULT-ITEM OF DIALOG MENU#######################
 										def_string_asset=$order_asset
-										
+
 										###DISPLAY DETAILED ASSET INFORMATION############
 										dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $order_asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${order_asset}" 0 0						
 									else
@@ -3591,7 +3557,7 @@ do
 										else
 											###CHANGE ORDER PURPOSE TO BINARY DATA##################
 											order_purpose="[data:${order_purpose_path}]"
-											
+
 											###COPY FILE TO SEND AS PURPOSE#########################
 											cp ${order_purpose_path} ${user_path}/trx_purpose_edited.tmp
 										fi
@@ -3755,14 +3721,14 @@ do
 															echo "${handover_account}.${trx_now}" >>${user_path}/depend_trx.dat
 															##############################################################################
 															##############################################################################
-															
+
 															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER IS DELETED ARE DELETED##############
 															if [ $gui_mode = 0 ]
 															then
 																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
 																echo "BALANCE_${trx_now}:${cmd_output}"
 															fi
-															
+
 															###SET VARIABLES FOR NEXT LOOP RUN###########################################
 															make_ledger=1
 															get_dependencies
@@ -4313,7 +4279,7 @@ do
 																			then
 																				asset_description=$(cat ${user_path}/asset_description.tmp|sed 's/\"/\\"/g')
 																				rm ${user_path}/asset_description.tmp
-																				
+
 																				###ASK IF FUNGIBLE OR NOT########################
 																				dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
 																				fungible=$?
@@ -4325,7 +4291,7 @@ do
 																					else
 																						dialog_asset_add_value=$dialog_asset_price
 																					fi
-																					
+
 																					quit_asset_value=0
 																					while [ $quit_asset_value = 0 ]
 																					do
@@ -4335,7 +4301,7 @@ do
 																						if [ $rt_query = 0 ]
 																						then
 																							asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
-																							if [ $asset_value_alnum = 0 ] 
+																							if [ $asset_value_alnum = 0 ]
 																							then
 																								asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
 																								value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
@@ -4363,7 +4329,7 @@ do
 																											echo "asset_description='${asset_description}'"
 																											} >${user_path}/${asset_name}.${asset_stamp}
 																											#########################################
-																											
+
 																											###CONFIRM###############################
 																											dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
 																											rt_query=$?
@@ -4371,10 +4337,10 @@ do
 																											then
 																												###COPY INTO ASSETS FOLDER###############
 																												mv ${user_path}/${asset_name}.${asset_stamp} ${script_path}/assets/${asset_name}.${asset_stamp}
-																												
+
 																												###DISPLAY SUCCESS MESSAGE###############
 																												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_asset_add_successfull" 0 0
-																												
+
 																												###CHECK ASSETS##########################
 																												check_assets
 																												if [ $fungible = 0 ]
@@ -4418,7 +4384,7 @@ do
 													;;
 										"$dialog_users")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
 													def_string_user=$(head -1 ${user_path}/depend_accounts.dat)
-														
+
 													quit_user_menu=0
 													while [ $quit_user_menu = 0 ]
 													do
@@ -4429,17 +4395,17 @@ do
 														then
 															###SET DEFAULT ITEM######################################
 															def_string_user=$user
-															
+
 															###USERS TRX OVERVIEW####################################
 															grep "${user}" ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
 															if [ ! -s ${user_path}/dialog_browser_trx.tmp ]
 															then
 																echo "0" >${user_path}/dialog_browser_trx.tmp
 															fi
-															
+
 															###SET DEFAULT-ITEM OF DIALOG MENU#######################
 															def_string_trx=$(head -1 ${user_path}/dialog_browser_trx.tmp)
-															
+
 															quit_trx_menu=0
 															while [ $quit_trx_menu = 0 ]
 															do
@@ -4760,4 +4726,3 @@ do
 		fi
 	fi
 done
-
