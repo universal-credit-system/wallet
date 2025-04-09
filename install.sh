@@ -11,7 +11,13 @@ do
         rt_query=$?
         if [ $rt_query -gt 0 ]
         then
-                echo $line >>${script_path}/install_dep.tmp
+        	### CHECK FOR NETCAT ################
+        	if [ "$line" = "netcat" ]
+        	then
+        		echo "netcat-openbsd" >>${script_path}/install_dep.tmp
+        	else
+                	echo $line >>${script_path}/install_dep.tmp
+                fi
         fi
 done <${script_path}/control/install.dep
 
