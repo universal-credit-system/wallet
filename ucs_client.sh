@@ -1216,9 +1216,7 @@ update_tsa(){
 			now_stamp=$(date +%s)
 
 			###PURGE OLD TMP FILES###########################
-			rm ${script_path}/certs/*.crt 2>/dev/null
-			rm ${script_path}/certs/*.crl 2>/dev/null
-			rm ${script_path}/certs/*.pem 2>/dev/null
+			rm ${script_path}/certs/*.* 2>/dev/null
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
 			for tsa_service in $(basename -a $(ls -d ${script_path}/certs/*))
@@ -1273,7 +1271,7 @@ update_tsa(){
 					if [ $tsa_update_required = 1 ]
 					then
 						###DOWNLOAD TSA.CRT###############################
-						wget -q -O ${tsa_cert_file} ${tsa_cert_url}
+						wget -o /dev/null -q -O ${tsa_cert_file} ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
@@ -1320,7 +1318,7 @@ update_tsa(){
 					if [ $tsa_update_required = 1 ]
 					then
 						###DOWNLOAD CACERT.PEM############################
-						wget -q -O ${tsa_cacert_file} ${tsa_cert_url}
+						wget -o /dev/null -q -O ${tsa_cacert_file} ${tsa_cert_url}
 						rt_query=$?
 						if [ $rt_query = 0 ]
 						then
@@ -1372,7 +1370,7 @@ update_tsa(){
 							if [ $period_seconds -gt $check_period_tsa ] || [ ! -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 							then
 								###DOWNLOAD CURRENT CRL FILE##############################
-								wget -q -O ${tsa_crl_file} ${tsa_crl_url}
+								wget -o /dev/null -q -O ${tsa_crl_file} ${tsa_crl_url}
 								if [ -s ${script_path}/certs/${tsa_crl_file} ]
 								then
 									###CHECK IF OLD CRL IS THERE##############################
