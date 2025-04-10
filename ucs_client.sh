@@ -1219,7 +1219,7 @@ update_tsa(){
 			rm ${script_path}/certs/*.* 2>/dev/null
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
-			for tsa_service in $(basename -a $(ls -d ${script_path}/certs/*))
+			for tsa_service in $(ls -1 ${script_path}/certs/)
 			do
 				###SET VARIABLES#################################
 				tsa_update_required=0
