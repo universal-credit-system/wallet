@@ -11,13 +11,15 @@ do
         rt_query=$?
         if [ $rt_query -gt 0 ]
         then
-        	### CHECK FOR NETCAT ################
-        	if [ "$line" = "netcat" ]
-        	then
-        		echo "netcat-openbsd" >>${script_path}/install_dep.tmp
-        	else
-                	echo $line >>${script_path}/install_dep.tmp
-                fi
+        	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
+        	case $line in
+        		"netcat")	echo "netcat-openbsd" >>${script_path}/install_dep.tmp
+        				;;
+        		"gpg")		echo "gnupg"  >>${script_path}/install_dep.tmp
+        				;;
+        		*)		echo "${line}"  >>${script_path}/install_dep.tmp
+        				;;
+        	esac
         fi
 done <${script_path}/control/install.dep
 
