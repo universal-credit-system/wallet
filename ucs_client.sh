@@ -2543,6 +2543,7 @@ end_program=0
 small_trx=0
 script_path=$(dirname $(readlink -f ${0}))
 my_pid=$$
+gui_mode=1
 
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
@@ -2565,7 +2566,6 @@ if [ $# -gt 0 ]
 then
 	###IF ANY VARIABLES ARE HANDED OVER SET INITAL VALUES##########
 	main_menu=$dialog_main_logon
-	gui_mode=0
 	cmd_var=""
 	cmd_action=""
 	cmd_user=""
@@ -2619,7 +2619,8 @@ then
 					;;
 			*)		###SET TARGET VARIABLES########################################
 					case $cmd_var in
-						"-action")	cmd_action=$1
+						"-action")	gui_mode=0
+								cmd_action=$1
 								case $cmd_action in
 									"create_user")		main_menu=$dialog_main_create
 												;;
@@ -2698,8 +2699,6 @@ then
 			no_ledger=0
 		fi
 	fi
-else
-	gui_mode=1
 fi
 while [ $end_program = 0 ]
 do
