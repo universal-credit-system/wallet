@@ -196,7 +196,7 @@ create_keys(){
 					cd ${user_path} || exit 1
 
 					###WRITE KEY DATA TO FILE####################################
-					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
+					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
 					if [ $rt_query = 0 ]
 					then
 						###CREATE TSA QUERY FILE#####################################
