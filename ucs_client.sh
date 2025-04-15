@@ -1493,7 +1493,7 @@ check_tsa(){
 					###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 					account="${line}"
 					account_key=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
-					if [ $account = $account_key ]
+					if [ "${account}" = "${account_key}" ]
 					then
 						###FOR EACH TSA-SERVICE USED BY USER#####################
 						for tsa_service in $(ls -1 ${script_path}/proofs/${account}/|grep ".tsr"|cut -d '.' -f1)
