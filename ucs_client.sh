@@ -2626,11 +2626,11 @@ then
 												;;
 									"restore_backup")	main_menu=$dialog_main_backup
 												;;
-									"get_confirmations")	main_menu=$cmd_action
-												;;
 									"create_trx")		user_menu=$dialog_send
 												;;
 									"read_trx")		user_menu=$dialog_receive
+												;;
+									"show_trx")		main_menu=$cmd_action
 												;;
 									"create_sync")		user_menu=$dialog_sync
 												;;
@@ -3181,7 +3181,7 @@ do
 				"$dialog_main_end")     clear
 							end_program=1
 							;;
-				"get_confirmations")	rt_query=1
+				"show_trx")		rt_query=1
 							trx=$(basename "${cmd_file}")
 							if [ -f "${script_path}"/trx/"${trx}" ]
 							then
@@ -3211,6 +3211,7 @@ do
 									confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 									echo "TRANSACTION  :trx/${trx}"
 									echo "SHA256_HASH  :${trx_hash}"
+									echo "TRX_STAMP    :${trx_stamp}"
 									echo "TRX_SENDER   :${sender}"
 									echo "TRX_RECEIVER :${receiver}"
 									echo "TRX_AMOUNT   :${amount}"
