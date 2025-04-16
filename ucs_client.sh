@@ -3182,10 +3182,9 @@ do
 							end_program=1
 							;;
 				"get_confirmations")	rt_query=1
-							trx=$(basename "${cmd_path}")
-							if [ -s "${script_path}"/trx/"${trx}" ]
+							trx=$(basename "${cmd_file}")
+							if [ -f "${script_path}"/trx/"${trx}" ]
 							then
-								trx=$(basename "${cmd_path}")
 								sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${trx})
 								receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
 								if [ ! "${sender}" = "" ] && [ ! "${receiver}" = "" ]
