@@ -2626,6 +2626,8 @@ then
 												;;
 									"restore_backup")	main_menu=$dialog_main_backup
 												;;
+									"get_confirmations")	main_menu=$cmd_action
+												;;
 									"create_trx")		user_menu=$dialog_send
 												;;
 									"read_trx")		user_menu=$dialog_receive
@@ -3178,6 +3180,52 @@ do
 							;;
 				"$dialog_main_end")     clear
 							end_program=1
+							;;
+				"get_confirmations")	rt_query=1
+							trx=$(basename "${cmd_path}")
+							if [ -s "${script_path}"/trx/"${trx}" ]
+							then
+								trx=$(basename "${cmd_path}")
+								sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${trx})
+								receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
+								if [ ! "${sender}" = "" ] && [ ! "${receiver}" = "" ]
+								then
+									signature="ERROR_VERIFY_SIGNATURE"
+									gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${script_path}/trx/${trx} >${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										signed_correct=$(grep "GOODSIG" ${script_path}/gpg_${my_pid}_verify.tmp|grep -c "${sender}")
+										if [ $signed_correct -ge 1 ]
+										then
+											if [ "${trx%%.*}" = "${sender}" ]
+											then
+												signature="OK"
+											fi
+										fi
+									fi
+									trx_hash=$(sha256sum ${script_path}/trx/${trx})
+									trx_hash=${trx_hash%% *}
+									trx_stamp=${trx#*.}
+									amount=$(awk -F: '/:AMNT:/{print $3}' ${script_path}/trx/${trx})
+									asset=$(awk -F: '/:ASST:/{print $3}' ${script_path}/trx/${trx})
+									confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+									echo "TRANSACTION  :trx/${trx}"
+									echo "SHA256_HASH  :${trx_hash}"
+									echo "TRX_SENDER   :${sender}"
+									echo "TRX_RECEIVER :${receiver}"
+									echo "TRX_AMOUNT   :${amount}"
+									echo "TRX_ASSET    :${asset}"
+									echo "SIGNATURE    :${signature}"
+									echo "CONFIRMATIONS:${confirmations}"
+									rm ${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
+									exit 0
+								fi
+							fi
+							if [ $rt_query = 1 ]
+							then
+								exit 1
+							fi
 							;;
 			esac
 		fi
