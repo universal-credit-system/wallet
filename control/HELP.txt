@@ -6,16 +6,21 @@ OPTIONS:
 
   -action <ACTION>	possible actions:
 
-			create_backup	to create a backup
-			create_user	to create a user
-			create_trx	to create a transaction
-			create_sync	to create a sync file
-			read_sync	to read a sync file
-			read_trx	to read a transaction
-			restore_backup	to restore a backup
-			sync_uca	to sync with UCAs
-			show_balance	to show the users balance
-			show_stats	to display the statistics
+			create_backup		to create a backup
+			create_user		to create a user
+			create_trx		to create a transaction*
+			create_sync		to create a sync file*
+			get_confirmations	to get trx confirmations
+			read_sync		to read a sync file*
+			read_trx		to read a transaction*
+			restore_backup		to restore a backup
+			sync_uca		to sync with UCAs*
+			show_balance		to show the users balance*
+			show_stats		to display the statistics
+			
+			*logon required either with username, pin and
+			 password or address and password only.
+			 See parameter -sender how to use address only
 
   -user <USER>		name of the account.	
 
@@ -23,9 +28,9 @@ OPTIONS:
 
   -password <PW>	password of the account
 
-  -sender <ADRESS>	sender of a transaction. can be used to handover 
-			a adress only instead of user and pin seperately. 
-			If you use this parameter, skip -user and -pin 
+  -sender <ADRESS>	sender of a transaction. can also be used to handover 
+			a address only to log on instead of user and pin seperately. 
+			If you use this parameter, just skip -user and -pin
 
   -receiver <ADRESS>	receiver of transaction. used only for action
 			create_trx
