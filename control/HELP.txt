@@ -10,13 +10,13 @@ OPTIONS:
 			create_user		to create a user
 			create_trx		to create a transaction*
 			create_sync		to create a sync file*
-			get_confirmations	to get trx confirmations
 			read_sync		to read a sync file*
 			read_trx		to read a transaction*
 			restore_backup		to restore a backup
 			sync_uca		to sync with UCAs*
 			show_balance		to show the users balance*
 			show_stats		to display the statistics
+			show_trx		to display trx informations
 			
 			*logon required either with username, pin and
 			 password or address and password only.
