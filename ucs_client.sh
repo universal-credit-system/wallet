@@ -4773,6 +4773,7 @@ do
 							rm ${user_path}/ledger_balances.tmp
 							total_assets=$(wc -l <${user_path}/all_assets.dat)
 							total_keys=$(wc -l <${user_path}/all_accounts.dat)
+							total_private=$(ls -1 ${script_path}/control/keys/*.sct|wc -l)
 							total_trx=$(wc -l <${user_path}/all_trx.dat)
 							total_user_blacklisted=$(wc -l <${user_path}/blacklisted_accounts.dat)
 							total_trx_blacklisted=$(wc -l <${user_path}/blacklisted_trx.dat)
@@ -4781,13 +4782,14 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_coins>/${total_coins}/g" -e "s/<total_keys>/${total_keys}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g")
+								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_coins>/${total_coins}/g" -e "s/<total_keys>/${total_keys}/g" -e "s/<total_private>/${total_private}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g")
 								dialog --title "$dialog_stats" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
 								echo "COINS_TOTAL:${total_coins}"
 								echo "ASSETS_TOTAL:${total_assets}"
-								echo "KEYS_TOTAL:${total_keys}"
+								echo "KEYS_PUBLIC:${total_keys}"
+								echo "KEYS_PRIVATE:${total_private}"
 								echo "TRX_TOTAL:${total_trx}"
 								echo "BLACKLISTED_USERS_TOTAL:${total_user_blacklisted}"
 								echo "BLACKLISTED_TRX_TOTAL:${total_trx_blacklisted}"
