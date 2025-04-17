@@ -871,7 +871,7 @@ build_ledger(){
 			if [ $show_balance = 1 ]
 			then
 				last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
-				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger})
+				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger}|grep "${cmd_asset}")
 				do
 					echo "BALANCE_${now_stamp}:${balance}"
 				done
@@ -2573,7 +2573,7 @@ then
 	cmd_sender=""
 	cmd_receiver=""
 	cmd_amount=""
-	cmd_asset=$main_asset
+	cmd_asset=""
 	cmd_purpose=""
 	cmd_type=""
 	cmd_path=""
@@ -3352,7 +3352,12 @@ do
 									fi
 								done
 							else
-								order_asset=$cmd_asset
+								if [ "${cmd_asset}" = "" ]
+								then
+									order_asset=$main_asset
+								else
+									order_asset=$cmd_asset
+								fi
 								asset_there=$(grep -c "${order_asset}" ${user_path}/menu_assets.tmp)
 								if [ $asset_there = 1 ]
 								then
