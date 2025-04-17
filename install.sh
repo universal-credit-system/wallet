@@ -29,12 +29,12 @@ then	##############################
 	########### SETUP ############
 
 	### CREATE DIRECTORIES #######
-	mkdir ${script_path}/backup
-	mkdir ${script_path}/control/keys
-	mkdir ${script_path}/keys
-	mkdir ${script_path}/proofs
-	mkdir ${script_path}/trx
-	mkdir ${script_path}/userdata
+	mkdir -p ${script_path}/backup
+	mkdir -p ${script_path}/control/keys
+	mkdir -p ${script_path}/keys
+	mkdir -p ${script_path}/proofs
+	mkdir -p ${script_path}/trx
+	mkdir -p ${script_path}/userdata
 
 	### SAVE UMASK SETTINGS ######
 	user_umask=$(umask)
