@@ -534,7 +534,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###CHECK IF OLD LEDGER THERE########################
-		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat|wc -l 2>/dev/null)
+		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat 2>/dev/null|wc -l)
 
 		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
 		then
@@ -2528,6 +2528,7 @@ trx_max_size_purpose_bytes=1024
 dh_key_length=2048
 main_asset="UCC"
 main_token="UCT"
+last_ledger=""
 default_tsa=""
 start_date="20250412"
 now=$(date -u +%Y%m%d)
@@ -2637,6 +2638,8 @@ then
 									"read_sync")		user_menu=$dialog_sync
 												;;
 									"sync_uca")		user_menu=$dialog_uca
+												;;
+									"show_addressbook")	main_menu=$cmd_action
 												;;
 									"show_balance")		main_menu=$dialog_main_logon
 												;;
@@ -3181,6 +3184,9 @@ do
 				"$dialog_main_end")     clear
 							end_program=1
 							;;
+				"show_addressbook")	ls -1 keys/|awk '{ print "ADDRESS:" $1 }'
+							exit 1
+							;;
 				"show_trx")		rt_query=1
 							trx=$(basename "${cmd_file}")
 							if [ -f "${script_path}"/trx/"${trx}" ]
@@ -3209,6 +3215,12 @@ do
 									amount=$(awk -F: '/:AMNT:/{print $3}' ${script_path}/trx/${trx})
 									asset=$(awk -F: '/:ASST:/{print $3}' ${script_path}/trx/${trx})
 									confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+									index="ERROR_NOT_INDEXED"
+									is_indexed=$(grep -c "trx/${trx} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
+									if [ $is_indexed -gt 0 ]
+									then
+										index="OK"	
+									fi
 									echo "TRANSACTION  :trx/${trx}"
 									echo "SHA256_HASH  :${trx_hash}"
 									echo "TRX_STAMP    :${trx_stamp}"
@@ -3217,6 +3229,7 @@ do
 									echo "TRX_AMOUNT   :${amount}"
 									echo "TRX_ASSET    :${asset}"
 									echo "SIGNATURE    :${signature}"
+									echo "STATUS_INDEX :${index}"
 									echo "CONFIRMATIONS:${confirmations}"
 									rm ${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
 									exit 0
@@ -3820,6 +3833,7 @@ do
 																	then
 																		if [ ! $small_trx = 255 ]
 																		then
+																			echo "TRX:trx/${handover_account}.${trx_now}"
 																			if [ ! "${cmd_path}" = "" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
 																				mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
@@ -3827,9 +3841,11 @@ do
 																			else
 																				echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
 																			fi
+																		else
+																			echo "TRX:trx/${handover_account}.${trx_now}"
 																		fi
 																	else
-																		echo "FILE:trx/${handover_account}.${trx_now}"
+																		echo "TRX:trx/${handover_account}.${trx_now}"
 																	fi
 																	exit 0
 																fi
@@ -4742,6 +4758,14 @@ do
 							rm ${user_path}/*.tmp 2>/dev/null
 							;;
 				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
+							total_coins=0
+							grep "UCC:" ${script_path}/userdata/${handover_account}/${last_ledger}|cut -d '=' -f2 >${user_path}/ledger_balances.tmp
+							while read line
+							do
+								total_coins=$(echo "scale=9; $total_coins + $line"|bc)
+							done <${user_path}/ledger_balances.tmp
+							total_coins=$(echo "$total_coins"|awk '{printf "%.9f", $0}')
+							rm ${user_path}/ledger_balances.tmp
 							total_assets=$(wc -l <${user_path}/all_assets.dat)
 							total_keys=$(wc -l <${user_path}/all_accounts.dat)
 							total_trx=$(wc -l <${user_path}/all_trx.dat)
@@ -4752,10 +4776,11 @@ do
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_keys>/${total_keys}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g")
+								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_coins>/${total_coins}/g" -e "s/<total_keys>/${total_keys}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g")
 								dialog --title "$dialog_stats" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
+								echo "COINS_TOTAL:${total_coins}"
 								echo "ASSETS_TOTAL:${total_assets}"
 								echo "KEYS_TOTAL:${total_keys}"
 								echo "TRX_TOTAL:${total_trx}"
