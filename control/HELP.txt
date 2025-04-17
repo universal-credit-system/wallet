@@ -14,15 +14,16 @@ OPTIONS:
 			read_trx		to read a transaction*
 			restore_backup		to restore a backup
 			sync_uca		to sync with UCAs*
+			show_addressbook	to display all addresses
 			show_balance		to show the users balance*
-			show_stats		to display the statistics
+			show_stats		to display the statistics*
 			show_trx		to display trx informations
 			
 			*logon required either with username, pin and
 			 password or address and password only.
 			 See parameter -sender how to use address only
 
-  -user <USER>		name of the account.	
+  -user <USER>		name of the account.
 
   -pin <PIN>		PIN of the account
 
