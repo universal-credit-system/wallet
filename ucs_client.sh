@@ -1609,6 +1609,7 @@ check_keys(){
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
   	       	while read line
   	      	do
+  	      		rt_query=0
 		       	key_uname=$line
  			key_imported=$(grep -c "${key_uname}" ${user_path}/keylist_gpg.tmp)
 			if [ $key_imported = 0 ]
@@ -1625,7 +1626,9 @@ check_keys(){
 					       	echo "${line}" >>${user_path}/blacklisted_accounts.dat
 				       	fi
 			       	fi
-			else
+			fi
+			if [ $rt_query = 0 ]
+			then
 				index_file="${script_path}/proofs/${line}/${line}.txt"
 				if [ -s $index_file ]
 				then
@@ -2043,12 +2046,14 @@ purge_files(){
 		rm -r ${script_path}/userdata/* 2>/dev/null
 }
 import_keys(){
-		cd ${script_path}/control/keys || exit 1
-		for key_file in $(ls -1 ${script_path}/control/keys)
+		for private_key in $(ls -1 ${script_path}/control/keys|grep -v ".sct")
 		do
-			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${key_file}
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/control/keys/${private_key} 2>/dev/null
 		done
-		cd ${script_path} || exit 1
+		for public_key in $(ls -1 ${script_path}/keys)
+		do
+			gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${public_key} 2>/dev/null
+		done
 }
 get_dependencies(){
 			cd ${script_path}/trx || exit 1
