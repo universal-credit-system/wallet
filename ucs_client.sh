@@ -418,7 +418,7 @@ make_signature(){
 				cat ${user_path}/*_index_trx.dat >>${message_blank} 2>/dev/null
 			fi
 
-			###SIGN FILE AND REMOVE GPG WRAPPER##############################
+			###SIGN FILE#####################################################
 			echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
 			if [ $rt_query = 0 ]
@@ -1081,7 +1081,7 @@ check_assets(){
 			while read line
 			do
 				###CHECK IF ASSET IS MAIN ASSET################################
-				if [ "${line}" = "${main_asset}" ] || [ "${line}" = "${main_token}" ]
+				if [ "${line}" = "${main_asset}" ]
 				then
 					###SET VARIABLE################################################
 					asset_acknowledged=1
@@ -1736,7 +1736,7 @@ check_trx(){
 							trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
 							trx_receiver_date=${trx_receiver_date#* }
 						else
-							if [ ! "${trx_receiver_date}" = "${main_asset}" ] && [ ! "${trx_receiver_date}" = "${main_token}" ]
+							if [ ! "${trx_receiver_date}" = "${main_asset}" ]
 							then
 								###IF RECEIVER IS ASSET GET DATE####################################
 								trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
@@ -2532,7 +2532,6 @@ trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
 dh_key_length=2048
 main_asset="UCC"
-main_token="UCT"
 last_ledger=""
 default_tsa=""
 start_date="20250412"
@@ -3224,7 +3223,7 @@ do
 									is_indexed=$(grep -c "trx/${trx} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
 									if [ $is_indexed -gt 0 ]
 									then
-										index="OK"	
+										index="OK"
 									fi
 									echo "TRANSACTION  :trx/${trx}"
 									echo "SHA256_HASH  :${trx_hash}"
@@ -4767,37 +4766,87 @@ do
 							done
 							rm ${user_path}/*.tmp 2>/dev/null
 							;;
-				"$dialog_stats")	###EXTRACT STATISTICS FOR TOTAL################
-							total_coins=0
-							grep "UCC:" ${script_path}/userdata/${handover_account}/${last_ledger}|cut -d '=' -f2 >${user_path}/ledger_balances.tmp
-							while read line
-							do
-								total_coins=$(echo "scale=9; $total_coins + $line"|bc)
-							done <${user_path}/ledger_balances.tmp
-							total_coins=$(echo "$total_coins"|awk '{printf "%.9f", $0}')
-							rm ${user_path}/ledger_balances.tmp
-							total_assets=$(wc -l <${user_path}/all_assets.dat)
-							total_keys=$(wc -l <${user_path}/all_accounts.dat)
-							total_private=$(ls -1 ${script_path}/control/keys/*.sct|wc -l)
-							total_trx=$(wc -l <${user_path}/all_trx.dat)
-							total_user_blacklisted=$(wc -l <${user_path}/blacklisted_accounts.dat)
-							total_trx_blacklisted=$(wc -l <${user_path}/blacklisted_trx.dat)
-							###############################################
+				"$dialog_stats")	###IF CMD_ASSET NOT SET USE UCC################
+							if [ "${cmd_asset}" = "" ]
+							then
+								order_asset=$main_asset
+							else
+								order_asset=$cmd_asset
+							fi
 
+							###CALCULATE TOTAL NUMBER OF COINS#############
+							total_number_coins=0
+							counter=1
+							total_ledgers=$(ls -1 ${user_path}/*_ledger.dat|wc -l)
+							for ledger_file in $(basename -a $(ls -1 ${user_path}/*_ledger.dat))
+							do
+								ledger_date=${ledger_file%%_*}
+								if [ $ledger_date = $start_date ]
+								then
+									daily_payout=365250
+								else
+									daily_payout=1
+								fi
+								if [ ! $total_ledgers = $counter ] 
+								then
+									total_users=$(grep -v "UCC" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${ledger_file}|wc -l)
+									total_payout=$(echo "$total_users * $daily_payout"|bc)
+									total_number_coins=$(echo "$total_number_coins + $total_payout"|bc)
+								fi
+								counter=$(( counter + 1 ))
+							done
+
+							###TOTAL NUMBER OF ASSETS######################
+							total_number_assets=$(wc -l <${user_path}/all_assets.dat)
+
+							###TOTAL NUMBER OF PUBLIC KEYS#################
+							total_number_users=$(wc -l <${user_path}/all_accounts.dat)
+
+							###TOTAL NUMBER OF PRIVATE KEYS################
+							total_number_users_local=$(ls -1 ${script_path}/control/keys/*.sct|wc -l)
+
+							###TOTAL NUMBER OF TRANSACTIONS################
+							total_number_trx=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/*|wc -l)
+
+							###TOUCH BLANK TMP FILE########################
+							touch ${user_path}/stats.tmp
+
+							###TOTAL NUMBER OF TRANSACTIONS TODAY##########
+							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
+
+							###TRANSACTION VOLUME TOTAL####################
+							total_volume_trx=0
+							for amount in $(grep "AMNT:" ${user_path}/stats.tmp $(grep -l "ASST:${cmd_asset}" ${user_path}/stats.tmp ${script_path}/trx/*)|cut -d ':' -f4)
+							do
+								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc|sed 's/^\./0./g')
+							done
+
+							###TRANSACTION VOLUME TODAY####################
+							total_volume_trx_today=0
+							for trx in $(grep -l "ASST:${cmd_asset}" ${user_path}/stats.tmp ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
+							do
+								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f4)
+								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc|sed 's/^\./0./g')
+							done
+
+							###REMOVE TMP FOLE#############################
+							rm ${user_path}/stats.tmp 2>/dev/null
+							
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
-								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_coins>/${total_coins}/g" -e "s/<total_keys>/${total_keys}/g" -e "s/<total_private>/${total_private}/g" -e "s/<total_assets>/${total_assets}/g" -e "s/<total_trx>/${total_trx}/g" -e "s/<total_user_blacklisted>/${total_user_blacklisted}/g" -e "s/<total_trx_blacklisted>/${total_trx_blacklisted}/g")
+								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_number_coins>/${total_number_coins}/g" -e "s/<total_number_assets>/${total_number_assets}/g" -e "s/<total_number_users>/${total_number_users}/g" -e "s/<total_number_users_local>/${total_number_users_local}/g" -e "s/<total_number_trx>/${total_number_trx}/g" -e "s/<total_number_trx_today>/${total_number_trx_today}/g" -e "s/<total_volume_trx>/${total_volume_trx}/g" -e "s/<total_volume_trx_today>/${total_volume_trx_today}/g")
 								dialog --title "$dialog_stats" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
-								echo "COINS_TOTAL:${total_coins}"
-								echo "ASSETS_TOTAL:${total_assets}"
-								echo "KEYS_PUBLIC:${total_keys}"
-								echo "KEYS_PRIVATE:${total_private}"
-								echo "TRX_TOTAL:${total_trx}"
-								echo "BLACKLISTED_USERS_TOTAL:${total_user_blacklisted}"
-								echo "BLACKLISTED_TRX_TOTAL:${total_trx_blacklisted}"
+								echo "TOTAL_NUMBER_COINS:${total_number_coins}"
+								echo "TOTAL_NUMBER_ASSETS:${total_number_assets}"
+								echo "TOTAL_NUMBER_USERS:${total_number_users}"
+								echo "TOTAL_NUMBER_USERS_LOCAL:${total_number_users_local}"
+								echo "TOTAL_NUMBER_TRX:${total_number_trx}"
+								echo "TOTAL_NUMBER_TRX_TODAY=${total_number_trx_today}"
+								echo "TOTAL_VOLUME_TRX:${total_volume_trx}"
+								echo "TOTAL_VOLUME_TRX_TODAY:${total_volume_trx_today}"
 								exit 0
 							fi
 							;;
