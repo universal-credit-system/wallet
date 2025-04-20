@@ -2255,6 +2255,18 @@ request_uca(){
 
 		### WRITE PLAIN INDEX TO FILE #####################
 		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt >${user_path}/dhuser_data.tmp 2>/dev/null
+		
+		### ADD TRANSACTIONS THAT ARE NOT INDEXED##########
+		while read trx
+		do
+			already_indexed=$(grep -C "trx/${trx}" ${user_path}/dhuser_data.tmp)
+			if [ $already_indexed = 0 ]
+			then
+				trx_hash=$(sha256sum ${script_path}/trx/${trx})
+				trx_hash=${trx_hash%% *}
+				echo "trx/${trx} ${trx_hash}" >>${user_path}/dhuser_data.tmp
+			fi
+		done <${user_path}/all_trx.dat
 
 		### MERGE ID AND PLAIN INDEX ######################
 		cat ${user_path}/dhuser_id.dat ${user_path}/dhuser_data.tmp >${user_path}/dhuser.dat
