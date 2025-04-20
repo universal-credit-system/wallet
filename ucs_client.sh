@@ -4818,26 +4818,26 @@ do
 							total_number_users_local=$(ls -1 ${script_path}/control/keys/*.sct|wc -l)
 
 							###TOTAL NUMBER OF TRANSACTIONS################
-							total_number_trx=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/*|wc -l)
+							total_number_trx=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|wc -l)
 
 							###TOUCH BLANK TMP FILE########################
 							touch ${user_path}/stats.tmp
 
 							###TOTAL NUMBER OF TRANSACTIONS TODAY##########
-							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
+							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
 
 							###TRANSACTION VOLUME TOTAL####################
 							total_volume_trx=0
-							for amount in $(grep "AMNT:" ${user_path}/stats.tmp $(grep -l "ASST:${cmd_asset}" ${user_path}/stats.tmp ${script_path}/trx/*)|cut -d ':' -f4)
+							for amount in $(grep "AMNT:" ${user_path}/stats.tmp $(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null)|cut -d ':' -f4)
 							do
 								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc|sed 's/^\./0./g')
 							done
 
 							###TRANSACTION VOLUME TODAY####################
 							total_volume_trx_today=0
-							for trx in $(grep -l "ASST:${cmd_asset}" ${user_path}/stats.tmp ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
+							for trx in $(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
 							do
-								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f4)
+								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f3)
 								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc|sed 's/^\./0./g')
 							done
 
@@ -4851,14 +4851,14 @@ do
 								dialog --title "$dialog_stats" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_statistic_display" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
-								echo "TOTAL_NUMBER_COINS:${total_number_coins}"
-								echo "TOTAL_NUMBER_ASSETS:${total_number_assets}"
-								echo "TOTAL_NUMBER_USERS:${total_number_users}"
+								echo "TOTAL_NUMBER_COINS      :${total_number_coins}"
+								echo "TOTAL_NUMBER_ASSETS     :${total_number_assets}"
+								echo "TOTAL_NUMBER_USERS      :${total_number_users}"
 								echo "TOTAL_NUMBER_USERS_LOCAL:${total_number_users_local}"
-								echo "TOTAL_NUMBER_TRX:${total_number_trx}"
-								echo "TOTAL_NUMBER_TRX_TODAY=${total_number_trx_today}"
-								echo "TOTAL_VOLUME_TRX:${total_volume_trx}"
-								echo "TOTAL_VOLUME_TRX_TODAY:${total_volume_trx_today}"
+								echo "TOTAL_NUMBER_TRX        :${total_number_trx}"
+								echo "TOTAL_NUMBER_TRX_TODAY  :${total_number_trx_today}"
+								echo "TOTAL_VOLUME_TRX        :${total_volume_trx}"
+								echo "TOTAL_VOLUME_TRX_TODAY  :${total_volume_trx_today}"
 								exit 0
 							fi
 							;;
