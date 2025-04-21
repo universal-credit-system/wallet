@@ -406,7 +406,7 @@ make_signature(){
 					done
 
 					###ADD INDEX FILE IF EXISTING####################################
-					if [ -s ${script_path}/proofs/${key_file}/${key_file}.txt ]
+					if [ -f ${script_path}/proofs/${key_file}/${key_file}.txt ] && [ -s ${script_path}/proofs/${key_file}/${key_file}.txt ]
 					then
 						file_hash=$(sha256sum ${script_path}/proofs/${key_file}/${key_file}.txt)
 						file_hash=${file_hash%% *}
@@ -581,7 +581,7 @@ build_ledger(){
 		awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' ${user_path}/all_assets.dat >${user_path}/assets.tmp
 
 		###MAKE LEDGER ENTRIES FOR ASSETS#####################
-		if [ -s ${user_path}/assets.tmp ]
+		if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
 		then
 			cd ${script_path}/assets || exit 1
 
@@ -664,7 +664,7 @@ build_ledger(){
 
 			###GRANT COINLOAD OF THAT DAY####################
 			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
-			if [ -s ${user_path}/${focus}_ledger.tmp ]
+			if [ -f ${user_path}/${focus}_ledger.tmp ] && [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
 				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
 				touch ${user_path}/${focus}_ledger_others.tmp
@@ -687,7 +687,7 @@ build_ledger(){
 			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat >${user_path}/assets.tmp
 
 			###MAKE LEDGER ENTRIES FOR ASSETS################
-			if [ -s ${user_path}/assets.tmp ]
+			if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
 			then
 				cd ${script_path}/assets || exit 1
 
@@ -722,7 +722,7 @@ build_ledger(){
 				##############################################################
 
 				###CHECK IF INDEX-FILE EXISTS#################################
-				if [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ "${trx_sender}" = "${handover_account}" ]
+				if [ -f ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] && [ -s ${script_path}/proofs/${trx_sender}/${trx_sender}.txt ] || [ "${trx_sender}" = "${handover_account}" ]
 				then
 					###CHECK IF TRX IS SIGNED BY USER#############################
 					is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/${trx_sender}/${trx_sender}.txt)
@@ -1065,7 +1065,7 @@ check_assets(){
 			###MAKE CLEAN START############################################
 			rm ${user_path}/blacklisted_assets.dat 2>/dev/null
 			touch ${user_path}/blacklisted_assets.dat
-			if [ -s ${user_path}/all_assets.dat ]
+			if [ -f ${user_path}/all_assets.dat ] && [ -s ${user_path}/all_assets.dat ] 
 			then
 				mv ${user_path}/all_assets.dat ${user_path}/ack_assets.dat
 			else
@@ -1178,7 +1178,7 @@ check_assets(){
 			done <${user_path}/all_assets.tmp
 
 			###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
-			if [ -s ${user_path}/blacklisted_assets.dat ]
+			if [ -f ${user_path}/blacklisted_assets.dat ] && [ -s ${user_path}/blacklisted_assets.dat ]
 			then
 				while read line
 				do
@@ -1230,7 +1230,7 @@ update_tsa(){
 				retry_counter=0
 
 				###CHECK IF TIMESTAMP-FILE IS THERE##############
-				if [ -s "${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat" ]
+				if [ -f "${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat" ] && [ -s "${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat" ]
 				then
 					###IF YES EXTRACT STAMP##########################
 					last_check=$(cat ${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat)
@@ -1252,7 +1252,7 @@ update_tsa(){
 					tsa_connect_string=$(echo "${tsa_config}"|cut -d ',' -f5)
 
 					###IF TSA.CRT FILE AVAILABLE...##################
-					if [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
+					if [ -f ${script_path}/certs/${tsa_service}/${tsa_cert_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
 					then
 						###GET DATES######################################
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
@@ -1282,7 +1282,7 @@ update_tsa(){
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
-								if [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
+								if [ -f ${script_path}/certs/${tsa_service}/${tsa_cert_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_cert_file} ]
 								then
 									file_name=${tsa_cert_file%%.*}
 									file_ext=${tsa_cert_file#*.}
@@ -1299,7 +1299,7 @@ update_tsa(){
 					fi
 
 					###IF CACERT.PEM FILE AVAILABLE...################
-					if [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
+					if [ -f ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
 					then
 						###GET DATES######################################
 						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
@@ -1329,7 +1329,7 @@ update_tsa(){
 							###CHECK IF CERT IS VALID#########################
 							if [ $now_stamp -gt $new_cert_valid_from ] && [ $now_stamp -lt $new_cert_valid_till ]
 							then
-								if [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
+								if [ -f ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ]
 								then
 									file_name=${tsa_cacert_file%%.*}
 									file_ext=${tsa_cacert_file#*.}
@@ -1371,10 +1371,10 @@ update_tsa(){
 							then
 								###DOWNLOAD CURRENT CRL FILE##############################
 								wget -o /dev/null -q -O ${tsa_crl_file} ${tsa_crl_url}
-								if [ -s ${script_path}/certs/${tsa_crl_file} ]
+								if [ -f ${script_path}/certs/${tsa_crl_file} ] && [ -s ${script_path}/certs/${tsa_crl_file} ]
 								then
 									###CHECK IF OLD CRL IS THERE##############################
-									if [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
+									if [ -f ${script_path}/certs/${tsa_service}/${tsa_crl_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 									then
 										###GET CRL DATES##########################################
 										crl_old_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Last Update:"|cut -c 22-45)")
@@ -1406,7 +1406,7 @@ update_tsa(){
 									fi
 								fi
 								rm ${script_path}/certs/${tsa_crl_file} 2>/dev/null
-								if [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
+								if [ -f ${script_path}/certs/${tsa_service}/${tsa_crl_file} ] && [ -s ${script_path}/certs/${tsa_service}/${tsa_crl_file} ]
 								then
 									###GET CRL DATES########################
 									crl_valid_from=$(date +%s --date="$(openssl crl -in ${script_path}/certs/${tsa_service}/${tsa_crl_file} -text|grep "Last Update:"|cut -c 22-45)")
@@ -1469,7 +1469,7 @@ check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
 			rm ${user_path}/blacklisted_accounts.dat 2>/dev/null
 			touch ${user_path}/blacklisted_accounts.dat
-			if [ -s ${user_path}/all_accounts.dat ]
+			if [ -f ${user_path}/all_accounts.dat ] && [ -s ${user_path}/all_accounts.dat ]
 			then
 				mv ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat
 			else
@@ -1499,7 +1499,7 @@ check_tsa(){
 						for tsa_service in $(ls -1 ${script_path}/proofs/${account}/|grep ".tsr"|cut -d '.' -f1)
 						do
 							###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
-							if [ -s ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsr ]
+							if [ -f ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsq ] && [ -f ${script_path}/proofs/${account}/${tsa_service}.tsr ] && [ -s ${script_path}/proofs/${account}/${tsa_service}.tsr ]
 							then
 								###GET TSA CONFIG################################
 								tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
@@ -1559,7 +1559,7 @@ check_tsa(){
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 			###############################WITH FLOCK############################################
-			if [ -s ${user_path}/blacklisted_accounts.dat ]
+			if [ -f ${user_path}/blacklisted_accounts.dat ] && [ -s ${user_path}/blacklisted_accounts.dat ]
 			then
 				cd ${user_path} || exit 1
 				flock ${script_path}/keys/ -c '
@@ -1594,7 +1594,7 @@ check_tsa(){
 }
 check_keys(){
 		###SETUP ALL LIST#################################################
-		if [ -s ${user_path}/all_keys.dat ]
+		if [ -f ${user_path}/all_keys.dat ] && [ -s ${user_path}/all_keys.dat ]
 		then
 			mv ${user_path}/all_keys.dat ${user_path}/ack_keys.dat
 		else
@@ -1630,7 +1630,7 @@ check_keys(){
 			if [ $rt_query = 0 ]
 			then
 				index_file="${script_path}/proofs/${line}/${line}.txt"
-				if [ -s $index_file ]
+				if [ -f $index_file ] && [ -s $index_file ]
 				then
 					verify_signature $index_file $line
 					rt_query=$?
@@ -1645,7 +1645,7 @@ check_keys(){
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 		###############################WITH FLOCK############################################
-		if [ -s ${user_path}/blacklisted_accounts.dat ]
+		if [ -f ${user_path}/blacklisted_accounts.dat ] && [ -s ${user_path}/blacklisted_accounts.dat ]
 		then
 			cd ${user_path} || exit 1
 			flock ${script_path}/keys/ -c '
@@ -1678,7 +1678,7 @@ check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST##############################
 		rm ${user_path}/blacklisted_trx.dat 2>/dev/null
 		touch ${user_path}/blacklisted_trx.dat
-		if [ -s ${user_path}/all_trx.dat ]
+		if [ -f ${user_path}/all_trx.dat ] && [ -s ${user_path}/all_trx.dat ]
 		then
 			mv ${user_path}/all_trx.dat ${user_path}/ack_trx.dat
 		else
@@ -1775,7 +1775,7 @@ check_trx(){
 									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
 
 									###CHECK IF USER HAS CREATED A INDEX FILE################################
-									if [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
+									if [ -f ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ] && [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 									then
 										####CHECK IF USER HAS INDEXED THE TRANSACTION############################
 										is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
@@ -1810,7 +1810,7 @@ check_trx(){
 		done <${user_path}/all_trx.tmp
 
 		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
-		if [ -s ${user_path}/blacklisted_trx.dat ]
+		if [ -f ${user_path}/blacklisted_trx.dat ] && [ -s ${user_path}/blacklisted_trx.dat ]
 		then
 			while read line
 			do
@@ -1884,7 +1884,7 @@ process_new_files(){
 								while read line
 								do
 									stripped_file=$(echo "${line}"|awk '{print $1}')
-									if [ -s ${script_path}/${stripped_file} ]
+									if [ -f ${script_path}/${stripped_file} ] && [ -s ${script_path}/${stripped_file} ]
 									then
 										old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
 										old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
@@ -1899,7 +1899,7 @@ process_new_files(){
 								while read line
 								do
 									stripped_file=$(echo "${line}"|awk '{print $1}')
-									if [ -s ${user_path}/temp/${stripped_file} ]
+									if [ -f ${user_path}/temp/${stripped_file} ] && [ -s ${user_path}/temp/${stripped_file} ]
 									then
 										new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
 										new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
@@ -1944,9 +1944,9 @@ process_new_files(){
 			else
 				###CHECK IF EXISTING FILES ARE OVERWRITTEN####
 				files_replaced=0
-				while read line
+				while read file_to_fetch
 				do
-					if [ -s ${script_path}/$line ]
+					if [ -f ${script_path}/$file_to_fetch ] && [ -s ${script_path}/$file_to_fetch ]
 					then
 						files_replaced=1
 					fi
@@ -2010,7 +2010,7 @@ set_permissions(){
 						chmod $permissions_directories ${script_path}/${line}
 					fi
 				else
-					if [ -s $file_to_change ]
+					if [ -f $file_to_change ]
 					then
 						if [ ! $curr_permissions = $permissions_files ]
 						then
@@ -2062,7 +2062,7 @@ get_dependencies(){
 			first_start=0
 
 			###CHECK IF INDEX/IGNORE/LEDGER THERE IF NOT BUILD LEDGE######################
-			if [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
+			if [ -f ${script_path}/proofs/${handover_account}/${handover_account}.txt ] && [ -s ${script_path}/proofs/${handover_account}/${handover_account}.txt ]
 			then
 				own_index_there=1
 			fi
@@ -2458,7 +2458,7 @@ send_uca(){
 			fi
 
 			### ONLY CONTINUE IF SECRET IS THERE ################
-			if [ -s ${user_path}/dhsecret_${uca_info_hashed}.dat ]
+			if [ -f ${user_path}/dhsecret_${uca_info_hashed}.dat ] && [ -s ${user_path}/dhsecret_${uca_info_hashed}.dat ]
 			then
 				### GET CONNECTION DATA #############################
 				shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
@@ -3575,7 +3575,7 @@ do
 																rt_query=$?
 																if [ $rt_query = 0 ]
 																then
-																	if [ ! -d "${file_path}" ] && [ -s "${file_path}" ]
+																	if [ -f "${file_path}" ] && [ -s "${file_path}" ]
 																	then
 																		### CHECK FOR MAX PURPOSE SIZE #################################
 																		if [ $(wc -c <${file_path}) -le $trx_max_size_purpose_bytes ]
@@ -3590,7 +3590,10 @@ do
 																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $trx_max_size_purpose_bytes Bytes!" 0 0
 																		fi
 																	else
-																		path_to_search=$file_path
+																		if [ -d "${file_path}" ]
+																		then
+																			path_to_search=$file_path
+																		fi
 																	fi
 																else
 																	quit_file_path=1
@@ -3604,7 +3607,7 @@ do
 											done
 										else
 											###CHECK IF FILE IS USED FOR PUPOSE###################
-											if [ ! "${cmd_file}" = "" ] && [ -s ${cmd_file} ]
+											if [ ! "${cmd_file}" = "" ] && [ -f ${cmd_file} ] && [ -s ${cmd_file} ]
 											then
 												### CHECK SIZE #######################################
 												if [ $(wc -c <${cmd_file}) -gt $trx_max_size_purpose_bytes ] 
@@ -3694,7 +3697,7 @@ do
 														receipient_index_file="${script_path}/proofs/${order_receipient}/${order_receipient}.txt"
 														###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 														{
-															if [ $small_trx = 0 ] && [ -s $receipient_index_file ]
+															if [ $small_trx = 0 ] && [ -f $receipient_index_file ] && [ -s $receipient_index_file ]
 															then
 																###GET ASSETS###################################################
 																while read line
@@ -3730,7 +3733,7 @@ do
 																			echo "proofs/${line}/${tsa_service}.tsr"
 																		fi
 																	done
-																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	if [ -f ${script_path}/proofs/${line}/${line}.txt ] && [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																	then
 																		echo "proofs/${line}/${line}.txt"
 																	fi
@@ -3758,7 +3761,7 @@ do
 																		file=$(basename $tsa_file)
 																		echo "proofs/${line}/${file}"
 																	done
-																	if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+																	if [ -f ${script_path}/proofs/${line}/${line}.txt ] && [ -s ${script_path}/proofs/${line}/${line}.txt ]
 																	then
 																		echo "proofs/${line}/${line}.txt"
 																	fi
@@ -3874,40 +3877,16 @@ do
 																rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
 																rm ${trx_path_output}/${handover_account}_${trx_now}.trx 2>/dev/null
 																rm ${last_trx} 2>/dev/null
-																if [ $gui_mode = 1 ]
-																then
-																	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
-																else
-																	exit 1
-																fi
 															fi
 														else
 															rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
 															rm ${last_trx} 2>/dev/null
-															if [ $gui_mode = 1 ]
-															then
-																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
-															else
-																exit 1
-															fi
 														fi
-													else
-														if [ $gui_mode = 1 ]
-														then
-															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
-														else
-															exit 1
-														fi
-													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
-													else
-														exit 1
 													fi
 												fi
-											else
+											fi
+											if [ ! $rt_query = 0 ]
+											then
 												if [ $gui_mode = 1 ]
 												then
 													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
@@ -3938,110 +3917,86 @@ do
 								fi
 								if [ $rt_query = 0 ]
 								then
-									if [ ! -d $file_path ]
+									rt_query=1
+									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 									then
-										if [ -s $file_path ]
+										cd ${script_path} || exit 1
+										if [ $gui_mode = 1 ]
 										then
-											cd ${script_path} || exit 1
-											if [ $gui_mode = 1 ]
+											all_extract=0
+										else
+											all_extract=$extract_all
+										fi
+
+										###DECRYPT TRANSACTION FILE################################
+										echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
+										then
+											###CHANGE TO ORIGINAL FILENAME#############################
+											mv ${file_path}.tmp ${file_path}
+
+											###CHECK ARCHIVE###########################################
+											if [ $all_extract = 0 ]
 											then
-												all_extract=0
+												check_archive $file_path 0
+												rt_query=$?
 											else
-												all_extract=$extract_all
+												check_archive $file_path 1
+												rt_query=$?
 											fi
 
-											###DECRYPT TRANSACTION FILE################################
-											echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
-											rt_query=$?
+											###UNPACK ARCHIVE##########################################
 											if [ $rt_query = 0 ]
 											then
-												###CHANGE TO ORIGINAL FILENAME#############################
-												mv ${file_path}.tmp ${file_path}
-
-												###CHECK ARCHIVE###########################################
-												if [ $all_extract = 0 ]
-												then
-													check_archive $file_path 0
-													rt_query=$?
-												else
-													check_archive $file_path 1
-													rt_query=$?
-												fi
-
-												###UNPACK ARCHIVE##########################################
+												cd ${user_path}/temp || exit 1
+												tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${user_path}/temp || exit 1
-													tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
-													rt_query=$?
-													if [ $rt_query = 0 ]
+													if [ $all_extract = 0 ]
 													then
-														if [ $all_extract = 0 ]
-														then
-															process_new_files 0
-														else
-															process_new_files 1
-														fi
-														set_permissions
-														if [ $gui_mode = 1 ]
-														then
-															file_found=1
-															action_done=1
-															make_ledger=1
-														else
-															update_tsa
-															check_tsa
-															check_keys
-															check_assets
-															check_trx
-															get_dependencies
-															ledger_mode=$?
-															build_ledger $ledger_mode
-															if [ $make_new_index = 1 ]
-															then
-																now_stamp=$(date +%s)
-																make_signature "none" $now_stamp 1
-																rt_query=$?
-																if [ $rt_query -gt 0 ]
-																then
-																	exit 1
-																else
-																	exit 0
-																fi
-															else
-																exit 1
-															fi
-														fi
+														process_new_files 0
+													else
+														process_new_files 1
 													fi
-												else
+													set_permissions
 													if [ $gui_mode = 1 ]
 													then
-														dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
+														file_found=1
+														action_done=1
+														make_ledger=1
 													else
-														exit 1
+														update_tsa
+														check_tsa
+														check_keys
+														check_assets
+														check_trx
+														get_dependencies
+														ledger_mode=$?
+														build_ledger $ledger_mode
+														if [ $make_new_index = 1 ]
+														then
+															now_stamp=$(date +%s)
+															make_signature "none" $now_stamp 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
+															then
+																exit 1
+															else
+																exit 0
+															fi
+														else
+															exit 1
+														fi
 													fi
 												fi
-											else
-												if [ $gui_mode = 1 ]
-												then
-													dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
-													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
-												else
-													exit 1
-												fi
-												rm ${file_path}.tmp 2>/dev/null
-											fi
-										else
-											if [ $gui_mode = 1 ]
-											then
-												dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
-												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
-											else
-												exit 1
 											fi
 										fi
-									else
+										rm ${file_path}.tmp 2>/dev/null
+									fi
+									if [ ! $rt_query = 0 ]
+									then
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
@@ -4085,101 +4040,84 @@ do
 								fi
 								if [ $rt_query = 0 ]
 								then
-									if [ ! -d $file_path ]
+									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 		  							then
-										if [ -s $file_path ]
+										cd ${script_path} || exit 1
+										if [ $gui_mode = 1 ]
 										then
-											cd ${script_path} || exit 1
-											if [ $gui_mode = 1 ]
+				 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
+											all_extract=$?
+										else
+											case $cmd_type in
+												"partial")	all_extract=0
+														;;
+												"full")		all_extract=1
+														;;
+												*)		exit 1
+														;;
+											esac
+										fi
+										if [ ! $all_extract = 255 ]
+										then
+											if [ $all_extract = 0 ]
 											then
-					 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
-												all_extract=$?
+												check_archive $file_path 0
+												rt_query=$?
 											else
-												case $cmd_type in
-													"partial")	all_extract=0
-															;;
-													"full")		all_extract=1
-															;;
-													*)		exit 1
-															;;
-												esac
+												check_archive $file_path 1
+												rt_query=$?
 											fi
-											if [ ! $all_extract = 255 ]
+											if [ $rt_query = 0 ]
 											then
-												if [ $all_extract = 0 ]
-												then
-													check_archive $file_path 0
-													rt_query=$?
-												else
-													check_archive $file_path 1
-													rt_query=$?
-												fi
+												cd ${user_path}/temp || exit 1
+							       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
+												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													cd ${user_path}/temp || exit 1
-								       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
-													rt_query=$?
-													if [ $rt_query = 0 ]
+													if [ $all_extract = 0 ]
 													then
-														if [ $all_extract = 0 ]
+														process_new_files 0
+													else
+														process_new_files 1
+													fi
+													set_permissions
+													if [ $gui_mode = 1 ]
+													then
+														file_found=1
+														action_done=1
+														make_ledger=1
+													else
+														update_tsa
+														check_tsa
+														check_keys
+														check_assets
+														check_trx
+														get_dependencies
+														ledger_mode=$?
+														build_ledger $ledger_mode
+														if [ $make_new_index = 1 ]
 														then
-															process_new_files 0
-														else
-															process_new_files 1
-														fi
-														set_permissions
-														if [ $gui_mode = 1 ]
-														then
-															file_found=1
-															action_done=1
-															make_ledger=1
-														else
-															update_tsa
-															check_tsa
-															check_keys
-															check_assets
-															check_trx
-															get_dependencies
-															ledger_mode=$?
-															build_ledger $ledger_mode
-															if [ $make_new_index = 1 ]
+															now_stamp=$(date +%s)
+															make_signature "none" $now_stamp 1
+															rt_query=$?
+															if [ $rt_query -gt 0 ]
 															then
-																now_stamp=$(date +%s)
-																make_signature "none" $now_stamp 1
-																rt_query=$?
-																if [ $rt_query -gt 0 ]
-																then
-																	exit 1
-																else
-																	exit 0
-																fi
+																exit 1
 															else
 																exit 0
 															fi
+														else
+															exit 0
 														fi
 													fi
-												else
-													if [ $gui_mode = 1 ]
-													then
-														dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
-														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
-													else
-														exit 1
-													fi
 												fi
-											else
-												file_found=1
 											fi
 										else
-											if [ $gui_mode = 1 ]
-											then
-												dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
-    												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
-											else
-												exit 1
-											fi
+											file_found=1
 										fi
-									else
+									fi
+									if [ ! $rt_query = 0 ]
+									then
 										if [ $gui_mode = 1 ]
 										then
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
@@ -4203,17 +4141,17 @@ do
 										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
 
 										###WRITE ACCOUNTS TO FILE LIST###############
-										while read line
+										while read user
 										do
-											echo "keys/${line}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											echo "keys/${user}"
+											for tsa_file in $(ls -1 ${script_path}/proofs/${user}/*.ts*)
 											do
 												file=$(basename $tsa_file)
-												echo "proofs/${line}/${file}"
+												echo "proofs/${user}/${file}"
 											done
-											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+											if [ -f ${script_path}/proofs/${user}/${user}.txt ] && [ -s ${script_path}/proofs/${user}/${user}.txt ]
 											then
-												echo "proofs/${line}/${line}.txt"
+												echo "proofs/${user}/${user}.txt"
 
 											fi
 										done <${user_path}/depend_accounts.dat
@@ -4225,17 +4163,17 @@ do
 										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
 
 										###GET KEYS AND PROOFS#######################################################
-										while read line
+										while read user
 										do
-											echo "keys/${line}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
+											echo "keys/${user}"
+											for tsa_file in $(ls -1 ${script_path}/proofs/${user}/*.ts*)
 											do
 												file=$(basename $tsa_file)
-												echo "proofs/${line}/${file}"
+												echo "proofs/${user}/${file}"
 											done
-											if [ -s ${script_path}/proofs/${line}/${line}.txt ]
+											if [ -f ${script_path}/proofs/${user}/${user}.txt ] && [ -s ${script_path}/proofs/${user}/${user}.txt ]
 											then
-												echo "proofs/${line}/${line}.txt"
+												echo "proofs/${user}/${user}.txt"
 											fi
 										done <${user_path}/all_accounts.dat
 
@@ -4559,7 +4497,7 @@ do
 									trx_hash=$(sha256sum $trx_file)
 									trx_hash=${trx_hash%% *}
 									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
-									if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
+									if [ -f ${script_path}/proofs/${sender}/${sender}.txt ] && [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=$(grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt)
 									else
@@ -4657,7 +4595,7 @@ do
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
-													if [ -s ${user_path}/history_purpose_decrypted.tmp ]
+													if [ -f ${user_path}/history_purpose_decrypted.tmp ] && [ -s ${user_path}/history_purpose_decrypted.tmp ]
 													then
 														###CHECK IF FILE CONTAINS TEXT OR ELSE######################################
 														is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
@@ -4675,7 +4613,7 @@ do
 										fi
 										rm ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 										trx_status=""
-										if [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
+										if [ -f ${script_path}/proofs/${sender}/${sender}.txt ] && [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
 											trx_signed=$(grep -c "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
 										else
