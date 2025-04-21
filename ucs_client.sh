@@ -2594,6 +2594,7 @@ then
 	cmd_type=""
 	cmd_path=""
 	cmd_file=""
+	cmd_config=""
 
 	###GO THROUGH PARAMETERS ONE BY ONE############################
 	while [ $# -gt 0 ]
@@ -2625,6 +2626,8 @@ then
 			"-path")	cmd_var=$1
 					;;
 			"-file")	cmd_var=$1
+					;;
+			"-config")	cmd_var=$1
 					;;
 			"-debug")	set -x
 					set -v
@@ -2700,6 +2703,15 @@ then
 						"-path")	cmd_path=$1
 								;;
 						"-file")	cmd_file=$1
+								;;
+						"-config")	cmd_config=$1
+								if [ -f "${cmd_config}" ] && [ -s "${cmd_config}" ]
+								then
+									. "${cmd_config}"
+								else
+									echo "ERROR: -config ${cmd_config}: FILES DOES NOT EXIST OR IS EMPTY"
+									exit 1
+								fi
 								;;
 						*)		echo "ERROR! TRY THIS:"
 								echo "./ucs_client.sh -help"
