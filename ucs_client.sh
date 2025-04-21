@@ -3607,7 +3607,7 @@ do
 											done
 										else
 											###CHECK IF FILE IS USED FOR PUPOSE###################
-											if [ ! "${cmd_file}" = "" ] && [ -f ${cmd_file} ] && [ -s ${cmd_file} ]
+											if [ ! "${cmd_file}" = "" ] && [ -f "${cmd_file}" ] && [ -s "${cmd_file}" ]
 											then
 												### CHECK SIZE #######################################
 												if [ $(wc -c <${cmd_file}) -gt $trx_max_size_purpose_bytes ] 
@@ -4040,6 +4040,7 @@ do
 								fi
 								if [ $rt_query = 0 ]
 								then
+									rt_query=1
 									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 		  							then
 										cd ${script_path} || exit 1
