@@ -72,7 +72,10 @@ OPTIONS:
 			setting in control/config.conf is disabled.
 			
 			Option will be ignored for action create_trx.
-			
+
+  -config <FILE>	handover a config file to be used instead of the default
+			config file control/config.conf
+
   -debug		enable debug mode
   
   -help			Display this HELP
