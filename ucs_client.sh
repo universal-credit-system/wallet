@@ -2253,20 +2253,11 @@ request_uca(){
 		unique_id=$(mktemp -u XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
 		echo "${unique_id}" >${user_path}/dhuser_id.dat
 
-		### WRITE PLAIN INDEX TO FILE #####################
-		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt >${user_path}/dhuser_data.tmp 2>/dev/null
-		
-		### ADD TRANSACTIONS THAT ARE NOT INDEXED##########
-		while read trx
-		do
-			already_indexed=$(grep -C "trx/${trx}" ${user_path}/dhuser_data.tmp)
-			if [ $already_indexed = 0 ]
-			then
-				trx_hash=$(sha256sum ${script_path}/trx/${trx})
-				trx_hash=${trx_hash%% *}
-				echo "trx/${trx} ${trx_hash}" >>${user_path}/dhuser_data.tmp
-			fi
-		done <${user_path}/all_trx.dat
+		### WRITE PLAIN INDEX TO FILE WITHOUT TRX/ ########
+		gpg --output - --verify ${script_path}/proofs/${handover_account}/${handover_account}.txt 2>/dev/null|grep -v "trx/" >${user_path}/dhuser_data.tmp
+
+		### ADD TRANSACTIONS ##############################
+		sha224sum ${script_path}/trx/* 2>/dev/null|awk '{print $2 " " $1}'|sed "s#${script_path}/##g" >>${user_path}/dhuser_data.tmp
 
 		### MERGE ID AND PLAIN INDEX ######################
 		cat ${user_path}/dhuser_id.dat ${user_path}/dhuser_data.tmp >${user_path}/dhuser.dat
