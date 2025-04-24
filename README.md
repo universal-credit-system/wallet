@@ -11,8 +11,6 @@ This is the repository for the UCS wallet.
 ## What is Universal Credit System
 The [Universal Credit System](https://www.universal-credit-system.org) is the wallet software for a new and revolutionary stablecoin cryptocurrency called Universal Credit Coins. The cryptocurrency is based on a innovative monetary standard in which any newly minted coins are backed by time. Users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid. Contrary to other cryptocurrencies users get daily rewards for the elapsed time instead of spent computing power (pow) or held balance (pos).
 
-The purpose of this document is to show how you can setup and run the UCS wallet client.
-
 ## Technologies used
 The program was written as **bourne shell script (#!/bin/sh)**
 
@@ -95,6 +93,4 @@ $ ./ucs_client.sh
 ```
 
 ## Community
-**Do you have a problem? We have set up a [Forum](https://forum.universal-credit-system.org) and also a [Discord Server](https://discord.gg/5kvCP6kkRn) for troubleshooting. It's the place for the ucs community were they can meet and discuss things related to the Universal Credit System. We encourage you to join the community think tank and contribute to this project. If you have any questions, suggestions or critics you are always welcome to post it on the forum.**
-
-**NOW HAVE FUN!**
+**You found a bug or face an issue running the client? We have set up a [Forum](https://forum.universal-credit-system.org) and also a [Discord Server](https://discord.gg/5kvCP6kkRn) for troubleshooting and support. If you have any questions, suggestions or critics you are always welcome to post it on the forum or the discord server.**
