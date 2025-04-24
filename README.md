@@ -9,14 +9,14 @@ This is the repository for the UCS wallet.
 * [Community](#community)
 
 ## What is Universal Credit System
-The [Universal Credit System](https://www.universal-credit-system.org) is a new innovative and resource friendly stablecoin crypto currency. Users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid.
+The [Universal Credit System](https://www.universal-credit-system.org) is the wallet software for a new and revolutionary stablecoin cryptocurrency called Universal Credit Coins. The cryptocurrency is based on a innovative monetary standard in which any newly minted coins are backed by time. Users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid. Contrary to other cryptocurrencies users get daily rewards for the elapsed time instead of spent computing power (pow) or held balance (pos).
 
 The purpose of this document is to show how you can setup and run the UCS wallet client.
 
 ## Technologies used
-The program was written as **standard shell script (#!/bin/sh)**.
+The program was written as **bourne shell script (#!/bin/sh)**
 
-The script depends on other programs. Most of them are **GNU core utilities**, which means that depending on your version of the GNU core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
+The script depends on other programs. Most of them are **core utilities**, which means that depending on your version of the core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
 
 The following programs are used:
 
