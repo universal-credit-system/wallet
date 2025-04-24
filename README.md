@@ -1,15 +1,15 @@
 # Universal Credit System Wallet
 
-This is the repository for the UCS wallet.
+Repository of the Universal Credit System Wallet.
 
 ## Table of contents
-* [What is UCS](#what-is-ucs)
+* [Description](#description)
 * [Technologies used](#technologies-used)
 * [How to install](#how-to-install)
 * [Community](#community)
 
-## What is Universal Credit System
-The [Universal Credit System](https://www.universal-credit-system.org) is the wallet software for a new and revolutionary stablecoin cryptocurrency called Universal Credit Coins. The cryptocurrency is based on a innovative monetary standard in which any newly minted coins are backed by time. Users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid. Contrary to other cryptocurrencies users get daily rewards for the elapsed time instead of spent computing power (pow) or held balance (pos).
+## Description
+The [Universal Credit System](https://www.universal-credit-system.org) Wallet is the wallet software for a new and revolutionary stablecoin cryptocurrency called Universal Credit Coins. The cryptocurrency is based on a innovative monetary standard in which any newly minted coins are backed by time. Users process their own blocks and permanently review and audit each other on a file based protocol that allows them to manage themself offline in a decentralised block grid. Contrary to other cryptocurrencies users get daily rewards for the elapsed time instead of spent computing power (pow) or held balance (pos).
 
 ## Technologies used
 The program was written as **bourne shell script (#!/bin/sh)**
