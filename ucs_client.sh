@@ -126,7 +126,7 @@ login_account(){
 				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
 				clear
 			else
-				exit 1
+				exit 2
 			fi
 		fi
 		action_done=1
@@ -193,7 +193,7 @@ create_keys(){
 				if [ $rt_query = 0 ]
 				then
 					###STEP INTO USER DIRECTORY##################################
-					cd ${user_path} || exit 1
+					cd ${user_path} || exit 3
 
 					###WRITE KEY DATA TO FILE####################################
 					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
@@ -356,7 +356,7 @@ create_keys(){
 				fi
 				if [ $gui_mode = 0 ]
 				then
-					exit 1
+					exit 4
 				fi
 			fi
 		fi
@@ -464,7 +464,7 @@ check_input(){
 		###CHECK LENGTH OF INPUT STRING########################################
 		length_counter=${#input_string}
 
-		###IF INPUT LESS OR EQUAL 1 DISPLAY NOTIFICATION#######################
+		###IF INPUT LESS THAN 1 DISPLAY NOTIFICATION###########################
 		if [ $length_counter -lt 1 ]
 		then
 			if [ $gui_mode = 1 ]
@@ -472,7 +472,7 @@ check_input(){
 				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg2" 0 0
 				rt_query=1
 			else
-				exit 1
+				exit 5
 			fi
 		fi
 
@@ -488,7 +488,7 @@ check_input(){
 						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 						rt_query=1
 					else
-						exit 1
+						exit 6
 					fi
 				fi
 				;;
@@ -510,11 +510,11 @@ check_input(){
 						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg1" 0 0
 						rt_query=1
 					else
-						exit 1
+						exit 7
 					fi
 				fi
 				;;
-			*)	exit 1
+			*)	exit 8
 				;;
 		esac
 		return $rt_query
@@ -583,12 +583,10 @@ build_ledger(){
 		###MAKE LEDGER ENTRIES FOR ASSETS#####################
 		if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
 		then
-			cd ${script_path}/assets || exit 1
-
 			###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
 			for asset in $(cat ${user_path}/assets.tmp)
 			do
-				if [ ! "${asset}" = "${main_asset}" ]
+				if [ ! "${asset}" = "${main_asset}" ] && [ -f ${script_path}/assets/${asset} ] && [ -s ${script_path}/assets/${asset} ]
 				then
 					asset_data=$(cat ${script_path}/assets/${asset})
 					asset_fungible=$(echo "$asset_data"|grep "asset_fungible=")
@@ -689,7 +687,7 @@ build_ledger(){
 			###MAKE LEDGER ENTRIES FOR ASSETS################
 			if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
 			then
-				cd ${script_path}/assets || exit 1
+				cd ${script_path}/assets || exit 9
 
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
 				for non_fungible_asset in $(grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp))
@@ -1205,12 +1203,12 @@ check_blacklist(){
 					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_blacklisted_display" 0 0
 				else
 					echo "WARNING:USER_BLACKLISTED"
-					exit 1
+					exit 10
 				fi
 			fi
 }
 update_tsa(){
-			cd ${script_path}/certs || exit 1
+			cd ${script_path}/certs || exit 11
 
 			###SET NOW STAMP#################################
 			now_stamp=$(date +%s)
@@ -1455,15 +1453,15 @@ update_tsa(){
 							then
 								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_no_network" 0 0
 								sleep 10
-								exit 1
+								exit 12
 							else
-								exit 1
+								exit 12
 							fi
 						fi
 					fi
 				done
 			done
-			cd ${script_path} || exit 1
+			cd ${script_path} || exit 13
 }
 check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
@@ -1561,7 +1559,7 @@ check_tsa(){
 			###############################WITH FLOCK############################################
 			if [ -f ${user_path}/blacklisted_accounts.dat ] && [ -s ${user_path}/blacklisted_accounts.dat ]
 			then
-				cd ${user_path} || exit 1
+				cd ${user_path} || exit 3
 				flock ${script_path}/keys/ -c '
 				user_path=$(pwd)
 				base_dir=$(dirname $user_path)
@@ -1577,7 +1575,7 @@ check_tsa(){
 					fi
 				done <${user_path}/blacklisted_accounts.dat
 				'
-				cd ${script_path} || exit 1
+				cd ${script_path} || exit 13
 				#####################################################################################
 			fi
 			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
@@ -1647,7 +1645,7 @@ check_keys(){
 		###############################WITH FLOCK############################################
 		if [ -f ${user_path}/blacklisted_accounts.dat ] && [ -s ${user_path}/blacklisted_accounts.dat ]
 		then
-			cd ${user_path} || exit 1
+			cd ${user_path} || exit 3
 			flock ${script_path}/keys/ -c '
 			user_path=$(pwd)
 			base_dir=$(dirname $user_path)
@@ -1826,7 +1824,7 @@ check_trx(){
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		rm ${user_path}/ack_trx.dat
 
-		cd ${script_path} || exit 1
+		cd ${script_path} || exit 13
 }
 process_new_files(){
 			process_mode=$1
@@ -1977,7 +1975,7 @@ process_new_files(){
 				#############################################
 				############  COPY FILES TO TARGET###########
 				##################WITH FLOCK#################
-				cd ${user_path} || exit 1
+				cd ${user_path} || exit 3
 				flock ${script_path}/keys/ -c '
 				user_path=$(pwd)
 				base_dir=$(dirname $user_path)
@@ -1987,7 +1985,7 @@ process_new_files(){
 				cp -r ${user_path}/temp/proofs/* ${script_path}/proofs/ 2>/dev/null
 				cp ${user_path}/temp/trx/* ${script_path}/trx/ 2>/dev/null
 				'
-				cd ${script_path} || exit 1
+				cd ${script_path} || exit 13
 				#############################################
 
 				###PURGE TEMP FILES##########################
@@ -2056,7 +2054,7 @@ import_keys(){
 		done
 }
 get_dependencies(){
-			cd ${script_path}/trx || exit 1
+			cd ${script_path}/trx || exit 14
 			ledger_mode=1
 			own_index_there=0
 			first_start=0
@@ -2208,7 +2206,7 @@ get_dependencies(){
 					fi
 
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
-					cd ${user_path} || exit 1
+					cd ${user_path} || exit 3
 					earliest_date=$(sort ${user_path}/dates.tmp|head -1)
 					if [ ! "${earliest_date}" = "" ]
 					then
@@ -2225,7 +2223,7 @@ get_dependencies(){
 				fi
 			fi
 			rm ${user_path}/*.tmp 2>/dev/null
-			cd ${script_path} || exit 1
+			cd ${script_path} || exit 13
 			return $ledger_mode
 }
 request_uca(){
@@ -2356,7 +2354,7 @@ request_uca(){
 											if [ $rt_query = 0 ]
 											then
 												### STEP INTO USERDATA/USER/TEMP ##################
-												cd ${user_path}/temp || exit 1
+												cd ${user_path}/temp || exit 15
 
 												### EXTRACT FILE ##################################
 												tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
@@ -2468,7 +2466,7 @@ send_uca(){
 				fi
 
 				### STEP INTO HOMEDIR AND CREATE TARBALL ############
-				cd ${script_path} || exit 1
+				cd ${script_path} || exit 13
 				tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
 				rt_query=$?
 				if [ $rt_query = 0 ]
@@ -2657,7 +2655,7 @@ then
 												;;
 									*)			echo "ERROR! TRY THIS:"
 												echo "./ucs_client.sh -help"
-												exit 1
+												exit 16
 												;;
 								esac
 								;;
@@ -2687,7 +2685,7 @@ then
 											;;
 									*)		echo "ERROR! TRY THIS:"
 											echo "./ucs_client.sh -help"
-											exit 1
+											exit 16
 											;;
 								esac
 								;;
@@ -2701,12 +2699,12 @@ then
 									. "${cmd_config}"
 								else
 									echo "ERROR: -config ${cmd_config}: FILES DOES NOT EXIST OR IS EMPTY"
-									exit 1
+									exit 17
 								fi
 								;;
 						*)		echo "ERROR! TRY THIS:"
 								echo "./ucs_client.sh -help"
-								exit 1
+								exit 16
 								;;
 					esac
 					cmd_var=""
@@ -2757,7 +2755,7 @@ do
 									else
 										if [ "${cmd_sender}" = "" ]
 										then
-											exit 1
+											exit 18
 										fi
 									fi
 								fi
@@ -2782,7 +2780,7 @@ do
 												else
 													if [ "${cmd_sender}" = "" ]
 													then
-														exit 1
+														exit 18
 													fi
 												fi
 											fi
@@ -2805,7 +2803,7 @@ do
 																rt_query=0
 																account_password_entered=$cmd_pw
 															else
-																exit 1
+																exit 19
 															fi
 														fi
 							     	   						if [ $rt_query = 0 ]
@@ -2988,7 +2986,7 @@ do
 											then
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_exists" 0 0
 											else
-												exit 1
+												exit 20
 											fi
 										fi
 									fi
@@ -3095,13 +3093,13 @@ do
 							fi
 							if [ $rt_query = 0 ]
 							then
-								cd ${script_path} || exit 1
+								cd ${script_path} || exit 13
 								now_stamp=$(date +%s)
 								tar -czf ${script_path}/backup/${now_stamp}.bcp assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									cd ${script_path}/backup || exit 1
+									cd ${script_path}/backup || exit 21
 									backup_file=$(find . -maxdepth 1 -type f|sed "s#./##g"|sort -t . -k1|tail -1)
 									if [ $gui_mode = 1 ]
 									then
@@ -3117,7 +3115,7 @@ do
 									then
 										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_create_fail" 0 0
 									else
-										exit 1
+										exit 21
 									fi
 								fi
 							else
@@ -3125,7 +3123,7 @@ do
 								then
 									if [ $gui_mode = 1 ]
 									then
-										cd ${script_path}/backup || exit 1
+										cd ${script_path}/backup || exit 21
 										touch ${script_path}/backups_list.tmp
 										find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
 										no_backups=$(wc -l <${script_path}/backups_list.tmp)
@@ -3152,7 +3150,7 @@ do
 												bcp_stamp=$(date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}")
 												bcp_file=$(cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}")
 												file_path="${script_path}/backup/${bcp_file}"
-												cd ${script_path} || exit 1
+												cd ${script_path} || exit 13
 												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
@@ -3172,9 +3170,9 @@ do
 									else
 										if [ "${cmd_path}" = "" ]
 										then
-											exit 1
+											exit 23
 										else
-											cd ${script_path} || exit 1
+											cd ${script_path} || exit 13
 											file_path=$cmd_path
 											tar -tf $file_path >/dev/null
 											rt_query=$?
@@ -3185,14 +3183,14 @@ do
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
 												then
-													exit 1
+													exit 24
 												else
 													import_keys
 													echo "SUCCESS"
 													exit 0
 												fi
 											else
-												exit 1
+												exit 25
 											fi
 										fi
 									fi
@@ -3204,11 +3202,11 @@ do
 							end_program=1
 							;;
 				"show_addressbook")	ls -1 keys/|awk '{ print "ADDRESS:" $1 }'
-							exit 1
+							exit 0
 							;;
 				"show_trx")		rt_query=1
 							trx=$(basename "${cmd_file}")
-							if [ -f "${script_path}"/trx/"${trx}" ]
+							if [ -f "${script_path}"/trx/"${trx}" ] && [ -s "${script_path}"/trx/"${trx}" ]
 							then
 								sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${trx})
 								receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
@@ -3256,7 +3254,7 @@ do
 							fi
 							if [ $rt_query = 1 ]
 							then
-								exit 1
+								exit 26
 							fi
 							;;
 			esac
@@ -3382,7 +3380,7 @@ do
 								then
 									rt_query=0
 								else
-									exit 1
+									exit 27
 								fi
 							fi
 							if [ $rt_query = 0 ]
@@ -3432,7 +3430,7 @@ do
 														then
 															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
 														else
-															exit 1
+															exit 28
 														fi
 													fi
 												fi
@@ -3472,7 +3470,7 @@ do
 																		then
 																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
 																		else
-																			exit 1
+																			exit 29
 																		fi
 																	fi
 																else
@@ -3480,7 +3478,7 @@ do
 																	then
 																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 																	else
-																		exit 1
+																		exit 30
 																	fi
 																fi
 															else
@@ -3488,7 +3486,7 @@ do
 																then
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 																else
-																	exit 1
+																	exit 30
 																fi
 															fi
 														else
@@ -3496,7 +3494,7 @@ do
 															then
 																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 															else
-																exit 1
+																exit 31
 															fi
 														fi
 													else
@@ -3615,7 +3613,7 @@ do
 												### CHECK SIZE #######################################
 												if [ $(wc -c <${cmd_file}) -gt $trx_max_size_purpose_bytes ] 
 												then
-													exit 1
+													exit 32
 												fi
 												order_purpose_path=$cmd_file
 												is_file=1
@@ -3624,7 +3622,7 @@ do
 												### CHECK SIZE #######################################
 												if [ $(printf "%s" "${order_purpose}"|wc -c) -gt $trx_max_size_purpose_bytes ] 
 												then
-													exit 1
+													exit 32
 												fi
 												order_purpose=$cmd_purpose
 											fi
@@ -3788,7 +3786,7 @@ do
 													then
 														if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 														then
-															cd ${script_path} || exit 1
+															cd ${script_path} || exit 13
 															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 															rt_query=$?
 															rm ${user_path}/files_list.tmp 2>/dev/null
@@ -3894,7 +3892,7 @@ do
 												then
 													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 												else
-													exit 1
+													exit 33
 												fi
 											fi
 										fi
@@ -3923,7 +3921,7 @@ do
 									rt_query=1
 									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 									then
-										cd ${script_path} || exit 1
+										cd ${script_path} || exit 13
 										if [ $gui_mode = 1 ]
 										then
 											all_extract=0
@@ -3952,7 +3950,7 @@ do
 											###UNPACK ARCHIVE##########################################
 											if [ $rt_query = 0 ]
 											then
-												cd ${user_path}/temp || exit 1
+												cd ${user_path}/temp || exit 15
 												tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query = 0 ]
@@ -3985,7 +3983,7 @@ do
 															rt_query=$?
 															if [ $rt_query -gt 0 ]
 															then
-																exit 1
+																exit 34
 															else
 																exit 0
 															fi
@@ -4005,7 +4003,7 @@ do
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
 											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
-											exit 1
+											exit 35
 										fi
 									fi
 								else
@@ -4023,7 +4021,7 @@ do
 										;;
 								"read_sync")	rt_query=0
 										;;
-								*)		exit 1
+								*)		exit 16
 										;;
 							esac
 						fi
@@ -4046,7 +4044,7 @@ do
 									rt_query=1
 									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 		  							then
-										cd ${script_path} || exit 1
+										cd ${script_path} || exit 13
 										if [ $gui_mode = 1 ]
 										then
 				 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
@@ -4057,7 +4055,7 @@ do
 														;;
 												"full")		all_extract=1
 														;;
-												*)		exit 1
+												*)		exit 16
 														;;
 											esac
 										fi
@@ -4073,7 +4071,7 @@ do
 											fi
 											if [ $rt_query = 0 ]
 											then
-												cd ${user_path}/temp || exit 1
+												cd ${user_path}/temp || exit 15
 							       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query = 0 ]
@@ -4106,7 +4104,7 @@ do
 															rt_query=$?
 															if [ $rt_query -gt 0 ]
 															then
-																exit 1
+																exit 34
 															else
 																exit 0
 															fi
@@ -4127,7 +4125,7 @@ do
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
 			       								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
 										else
-											exit 1
+											exit 35
 										fi
 									fi
 			       					else
@@ -4190,7 +4188,7 @@ do
 								now_stamp=$(date +%s)
 
 								###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
-								cd ${script_path} || exit 1
+								cd ${script_path} || exit 13
 								tar -czf ${handover_account}_${now_stamp}.sync -T ${user_path}/files_list.tmp --dereference --hard-dereference
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -4481,9 +4479,9 @@ do
 							done
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
-							cd ${script_path}/trx || exit 1
+							cd ${script_path}/trx || exit 14
 							grep -s -l ":${handover_account}" -- * >${user_path}/my_trx.tmp
-							cd ${script_path} || exit 1
+							cd ${script_path} || exit 13
 							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
 							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
