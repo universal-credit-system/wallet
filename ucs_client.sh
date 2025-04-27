@@ -1135,8 +1135,8 @@ check_assets(){
 													###CHECK IF ASSET OWNER IS SET#########################
 													if [ ! "${asset_owner}" = "" ]
 													then
-														owner_exists=$(ls -1 ${script_path}/keys|grep -c "${asset_owner}")
-														if [ $owner_exists = 1 ]
+														test -f ${script_path}/keys/"${asset_owner}"
+														if [ $? = 0 ]
 														then
 															asset_owner_ok=1
 														fi
@@ -2564,7 +2564,7 @@ dialogrc_set="${theme_file}"
 ###CHECK FOR STDIN INPUT####
 if [ ! -t 0 ]
 then
-	set -- $(cat) $*
+	set -- $(cat) "$@"
 fi
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
@@ -4729,25 +4729,26 @@ do
 							fi
 
 							###CALCULATE TOTAL NUMBER OF COINS#############
-							total_number_coins=0
 							counter=1
-							total_ledgers=$(ls -1 ${user_path}/*_ledger.dat|wc -l)
-							for ledger_file in $(basename -a $(ls -1 ${user_path}/*_ledger.dat))
+							total_users=0
+							total_number_coins=0
+							daily_payout=365250
+							today=$(date +%s)
+							focus=$(date -u +%s --date="$start_date")
+							user_dates_list=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|grep -f ${user_path}/all_accounts.dat -|cut -d ':' -f6)
+							while [ $focus -le $today ]
 							do
-								ledger_date=${ledger_file%%_*}
-								if [ $ledger_date = $start_date ]
+								total_payout=$(echo "$total_users * $daily_payout"|bc)
+								total_number_coins=$(echo "$total_number_coins + $total_payout"|bc)
+								focus_next_day=$(( focus + 86400 ))
+								total_users_today=$(echo "${user_dates_list}"|awk -F. -v focus="${focus}" -v focus_next_day="${focus_next_day}" '$1 > focus && $1 < focus_next_day'|wc -l)
+								total_users=$(( total_users + total_users_today ))
+								if [ $counter -ge 2 ]
 								then
-									daily_payout=365250
-								else
 									daily_payout=1
 								fi
-								if [ ! $total_ledgers = $counter ] 
-								then
-									total_users=$(grep -v "UCC" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${ledger_file}|wc -l)
-									total_payout=$(echo "$total_users * $daily_payout"|bc)
-									total_number_coins=$(echo "$total_number_coins + $total_payout"|bc)
-								fi
 								counter=$(( counter + 1 ))
+								focus=$(( focus + 86400 ))
 							done
 
 							###TOTAL NUMBER OF ASSETS######################
