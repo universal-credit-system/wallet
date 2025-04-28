@@ -29,29 +29,28 @@ OPTIONS:
 
   -password <PW>	password of the account
 
-  -sender <ADRESS>	sender of a transaction. can also be used to handover 
+  -sender <ADDRESS>	sender of a transaction. can also be used to handover 
 			a address only to log on instead of user and pin seperately. 
-			If you use this parameter, just skip -user and -pin
+			if you use this parameter you can skip -user and -pin
 
-  -receiver <ADRESS>	receiver of transaction. used only for action
+  -receiver <ADDRESS>	receiver of transaction. used only for action
 			create_trx
 
   -amount <AMOUNT>	amount of transaction. used only for action
 			create_trx
 
   -asset <ASSET>	asset to be used. if no asset type is defined
-			the value $main_asset of control/config.conf is
-			used as default asset
+			UCC is used as default asset
 
   -purpose "<TEXT>"	purpose of the transaction. used only for action
 			create_trx
 			
-  -file <FILE>		When this is set and the file is bigger than zero 
+  -file <FILE>		when this is set and the file is bigger than zero 
 			-purpose will be ignored and the content of this
 			file will be used as purpose. used only for action
 			create_trx
 
-  -type <TYPE>		possible values are "partial" or "full".
+  -type <TYPE>		possible values are "partial" or "full"
 
 			when creating a transaction this value is used to 
 			specifiy wheter a big or small transaction should 
@@ -71,17 +70,19 @@ OPTIONS:
 			when option is applied the usage of auto_uca_start 
 			setting in control/config.conf is disabled.
 			
-			Option will be ignored for action create_trx.
+			option will be ignored for action create_trx.
 
   -config <FILE>	handover a config file to be used instead of the default
 			config file control/config.conf
 
   -debug		enable debug mode
   
-  -help			Display this HELP
+  -version		display wallet version info
+  
+  -help			display this help
   
 
-EXIT CODES:
+Exit Codes:
 
 In case of any errors the script will return a exitcode greater than 0 :
 
