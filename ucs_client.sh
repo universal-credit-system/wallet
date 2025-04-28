@@ -252,8 +252,8 @@ create_keys(){
 													if [ $stamp_diff -lt 120 ]
 													then
 														###COPY TSA FILES###################################################
-														mv ${user_path}/${tsa_service}.tsq ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq
-														mv ${user_path}/${tsa_service}.tsr ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr
+														cp ${user_path}/${tsa_service}.tsq ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq
+														cp ${user_path}/${tsa_service}.tsr ${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr
 														is_stamped=1
 														break
 													else
@@ -1478,19 +1478,18 @@ check_tsa(){
 			###FLOCK######################################
 			flock ${script_path}/keys ls -1 -X ${script_path}/keys >${user_path}/all_accounts.dat
 			sort ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|uniq -u >${user_path}/all_accounts.tmp
-			while read line
-			do
-				###SET FLAG##############################################
-				account_verified=0
+			if [ -s ${user_path}/all_accounts.tmp ]
+			then
+				gpg --with-colons --import-options show-only --import $(cat ${user_path}/all_accounts.tmp|awk -v script_path="${script_path}" '{print script_path "/keys/" $1}')|grep "uid" >${user_path}/gpg_check.tmp
+				counter=1
+				while read line
+				do
+					###SET FLAG##############################################
+					account_verified=0
 
-				###GET KEY DATA FROM GPG#################################
-				gpg --with-colons --import-options show-only --import ${script_path}/keys/${line} >${user_path}/gpg_check.tmp
-				rt_query=$?
-				if [ $rt_query = 0 ]
-				then
 					###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 					account="${line}"
-					account_key=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f10)
+					account_key=$(head -$counter ${user_path}/gpg_check.tmp|tail -1|cut -d ':' -f10)
 					if [ "${account}" = "${account_key}" ]
 					then
 						###FOR EACH TSA-SERVICE USED BY USER#####################
@@ -1523,7 +1522,7 @@ check_tsa(){
 										then
 											###GET STAMPS###############################
 											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-											key_stamp=$(grep "uid" ${user_path}/gpg_check.tmp|cut -d ':' -f6)
+											key_stamp=$(head -$counter ${user_path}/gpg_check.tmp|tail -1|cut -d ':' -f6)
 
 											###CALCULATE DIFFERENCE#####################
 											stamp_diff=$(( file_stamp - key_stamp ))
@@ -1546,13 +1545,14 @@ check_tsa(){
 							fi
 						done
 					fi
-				fi
-				if [ $account_verified = 0 ]
-				then
-					echo $line >>${user_path}/blacklisted_accounts.dat
-				fi
-			done <${user_path}/all_accounts.tmp
-			rm ${user_path}/*_check.tmp 2>/dev/null
+					if [ $account_verified = 0 ]
+					then
+						echo $line >>${user_path}/blacklisted_accounts.dat
+					fi
+					counter=$(( counter + 1 ))
+				done <${user_path}/all_accounts.tmp
+				rm ${user_path}/*_check.tmp 2>/dev/null
+			fi
 
 			#####################################################################################
 			###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1835,8 +1835,7 @@ process_new_files(){
 				for new_index_file in $(grep "proofs/" ${user_path}/files_to_fetch.tmp|grep ".txt")
 				do
 					###CHECK IF USER ALREADY EXISTS#####################
-					user_to_verify=$(basename $new_index_file)
-					user_to_verify=${user_to_verify%%.*}
+					user_to_verify=$(basename -s ".txt" $new_index_file)
 					user_already_there=$(cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}")
 					if [ $user_already_there = 1 ]
 					then
@@ -1953,11 +1952,7 @@ process_new_files(){
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ $files_replaced = 1 ]
 				then
-					rm ${script_path}/userdata/${handover_account}/all_assets.dat
-					rm ${script_path}/userdata/${handover_account}/all_keys.dat
-					rm ${script_path}/userdata/${handover_account}/all_trx.dat
-					rm ${script_path}/userdata/${handover_account}/all_accounts.dat
-					rm ${script_path}/userdata/${handover_account}/*_ledger.dat
+					rm ${script_path}/userdata/${handover_account}/*.dat
 				fi
 			fi
 			while read line
@@ -2023,15 +2018,10 @@ set_permissions(){
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
-		for key_file in $(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|cut -d ':' -f10 2>/dev/null)
+		for key_fp in $(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
 		do
-			key_fp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${key_file}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
-			rt_query=$?
-			if [ $rt_query = 0 ]
-			then
-				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
-				gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
-			fi
+			gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
+			gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 		done
 
 		###REMOVE KEYRING AND FILES########################################
@@ -2377,6 +2367,7 @@ request_uca(){
 			### PURGE TEMP FILES ################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
+			rm ${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 
 			### PROGRESSBAR FOR GUI #############################
 			if [ $gui_mode = 1 ]
@@ -2495,6 +2486,7 @@ send_uca(){
 			rm ${sync_file} 2>/dev/null
 			rm ${user_path}/dhuser_id.dat 2>/dev/null
 			rm ${user_path}/dhuser.tmp 2>/dev/null
+			rm ${user_path}/dhsecret_${uca_info_hashed}.dat 2>/dev/null
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
 			### PROGRESS BAR ###################################
