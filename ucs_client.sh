@@ -1063,7 +1063,7 @@ check_assets(){
 			###MAKE CLEAN START############################################
 			rm ${user_path}/blacklisted_assets.dat 2>/dev/null
 			touch ${user_path}/blacklisted_assets.dat
-			if [ -f ${user_path}/all_assets.dat ] && [ -s ${user_path}/all_assets.dat ] 
+			if [ -f ${user_path}/all_assets.dat ] && [ -s ${user_path}/all_assets.dat ]
 			then
 				mv ${user_path}/all_assets.dat ${user_path}/ack_assets.dat
 			else
@@ -2516,7 +2516,7 @@ send_uca(){
 ##################
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
-core_system_version="v0.0.1"
+core_system_version="v0.0.2-stable"
 
 ###SET INITIAL VARIABLES####
 initial_coinload=365250
@@ -4776,7 +4776,7 @@ do
 
 							###REMOVE TMP FOLE#############################
 							rm ${user_path}/stats.tmp 2>/dev/null
-							
+
 							if [ $gui_mode = 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
