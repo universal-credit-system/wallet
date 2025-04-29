@@ -3649,7 +3649,7 @@ do
 										random_key=$(head -50 /dev/urandom|tr -dc "[:alnum:]"|head -c 32)
 										echo "${random_key}" >${user_path}/trx_purpose_key.tmp
 										###ENCRYPT KEY##########################################
-										order_purpose_key=$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${receiver} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_key.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
+										order_purpose_key=$(gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always -r ${receiver} --pinentry-mode loopback --armor --output - --encrypt ${user_path}/trx_purpose_key.tmp 2>/dev/null|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
 										###ENCRYPT PURPOSE######################################
 										order_purpose_encrypted=$(echo "${random_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
 										rm ${user_path}/trx_purpose_key.tmp
@@ -3713,20 +3713,13 @@ do
 																	then
 																		echo "keys/${line}"
 																	fi
-
-																	for tsa_service in $(ls -1 ${script_path}/certs)
+																	for tsa_file in $(ls -1 ${script_path}/proofs/${line}/*.ts*)
 																	do
-																		tsa_req_there=0
-																		tsa_req_there=$(grep -c "proofs/${line}/${tsa_service}.tsq" $receipient_index_file)
-																		if [ $tsa_req_there = 0 ]
+																		file=$(basename $tsa_file)
+																		tsa_file_there=$(grep -c "proofs/${line}/${file}" $receipient_index_file)
+																		if [ $tsa_file_there = 0 ]
 																		then
-																			echo "proofs/${line}/${tsa_service}.tsq"
-																		fi
-																		tsa_res_there=0
-																		tsa_res_there=$(grep -c "proofs/${line}/${tsa_service}.tsr" $receipient_index_file)
-																		if [ $tsa_res_there = 0 ]
-																		then
-																			echo "proofs/${line}/${tsa_service}.tsr"
+																			echo "proofs/${line}/${file}"
 																		fi
 																	done
 																	if [ -f ${script_path}/proofs/${line}/${line}.txt ] && [ -s ${script_path}/proofs/${line}/${line}.txt ]
@@ -4132,51 +4125,37 @@ do
 							then
 								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 								{
+									###SET VARIABLES#############################
 									if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
 									then
-										###WRITE ASSETS TO FILE LIST#################
-										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
-
-										###WRITE ACCOUNTS TO FILE LIST###############
-										while read user
-										do
-											echo "keys/${user}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${user}/*.ts*)
-											do
-												file=$(basename $tsa_file)
-												echo "proofs/${user}/${file}"
-											done
-											if [ -f ${script_path}/proofs/${user}/${user}.txt ] && [ -s ${script_path}/proofs/${user}/${user}.txt ]
-											then
-												echo "proofs/${user}/${user}.txt"
-
-											fi
-										done <${user_path}/depend_accounts.dat
-
-										###WRITE TRX TO FILE LIST####################
-										awk '{print "trx/" $1}' ${user_path}/depend_trx.dat
+										accounts_list="${user_path}/depend_accounts.dat"
+										trx_list="${user_path}/depend_trx.dat"
 									else
-										###GET ASSETS################################################################
-										awk '{print "assets/" $1}' ${user_path}/all_assets.dat
-
-										###GET KEYS AND PROOFS#######################################################
-										while read user
-										do
-											echo "keys/${user}"
-											for tsa_file in $(ls -1 ${script_path}/proofs/${user}/*.ts*)
-											do
-												file=$(basename $tsa_file)
-												echo "proofs/${user}/${file}"
-											done
-											if [ -f ${script_path}/proofs/${user}/${user}.txt ] && [ -s ${script_path}/proofs/${user}/${user}.txt ]
-											then
-												echo "proofs/${user}/${user}.txt"
-											fi
-										done <${user_path}/all_accounts.dat
-
-										###GET TRX###################################################################
-										awk '{print "trx/" $1}' ${user_path}/all_trx.dat
+										accounts_list="${user_path}/all_accounts.dat"
+										trx_list="${user_path}/all_trx.dat"
 									fi
+
+									###WRITE ASSETS TO FILE LIST#################
+									awk '{print "assets/" $1}' ${user_path}/all_assets.dat
+
+									###WRITE ACCOUNTS TO FILE LIST###############
+									while read user
+									do
+										echo "keys/${user}"
+										for tsa_file in $(ls -1 ${script_path}/proofs/${user}/*.ts*)
+										do
+											file=$(basename $tsa_file)
+											echo "proofs/${user}/${file}"
+										done
+										if [ -f ${script_path}/proofs/${user}/${user}.txt ] && [ -s ${script_path}/proofs/${user}/${user}.txt ]
+										then
+											echo "proofs/${user}/${user}.txt"
+
+										fi
+									done <${accounts_list}
+
+									###WRITE TRX TO FILE LIST####################
+									awk '{print "trx/" $1}' ${trx_list}
 								} >${user_path}/files_list.tmp
 
 								###GET CURRENT TIMESTAMP#################################
@@ -4474,11 +4453,11 @@ do
 							done
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
-							cd ${script_path}/trx || exit 14
-							grep -s -l ":${handover_account}" -- * >${user_path}/my_trx.tmp
-							cd ${script_path} || exit 13
-							sort -r -t . -k2 ${user_path}/my_trx.tmp >${user_path}/my_trx_sorted.tmp
-							mv ${user_path}/my_trx_sorted.tmp ${user_path}/my_trx.tmp
+							touch ${user_path}/my_trx.tmp
+							for trx in $(basename -a "$(grep -s -l ":${handover_account}" -- ${script_path}/trx/*)"|sort -r -t . -k2)
+							do
+								echo "${trx}" >>${user_path}/my_trx.tmp
+							done
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
 							if [ $no_trx -gt 0 ]
 							then
