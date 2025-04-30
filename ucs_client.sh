@@ -2394,6 +2394,7 @@ request_uca(){
 		rm ${user_path}/dhparams.pem 2>/dev/null
 		rm ${user_path}/dhkey_send.pem 2>/dev/null
 		rm ${user_path}/dhpub_send.pem 2>/dev/null
+		rm ${user_path}/dhpub_receive.pem 2>/dev/null
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 }
 send_uca(){
