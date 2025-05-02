@@ -13,7 +13,7 @@ login_account(){
 		fi
 
 		###FOR EACH SECRET###########################################
-		for secret_file in $(ls -1 -X ${script_path}/control/keys/|grep ".sct")
+		for secret_file in $(ls -1 ${script_path}/control/keys/|grep ".sct")
 		do
 			###GET ADDRESS OF SECRET#####################################
 			key_file=${secret_file%%.*}
@@ -1476,7 +1476,7 @@ check_tsa(){
 			fi
 
 			###FLOCK######################################
-			flock ${script_path}/keys ls -1 -X ${script_path}/keys >${user_path}/all_accounts.dat
+			flock ${script_path}/keys ls -1 ${script_path}/keys >${user_path}/all_accounts.dat
 			sort ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat|uniq -u >${user_path}/all_accounts.tmp
 			if [ -s ${user_path}/all_accounts.tmp ]
 			then
