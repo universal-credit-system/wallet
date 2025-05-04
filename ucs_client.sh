@@ -3380,7 +3380,7 @@ do
 								else
 									order_asset=$cmd_asset
 								fi
-								asset_there=$(grep -c "${order_asset}" ${user_path}/menu_assets.tmp)
+								asset_there=$(grep -c -w "${order_asset}" ${user_path}/menu_assets.tmp)
 								if [ $asset_there = 1 ]
 								then
 									rt_query=0
