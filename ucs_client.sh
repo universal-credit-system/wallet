@@ -3374,7 +3374,7 @@ do
 									fi
 								done
 							else
-								if [ "${cmd_asset}" = "" ]
+								if [ "${cmd_asset}" = "" ] && [ $(wc -l <${user_path}/menu_assets.tmp) = 1 ]
 								then
 									order_asset=$main_asset
 								else
