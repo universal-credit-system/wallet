@@ -1987,8 +1987,9 @@ process_new_files(){
 				rm -r ${user_path}/temp/assets/* 2>/dev/null
 				rm -r ${user_path}/temp/keys/* 2>/dev/null
 				rm -r ${user_path}/temp/trx/* 2>/dev/null
-				rm -r ${user_path}/temp/proofs/* 2>/dev/null
 			fi
+			###CLEANUP TEMP PROOFS#######################
+			rm -r ${user_path}/temp/proofs/* 2>/dev/null
 }
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
