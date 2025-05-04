@@ -3201,56 +3201,64 @@ do
 				"show_addressbook")	ls -1 keys/|awk '{ print "ADDRESS:" $1 }'
 							exit 0
 							;;
-				"show_trx")		rt_query=1
-							trx=$(basename "${cmd_file}")
-							if [ -f "${script_path}"/trx/"${trx}" ] && [ -s "${script_path}"/trx/"${trx}" ]
-							then
-								sender=$(awk -F: '/:SNDR:/{print $3}' ${script_path}/trx/${trx})
-								receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
-								if [ ! "${sender}" = "" ] && [ ! "${receiver}" = "" ]
+				"show_trx")		rt_code=0
+							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
+							do
+								if [ -f "${trx}" ] && [ -s "${trx}" ]
 								then
-									signature="ERROR_VERIFY_SIGNATURE"
-									gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${script_path}/trx/${trx} >${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
-									rt_query=$?
-									if [ $rt_query = 0 ]
+									sender=$(awk -F: '/:SNDR:/{print $3}' "${trx}")
+									receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx}")
+									if [ ! "${sender}" = "" ] && [ ! "${receiver}" = "" ]
 									then
-										signed_correct=$(grep "GOODSIG" ${script_path}/gpg_${my_pid}_verify.tmp|grep -c "${sender}")
-										if [ $signed_correct -ge 1 ]
+										signature="ERROR_VERIFY_SIGNATURE"
+										gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify "${trx}" >${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
+										rt_query=$?
+										if [ $rt_query = 0 ]
 										then
-											if [ "${trx%%.*}" = "${sender}" ]
+											signed_correct=$(grep "GOODSIG" ${script_path}/gpg_${my_pid}_verify.tmp|grep -c "${sender}")
+											if [ $signed_correct -ge 1 ]
 											then
-												signature="OK"
+												trx_file=$(basename "${trx}")
+												if [ "${trx_file%%.*}" = "${sender}" ]
+												then
+													signature="OK"
+												fi
 											fi
+										else
+											rt_code=1
 										fi
+										trx_hash=$(sha256sum "${trx}")
+										trx_hash=${trx_hash%% *}
+										amount=$(awk -F: '/:AMNT:/{print $3}' "${trx}")
+										asset=$(awk -F: '/:ASST:/{print $3}' "${trx}")
+										trx=$(basename "${trx}")
+										trx_stamp=${trx#*.}
+										confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+										index="ERROR_NOT_INDEXED"
+										is_indexed=$(grep -c "trx/${trx} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
+										if [ $is_indexed -gt 0 ]
+										then
+											index="OK"
+										fi
+										echo "TRANSACTION  :trx/${trx}"
+										echo "SHA256_HASH  :${trx_hash}"
+										echo "TRX_STAMP    :${trx_stamp}"
+										echo "TRX_SENDER   :${sender}"
+										echo "TRX_RECEIVER :${receiver}"
+										echo "TRX_AMOUNT   :${amount}"
+										echo "TRX_ASSET    :${asset}"
+										echo "SIGNATURE    :${signature}"
+										echo "STATUS_INDEX :${index}"
+										echo "CONFIRMATIONS:${confirmations}"
+										echo ""
+										rm ${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
 									fi
-									trx_hash=$(sha256sum ${script_path}/trx/${trx})
-									trx_hash=${trx_hash%% *}
-									trx_stamp=${trx#*.}
-									amount=$(awk -F: '/:AMNT:/{print $3}' ${script_path}/trx/${trx})
-									asset=$(awk -F: '/:ASST:/{print $3}' ${script_path}/trx/${trx})
-									confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
-									index="ERROR_NOT_INDEXED"
-									is_indexed=$(grep -c "trx/${trx} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
-									if [ $is_indexed -gt 0 ]
-									then
-										index="OK"
-									fi
-									echo "TRANSACTION  :trx/${trx}"
-									echo "SHA256_HASH  :${trx_hash}"
-									echo "TRX_STAMP    :${trx_stamp}"
-									echo "TRX_SENDER   :${sender}"
-									echo "TRX_RECEIVER :${receiver}"
-									echo "TRX_AMOUNT   :${amount}"
-									echo "TRX_ASSET    :${asset}"
-									echo "SIGNATURE    :${signature}"
-									echo "STATUS_INDEX :${index}"
-									echo "CONFIRMATIONS:${confirmations}"
-									rm ${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
-									exit 0
 								fi
-							fi
-							if [ $rt_query = 1 ]
+							done
+							if [ $rt_code = 0 ]
 							then
+								exit 0
+							else
 								exit 26
 							fi
 							;;
