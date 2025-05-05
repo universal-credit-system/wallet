@@ -16,7 +16,7 @@ OPTIONS:
 			sync_uca		to sync with UCAs*
 			show_addressbook	to display all addresses
 			show_balance		to show the users balance*
-			show_stats		to display the statistics*
+			show_stats		to display the statistics
 			show_trx		to display trx informations
 			
 			*logon required either with username, pin and
@@ -33,27 +33,25 @@ OPTIONS:
 			a address only to log on instead of user and pin seperately. 
 			if you use this parameter you can skip -user and -pin
 
-  -receiver <ADDRESS>	receiver of transaction. used only for action
-			create_trx
+  -receiver <ADDRESS>	receiver of transaction. used only for -action create_trx
+  			or -action show_trx
 
-  -amount <AMOUNT>	amount of transaction. used only for action
-			create_trx
+  -amount <AMOUNT>	amount of transaction. used only for -action create_trx
 
-  -asset <ASSET>	asset to be used. if no asset type is defined
-			UCC is used as default asset
+  -asset <ASSET>	asset to be used. when performing -action create_trx
+  			and asset is not set UCC will be used as default asset
+  			if it is the only existing asset
 
-  -purpose "<TEXT>"	purpose of the transaction. used only for action
-			create_trx
+  -purpose "<TEXT>"	purpose of transaction. used only for -action create_trx
 			
-  -file <FILE>		when this is set and the file is bigger than zero 
-			-purpose will be ignored and the content of this
-			file will be used as purpose. used only for action
-			create_trx
+  -file <FILE>		when set and the file is bigger than zero -purpose will
+  			be ignored and the content of this file will be used as
+  			purpose. used only for -action create_trx
 
   -type <TYPE>		possible values are "partial" or "full"
 
 			when creating a transaction this value is used to 
-			specifiy wheter a big or small transaction should 
+			specifiy whether a big or small transaction should 
 			be created. 
 
 			when reading a transaction or reading 
@@ -68,9 +66,9 @@ OPTIONS:
 			integrity checks. should only be performed after a
 			certain action to ensure information are up-to-date.
 			when option is applied the usage of auto_uca_start 
-			setting in control/config.conf is disabled.
+			setting in control/config.conf is disabled
 			
-			option will be ignored for action create_trx.
+			option will be ignored for action create_trx
 
   -config <FILE>	handover a config file to be used instead of the default
 			config file control/config.conf
