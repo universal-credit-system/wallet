@@ -4724,7 +4724,7 @@ do
 							daily_payout=365250
 							today=$(date +%s)
 							focus=$(date -u +%s --date="$start_date")
-							user_dates_list=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|grep "$(ls -1 keys/)" -|cut -d ':' -f6)
+							user_dates_list=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|grep "$(ls -1 ${script_path}/keys/)" -|cut -d ':' -f6)
 							while [ $focus -le $today ]
 							do
 								total_payout=$(echo "$total_users * $daily_payout"|bc)
