@@ -3203,7 +3203,7 @@ do
 							exit 0
 							;;
 				"show_trx")		rt_code=0
-							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/|grep "${cmd_sender}"|grep "${cmd_file}")))
+							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
 							do
 								if [ -f "${trx}" ] && [ -s "${trx}" ]
 								then
