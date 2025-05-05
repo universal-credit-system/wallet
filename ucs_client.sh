@@ -2648,7 +2648,8 @@ then
 												;;
 									"show_balance")		main_menu=$dialog_main_logon
 												;;
-									"show_stats")		user_menu=$dialog_stats
+									"show_stats")		user_logged_in=1
+												user_menu=$dialog_stats
 												;;
 									*)			echo "ERROR! TRY THIS:"
 												echo "./ucs_client.sh -help"
@@ -3202,7 +3203,7 @@ do
 							exit 0
 							;;
 				"show_trx")		rt_code=0
-							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
+							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/|grep "${cmd_sender}"|grep "${cmd_file}")))
 							do
 								if [ -f "${trx}" ] && [ -s "${trx}" ]
 								then
@@ -3267,12 +3268,19 @@ do
 
 	else
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ]
+		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ] && [ ! "${cmd_action}" = "show_stats" ]
 		then
 			request_uca
 		fi
 
-		###ON EACH START AND AFTER EACH ACTION...
+		###DO NOTHING WHEN SHOWING STATS###########
+		if [ "${cmd_action}" = "show_stats" ]
+		then
+			no_ledger=1
+			action_done=0
+		fi
+		
+		###ON EACH START AND AFTER EACH ACTION#####
 		if [ $action_done = 1 ]
 		then
 			update_tsa
@@ -3284,7 +3292,6 @@ do
 			ledger_mode=$?
 			action_done=0
 		fi
-
 		if [ $no_ledger = 0 ]
 		then
 			if [ $make_ledger = 1 ]
@@ -3312,7 +3319,7 @@ do
 		fi
 
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ]
+		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ] && [ ! "${cmd_action}" = "show_stats" ]
 		then
 			send_uca
 		fi
@@ -4464,7 +4471,7 @@ do
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
-							for trx in $(basename -a "$(grep -s -l ":${handover_account}" -- ${script_path}/trx/*)"|sort -r -t . -k2)
+							for trx in $(basename -a $(grep -s -l ":${handover_account}" /dev/null ${script_path}/trx/*)|sort -r -t . -k2)
 							do
 								echo "${trx}" >>${user_path}/my_trx.tmp
 							done
@@ -4717,7 +4724,7 @@ do
 							daily_payout=365250
 							today=$(date +%s)
 							focus=$(date -u +%s --date="$start_date")
-							user_dates_list=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|grep -f ${user_path}/all_accounts.dat -|cut -d ':' -f6)
+							user_dates_list=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys|grep "uid"|grep "$(ls -1 keys/)" -|cut -d ':' -f6)
 							while [ $focus -le $today ]
 							do
 								total_payout=$(echo "$total_users * $daily_payout"|bc)
@@ -4734,26 +4741,23 @@ do
 							done
 
 							###TOTAL NUMBER OF ASSETS######################
-							total_number_assets=$(wc -l <${user_path}/all_assets.dat)
+							total_number_assets=$(ls -1 ${script_path}/assets|wc -l)
 
 							###TOTAL NUMBER OF PUBLIC KEYS#################
-							total_number_users=$(wc -l <${user_path}/all_accounts.dat)
+							total_number_users=$(ls -1 ${script_path}/keys|wc -l)
 
 							###TOTAL NUMBER OF PRIVATE KEYS################
-							total_number_users_local=$(ls -1 ${script_path}/control/keys/*.sct|wc -l)
+							total_number_users_local=$(ls -1 ${script_path}/control/keys/*.sct 2>/dev/null|wc -l)
 
 							###TOTAL NUMBER OF TRANSACTIONS################
-							total_number_trx=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|wc -l)
-
-							###TOUCH BLANK TMP FILE########################
-							touch ${user_path}/stats.tmp
+							total_number_trx=$(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*|wc -l)
 
 							###TOTAL NUMBER OF TRANSACTIONS TODAY##########
-							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
+							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
 
 							###TRANSACTION VOLUME TOTAL####################
 							total_volume_trx=0
-							for amount in $(grep "AMNT:" ${user_path}/stats.tmp $(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null)|cut -d ':' -f4)
+							for amount in $(grep "AMNT:" /dev/null $(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*)|cut -d ':' -f4)
 							do
 								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc|sed 's/^\./0./g')
 							done
@@ -4765,9 +4769,6 @@ do
 								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f3)
 								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc|sed 's/^\./0./g')
 							done
-
-							###REMOVE TMP FOLE#############################
-							rm ${user_path}/stats.tmp 2>/dev/null
 
 							if [ $gui_mode = 1 ]
 							then
