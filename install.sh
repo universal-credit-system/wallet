@@ -32,12 +32,12 @@ then	##############################
 
 	### CREATE DIRECTORIES #######
 	printf "%b" "INFO: Creating directories..."
-	mkdir -p "${script_path}"/backup
+	mkdir "${script_path}"/backup
 	mkdir -p "${script_path}"/control/keys
-	mkdir -p "${script_path}"/keys
-	mkdir -p "${script_path}"/proofs
-	mkdir -p "${script_path}"/trx
-	mkdir -p "${script_path}"/userdata
+	mkdir "${script_path}"/keys
+	mkdir "${script_path}"/proofs
+	mkdir "${script_path}"/trx
+	mkdir "${script_path}"/userdata
 	printf "%b" "DONE\n"
 
 	### SAVE UMASK SETTINGS ######
