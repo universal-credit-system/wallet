@@ -3057,7 +3057,7 @@ do
 															cat ${script_path}/control/config.conf|grep -v "###"|sed 's/=/= /g' >${script_path}/config_${my_pid}.tmp
 
 															### DISPLAY INPUTMENU DIALOG ####################
-															changed=$(dialog --cancel-label "$dialog_main_back" --extra-label "$dialog_main_choose" --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp)
+															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp)
 															rt_query=$?
 															if [ $rt_query = 3 ]
 															then
@@ -3066,7 +3066,20 @@ do
 																new_value=$(echo "${changed}"|awk '{print $3}')
 																sed -i "s#${entry}=${old_value}#${entry}=${new_value}#" ${script_path}/control/config.conf
 															else
-																config_changed=1
+																if [ $rt_query = 1 ]
+																then
+																	touch ${script_path}/config_${my_pid}_add.tmp
+																	dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "CONFIG.CONF+" --backtitle "$core_system_name $core_system_version" --editbox ${script_path}/config_${my_pid}_add.tmp 20 80 2>${script_path}/config_${my_pid}_added.tmp
+																	rt_query=$?
+																	if [ $rt_query = 0 ]
+																	then
+																		cat ${script_path}/config_${my_pid}_added.tmp >>${script_path}/control/config.conf
+																	fi
+																	rm ${script_path}/config_${my_pid}_add.tmp
+																	rm ${script_path}/config_${my_pid}_added.tmp
+																else
+																	config_changed=1
+																fi
 															fi
 														done
 														rm ${script_path}/config_${my_pid}.tmp
