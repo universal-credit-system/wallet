@@ -7,7 +7,7 @@ login_account(){
 		handover_account=""
 
 		###CALCULATE ADDRESS#########################################
-		if [ ! "${cmd_sender}" = "" ]
+		if [ -n "${cmd_sender}" ]
 		then
 			key_login=${cmd_sender}
 		fi
@@ -19,7 +19,7 @@ login_account(){
 			key_file=${secret_file%%.*}
 
 			###IF CMD_SENDER NOT SET#####################################
-			if [ "${cmd_sender}" = "" ]
+			if [ -z "${cmd_sender}" ]
 			then
 				###CALCULATE ADDRESS#########################################
 				random_secret=$(cat ${script_path}/control/keys/${secret_file})
@@ -49,7 +49,7 @@ login_account(){
 				if [ $rt_query = 0 ]
 				then
 					###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
-					if [ "${cmd_sender}" = "" ]
+					if [ -z "${cmd_sender}" ]
 					then
 						name_hash=$(echo "${login_name}"|sha224sum)
 						name_hash=${name_hash%% *}
@@ -337,7 +337,7 @@ create_keys(){
 		else
 			if [ $key_remove = 1 ]
 			then
-				if [ ! "${create_name_hashed}" = "" ]
+				if [ -n "${create_name_hashed}" ]
 				then
 					###REMOVE PROOFS DIRECTORY OF USER###########################
 					rm -r ${script_path}/proofs/${create_name_hashed} 2>/dev/null
@@ -1105,7 +1105,7 @@ check_assets(){
 					if [ $stamp_only_digits = 0 ] && [ $stamp_size -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ ! "${asset_description}" = "" ] && [ ! "${asset_fungible}" = "" ]
+						if [ -n "${asset_description}" ] && [ -n "${asset_fungible}" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo $asset_symbol|grep -c '[^[:alnum:]]')
@@ -1125,13 +1125,13 @@ check_assets(){
 										if [ $asset_fungible = 0 ]
 										then
 											###CHECK ASSET HARDCAP#################################
-											if [ ! "${asset_quantity}" = "" ] && [ ! "${asset_quantity}" = "*" ]
+											if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
 											then
 												is_big_enough=$(echo "${asset_quantity} > 0 "|bc)
 												if [ $is_big_enough = 1 ]
 												then
 													###CHECK IF ASSET OWNER IS SET#########################
-													if [ ! "${asset_owner}" = "" ]
+													if [ -n "${asset_owner}" ]
 													then
 														test -f ${script_path}/keys/"${asset_owner}"
 														if [ $? = 0 ]
@@ -1349,11 +1349,11 @@ update_tsa(){
 						###GET TSA CRL URL FIRST BY CRT THEN BY CONFIG####
 						tsa_crl_url=""
 						tsa_crl_url=$(openssl x509 -in ${script_path}/certs/${tsa_service}/${tsa_cert_file} -text -noout|grep -A4 "X509v3 CRL Distribution Points:"|grep "URI"|awk -F: '{print $2":"$3}')
-						if [ "${tsa_crl_url}" = "" ]
+						if [ -z "${tsa_crl_url}" ]
 						then
 							###GET CRL URL FROM TSA.CONF######################
 							tsa_crl_url=$(echo "${tsa_config}"|cut -d ',' -f4)
-							if [ "${tsa_crl_url}" = "" ]
+							if [ -z "${tsa_crl_url}" ]
 							then
 								###IF NO CRL IS THERE#############################
 								tsa_checked=1
@@ -2168,7 +2168,7 @@ get_dependencies(){
 					then
 						depend_accounts_new_date=$(grep "$(sort ${user_path}/depend_accounts_old.tmp ${user_path}/depend_accounts.dat|uniq -u)" ${user_path}/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
 						depend_accounts_new_date=${depend_accounts_new_date#* }
-						if [ ! "${depend_accounts_new_date}" = "" ]
+						if [ -n "${depend_accounts_new_date}" ]
 						then
 							echo "${depend_accounts_new_date}" >>${user_path}/dates.tmp
 						fi
@@ -2178,7 +2178,7 @@ get_dependencies(){
 						if [ -e ${user_path}/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
 						then
 							depend_trx_new_date=$(sort -t . -k2 ${user_path}/depend_trx_old.tmp ${user_path}/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
-							if [ ! "${depend_trx_new_date}" = "" ]
+							if [ -n "${depend_trx_new_date}" ]
 							then
 								echo "${depend_trx_new_date}" >>${user_path}/dates.tmp
 							fi
@@ -2189,7 +2189,7 @@ get_dependencies(){
 						if [ -e ${user_path}/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
 						then
 							depend_confirmations_new_date=$(sort -t . -k2 ${user_path}/depend_confirmations_old.tmp ${user_path}/depend_confirmations.dat|head -1|cut -d '.' -f2)
-							if [ ! "${depend_confirmations_new_date}" = "" ]
+							if [ -n "${depend_confirmations_new_date}" ]
 							then
 								echo "${depend_confirmations_new_date}" >>${user_path}/dates.tmp
 							fi
@@ -2199,7 +2199,7 @@ get_dependencies(){
 					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
 					cd ${user_path} || exit 3
 					earliest_date=$(sort ${user_path}/dates.tmp|head -1)
-					if [ ! "${earliest_date}" = "" ]
+					if [ -n "${earliest_date}" ]
 					then
 						last_date=$(date +%Y%m%d --date=@${earliest_date})
 						for ledger in $(basename -a ${user_path}/*_ledger.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
@@ -2746,12 +2746,12 @@ do
 									account_name_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 "")
 									rt_query=$?
 								else
-									if [ ! "${cmd_user}" = "" ]
+									if [ -n "${cmd_user}" ]
 									then
 										rt_query=0
 										account_name_entered=$cmd_user
 									else
-										if [ "${cmd_sender}" = "" ]
+										if [ -z "${cmd_sender}" ]
 										then
 											exit 18
 										fi
@@ -2771,12 +2771,12 @@ do
 												account_pin_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "")
 												rt_query=$?
 											else
-												if [ ! "${cmd_pin}" = "" ]
+												if [ -n "${cmd_pin}" ]
 												then
 													rt_query=0
 													account_pin_entered=$cmd_pin
 												else
-													if [ "${cmd_sender}" = "" ]
+													if [ -z "${cmd_sender}" ]
 													then
 														exit 18
 													fi
@@ -2796,7 +2796,7 @@ do
 															account_password_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 "")
 															rt_query=$?
 														else
-															if [ ! "${cmd_pw}" = "" ]
+															if [ -n "${cmd_pw}" ]
 															then
 																rt_query=0
 																account_password_entered=$cmd_pw
@@ -2844,7 +2844,7 @@ do
 									account_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}")
 									rt_query=$?
 								else
-									if [ "${cmd_user}" = "" ]
+									if [ -z "${cmd_user}" ]
 									then
 										account_name=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 20)
 									else
@@ -2872,7 +2872,7 @@ do
 													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
 													rt_query=$?
 												else
-													if [ "${cmd_pin}" = "" ]
+													if [ -z "${cmd_pin}" ]
 													then
 														account_pin_first=$(tr -dc 0-9 </dev/urandom|head -c 5)
 														account_pin_second=$account_pin_first
@@ -2912,7 +2912,7 @@ do
 																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
 																		rt_query=$?
 																	else
-																		if [ "${cmd_pw}" = "" ]
+																		if [ -z "${cmd_pw}" ]
 																		then
 																			account_password_first=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 10)
 																			account_password_second=$account_password_first
@@ -3179,7 +3179,7 @@ do
 											rm ${script_path}/backups_list.tmp 2>/dev/null
 										fi
 									else
-										if [ "${cmd_path}" = "" ]
+										if [ -z "${cmd_path}" ]
 										then
 											exit 23
 										else
@@ -3222,7 +3222,7 @@ do
 								then
 									sender=$(awk -F: '/:SNDR:/{print $3}' "${trx}")
 									receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx}")
-									if [ ! "${sender}" = "" ] && [ ! "${receiver}" = "" ]
+									if [ -n "${sender}" ] && [ -n "${receiver}" ]
 									then
 										signature="ERROR_VERIFY_SIGNATURE"
 										gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify "${trx}" >${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
@@ -3394,7 +3394,7 @@ do
 									fi
 								done
 							else
-								if [ "${cmd_asset}" = "" ] && [ $(wc -l <${user_path}/menu_assets.tmp) = 1 ]
+								if [ -z "${cmd_asset}" ] && [ $(wc -l <${user_path}/menu_assets.tmp) = 1 ]
 								then
 									order_asset=$main_asset
 								else
@@ -3429,7 +3429,7 @@ do
 									fi
 									if [ $rt_query = 0 ]
 									then
-										if [ ! "${order_receipient}" = "" ]
+										if [ -n "${order_receipient}" ]
 										then
 											###CHECK IF INPUT CONTAINS ALNUM####################################
 											check_input $order_receipient 0
@@ -3633,7 +3633,7 @@ do
 											done
 										else
 											###CHECK IF FILE IS USED FOR PUPOSE###################
-											if [ ! "${cmd_file}" = "" ] && [ -f "${cmd_file}" ] && [ -s "${cmd_file}" ]
+											if [ -n "${cmd_file}" ] && [ -f "${cmd_file}" ] && [ -s "${cmd_file}" ]
 											then
 												### CHECK SIZE #######################################
 												if [ $(wc -c <${cmd_file}) -gt $trx_max_size_purpose_bytes ] 
@@ -3856,7 +3856,7 @@ do
 																	then
 																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
 																	else
-																		if [ "${trx_path_output}" = "" ]
+																		if [ -z "${trx_path_output}" ]
 																		then
 																			rm ${script_path}/${handover_account}_${trx_now}.trx
 																		fi
@@ -3877,7 +3877,7 @@ do
 																		if [ ! $small_trx = 255 ]
 																		then
 																			echo "TRX:trx/${handover_account}.${trx_now}"
-																			if [ ! "${cmd_path}" = "" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
+																			if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
 																				mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
 																				echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
@@ -4210,7 +4210,7 @@ do
 										dialog_sync_create_success_display=$(echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g")
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_create_success_display" 0 0
 									else
-										if [ ! "${cmd_path}" = "" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
+										if [ -n "${cmd_path}" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
 										then
 											mv ${sync_path_output}/${handover_account}_${now_stamp}.sync ${cmd_path}/${handover_account}_${now_stamp}.sync
 											echo "FILE:${cmd_path}/${handover_account}_${now_stamp}.sync"
@@ -4723,7 +4723,7 @@ do
 							rm ${user_path}/*.tmp 2>/dev/null
 							;;
 				"$dialog_stats")	###IF CMD_ASSET NOT SET USE UCC################
-							if [ "${cmd_asset}" = "" ]
+							if [ -z "${cmd_asset}" ]
 							then
 								order_asset=$main_asset
 							else

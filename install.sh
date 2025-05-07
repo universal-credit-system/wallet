@@ -91,7 +91,7 @@ then	##############################
 		### READ OLD CONFIG #########
 		while read config_line
 		do
-			if [ ! "${config_line}" = "" ]
+			if [ -n "${config_line}" ]
 			then
 				conf_var=$(echo "${config_line}"|cut -d '=' -f1)
 				conf_var_val=$(echo "${config_line}"|cut -d '=' -f2)
