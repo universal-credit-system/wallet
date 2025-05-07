@@ -4484,7 +4484,7 @@ do
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
-							for trx in $(basename -a $(grep -s -l ":${handover_account}" /dev/null ${script_path}/trx/*)|sort -r -t . -k2)
+							for trx in $(basename -a $(grep -s -l ":${handover_account}" ${script_path}/trx/*)|sort -r -t . -k2)
 							do
 								echo "${trx}" >>${user_path}/my_trx.tmp
 							done
@@ -4763,21 +4763,21 @@ do
 							total_number_users_local=$(ls -1 ${script_path}/control/keys/*.sct 2>/dev/null|wc -l)
 
 							###TOTAL NUMBER OF TRANSACTIONS################
-							total_number_trx=$(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*|wc -l)
+							total_number_trx=$(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*|wc -l)
 
 							###TOTAL NUMBER OF TRANSACTIONS TODAY##########
-							total_number_trx_today=$(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
+							total_number_trx_today=$(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
 
 							###TRANSACTION VOLUME TOTAL####################
 							total_volume_trx=0
-							for amount in $(grep "AMNT:" /dev/null $(grep -l "ASST:${cmd_asset}" /dev/null ${script_path}/trx/*)|cut -d ':' -f4)
+							for amount in $(grep "AMNT:" /dev/null $(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*)|cut -d ':' -f4)
 							do
 								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc|sed 's/^\./0./g')
 							done
 
 							###TRANSACTION VOLUME TODAY####################
 							total_volume_trx_today=0
-							for trx in $(grep -l "ASST:${cmd_asset}" ${script_path}/trx/* 2>/dev/null|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
+							for trx in $(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
 							do
 								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f3)
 								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc|sed 's/^\./0./g')
