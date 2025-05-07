@@ -4484,28 +4484,25 @@ do
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
 							touch ${user_path}/my_trx.tmp
-							for trx in $(basename -a $(grep -s -l ":${handover_account}" ${script_path}/trx/*)|sort -r -t . -k2)
-							do
-								echo "${trx}" >>${user_path}/my_trx.tmp
-							done
+							grep -s -l ":${handover_account}" ${script_path}/trx/*|sort -r -t . -k2 >>${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
 							if [ $no_trx -gt 0 ]
 							then
-								while read line
+								while read trx_file
 								do
-									trx_file=${script_path}/trx/${line}
+									trx_filename=$(basename "${trx_file}")
 									sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 									receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
-									trx_date_tmp=${line#*.}
+									trx_date_tmp=${trx_filename#*.}
 									trx_date=$(date +'%F|%H:%M:%S' --date=@${trx_date_tmp})
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 									trx_hash=$(sha256sum $trx_file)
 									trx_hash=${trx_hash%% *}
-									trx_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 									if [ -f ${script_path}/proofs/${sender}/${sender}.txt ] && [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
-										trx_signed=$(grep -c "${line}" ${script_path}/proofs/${sender}/${sender}.txt)
+										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
 									else
 										trx_signed=0
 									fi
@@ -4513,7 +4510,7 @@ do
 									then
 										if [ $trx_confirmations -ge $confirmations_from_users ]
 										then
-											trx_blacklisted=$(grep -c "${line}" ${user_path}/blacklisted_trx.dat)
+											trx_blacklisted=$(grep -c "${trx_filename}" ${user_path}/blacklisted_trx.dat)
 											sender_blacklisted=$(grep -c "${sender}" ${user_path}/blacklisted_accounts.dat)
 											receiver_blacklisted=$(grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat)
 											if [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted = 0 ]
@@ -4557,7 +4554,7 @@ do
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
-										trx_file=$(grep "${trx_date}" ${user_path}/my_trx.tmp)
+										trx_file=$(basename $(grep "${trx_date}" ${user_path}/my_trx.tmp))
 										trx_amount=$(echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g')
 										trx_hash=$(sha256sum ${script_path}/trx/${trx_file})
 										trx_hash=${trx_hash%% *}
@@ -4648,8 +4645,8 @@ do
 										then
 											trx_status="OK"
 										fi
-										user_total_depend=$(cat ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
-										user_total_all=$(cat ${user_path}/all_accounts.dat|grep -c -v "${sender}\|${receiver}")
+										user_total_depend=$(grep -c -v "${sender}\|${receiver}" ${user_path}/depend_accounts.dat)
+										user_total_all=$(grep -c -v "${sender}\|${receiver}" ${user_path}/all_accounts.dat)
 										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
