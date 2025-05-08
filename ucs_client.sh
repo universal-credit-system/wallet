@@ -2743,7 +2743,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_name_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 "")
+									account_name_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 "$cmd_user")
 									rt_query=$?
 								else
 									if [ -n "${cmd_user}" ]
@@ -2768,7 +2768,7 @@ do
 										do
 											if [ $gui_mode = 1 ]
 											then
-												account_pin_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "")
+												account_pin_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "$cmd_pin")
 												rt_query=$?
 											else
 												if [ -n "${cmd_pin}" ]
@@ -2793,7 +2793,7 @@ do
 	       												do
 														if [ $gui_mode = 1 ]
 														then
-															account_password_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 "")
+															account_password_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 "$cmd_pw")
 															rt_query=$?
 														else
 															if [ -n "${cmd_pw}" ]
@@ -3110,8 +3110,7 @@ do
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
-									cd ${script_path}/backup || exit 21
-									backup_file=$(find . -maxdepth 1 -type f|sed "s#./##g"|sort -t . -k1|tail -1)
+									backup_file="${now_stamp}.bcp"
 									if [ $gui_mode = 1 ]
 									then
 										dialog_backup_success_display=$(echo $dialog_backup_create_success|sed "s/<backup_file>/${backup_file}/g")
@@ -3134,17 +3133,15 @@ do
 								then
 									if [ $gui_mode = 1 ]
 									then
-										cd ${script_path}/backup || exit 21
-										touch ${script_path}/backups_list.tmp
-										find . -maxdepth 1 -type f|sed "s#./##g"|sort -r -t . -k1 >${script_path}/backups_list.tmp
-										no_backups=$(wc -l <${script_path}/backups_list.tmp)
-										if [ $no_backups -gt 0 ]
+										find ${script_path}/backup/ -maxdepth 1 -type f|sort -r -t . -k1 >${script_path}/backups_list.tmp
+										if [ $(wc -l <${script_path}/backups_list.tmp) -gt 0 ]
 										then
 											while read line
 											do
-												backup_stamp=${line%%.*}
+												backup_file=$(basename "${line}")
+												backup_stamp=${backup_file%%.*}
 												backup_date=$(date +'%F|%H:%M:%S' --date=@${backup_stamp})
-												printf "%s" "${backup_date} BACKUP " >>${script_path}/backup_list.tmp
+												printf "%s" "${backup_date} Backup " >>${script_path}/backup_list.tmp
 											done <${script_path}/backups_list.tmp
 										else
 											printf "%s" "${dialog_history_noresult}" >${script_path}/backup_list.tmp
@@ -3159,8 +3156,7 @@ do
 												bcp_date_extracted=${backup_decision%%|*}
 												bcp_time_extracted=${backup_decision#*|}
 												bcp_stamp=$(date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}")
-												bcp_file=$(cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}")
-												file_path="${script_path}/backup/${bcp_file}"
+												file_path=$(cat ${script_path}/backups_list.tmp|grep "${bcp_stamp}")
 												cd ${script_path} || exit 13
 												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
