@@ -2368,7 +2368,6 @@ request_uca(){
 			### PURGE TEMP FILES ################################
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
-			rm ${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 
 			### PROGRESSBAR FOR GUI #############################
 			if [ $gui_mode = 1 ]
@@ -2487,6 +2486,7 @@ send_uca(){
 			rm ${out_file} 2>/dev/null
 			rm ${sync_file} 2>/dev/null
 			rm ${user_path}/dhuser_id.dat 2>/dev/null
+			rm ${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 			rm ${user_path}/dhuser.tmp 2>/dev/null
 			rm ${user_path}/dhsecret_${uca_info_hashed}.dat 2>/dev/null
 			rm ${user_path}/files_list.tmp 2>/dev/null
