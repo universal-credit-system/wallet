@@ -1616,8 +1616,11 @@ check_keys(){
 	      			rt_query=$?
 			       	if [ $rt_query -gt 0 ]
 			       	then
-					dialog_import_fail_display=$(echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g")
-		       			dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_import_fail_display" 0 0
+			       		if [ $gui_mode = 1 ]
+					then
+						dialog_import_fail_display=$(echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g")
+		       				dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_import_fail_display" 0 0
+				       	fi
 				       	key_already_blacklisted=$(grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat)
 				       	if [ $key_already_blacklisted = 0 ]
 				       	then
