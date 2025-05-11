@@ -13,7 +13,7 @@ login_account(){
 		fi
 
 		###FOR EACH SECRET###########################################
-		for secret_file in $(ls -1 ${script_path}/control/keys/|grep ".sct")
+		for secret_file in $(ls -1 ${script_path}/control/keys/|grep "${cmd_sender}.sct")
 		do
 			###GET ADDRESS OF SECRET#####################################
 			key_file=${secret_file%%.*}
