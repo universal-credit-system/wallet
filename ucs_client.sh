@@ -1884,7 +1884,7 @@ process_new_files(){
 									if [ -f ${script_path}/${stripped_file} ] && [ -s ${script_path}/${stripped_file} ]
 									then
 										old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-										old_trx_confirmations=$(grep -l "$line" proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
+										old_trx_confirmations=$(grep -l "$line" ${script_path}/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
 										if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 										then
 											old_trx_score_highest=$old_trx_confirmations
@@ -3243,7 +3243,7 @@ do
 										asset=$(awk -F: '/:ASST:/{print $3}' "${trx}")
 										trx=$(basename "${trx}")
 										trx_stamp=${trx#*.}
-										confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+										confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										index="ERROR_NOT_INDEXED"
 										is_indexed=$(grep -c "trx/${trx} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
 										if [ $is_indexed -gt 0 ]
@@ -4495,7 +4495,7 @@ do
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 									trx_hash=$(sha256sum $trx_file)
 									trx_hash=${trx_hash%% *}
-									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 									if [ -f ${script_path}/proofs/${sender}/${sender}.txt ] && [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 									then
 										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" ${script_path}/proofs/${sender}/${sender}.txt)
@@ -4643,8 +4643,8 @@ do
 										fi
 										user_total_depend=$(grep -c -v "${sender}\|${receiver}" ${user_path}/depend_accounts.dat)
 										user_total_all=$(grep -c -v "${sender}\|${receiver}" ${user_path}/all_accounts.dat)
-										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
-										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
+										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=${decision#*|*|*|*}
 										if [ $sender = $handover_account ]
