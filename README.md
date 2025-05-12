@@ -94,7 +94,7 @@ To start the wallet `ucs_client.sh` simply type
 ```
 
 ## Update
-Do get the latest updates for the source code run `git pull`
+To get the latest updates for the source code run `git pull`
 ```bash
 git pull
 ```
