@@ -93,7 +93,7 @@ After setup you can run the wallet `ucs_client.sh`
 Do get the latest updates for the source code run `git pull`
 ```bash
 git pull
-``
+```
 
 ## Community
 **You found a bug or face an issue running the client? We have a [Forum](https://forum.universal-credit-system.org) and also a [Discord Server](https://discord.gg/5kvCP6kkRn) for troubleshooting and support. If you have any questions, suggestions or critics you are welcome to post it on the forum or the discord server.**
