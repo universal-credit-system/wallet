@@ -2095,7 +2095,7 @@ get_dependencies(){
 				do
 					touch ${user_path}/depend_user_list.tmp
 					user=$line
-					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|sort -u|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
+					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1|sort -u >${user_path}/depend_user_list.tmp
 					for user_trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
 						echo "${user_trx}" >>${user_path}/depend_trx.dat
