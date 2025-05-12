@@ -5,7 +5,9 @@ Repository of the Universal Credit System Wallet.
 ## Table of contents
 * [Description](#description)
 * [Technologies used](#technologies-used)
-* [How to install](#how-to-install)
+* [Installation](#installation)
+* [Start](#start)
+* [Update](#update)
 * [Community](#community)
 
 ## Description
@@ -61,7 +63,7 @@ The following programs are used:
 * **wc**      used to count lines, words, bytes
 * **wget**    used to fetch certificate files of TSA from Internet
 
-## How to install
+## Installation
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
 
 Install Git (you may use `sudo` in front)
@@ -80,16 +82,18 @@ cd wallet/
 ```
 
 Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
-If there is a program that needs to be installed the script will output the program names and then quit. In this case you have to install these programs first and then run `install.sh` script again.
+If there is a program that needs to be installed the script will display the program names and then quit. In this case you have to manually install these programs first and then run `install.sh` script again.
 ```bash
 ./install.sh
 ```
 
-After setup you can run the wallet `ucs_client.sh`
+## Start
+To start the wallet `ucs_client.sh` simply type
 ```bash
 ./ucs_client.sh
 ```
 
+## Update
 Do get the latest updates for the source code run `git pull`
 ```bash
 git pull
