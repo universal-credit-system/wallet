@@ -2085,37 +2085,34 @@ get_dependencies(){
 			fi
 
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
-			rm ${user_path}/depend_trx.dat 2>/dev/null
-			touch ${user_path}/depend_trx.dat
 			if [ $only_process_depend = 1 ]
 			then
 				echo "${handover_account}" >${user_path}/depend_accounts.dat
 				grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
-				while read line
+				while read user
 				do
-					touch ${user_path}/depend_user_list.tmp
-					user=$line
-					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1|sort -u >${user_path}/depend_user_list.tmp
-					for user_trx in $(grep "${user}" ${user_path}/all_trx.dat)
+					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
+					for trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
-						echo "${user_trx}" >>${user_path}/depend_trx.dat
-						receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${user_trx})
+						echo "${trx}" >>${user_path}/depend_trx.dat
+						receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
 						is_asset=$(grep -c "$receiver" ${user_path}/all_assets.dat)
-						if [ $is_asset = 0 ]
+						is_user=$(grep -c "$receiver" ${user_path}/all_accounts.dat)
+						if [ $is_asset = 0 ] && [ $is_user = 1 ]
 						then
 							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
-					for trx_file in $(sort -u ${user_path}/depend_user_list.tmp)
+					for user in $(sort -u ${user_path}/depend_user_list.tmp)
 					do
-						name="${trx_file%%.*}"
-						already_there=$(grep -c "${name}" ${user_path}/depend_accounts.dat)
+						already_there=$(grep -c "${user}" ${user_path}/depend_accounts.dat)
 						if [ $already_there = 0 ]
 						then
-							echo $trx_file >>${user_path}/depend_accounts.dat
+							echo $user >>${user_path}/depend_accounts.dat
 						fi
 					done
 				done <${user_path}/depend_accounts.dat
+				rm ${user_path}/depend_user_list.tmp
 
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort ${user_path}/depend_accounts.dat >${user_path}/depend_accounts.tmp
