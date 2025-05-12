@@ -1681,18 +1681,9 @@ check_trx(){
 		fi
 		touch ${user_path}/all_trx.dat
 
-		###REMOVE OLD FILES AND RECREATE THEM##############################
-		rm ${user_path}/all_trx.tmp 2>/dev/null
-		rm ${user_path}/trx_list_all.tmp 2>/dev/null
-		touch ${user_path}/all_trx.tmp
-		touch ${user_path}/trx_list_all.tmp
-
 		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE######################
 		ls -1 ${script_path}/trx >${user_path}/trx_list_all.tmp
-		while read line
-		do
-			grep "${line}" ${user_path}/trx_list_all.tmp >>${user_path}/all_trx.dat
-		done <${user_path}/all_accounts.dat
+		grep -f ${user_path}/all_accounts.dat ${user_path}/trx_list_all.tmp >${user_path}/all_trx.dat
 		rm ${user_path}/trx_list_all.tmp 2>/dev/null
 
 		###SORT LIST OF TRANSACTION PER DATE###############################
@@ -1710,9 +1701,9 @@ check_trx(){
 			then
 				###CHECK IF HEADER MATCHES OWNER###################################
 				file_to_check=${script_path}/trx/${line}
-				user_to_check=$(echo $line|awk -F. '{print $1}')
+				user_to_check=${line%%.*}
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' $file_to_check)
-				if [ $user_to_check = $trx_sender ]
+				if [ "${user_to_check}" = "${trx_sender}" ]
 				then
 					###VERIFY SIGNATURE OF TRANSACTION#################################
 					verify_signature $file_to_check $user_to_check
