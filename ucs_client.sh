@@ -1644,10 +1644,10 @@ check_keys(){
 			cd ${script_path} || exit 13
 			###################################################################
 		fi
-		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
+		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST########
 		sort ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_keys.dat
 
-		###CHECK INDEX FILES###############################################
+		###CHECK INDEX FILES####################################
 		for account in $(cat ${user_path}/all_keys.dat)
 		do
 			index_file="${script_path}/proofs/${account}/${account}.txt"
@@ -1662,14 +1662,14 @@ check_keys(){
 			fi
 		done
 
-		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
+		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST##############
 		sort ${user_path}/all_keys.dat ${user_path}/ack_keys.dat >${user_path}/all_keys.tmp
 		mv ${user_path}/all_keys.tmp ${user_path}/all_keys.dat
 		cp ${user_path}/all_keys.dat ${user_path}/all_accounts.dat
 		rm ${user_path}/ack_keys.dat
 }
 check_trx(){
-		###PURGE BLACKLIST AND SETUP ALL LIST##############################
+		###PURGE BLACKLIST AND SETUP ALL LIST###################
 		rm ${user_path}/blacklisted_trx.dat 2>/dev/null
 		touch ${user_path}/blacklisted_trx.dat
 		if [ -f ${user_path}/all_trx.dat ] && [ -s ${user_path}/all_trx.dat ]
@@ -1681,71 +1681,71 @@ check_trx(){
 		fi
 		touch ${user_path}/all_trx.dat
 
-		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE######################
+		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE###########
 		ls -1 ${script_path}/trx >${user_path}/trx_list_all.tmp
 		grep -f ${user_path}/all_accounts.dat ${user_path}/trx_list_all.tmp >${user_path}/all_trx.dat
 		rm ${user_path}/trx_list_all.tmp 2>/dev/null
 
-		###SORT LIST OF TRANSACTION PER DATE###############################
+		###SORT LIST OF TRANSACTION PER DATE####################
 		sort -t . -k2 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat|uniq -u >${user_path}/all_trx.tmp
 
-		###GO THROUGH TRANSACTIONS LINE PER LINE###########################
+		###GO THROUGH TRANSACTIONS LINE PER LINE################
 		while read line
 		do
-			###SET ACKNOWLEDGED VARIABLE###############################
+			###SET ACKNOWLEDGED VARIABLE############################
 			trx_acknowledged=0
 
-			###CHECK SIZE##############################################
+			###CHECK SIZE###########################################
 			trx_size=$(wc -c <${script_path}/trx/${line})
 			if [ $trx_size -le $trx_max_size_bytes ]
 			then
-				###CHECK IF HEADER MATCHES OWNER###################################
+				###CHECK IF HEADER MATCHES OWNER########################
 				file_to_check=${script_path}/trx/${line}
 				user_to_check=${line%%.*}
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' $file_to_check)
 				if [ "${user_to_check}" = "${trx_sender}" ]
 				then
-					###VERIFY SIGNATURE OF TRANSACTION#################################
+					###VERIFY SIGNATURE OF TRANSACTION######################
 					verify_signature $file_to_check $user_to_check
 					rt_query=$?
 					if [ $rt_query = 0 ]
 					then
-						###CHECK IF DATE IN HEADER MATCHES DATE OF FILENAME AND TRX########
-						###WAS CREATED BEFORE RECEIVER WAS CREATED#########################
+						###GET DATES############################################
 						trx_date_filename=${line#*.}
 						trx_date_inside=$(awk -F: '/:TIME:/{print $3}' $file_to_check)
 						trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
-						###IF RECEIVER NOT A USER###################################################
+						###IF RECEIVER NOT A USER###############################
 						if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat) = 0 ]
 						then
-							###IF RECEIVER NOT A ASSET##################################################
+							###IF RECEIVER NOT A ASSET##############################
 							if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) = 0 ]
 							then
-								###IF RECEIVER IS UNDETECTABLE##############################################
+								###GET DATE#############################################
 								trx_receiver_date=${trx_receiver_date#*.}
 								if [ -z "${trx_receiver_date}" ]
 								then
-									trx_receiver_date=0
+									###IF RECEIVER IS UNDETECTABLE##########################
+									trx_receiver_date=$(date -u +%s --date="${start_date}")
 								fi
 							else
 								if [ ! "${trx_receiver_date}" = "${main_asset}" ]
 								then
-									###IF RECEIVER IS ASSET GET DATE####################################
+									###IF RECEIVER IS ASSET GET DATE########################
 									trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_assets.dat)
 									trx_receiver_date=${trx_receiver_date#*.}
 								else
-									###MAIN ASSET OR MAIN TOKEN SET TO START DATE#######################
+									###IF MAIN ASSET SET TO START DATE######################
 									trx_receiver_date=$(date -u +%s --date="${start_date}")
 								fi
 							fi
 						else
-							###IF RECEIVER IS USER##############################################
+							###IF RECEIVER IS USER##################################
 							trx_receiver_date=$(grep "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat)
 							trx_receiver_date=${trx_receiver_date#* }
 						fi
 						if [ $trx_date_filename = $trx_date_inside ] && [ $trx_date_inside -gt $trx_receiver_date ]
 						then
-							###CHECK IF PURPOSE CONTAINS ALNUM##################################
+							###CHECK IF PURPOSE CONTAINS ALNUM######################
 							purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' $file_to_check)
 							purpose_key_start=$(( purpose_key_start + 1 ))
 							purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $file_to_check)
@@ -1760,21 +1760,21 @@ check_trx(){
 							purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
 							if [ $purpose_key_contains_alnum = 0 ] && [ $purpose_contains_alnum = 0 ]
 							then
-								###CHECK IF ASSET TYPE EXISTS############################################
+								###CHECK IF ASSET TYPE EXISTS###########################
 								trx_asset=$(awk -F: '/:ASST:/{print $3}' $file_to_check)
 								asset_already_exists=$(grep -c "${trx_asset}" ${user_path}/all_assets.dat)
 								if [ $asset_already_exists = 1 ]
 								then
-									###CHECK IF AMOUNT IS MINIMUM 0.000000001################################
+									###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
 									trx_amount=$(awk -F: '/:AMNT:/{print $3}' $file_to_check)
 									is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
 									is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
 									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
 
-									###CHECK IF USER HAS CREATED A INDEX FILE################################
+									###CHECK IF USER HAS CREATED A INDEX FILE###############
 									if [ -f ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ] && [ -s ${script_path}/proofs/${user_to_check}/${user_to_check}.txt ]
 									then
-										####CHECK IF USER HAS INDEXED THE TRANSACTION############################
+										####CHECK IF USER HAS INDEXED THE TRANSACTION###########
 										is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
 										if [ $is_trx_signed = 1 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
 										then
@@ -1806,7 +1806,7 @@ check_trx(){
 			fi
 		done <${user_path}/all_trx.tmp
 
-		###GO THROUGH BLACKLISTED TRX LINE BY LINE AND REMOVE THEM#########
+		###GO THROUGH BLACKLISTED TRX AND REMOVE THEM#########
 		if [ -f ${user_path}/blacklisted_trx.dat ] && [ -s ${user_path}/blacklisted_trx.dat ]
 		then
 			while read line
@@ -1815,10 +1815,10 @@ check_trx(){
 			done <${user_path}/blacklisted_trx.dat
 		fi
 
-		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST########################
+		###REMOVE BLACKLISTED TRX FROM ACCOUNT LIST###########
 		sort -t . -k2 ${user_path}/all_trx.tmp ${user_path}/blacklisted_trx.dat|uniq -u >${user_path}/all_trx.dat
 
-		###ADD ACKNOWLEDGED TRX TO FINAL LIST##############################
+		###ADD ACKNOWLEDGED TRX TO FINAL LIST#################
 		sort -t . -k2 ${user_path}/all_trx.dat ${user_path}/ack_trx.dat >${user_path}/all_trx.tmp
 		mv ${user_path}/all_trx.tmp ${user_path}/all_trx.dat
 		rm ${user_path}/ack_trx.dat
