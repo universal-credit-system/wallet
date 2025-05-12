@@ -1578,7 +1578,7 @@ check_tsa(){
 				cd ${script_path} || exit 13
 				#####################################################################################
 			fi
-			###REMOVE BLACKLISTED USER FROM LIST OF FILES########################################
+			###REMOVE BLACKLISTED USER FROM LIST OF FILES######################
 			sort ${user_path}/all_accounts.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_accounts.dat
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
@@ -1591,7 +1591,7 @@ check_tsa(){
 			mv ${user_path}/all_accounts_dates.tmp ${user_path}/all_accounts_dates.dat
 }
 check_keys(){
-		###SETUP ALL LIST#################################################
+		###SETUP ALL LIST######################################
 		if [ -f ${user_path}/all_keys.dat ] && [ -s ${user_path}/all_keys.dat ]
 		then
 			mv ${user_path}/all_keys.dat ${user_path}/ack_keys.dat
@@ -1602,46 +1602,23 @@ check_keys(){
 		cp ${user_path}/all_accounts.dat ${user_path}/all_keys.dat
 		sort ${user_path}/all_keys.dat ${user_path}/ack_keys.dat|uniq -u >${user_path}/all_keys.tmp
 
-		###CHECK KEYS IF ALREADY IN KEYRING AND IMPORT THEM IF NOT#########
-		touch ${user_path}/keylist_gpg.tmp
-		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys >${user_path}/keylist_gpg.tmp 2>/dev/null
-  	       	while read line
-  	      	do
-  	      		rt_query=0
-		       	key_uname=$line
- 			key_imported=$(grep -c "${key_uname}" ${user_path}/keylist_gpg.tmp)
-			if [ $key_imported = 0 ]
-	      		then
-			       	gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${line} 2>/dev/null
-	      			rt_query=$?
-			       	if [ $rt_query -gt 0 ]
+		###CHECK IF KEYS IN KEYRING IMPORT THEM IF NOT#########
+		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|grep "uid"|cut -d ':' -f10 >${user_path}/keylist_gpg.tmp
+  	        rt_query=$?
+  	        if [ $rt_query = 0 ]
+  	        then
+  	        	###GO THROUGH ACCOUNTS NOT IN GPG KEYRING##############
+	  	        for account in $(grep -v -f ${user_path}/keylist_gpg.tmp ${user_path}/all_keys.tmp)
+	  	      	do
+	  	      		###IMPORT KEY INTO KEYRING ############################
+	  	      		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${account} 2>/dev/null
+		      		rt_query=$?
+		      		if [ ! rt_query = 0 ]
 			       	then
-			       		if [ $gui_mode = 1 ]
-					then
-						dialog_import_fail_display=$(echo $dialog_import_fail|sed -e "s/<key_uname>/${key_uname}/g" -e "s/<file>/${line}/g")
-		       				dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_import_fail_display" 0 0
-				       	fi
-				       	key_already_blacklisted=$(grep -c "${key_uname}" ${user_path}/blacklisted_accounts.dat)
-				       	if [ $key_already_blacklisted = 0 ]
-				       	then
-					       	echo "${line}" >>${user_path}/blacklisted_accounts.dat
-				       	fi
+					echo "${account}" >>${user_path}/blacklisted_accounts.dat
 			       	fi
-			fi
-			if [ $rt_query = 0 ]
-			then
-				index_file="${script_path}/proofs/${line}/${line}.txt"
-				if [ -f $index_file ] && [ -s $index_file ]
-				then
-					verify_signature $index_file $line
-					rt_query=$?
-					if [ $rt_query -gt 0 ]
-					then
-						rm ${script_path}/proofs/${line}/${line}.txt 2>/dev/null
-					fi
-				fi
-		       	fi
-	       	done <${user_path}/all_keys.tmp
+		       	done
+		fi
 		rm ${user_path}/keylist_gpg.tmp
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
@@ -1664,10 +1641,26 @@ check_keys(){
 				fi
 			done <${user_path}/blacklisted_accounts.dat
 			'
+			cd ${script_path} || exit 13
 			###################################################################
 		fi
 		###REMOVE BLACKLISTED ACCOUNTS FROM ACCOUNT LIST###################
 		sort ${user_path}/all_keys.tmp ${user_path}/blacklisted_accounts.dat|uniq -u >${user_path}/all_keys.dat
+
+		###CHECK INDEX FILES###############################################
+		for account in $(cat ${user_path}/all_keys.dat)
+		do
+			index_file="${script_path}/proofs/${account}/${account}.txt"
+			if [ -f $index_file ] && [ -s $index_file ]
+			then
+				verify_signature $index_file $account
+				rt_query=$?
+				if [ $rt_query -gt 0 ]
+				then
+					rm ${script_path}/proofs/${account}/${account}.txt 2>/dev/null
+				fi
+			fi
+		done
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
 		sort ${user_path}/all_keys.dat ${user_path}/ack_keys.dat >${user_path}/all_keys.tmp
