@@ -4401,13 +4401,13 @@ do
 													done
 													;;
 										"$dialog_users")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
-													def_string_user=$(head -1 ${user_path}/depend_accounts.dat)
+													def_string_user=$(head -1 ${user_path}/all_accounts.dat)
 
 													quit_user_menu=0
 													while [ $quit_user_menu = 0 ]
 													do
 														###USERS OVERVIEW########################################
-														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_user}" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/depend_accounts.dat)
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_user}" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -4415,7 +4415,7 @@ do
 															def_string_user=$user
 
 															###USERS TRX OVERVIEW####################################
-															grep "${user}" ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
+															grep "${user}" ${user_path}/all_trx.dat >${user_path}/dialog_browser_trx.tmp
 															if [ ! -s ${user_path}/dialog_browser_trx.tmp ]
 															then
 																echo "0" >${user_path}/dialog_browser_trx.tmp
@@ -4444,11 +4444,11 @@ do
 													done
 													;;
 										"$dialog_trx")		###TRX OVERVIEW##########################################
-													if [ ! -s ${user_path}/depend_trx.dat ]
+													if [ ! -s ${user_path}/all_trx.dat ]
 													then
 														echo "0" >${user_path}/dialog_browser_trx.tmp
 													else
-														sort -r -t . -k2 ${user_path}/depend_trx.dat >${user_path}/dialog_browser_trx.tmp
+														sort -r -t . -k2 ${user_path}/all_trx.dat >${user_path}/dialog_browser_trx.tmp
 													fi
 													quit_trx_loop=0
 													def_string=$(head -1 ${user_path}/dialog_browser_trx.tmp)
