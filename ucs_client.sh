@@ -2865,7 +2865,7 @@ do
 											do
 												if [ $gui_mode = 1 ]
 												then
-													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
+													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
 													rt_query=$?
 												else
 													if [ -z "${cmd_pin}" ]
@@ -2887,7 +2887,7 @@ do
 														if [ $gui_mode = 1 ]
 														then
 															clear
-															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
+															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
 															rt_query=$?
 														else
 															rt_query=0
@@ -2905,7 +2905,7 @@ do
 		       														do
 																	if [ $gui_mode = 1 ]
 																	then
-																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
+																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
 																		rt_query=$?
 																	else
 																		if [ -z "${cmd_pw}" ]
