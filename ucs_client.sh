@@ -2927,7 +2927,7 @@ do
 																			if [ $gui_mode = 1 ]
 																			then
 																				clear
-																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
+																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
 																				rt_query=$?
 																			else
 																				rt_query=0
