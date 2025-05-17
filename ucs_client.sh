@@ -6,7 +6,7 @@ login_account(){
 		account_found=0
 		handover_account=""
 
-		###CALCULATE ADDRESS#########################################
+		###IF CMD SENDER IS SET HAND OVER############################
 		if [ -n "${cmd_sender}" ]
 		then
 			key_login=${cmd_sender}
@@ -3372,11 +3372,11 @@ do
 								while [ $quit_asset_loop = 0 ]
 								do
 									###ASSET OVERVIEW################################
-									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
+									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --default-item "$def_string_asset" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
 									rt_query=$?
 									if [ $rt_query = 3 ]
 									then
-										###SET DEFAULT-ITEM OF DIALOG MENU#######################
+										###SET DEFAULT-ITEM OF DIALOG MENU###############
 										def_string_asset=$order_asset
 
 										###DISPLAY DETAILED ASSET INFORMATION############
@@ -4266,7 +4266,7 @@ do
 													while [ $quit_asset_menu = 0 ]
 													do
 														###ASSET OVERVIEW########################################
-														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "${def_string_asset}" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
+														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
 														then
@@ -4402,12 +4402,11 @@ do
 													;;
 										"$dialog_users")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
 													def_string_user=$(head -1 ${user_path}/all_accounts.dat)
-
 													quit_user_menu=0
 													while [ $quit_user_menu = 0 ]
 													do
 														###USERS OVERVIEW########################################
-														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_user}" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -4427,7 +4426,7 @@ do
 															quit_trx_menu=0
 															while [ $quit_trx_menu = 0 ]
 															do
-																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string_trx}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 																rt_query=$?
 																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
@@ -4475,8 +4474,7 @@ do
 							done
 							;;
 				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
-							touch ${user_path}/my_trx.tmp
-							grep -s -l ":${handover_account}" ${script_path}/trx/*|sort -r -t . -k2 >>${user_path}/my_trx.tmp
+							grep -s -l ":${handover_account}" ${script_path}/trx/*|sort -r -t . -k2 >${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
 							if [ $no_trx -gt 0 ]
 							then
