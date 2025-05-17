@@ -787,7 +787,7 @@ build_ledger(){
 								if [ $receiver_in_ledger = 1 ]
 								then
 									###GET CONFIRMATIONS##########################################
-									total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+									total_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
 
 									###ADD 1 CONFIRMATION FOR OWN#################################
 									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
@@ -2125,7 +2125,7 @@ get_dependencies(){
 				cp ${user_path}/all_trx.dat ${user_path}/depend_trx.dat
 			fi
 
-			###GET DEPEND TRX WITH 0 CONFIRMATIONS########################################
+			###GET DEPEND TRX THAT HAVE ENOUGH CONFIRMATIONS##############################
 			rm ${user_path}/depend_confirmations.dat 2>/dev/null
 			touch ${user_path}/depend_confirmations.dat
 			while read line
