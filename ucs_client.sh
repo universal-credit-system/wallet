@@ -701,8 +701,8 @@ build_ledger(){
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
 				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print $1"."$2":"main_asset"=0"}' >>${user_path}/${focus}_ledger.dat
-				rm ${user_path}/assets.tmp
 			fi
+			rm ${user_path}/assets.tmp 2>/dev/null
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_trx.dat) 
