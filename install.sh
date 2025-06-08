@@ -32,12 +32,12 @@ then	##############################
 
 	### CREATE DIRECTORIES #######
 	printf "%b" "INFO: Creating directories..."
-	mkdir "${script_path}"/backup
+	mkdir -p "${script_path}"/backup
 	mkdir -p "${script_path}"/control/keys
-	mkdir "${script_path}"/keys
-	mkdir "${script_path}"/proofs
-	mkdir "${script_path}"/trx
-	mkdir "${script_path}"/userdata
+	mkdir -p "${script_path}"/keys
+	mkdir -p "${script_path}"/proofs
+	mkdir -p "${script_path}"/trx
+	mkdir -p "${script_path}"/userdata
 	printf "%b" "DONE\n"
 
 	### SAVE UMASK SETTINGS ######
@@ -118,6 +118,7 @@ then	##############################
 		gpg '?' 2>/dev/null
 		printf "%b" "DONE\n"
 	fi
+	### CONFIGURE gpg-agent.conf #############
 	if [ -s ~/.gnupg/gpg-agent.conf ]
 	then
 		printf "%b" "INFO: Checking gpg-agent.conf configuration..."
@@ -132,6 +133,13 @@ then	##############################
 	else
 		printf "%b" "INFO: Copy gpg-agent.conf to ~/.gnupg/ folder..."
 		cp "${script_path}"/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf
+		printf "%b" "DONE\n"
+	fi
+	### USE KEYRING INSTEAD OF KEYBOX ########
+	if [ -s ~/.gnupg/common.conf ]
+	then
+		printf "%b" "INFO: Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
+		sed -i 's/use-keyboxd//g' ~/.gnupg/common.conf
 		printf "%b" "DONE\n"
 	fi
 else
