@@ -868,10 +868,11 @@ build_ledger(){
 			esac
 			if [ $show_balance = 1 ]
 			then
+				out_stamp=$(date +%s.%3N)
 				last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
 				for balance in $(grep "${handover_account}" ${user_path}/${last_ledger}|grep "${cmd_asset}")
 				do
-					echo "BALANCE_${now_stamp}:${balance}"
+					echo "BALANCE_${out_stamp}:${balance}"
 				done
 			fi
 		fi
@@ -3256,7 +3257,6 @@ do
 										echo "SIGNATURE    :${signature}"
 										echo "STATUS_INDEX :${index}"
 										echo "CONFIRMATIONS:${confirmations}"
-										echo ""
 										rm ${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
 									fi
 								fi
@@ -3864,23 +3864,16 @@ do
 																	fi
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																else
-																	if [ $receipient_is_asset = 0 ]
+																	echo "TRX:trx/${handover_account}.${trx_now}"
+																	if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																	then
-																		if [ ! $small_trx = 255 ]
+																		if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																		then
-																			echo "TRX:trx/${handover_account}.${trx_now}"
-																			if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
-																			then
-																				mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
-																				echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
-																			else
-																				echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
-																			fi
+																			mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
+																			echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
 																		else
-																			echo "TRX:trx/${handover_account}.${trx_now}"
+																			echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
 																		fi
-																	else
-																		echo "TRX:trx/${handover_account}.${trx_now}"
 																	fi
 																	exit 0
 																fi
@@ -4631,7 +4624,7 @@ do
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
 										fi
-										if [ $trx_signed = 1 ] && [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted ]
+										if [ $trx_signed = 1 ] && [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted = 0 ]
 										then
 											trx_status="OK"
 										fi
