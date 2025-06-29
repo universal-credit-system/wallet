@@ -3187,10 +3187,11 @@ do
 												rt_query=$?
 												if [ $rt_query -gt 0 ]
 												then
+													echo "BACKUP_FILE_RESTORE:FAILED"
 													exit 24
 												else
 													import_keys
-													echo "SUCCESS"
+													echo "BACKUP_FILE_RESTORE:FINISHED"
 													exit 0
 												fi
 											else
@@ -3818,8 +3819,9 @@ do
 															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER IS DELETED ARE DELETED##############
 															if [ $gui_mode = 0 ]
 															then
+																out_stamp=$(date +%s.%3N)
 																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
-																echo "BALANCE_${trx_now}:${cmd_output}"
+																echo "BALANCE_${out_stamp}:${cmd_output}"
 															fi
 
 															###SET VARIABLES FOR NEXT LOOP RUN###########################################
