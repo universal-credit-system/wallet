@@ -3130,7 +3130,7 @@ do
 								then
 									if [ $gui_mode = 1 ]
 									then
-										find ${script_path}/backup/ -maxdepth 1 -type f|sort -r -t . -k1 >${script_path}/backups_list.tmp
+										find ${script_path}/backup/ -maxdepth 1 -type f -name "*.bcp"|sort -r -t . -k1 >${script_path}/backups_list.tmp
 										if [ $(wc -l <${script_path}/backups_list.tmp) -gt 0 ]
 										then
 											while read line
