@@ -1135,6 +1135,7 @@ check_assets(){
 													if [ -n "${asset_owner}" ]
 													then
 														test -f ${script_path}/keys/"${asset_owner}"
+														rt_query=$?
 														if [ $? = 0 ]
 														then
 															asset_owner_ok=1
@@ -2509,6 +2510,35 @@ send_uca(){
 		done <${script_path}/control/uca.conf
 		rm ${user_path}/uca_list.tmp 2>/dev/null
 		sleep 1
+}
+urlencode(){
+		### SET INITIAL VALUES #############################
+		rt_query=0
+		
+		### HANDOVER FILE PATH #############################
+		file_path=$1
+		
+		### URL ENCODE USING AWK ###########################
+		enc_string=$(LC_ALL=C awk '
+    		BEGIN {
+      			for (i = 1; i <= 255; i++) {
+      				hex[sprintf("%c", i)] = sprintf("%%%02X", i)
+    			}
+    		}
+    		function urlencode(s,c,i,r,l) {
+      		  l = length(s)
+      		  for (i = 1; i <= l; i++) {
+      		  	c = substr(s, i, 1)
+      		  	r = r "" (c ~ /^[-._~0-9a-zA-Z]$/ ? c : hex[c])
+		  }
+		  return r
+    		}
+    		BEGIN {
+			for (i = 1; i < ARGC; i++) {
+				print urlencode(ARGV[i])
+			}
+		}' "$(cat ${file_path})") || rt_query = 1
+		return $rt_query
 }
 ##################
 #Main Menu Screen#
@@ -4290,8 +4320,14 @@ do
 																			rt_query=$?
 																			if [ $rt_query = 0 ]
 																			then
-																				asset_description=$(cat ${user_path}/asset_description.tmp|sed 's/\"/\\"/g')
+																				enc_string=""
+																				
+																				###ENCODE DESCRIPTION############################
+																				urlencode "${user_path}/asset_description.tmp"
 																				rm ${user_path}/asset_description.tmp
+
+																				###ASSIGN ENCODED RESULT#########################
+																				asset_description=$enc_string
 
 																				###ASK IF FUNGIBLE OR NOT########################
 																				dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
@@ -4330,16 +4366,16 @@ do
 																											###WRITE ASSET###########################
 																											asset_stamp=$(date +%s)
 																											{
-																											echo "asset_name='${asset_name}'"
+																											echo "asset_name=\"${asset_name}\""
 																											echo "asset_fungible=${fungible}"
 																											if [ $fungible = 0 ]
 																											then
-																												echo "asset_quantity='${asset_value_formatted}'"
-																												echo "asset_owner='${handover_account}'"
+																												echo "asset_quantity=${asset_value_formatted}"
+																												echo "asset_owner=\"${handover_account}\""
 																											else
-																												echo "asset_price='${asset_value_formatted}'"
+																												echo "asset_price=\"${asset_value_formatted}\""
 																											fi
-																											echo "asset_description='${asset_description}'"
+																											echo "asset_description=\"${asset_description}\""
 																											} >${user_path}/${asset_name}.${asset_stamp}
 																											#########################################
 
@@ -4356,11 +4392,11 @@ do
 
 																												###CHECK ASSETS##########################
 																												check_assets
-																												if [ $fungible = 0 ]
+																												if [ $fungible = 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) = 0 ]
 																												then
 																													###CREATE LEDGER ENTRY###################
 																													last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
-																													echo "${asset_name}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
+																													echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
 																												fi
 																											fi
 																											quit_asset_value=1
@@ -4381,7 +4417,7 @@ do
 																					done
 																				fi
 																			fi
-																			rm ${user_path}/asset_description_blank.tmp
+																			rm ${user_path}/asset_description_blank.tmp 2>/dev/null
 																		else
 																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 																		fi
