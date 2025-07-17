@@ -2545,7 +2545,7 @@ urlencode(){
 ##################
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
-core_system_version="v0.0.3-stable"
+core_system_version="v0.0.4-stable"
 
 ###SET INITIAL VARIABLES####
 initial_coinload=365250
