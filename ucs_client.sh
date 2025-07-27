@@ -2089,31 +2089,31 @@ get_dependencies(){
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
 			if [ $only_process_depend = 1 ]
 			then
+				counter=1
 				echo "${handover_account}" >${user_path}/depend_accounts.dat
 				grep "${handover_account}" ${user_path}/all_trx.dat >${user_path}/depend_trx.dat
-				while read user
+				while [ $counter -le $(wc -l <${user_path}/depend_accounts.dat) ]
 				do
+					user=$(head -$counter ${user_path}/depend_accounts.dat|tail -1)
 					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
 					for trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
 						echo "${trx}" >>${user_path}/depend_trx.dat
 						receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
-						is_asset=$(grep -c "$receiver" ${user_path}/all_assets.dat)
-						is_user=$(grep -c "$receiver" ${user_path}/all_accounts.dat)
-						if [ $is_asset = 0 ] && [ $is_user = 1 ]
+						if [ $(grep -c "$receiver" ${user_path}/all_assets.dat) = 0 ] && [ $(grep -c "$receiver" ${user_path}/all_accounts.dat) = 1 ]
 						then
 							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
 					for user in $(sort -u ${user_path}/depend_user_list.tmp)
 					do
-						already_there=$(grep -c "${user}" ${user_path}/depend_accounts.dat)
-						if [ $already_there = 0 ]
+						if [ $(grep -c "${user}" ${user_path}/depend_accounts.dat) = 0 ]
 						then
 							echo $user >>${user_path}/depend_accounts.dat
 						fi
 					done
-				done <${user_path}/depend_accounts.dat
+					counter=$(( counter + 1 ))
+				done
 				rm ${user_path}/depend_user_list.tmp
 
 				###SORT DEPENDENCIE LISTS#####################################################
