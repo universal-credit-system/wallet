@@ -593,7 +593,7 @@ build_ledger(){
 					asset_fungible=${asset_fungible#*=}
 					if [ $asset_fungible = 0 ]
 					then
-						asset_owner=$(echo "$asset_data"|grep "asset_owner=")
+						asset_owner=$(echo "$asset_data"|grep "asset_owner="|sed "s/\"//g")
 						asset_owner=${asset_owner#*=}
 						asset_quantity=$(echo "$asset_data"|grep "asset_quantity=")
 						asset_quantity=${asset_quantity#*=}
@@ -694,7 +694,7 @@ build_ledger(){
 				do
 					asset_quantity=$(grep "asset_quantity=" $non_fungible_asset)
 					asset_quantity=${asset_quantity#*=}
-					asset_owner=$(grep "asset_owner=" $non_fungible_asset)
+					asset_owner=$(grep "asset_owner=" $non_fungible_asset|sed "s/\"//g")
 					asset_owner=${asset_owner#*=}
 					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat
 				done
