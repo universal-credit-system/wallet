@@ -918,7 +918,7 @@ check_archive(){
 											then
 												file_full=${line#*/}
 												file_ext=${file_full#*.}
-												file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
+												file_ext_correct=$(echo "$file_ext"|grep -c '[^[:digit:]]')
 												if [ $file_ext_correct -gt 0 ]
 												then
 													rt_query=1
@@ -939,7 +939,7 @@ check_archive(){
 								"keys")		if [ ! -d ${script_path}/$line ]
 										then
 											file_full=${line#*/}
-											file_full_correct=$(echo $file_full|grep -c '[^[:alnum:]]')
+											file_full_correct=$(echo "$file_full"|grep -c '[^[:alnum:]]')
 											if [ $file_full_correct -gt 0 ]
 											then
 												rt_query=1
@@ -960,7 +960,7 @@ check_archive(){
 										then
 											file_full=${line#*/}
 											file_ext=${file_full#*.}
-											file_ext_correct=$(echo $file_ext|grep -c '[^[:digit:]]')
+											file_ext_correct=$(echo "$file_ext"|sed 's/\.//g'|grep -c '[^[:digit:]]')
 											if [ $file_ext_correct -gt 0 ]
 											then
 												rt_query=1
@@ -984,7 +984,7 @@ check_archive(){
 										then
 											file_usr=${line#*/}
 											file_usr=${file_usr%%/*}
-											file_usr_correct=$(echo $file_usr|grep -c '[^[:alnum:]]')
+											file_usr_correct=$(echo "$file_usr"|grep -c '[^[:alnum:]]')
 											if [ $file_usr_correct = 0 ]
 											then
 												file_full=${line#*/*/}
@@ -3240,7 +3240,7 @@ do
 							exit 0
 							;;
 				"show_trx")		rt_code=0
-							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1 "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
+							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1Xr "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
 							do
 								if [ -f "${trx}" ] && [ -s "${trx}" ]
 								then
@@ -3723,7 +3723,7 @@ do
 										fi
 										if [ $rt_query = 0 ]
 										then
-											trx_now=$(date +%s)
+											trx_now=$(date +%s.%3N)
 											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receipient}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" ${trx_now} 0
 											rt_query=$?
 											if [ $rt_query = 0 ]
@@ -3825,10 +3825,11 @@ do
 													rt_query=$?
 													if [ $rt_query = 0 ]
 													then
+														trx_now_form=$(echo "$trx_now"|sed 's/\./_/g')
 														if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 														then
 															cd ${script_path} || exit 13
-															tar -czf ${handover_account}_${trx_now}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
+															tar -czf ${handover_account}_${trx_now_form}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 															rt_query=$?
 															rm ${user_path}/files_list.tmp 2>/dev/null
 														fi
@@ -3862,7 +3863,7 @@ do
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
 															if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 															then
-																echo "${order_receipient}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now}.trx --passphrase-fd 0 ${handover_account}_${trx_now}.trx.tmp
+																echo "${order_receipient}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now_form}.trx --passphrase-fd 0 ${handover_account}_${trx_now_form}.trx.tmp
 																rt_query=$?
 															fi
 															if [ $rt_query = 0 ]
@@ -3870,19 +3871,18 @@ do
 																if [ $receipient_is_asset = 0 ] && [ ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
-																	rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+																	rm ${script_path}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
 
 																	###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
-																	#cp ${script_path}/${handover_account}_${trx_now}.trx ${user_path}/${handover_account}_${trx_now}.trx
+																	#cp ${script_path}/${handover_account}_${trx_now_form}.trx ${user_path}/${handover_account}_${trx_now_form}.trx
 																	#############################################################################
-
 																	if [ ! $trx_path_output = $script_path ] && [ -d $trx_path_output ]
 																	then
-																		mv ${script_path}/${handover_account}_${trx_now}.trx ${trx_path_output}/${handover_account}_${trx_now}.trx
+																		mv ${script_path}/${handover_account}_${trx_now_form}.trx ${trx_path_output}/${handover_account}_${trx_now_form}.trx
 																	else
 																		if [ -z "${trx_path_output}" ]
 																		then
-																			rm ${script_path}/${handover_account}_${trx_now}.trx
+																			rm ${script_path}/${handover_account}_${trx_now_form}.trx
 																		fi
 																	fi
 																fi
@@ -3901,21 +3901,21 @@ do
 																	then
 																		if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																		then
-																			mv ${trx_path_output}/${handover_account}_${trx_now}.trx ${cmd_path}/${handover_account}_${trx_now}.trx
-																			echo "FILE:${cmd_path}/${handover_account}_${trx_now}.trx"
+																			mv ${trx_path_output}/${handover_account}_${trx_now_form}.trx ${cmd_path}/${handover_account}_${trx_now_form}.trx
+																			echo "FILE:${cmd_path}/${handover_account}_${trx_now_form}.trx"
 																		else
-																			echo "FILE:${trx_path_output}/${handover_account}_${trx_now}.trx"
+																			echo "FILE:${trx_path_output}/${handover_account}_${trx_now_form}.trx"
 																		fi
 																	fi
 																	exit 0
 																fi
 															else
-																rm ${trx_path_output}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
-																rm ${trx_path_output}/${handover_account}_${trx_now}.trx 2>/dev/null
+																rm ${trx_path_output}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
+																rm ${trx_path_output}/${handover_account}_${trx_now_form}.trx 2>/dev/null
 																rm ${last_trx} 2>/dev/null
 															fi
 														else
-															rm ${script_path}/${handover_account}_${trx_now}.trx.tmp 2>/dev/null
+															rm ${script_path}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
 															rm ${last_trx} 2>/dev/null
 														fi
 													fi
@@ -4515,7 +4515,7 @@ do
 									sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 									receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
 									trx_date_tmp=${trx_filename#*.}
-									trx_date=$(date +'%F|%H:%M:%S' --date=@${trx_date_tmp})
+									trx_date=$(date +'%F|%H:%M:%S.%3N' --date=@${trx_date_tmp})
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 									trx_hash=$(sha256sum $trx_file)
@@ -4575,6 +4575,10 @@ do
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
+										if [ $(grep -c "${trx_date}" ${user_path}/my_trx.tmp) = 0 ]
+										then
+											trx_date=${trx_date%%.*}
+										fi
 										trx_file=$(basename $(grep "${trx_date}" ${user_path}/my_trx.tmp))
 										trx_amount=$(echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g')
 										trx_hash=$(sha256sum ${script_path}/trx/${trx_file})
