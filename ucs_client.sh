@@ -3490,40 +3490,34 @@ do
 													then
 														order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
 														amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
-														amount_mod=$(echo "${amount_mod} > 0"|bc)
-														if [ $amount_mod = 0 ]
+														amount_big_enough=$(echo "${amount_mod} > 0"|bc)
+														if [ $amount_big_enough = 0 ]
 														then
 															order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
-															is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
-															if [ $is_amount_big_enough = 1 ] && [ $receipient_is_asset = 1 ]
+															if [ $receipient_is_asset = 1 ]
 															then
-																asset_type_price=$(grep "asset_price=" ${script_path}/assets/${order_asset})
-																asset_type_price=${asset_type_price#*=}
-																asset_price=$(grep "asset_price=" ${script_path}/assets/${order_receipient})
-																asset_price=${asset_price#*=}
-																asset_value=$(echo "scale=9; ${order_amount_formatted} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
-																is_amount_big_enough=$(echo "${asset_value} >= 0.000000001"|bc)
+																asset=$order_receipient
+															else
+																asset=$main_asset
 															fi
-															if [ $is_amount_big_enough = 1 ]
+															asset_price=$(grep "asset_price=" ${script_path}/assets/${asset})
+															asset_price=${asset_price#*=}
+															asset_value=$(echo "scale=9; 0.000000001 * ${asset_price}"|bc|sed 's/^\./0./g')
+															amount_big_enough=$(echo "${order_amount_formatted} < ${asset_value}"|bc)
+															dialog_send_amount_not_big_enough=$(echo "$dialog_send_amount_not_big_enough"|sed "s/0.000000001/${asset_value}/g")
+														fi
+														if [ $amount_big_enough = 0 ]
+														then
+															enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
+															if [ $enough_balance = 1 ]
 															then
-																enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-																if [ $enough_balance = 1 ]
-																then
-																	amount_selected=1
-																else
-																	if [ $gui_mode = 1 ]
-																	then
-																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
-																	else
-																		exit 29
-																	fi
-																fi
+																amount_selected=1
 															else
 																if [ $gui_mode = 1 ]
 																then
-																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
 																else
-																	exit 30
+																	exit 29
 																fi
 															fi
 														else
