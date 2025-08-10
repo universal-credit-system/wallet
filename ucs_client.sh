@@ -495,13 +495,6 @@ check_input(){
 			1 )	###CHECK IF ONLY DIGITS ARE IN INPUT STRING############################
 				string_check=$(echo "${input_string}"|grep -c '[^[:digit:]]')
 
-				###IF NOT CHECK IF ALPHA NUM ARE IN INPUT STRING#######################
-				if [ $string_check = 0 ]
-				then
-					###CHECK IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION########
-					string_check=$(echo "${input_string}"|grep -c '[^[:alnum:]]')
-				fi
-
 				###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
 				if [ $string_check = 1 ]
 				then
@@ -3454,79 +3447,75 @@ do
 									then
 										if [ -n "${order_receipient}" ]
 										then
-											###CHECK IF INPUT CONTAINS ALNUM####################################
-											check_input $order_receipient 0
-											rt_query=$?
-											if [ $rt_query = 0 ]
+											###CHECK IF RECEIPIENT IS USER OR ASSET#############################
+											if [ $(grep -c -w "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
 											then
-												###CHECK IF RECEIPIENT IS USER OR ASSET#############################
-												if [ $(grep -c -w "${order_receipient}" ${user_path}/all_accounts.dat) = 1 ]
+												receipient_found=1
+												amount_selected=0
+											else
+												asset_there=$(grep -c -w "${order_receipient}" ${user_path}/all_assets.dat)
+												asset=$(grep -w "${order_receipient}" ${user_path}/all_assets.dat)
+												is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
+												if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
 												then
+													receipient_is_asset=1
 													receipient_found=1
 													amount_selected=0
 												else
-													asset_there=$(grep -c -w "${order_receipient}" ${user_path}/all_assets.dat)
-													asset=$(grep -w "${order_receipient}" ${user_path}/all_assets.dat)
-													is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
-													if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
-													then
-														receipient_is_asset=1
-														receipient_found=1
-														amount_selected=0
-													else
-														if [ $gui_mode = 1 ]
-														then
-															dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
-														else
-															exit 28
-														fi
-													fi
-												fi
-												while [ $amount_selected = 0 ]
-												do
-													account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
-													account_my_balance=${account_my_balance#*=}
 													if [ $gui_mode = 1 ]
 													then
-														dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
-														order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
-														rt_query=$?
+														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
 													else
-														rt_query=0
-														order_amount=$cmd_amount
+														exit 28
 													fi
-													if [ $rt_query = 0 ]
+												fi
+											fi
+											while [ $amount_selected = 0 ]
+											do
+												account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
+												account_my_balance=${account_my_balance#*=}
+												if [ $gui_mode = 1 ]
+												then
+													dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
+													order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
+													rt_query=$?
+												else
+													rt_query=0
+													order_amount=$cmd_amount
+												fi
+												if [ $rt_query = 0 ]
+												then
+													order_amount_alnum=$(echo $order_amount|grep -c '[^0-9.,]')
+													if [ $order_amount_alnum = 0 ]
 													then
-														order_amount_alnum=$(echo $order_amount|grep -c '[^0-9.,]')
-														if [ $order_amount_alnum = 0 ]
+														order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
+														amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
+														amount_mod=$(echo "${amount_mod} > 0"|bc)
+														if [ $amount_mod = 0 ]
 														then
-															order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
-															amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
-															amount_mod=$(echo "${amount_mod} > 0"|bc)
-															if [ $amount_mod = 0 ]
+															order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
+															is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
+															if [ $is_amount_big_enough = 1 ] && [ $receipient_is_asset = 1 ]
 															then
-																order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
-																is_amount_big_enough=$(echo "${order_amount_formatted} >= 0.000000001"|bc)
-																if [ $is_amount_big_enough = 1 ]
+																asset_type_price=$(grep "asset_price=" ${script_path}/assets/${order_asset})
+																asset_type_price=${asset_type_price#*=}
+																asset_price=$(grep "asset_price=" ${script_path}/assets/${order_receipient})
+																asset_price=${asset_price#*=}
+																asset_value=$(echo "scale=9; ${order_amount_formatted} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
+																is_amount_big_enough=$(echo "${asset_value} >= 0.000000001"|bc)
+															fi
+															if [ $is_amount_big_enough = 1 ]
+															then
+																enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
+																if [ $enough_balance = 1 ]
 																then
-																	enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-																	if [ $enough_balance = 1 ]
-																	then
-																		amount_selected=1
-																	else
-																		if [ $gui_mode = 1 ]
-																		then
-																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
-																		else
-																			exit 29
-																		fi
-																	fi
+																	amount_selected=1
 																else
 																	if [ $gui_mode = 1 ]
 																	then
-																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																		dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
 																	else
-																		exit 30
+																		exit 29
 																	fi
 																fi
 															else
@@ -3540,18 +3529,25 @@ do
 														else
 															if [ $gui_mode = 1 ]
 															then
-																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
+																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 															else
-																exit 31
+																exit 30
 															fi
 														fi
 													else
-														amount_selected=1
-														receipient_found=1
-														order_aborted=1
+														if [ $gui_mode = 1 ]
+														then
+															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
+														else
+															exit 31
+														fi
 													fi
-												done
-											fi
+												else
+													amount_selected=1
+													receipient_found=1
+													order_aborted=1
+												fi
+											done
 										fi
 									else
 										if [ $rt_query = 1 ]
@@ -4373,7 +4369,7 @@ do
 																												echo "asset_quantity=${asset_value_formatted}"
 																												echo "asset_owner=\"${handover_account}\""
 																											else
-																												echo "asset_price=\"${asset_value_formatted}\""
+																												echo "asset_price=${asset_value_formatted}"
 																											fi
 																											echo "asset_description=\"${asset_description}\""
 																											} >${user_path}/${asset_name}.${asset_stamp}
