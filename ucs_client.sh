@@ -2537,10 +2537,6 @@ urlencode(){
 ##################
 #Main Menu Screen#
 ##################
-###VERSION INFO#############
-core_system_name="Universal Credit System"
-core_system_version="v0.0.4-stable"
-
 ###SET INITIAL VARIABLES####
 initial_coinload=365250
 check_period_tsa=21600
@@ -2563,6 +2559,10 @@ small_trx=0
 script_path=$(dirname $(readlink -f ${0}))
 my_pid=$$
 gui_mode=1
+
+###VERSION INFO#############
+core_system_name="Universal Credit System"
+core_system_version=$(cat "${script_path}"/control/version_info)
 
 ###SOURCE CONFIG FILE#######
 . ${script_path}/control/config.conf
