@@ -1107,51 +1107,45 @@ check_assets(){
 								asset_already_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|grep -c "${asset}")
 								if [ $asset_already_exists -gt 0 ]
 								then
-									###CHECK IF FUNGIBLE VARIABLE SET CORRECTLY####################
-									if [ $asset_fungible = 0 ] || [ $asset_fungible = 1 ]
+									asset_owner_ok=0
+									###IF NON FUNGIBLE ASSET#####################################
+									if [ $asset_fungible = 0 ]
 									then
-										asset_owner_ok=0
-										asset_owner=$(echo "$asset_data"|grep "asset_owner")
-										asset_owner=${asset_owner#*=}
-										if [ $asset_fungible = 0 ]
+										###CHECK ASSET HARDCAP#######################################
+										if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
 										then
-											###CHECK ASSET HARDCAP#################################
-											if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
+											check_value=$asset_quantity
+											asset_owner=$(echo "$asset_data"|grep "asset_owner")
+											asset_owner=${asset_owner#*=}
+											###CHECK IF ASSET OWNER IS SET###############################
+											if [ -n "${asset_owner}" ]
 											then
-												is_big_enough=$(echo "${asset_quantity} > 0 "|bc)
-												if [ $is_big_enough = 1 ]
+												test -f ${script_path}/keys/"${asset_owner}"
+												rt_query=$?
+												if [ $? = 0 ]
 												then
-													###CHECK IF ASSET OWNER IS SET#########################
-													if [ -n "${asset_owner}" ]
-													then
-														test -f ${script_path}/keys/"${asset_owner}"
-														rt_query=$?
-														if [ $? = 0 ]
-														then
-															asset_owner_ok=1
-														fi
-													fi
+													asset_owner_ok=1
 												fi
 											fi
-										else
+										fi
+									else
+										###IF FUNGIBLE ASSET#########################################
+										if [ $asset_fungible = 1 ]
+										then
+											check_value=$asset_price
 											asset_owner_ok=1
 										fi
-										if [ $asset_owner_ok = 1 ]
+									fi
+									if [ $asset_owner_ok = 1 ]
+									then
+										###CHECK ASSET PRICE###################################
+										rt_query=0
+										is_amount_ok=$(echo "$check_value >= 0.000000001"|bc) || rt_query=1
+										is_amount_mod=$(echo "$check_value % 0.000000001"|bc) || rt_query=1
+										is_amount_mod=$(echo "${is_amount_mod} > 0"|bc) || rt_query=1
+										if [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ] && [ $rt_query = 0 ]
 										then
-											if [ $asset_fungible = 0 ]
-											then
-												check_value=$asset_quantity
-											else
-												check_value=$asset_price
-											fi
-											###CHECK ASSET PRICE###################################
-											is_amount_ok=$(echo "$check_value >= 0.000000001"|bc)
-											is_amount_mod=$(echo "$check_value % 0.000000001"|bc)
-											is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
-											if [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
-											then
-												asset_acknowledged=1
-											fi
+											asset_acknowledged=1
 										fi
 									fi
 								fi
