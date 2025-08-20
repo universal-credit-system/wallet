@@ -569,48 +569,42 @@ build_ledger(){
 		focus=$(date -u +%Y%m%d --date=@${date_stamp})
 		now_stamp=$(date +%s)
 
-		###CREATE LIST OF ASSETS CREATED BEFORE THAT DAY####
+		###GET PREVIOUS DAY#################################
 		previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
-		awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' ${user_path}/all_assets.dat >${user_path}/assets.tmp
 
-		###MAKE LEDGER ENTRIES FOR ASSETS#####################
-		if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
-		then
-			###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
-			for asset in $(cat ${user_path}/assets.tmp)
-			do
-				if [ ! "${asset}" = "${main_asset}" ] && [ -f ${script_path}/assets/${asset} ] && [ -s ${script_path}/assets/${asset} ]
+		###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
+		for asset in $(awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' ${user_path}/all_assets.dat)
+		do
+			if [ ! "${asset}" = "${main_asset}" ] && [ -f ${script_path}/assets/${asset} ] && [ -s ${script_path}/assets/${asset} ]
+			then
+				asset_data=$(cat ${script_path}/assets/${asset})
+				asset_fungible=$(echo "$asset_data"|grep "asset_fungible=")
+				asset_fungible=${asset_fungible#*=}
+				if [ $asset_fungible = 0 ]
 				then
-					asset_data=$(cat ${script_path}/assets/${asset})
-					asset_fungible=$(echo "$asset_data"|grep "asset_fungible=")
-					asset_fungible=${asset_fungible#*=}
-					if [ $asset_fungible = 0 ]
+					asset_owner=$(echo "$asset_data"|grep "asset_owner="|sed "s/\"//g")
+					asset_owner=${asset_owner#*=}
+					asset_quantity=$(echo "$asset_data"|grep "asset_quantity=")
+					asset_quantity=${asset_quantity#*=}
+					already_exists=$(grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat)
+					if [ $already_exists = 0 ]
 					then
-						asset_owner=$(echo "$asset_data"|grep "asset_owner="|sed "s/\"//g")
-						asset_owner=${asset_owner#*=}
-						asset_quantity=$(echo "$asset_data"|grep "asset_quantity=")
-						asset_quantity=${asset_quantity#*=}
-						already_exists=$(grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat)
-						if [ $already_exists = 0 ]
-						then
-							echo "${asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${previous_day}_ledger.dat
-						fi
-					else
-						already_exists=$(grep -c "${main_asset}:${asset}=" ${user_path}/${previous_day}_ledger.dat)
-						if [ $already_exists = 0 ]
-						then
-							echo "${main_asset}:${asset}=0" >>${user_path}/${previous_day}_ledger.dat
-						fi
-						already_exists=$(grep -c "${asset}:${main_asset}=" ${user_path}/${previous_day}_ledger.dat)
-						if [ $already_exists = 0 ]
-						then
-							echo "${asset}:${main_asset}=0" >>${user_path}/${previous_day}_ledger.dat
-						fi
+						echo "${asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${previous_day}_ledger.dat
+					fi
+				else
+					already_exists=$(grep -c "${main_asset}:${asset}=" ${user_path}/${previous_day}_ledger.dat)
+					if [ $already_exists = 0 ]
+					then
+						echo "${main_asset}:${asset}=0" >>${user_path}/${previous_day}_ledger.dat
+					fi
+					already_exists=$(grep -c "${asset}:${main_asset}=" ${user_path}/${previous_day}_ledger.dat)
+					if [ $already_exists = 0 ]
+					then
+						echo "${asset}:${main_asset}=0" >>${user_path}/${previous_day}_ledger.dat
 					fi
 				fi
-			done
-		fi
-		rm ${user_path}/assets.tmp 2>/dev/null
+			fi
+		done
 
 		if [ $focus -le $now ] && [ $gui_mode = 1 ]
 		then
@@ -657,45 +651,48 @@ build_ledger(){
 			grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -v -f - ${user_path}/${focus}_ledger.dat|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >${user_path}/${focus}_ledger.tmp
 			if [ -f ${user_path}/${focus}_ledger.tmp ] && [ -s ${user_path}/${focus}_ledger.tmp ]
 			then
-				rm ${user_path}/${focus}_ledger_others.tmp 2>/dev/null
-				touch ${user_path}/${focus}_ledger_others.tmp
 				grep -v "${main_asset}" ${user_path}/all_assets.dat|grep -f - ${user_path}/${focus}_ledger.dat >${user_path}/${focus}_ledger_others.tmp
 				cat ${user_path}/${focus}_ledger.tmp ${user_path}/${focus}_ledger_others.tmp >${user_path}/${focus}_ledger.dat
 				rm ${user_path}/${focus}_ledger_others.tmp
 			fi
 			rm ${user_path}/${focus}_ledger.tmp 2>/dev/null
 
-			###CREATE LIST OF ACCOUNTS CREATED THAT DAY######
-			touch ${user_path}/accounts.tmp
+			###GET DATESTAMP OF TOMORROW#####################
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
+			
+			###GET LIST OF ACCOUNTS CREATED TODAY############
 			grep -f ${user_path}/depend_accounts.dat ${user_path}/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >${user_path}/accounts.tmp
 
-			###CREATE LEDGER ENTRY FOR USER##################
+			###CREATE LEDGER ENTRY FOR THESE USERS###########
 			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' ${user_path}/accounts.tmp >>${user_path}/${focus}_ledger.dat
 			rm ${user_path}/accounts.tmp 2>/dev/null
 
-			###CREATE LIST OF ASSETS CREATED THAT DAY########
-			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat >${user_path}/assets.tmp
-
-			###MAKE LEDGER ENTRIES FOR ASSETS################
-			if [ -f ${user_path}/assets.tmp ] && [ -s ${user_path}/assets.tmp ]
-			then
-				cd ${script_path}/assets || exit 9
+			###FOR EACH ASSET CREATED THAT DAY###############
+			for asset in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' ${user_path}/all_assets.dat)
+			do
+				###SET FULL PATH###########################################
+				asset_full_path="${script_path}/assets/${asset}"
 
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
-				for non_fungible_asset in $(grep -l "asset_fungible=0" $(cat ${user_path}/assets.tmp))
-				do
-					asset_quantity=$(grep "asset_quantity=" $non_fungible_asset)
+				rt_query=0
+				match=$(grep -s -c "asset_fungible=0" "${asset_full_path}") || rt_query=1
+				if [ $rt_query = 0 ] && [ $match = 1 ]
+				then
+					asset_quantity=$(grep "asset_quantity=" "${asset_full_path}")
 					asset_quantity=${asset_quantity#*=}
-					asset_owner=$(grep "asset_owner=" $non_fungible_asset|sed "s/\"//g")
+					asset_owner=$(grep "asset_owner=" "${asset_full_path}"|sed "s/\"//g")
 					asset_owner=${asset_owner#*=}
-					echo "${non_fungible_asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat
-				done
+					echo "${asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${focus}_ledger.dat
+				fi
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
-				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
-				grep -l "asset_fungible=1" $(cat ${user_path}/assets.tmp)|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print $1"."$2":"main_asset"=0"}' >>${user_path}/${focus}_ledger.dat
-			fi
-			rm ${user_path}/assets.tmp 2>/dev/null
+				match=$(grep -s -c "asset_fungible=1" "${asset_full_path}") || rt_query=1
+				if [ $rt_query = 0 ] && [ $asset_fungible = 1 ]
+				then
+					###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
+					echo "${asset}"|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
+					echo "${asset}"|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print $1"."$2":"main_asset"=0"}' >>${user_path}/${focus}_ledger.dat
+				fi
+			done
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' ${user_path}/depend_trx.dat) 
