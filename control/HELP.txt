@@ -62,9 +62,13 @@ OPTIONS:
   -path <PATH>		path where output file is stored. 
 			path from where to read input file.
 
+  -new_ledger           rebuild the whole ledger from the scratch
+
+                        option will be ignored when parameter -no_ledger is set
+
   -no_ledger		don't build a ledger at start and only perform basic 
-			integrity checks. should only be performed after a
-			certain action to ensure information are up-to-date.
+			integrity checks. allows import of multiple files one
+			after another without building a ledger each time.
 			when option is applied the usage of auto_uca_start 
 			setting in control/config.conf is disabled
 			

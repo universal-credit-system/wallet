@@ -101,7 +101,7 @@ login_account(){
 					mkdir ${script_path}/userdata/${handover_account}/temp/trx
 				fi
 
-				####DISPLAY WELCOME MESSAGE################################################
+				####DISPLAY WELCOME MESSAGE##################################
 				if [ $gui_mode = 1 ]
 				then
 					###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
@@ -2539,12 +2539,13 @@ last_ledger=""
 default_tsa=""
 start_date="20250412"
 now=$(date -u +%Y%m%d)
-no_ledger=0
 user_logged_in=0
 uca_trigger=0
 action_done=1
 make_ledger=1
 make_new_index=1
+new_ledger=0
+no_ledger=0
 end_program=0
 small_trx=0
 script_path=$(dirname $(readlink -f ${0}))
@@ -2596,6 +2597,8 @@ then
 	do
 		###GET TARGET VARIABLES########################################
 		case $1 in
+			"-new_ledger")	new_ledger=1
+					;;
 			"-no_ledger")	no_ledger=1
 					;;
 			"-action")	cmd_var=$1
@@ -2845,6 +2848,11 @@ do
 								fi
 							done
 							set +f
+							###CHECK IF PARAMETER IS SET TO REBUILD LEDGER###############
+							if [ $user_logged_in = 1 ] && [ $new_ledger = 1 ] && [ $no_ledger = 0 ]
+							then
+								rm "${user_path}"/*.dat 2>/dev/null
+							fi
 							;;
 				"$dialog_main_create")  set -f
 							account_name_inputbox=""
