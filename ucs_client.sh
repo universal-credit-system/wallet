@@ -1056,7 +1056,8 @@ check_assets(){
 			touch ${user_path}/blacklisted_assets.dat
 			if [ -f ${user_path}/all_assets.dat ] && [ -s ${user_path}/all_assets.dat ]
 			then
-				mv ${user_path}/all_assets.dat ${user_path}/ack_assets.dat
+				###REMOVE DELETED ASSETS FROM ALL_ASSETS.DAT AND SAVE##########
+				ls -1 ${script_path}/assets|sort - ${user_path}/all_assets.dat|uniq -d >${user_path}/ack_assets.dat
 			else
 				rm ${user_path}/ack_assets.dat 2>/dev/null
 				touch ${user_path}/ack_assets.dat
@@ -1455,7 +1456,8 @@ check_tsa(){
 			touch ${user_path}/blacklisted_accounts.dat
 			if [ -f ${user_path}/all_accounts.dat ] && [ -s ${user_path}/all_accounts.dat ]
 			then
-				mv ${user_path}/all_accounts.dat ${user_path}/ack_accounts.dat
+				###REMOVE DELETED KEYS FROM ALL_ACCOUNTS.DAT AND SAVE#######
+				ls -1 ${script_path}/keys|sort - ${user_path}/all_accounts.dat|uniq -d >${user_path}/ack_accounts.dat
 			else
 				rm ${user_path}/ack_accounts.dat 2>/dev/null
 				touch ${user_path}/ack_accounts.dat
@@ -1660,7 +1662,8 @@ check_trx(){
 		touch ${user_path}/blacklisted_trx.dat
 		if [ -f ${user_path}/all_trx.dat ] && [ -s ${user_path}/all_trx.dat ]
 		then
-			mv ${user_path}/all_trx.dat ${user_path}/ack_trx.dat
+			###REMOVE DELETED TRX FROM ALL_TRX.DAT AND SAVE#########
+			ls -1 ${script_path}/trx|sort - ${user_path}/all_trx.dat|uniq -d|grep -f ${user_path}/all_accounts.dat >${user_path}/ack_trx.dat
 		else
 			rm ${user_path}/ack_trx.dat 2>/dev/null
 			touch ${user_path}/ack_trx.dat
