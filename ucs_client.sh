@@ -2083,7 +2083,7 @@ get_dependencies(){
 				while [ $counter -le $(wc -l <${user_path}/depend_accounts.dat) ]
 				do
 					user=$(head -$counter ${user_path}/depend_accounts.dat|tail -1)
-					grep -l "RCVR:${user}" $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
+					grep -l "RCVR:${user}" /dev/null $(cat ${user_path}/all_trx.dat)|cut -d '.' -f1 >${user_path}/depend_user_list.tmp
 					for trx in $(grep "${user}" ${user_path}/all_trx.dat)
 					do
 						echo "${trx}" >>${user_path}/depend_trx.dat
