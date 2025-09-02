@@ -100,7 +100,7 @@ To get the latest updates for the source code run `git pull`
 git pull
 ```
 ## Extensions
-There are additional archives that contain the different extensions:
+The archives in the repository contain the different extensions:
 
 * **contractor.tar**
 
@@ -109,9 +109,11 @@ There are additional archives that contain the different extensions:
 * **docker.tar**
 
   Dockerfiles including build and deployment scripts
+  
 * **explorer.tar**
 
   UCS Tangle explorer
+  
 * **otsa.tar**
 
   scripts to create and deploy your own TSA service
@@ -136,7 +138,7 @@ There are additional archives that contain the different extensions:
 
   a useful set of scripts
 
-You have to unpack these tar files yourself if by using `tar`:
+You have to unpack these tar files yourself using `tar`:
 ```bash
 tar -xvf <archive>.tar
 ```
