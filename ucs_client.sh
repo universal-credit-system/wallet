@@ -2644,7 +2644,7 @@ then
 			"-debug")	set -x
 					set -v
 					;;
-			"-version")	echo "${core_system_version}"
+			"-version")	echo "version:${core_system_version}"
 					exit 0
 					;;
 			"-help")	more ${script_path}/control/HELP.txt
