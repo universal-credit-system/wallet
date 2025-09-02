@@ -8,6 +8,7 @@ Repository of the Universal Credit System Wallet.
 * [Installation](#installation)
 * [Start](#start)
 * [Update](#update)
+* [Extensions](#extensions)
 * [Community](#community)
 
 ## Description
@@ -98,6 +99,48 @@ To get the latest updates for the source code run `git pull`
 ```bash
 git pull
 ```
+## Extensions
+There are additional archives that contain the different extensions:
+
+* **contractor.tar**
+
+  Universal Contractor including sample contracts
+  
+* **docker.tar**
+
+  Dockerfiles including build and deployment scripts
+* **explorer.tar**
+
+  UCS Tangle explorer
+* **otsa.tar**
+
+  scripts to create and deploy your own TSA service
+  
+* **webwallet_home.tar**
+
+  webwallet wallet connector
+  
+* **webwallet_www-data.tar**
+
+  webwallet webpage
+  
+* **webapi.tar**
+
+  WebAPI RPC
+  
+* **server.tar**
+
+  UCA LINK Server
+  
+* **tools.tar**
+
+  a useful set of scripts
+
+You have to unpack these tar files yourself if by using `tar`:
+```bash
+tar -xvf <archive>.tar
+```
+For more information on the extension please have a look into the related technical documentation.
 
 ## Community
 **You found a bug or face an issue running the client? We have a [Forum](https://forum.universal-credit-system.org) and also a [Discord Server](https://discord.gg/5kvCP6kkRn) for troubleshooting and support. If you have any questions, suggestions or critics you are welcome to post it on the forum or the discord server.**
