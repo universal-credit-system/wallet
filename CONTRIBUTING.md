@@ -8,6 +8,23 @@ In this guide you will get an overview of the contribution workflow from opening
 
 Use the table of contents icon on the top left corner of this document to get to a specific section of this guide quickly.
 
+Our main goal is to permanently improve and maintain the Universal Credit System and its associated software components.
+To prevent contributers from hastily proposing ill-considered changes that disimprove things instead of making them
+better here is some advice on how to handle proposed changes.
+
+Before you propose a change, you should pause for a moment and take a deep breath.
+Ask yourself whether your proposal is really better than the current code in terms of
+
+- runtime
+- simplicity
+- efficiency
+- maintainability
+- compatability (forward and backward)
+- avoidance of additional external programs
+ 
+If one or more points have raised doubts about your proposal, you maybe should first present it to the community.
+If the proposal can stand the points above you have a real improvement. Awesome!
+
 ## New contributor guide
 
 To get an overview of the project, read the [README](../README.md) file.
