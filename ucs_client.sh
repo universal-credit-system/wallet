@@ -1878,14 +1878,14 @@ process_new_files(){
 					new_trx_score_highest=0
 					old_trx_score_highest=0
 
-					###GET USER TRANSACTION OF OLD AND NEW INDEX FILE###########
+					###GET USER TRANSACTION OF NEW AND OLD INDEX FILE###########
 					grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
 					grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
 
-					###GET UNIQUE USER TRANSACIONS OF OLD INDEX FILE############
+					###GET UNIQUE USER TRANSACIONS OF NEW INDEX FILE############
 					sort ${user_path}/new_index_filelist.tmp ${user_path}/old_index_filelist.tmp ${user_path}/old_index_filelist.tmp|uniq -u >${user_path}/new_unique_filelist.tmp
 
-					###GET UNIQUE USER TRANSACIONS OF NEW INDEX FILE############
+					###GET UNIQUE USER TRANSACIONS OF OLD INDEX FILE############
 					sort ${user_path}/old_index_filelist.tmp ${user_path}/new_index_filelist.tmp ${user_path}/new_index_filelist.tmp|uniq -u >${user_path}/old_unique_filelist.tmp
 
 					###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN OLD INDEX#####
@@ -1895,7 +1895,7 @@ process_new_files(){
 						if [ -f ${script_path}/${stripped_file} ] && [ -s ${script_path}/${stripped_file} ]
 						then
 							old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-							old_trx_confirmations=$(grep -l "$line" ${script_path}/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${old_trx_receiver}")
+							old_trx_confirmations=$(grep -l "$line" ${script_path}/proofs/*/*.txt|grep -c -v "${old_trx_receiver}")
 							if [ $old_trx_confirmations -gt $old_trx_score_highest ]
 							then
 								old_trx_score_highest=$old_trx_confirmations
@@ -1910,7 +1910,7 @@ process_new_files(){
 						if [ -f ${user_path}/temp/${stripped_file} ] && [ -s ${user_path}/temp/${stripped_file} ]
 						then
 							new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
-							new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${user_to_verify}\|${new_trx_receiver}")
+							new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${new_trx_receiver}")
 							if [ $new_trx_confirmations -gt $new_trx_score_highest ]
 							then
 								new_trx_score_highest=$new_trx_confirmations
