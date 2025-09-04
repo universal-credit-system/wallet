@@ -1893,7 +1893,7 @@ process_new_files(){
 						if [ -f ${script_path}/${stripped_file} ] && [ -s ${script_path}/${stripped_file} ]
 						then
 							trx_confirmations_old=$(grep -l "$trx" ${script_path}/proofs/*/*.txt|wc -l)
-							trx_confirmations_new=$(grep -l "$trx" ${script_path}/temp/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -l "$trx" ${user_path}/temp/proofs/*/*.txt|wc -l)
 							if [ $trx_confirmations_old -gt $trx_confirmations_new ]
 							then
 								trx_confirmations=$trx_confirmations_old
@@ -1914,7 +1914,7 @@ process_new_files(){
 						if [ -f ${user_path}/temp/${stripped_file} ] && [ -s ${user_path}/temp/${stripped_file} ]
 						then
 							trx_confirmations_old=$(grep -l "$trx" ${script_path}/proofs/*/*.txt|wc -l)
-							trx_confirmations_new=$(grep -l "$trx" ${script_path}/temp/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -l "$trx" ${user_path}/temp/proofs/*/*.txt|wc -l)
 							if [ $trx_confirmations_old -gt $trx_confirmations_new ]
 							then
 								trx_confirmations=$trx_confirmations_old
