@@ -1882,38 +1882,48 @@ process_new_files(){
 					grep "trx/${user_to_verify}" ${user_path}/temp/${new_index_file} >${user_path}/new_index_filelist.tmp
 					grep "trx/${user_to_verify}" ${script_path}/${new_index_file} >${user_path}/old_index_filelist.tmp
 
-					###GET UNIQUE USER TRANSACIONS OF NEW INDEX FILE############
+					###GET UNIQUE USER TRANSACIONS OF INDEX FILES###############
+					sort ${user_path}/old_index_filelist.tmp ${user_path}/new_index_filelist.tmp ${user_path}/new_index_filelist.tmp|uniq -u >${user_path}/old_unique_filelist.tmp
 					sort ${user_path}/new_index_filelist.tmp ${user_path}/old_index_filelist.tmp ${user_path}/old_index_filelist.tmp|uniq -u >${user_path}/new_unique_filelist.tmp
 
-					###GET UNIQUE USER TRANSACIONS OF OLD INDEX FILE############
-					sort ${user_path}/old_index_filelist.tmp ${user_path}/new_index_filelist.tmp ${user_path}/new_index_filelist.tmp|uniq -u >${user_path}/old_unique_filelist.tmp
-
 					###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN OLD INDEX#####
-					while read line
+					while read trx
 					do
-						stripped_file=$(echo "${line}"|awk '{print $1}')
+						stripped_file=${trx%% *}
 						if [ -f ${script_path}/${stripped_file} ] && [ -s ${script_path}/${stripped_file} ]
 						then
-							old_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/${stripped_file})
-							old_trx_confirmations=$(grep -l "$line" ${script_path}/proofs/*/*.txt|grep -c -v "${old_trx_receiver}")
-							if [ $old_trx_confirmations -gt $old_trx_score_highest ]
+							trx_confirmations_old=$(grep -l "$trx" ${script_path}/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -l "$trx" ${script_path}/temp/proofs/*/*.txt|wc -l)
+							if [ $trx_confirmations_old -gt $trx_confirmations_new ]
 							then
-								old_trx_score_highest=$old_trx_confirmations
+								trx_confirmations=$trx_confirmations_old
+							else
+								trx_confirmations=$trx_confirmations_new
+							fi
+							if [ $trx_confirmations -gt $old_trx_score_highest ]
+							then
+								old_trx_score_highest=$trx_confirmations
 							fi
 						fi
 					done <${user_path}/old_unique_filelist.tmp
 
 					###GET HIGHEST NUMBER OF TRX CONFIRMATIONS IN NEW INDEX#####
-					while read line
+					while read trx
 					do
-						stripped_file=$(echo "${line}"|awk '{print $1}')
+						stripped_file=${trx%% *}
 						if [ -f ${user_path}/temp/${stripped_file} ] && [ -s ${user_path}/temp/${stripped_file} ]
 						then
-							new_trx_receiver=$(awk -F: '/:RCVR:/{print $3}' ${user_path}/temp/${stripped_file})
-							new_trx_confirmations=$(grep -l "$line" ${user_path}/temp/proofs/*/*.txt|grep -c -v "${new_trx_receiver}")
-							if [ $new_trx_confirmations -gt $new_trx_score_highest ]
+							trx_confirmations_old=$(grep -l "$trx" ${script_path}/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -l "$trx" ${script_path}/temp/proofs/*/*.txt|wc -l)
+							if [ $trx_confirmations_old -gt $trx_confirmations_new ]
 							then
-								new_trx_score_highest=$new_trx_confirmations
+								trx_confirmations=$trx_confirmations_old
+							else
+								trx_confirmations=$trx_confirmations_new
+							fi
+							if [ $trx_confirmations -gt $new_trx_score_highest ]
+							then
+								new_trx_score_highest=$trx_confirmations
 							fi
 						fi
 					done <${user_path}/new_unique_filelist.tmp
@@ -1924,6 +1934,23 @@ process_new_files(){
 						if [ $old_trx_score_highest -gt $new_trx_score_highest ] || [ $(grep -c -v "trx/${user_to_verify}" ${user_path}/temp/${new_index_file}) -le $(grep -c -v "trx/${user_to_verify}" ${script_path}/${new_index_file}) ]
 						then
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+						fi
+					else
+						###ENSURE THAT NEW TRANSACTIONS ARE OLDER##################
+						if [ $(wc -l <${user_path}/old_unique_filelist.tmp) = 0 ] && [ -s ${user_path}/old_index_filelist.tmp ]
+						then
+							old_date=$(tail -1 ${user_path}/old_index_filelist.tmp)
+							old_date=${old_date%% *}
+							old_date=${old_date#*/}
+							old_date=${old_date#*.}
+							new_date=$(head -1 ${user_path}/new_uniq_filelist.tmp)
+							new_date=${new_date%% *}
+							new_date=${new_date#*/}
+							new_date=${new_date#*.}
+							if [ $(echo "${old_date} < ${new_date}"|bc) = 0 ]
+							then
+								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
+							fi
 						fi
 					fi
 				done
