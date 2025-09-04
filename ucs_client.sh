@@ -3996,20 +3996,18 @@ do
 										fi
 
 										###DECRYPT TRANSACTION FILE################################
-										echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${file_path}.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
+										rm ${user_path}/trx_decr.tmp 2>/dev/null
+										echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/trx_decr.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###CHANGE TO ORIGINAL FILENAME#############################
-											mv ${file_path}.tmp ${file_path}
-
 											###CHECK ARCHIVE###########################################
 											if [ $all_extract = 0 ]
 											then
-												check_archive $file_path 0
+												check_archive ${user_path}/trx_decr.tmp 0
 												rt_query=$?
 											else
-												check_archive $file_path 1
+												check_archive ${user_path}/trx_decr.tmp 1
 												rt_query=$?
 											fi
 
@@ -4017,7 +4015,7 @@ do
 											if [ $rt_query = 0 ]
 											then
 												cd ${user_path}/temp || exit 15
-												tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
+												tar -xzf ${user_path}/trx_decr.tmp -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
 												if [ $rt_query = 0 ]
 												then
@@ -4060,7 +4058,7 @@ do
 												fi
 											fi
 										fi
-										rm ${file_path}.tmp 2>/dev/null
+										rm ${user_path}/trx_decr.tmp 2>/dev/null
 									fi
 									if [ ! $rt_query = 0 ]
 									then
