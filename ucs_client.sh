@@ -2780,7 +2780,7 @@ do
 	then
 		if [ $gui_mode = 1 ]
 		then
-			main_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-items --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "$dialog_main_create" "$dialog_main_settings" "$dialog_main_backup" "$dialog_main_end")
+			main_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-items --no-hot-list --menu "\Z7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXX                   XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX         XXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXX                   XXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXX \ZUUNIVERSAL CREDIT SYSTEM\ZU XXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 22 43 5 "$dialog_main_logon" "$dialog_main_create" "$dialog_main_settings" "$dialog_main_backup" "$dialog_main_end")
 			rt_query=$?
 		else
 			rt_query=0
@@ -3063,7 +3063,7 @@ do
 				"$dialog_main_settings")	quit_settings=0
 								while [ $quit_settings -eq 0 ]
 								do
-									settings_menu=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" "" "config.conf" "")
+									settings_menu=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-hot-list --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" "" "config.conf" "")
 									rt_query=$?
 									if [ $rt_query = 0 ]
 									then
@@ -3093,7 +3093,7 @@ do
 															theme_name=${theme_file%%.*}
 															printf "%s" "$theme_name theme " >>${script_path}/theme_list.tmp
 														done
-														theme_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp)
+														theme_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -3118,7 +3118,7 @@ do
 															cat ${script_path}/control/config.conf|grep -v "###"|sed 's/=/= /g' >${script_path}/config_${my_pid}.tmp
 
 															### DISPLAY INPUTMENU DIALOG ####################
-															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp)
+															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --no-hot-list --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp)
 															rt_query=$?
 															if [ $rt_query = 3 ]
 															then
@@ -3207,7 +3207,7 @@ do
 										else
 											printf "%s" "${dialog_history_noresult}" >${script_path}/backup_list.tmp
 										fi
-										backup_decision=$(dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp)
+										backup_decision=$(dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --scrollbar --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp)
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
@@ -3404,7 +3404,7 @@ do
 		if [ $gui_mode = 1 ]
 		then
 			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g")
-			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_browser" "$dialog_history" "$dialog_stats" "$dialog_logout")
+			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --no-hot-list --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_browser" "$dialog_history" "$dialog_stats" "$dialog_logout")
 			rt_query=$?
 		else
 			rt_query=0
@@ -3437,7 +3437,7 @@ do
 								while [ $quit_asset_loop = 0 ]
 								do
 									###ASSET OVERVIEW################################
-									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --default-item "$def_string_asset" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
+									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --default-item "$def_string_asset" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
 									rt_query=$?
 									if [ $rt_query = 3 ]
 									then
@@ -3602,7 +3602,7 @@ do
 												done <${user_path}/all_assets.dat
 											fi
 											cat ${user_path}/menu_addresses_fungible.tmp ${user_path}/all_assets.dat|grep -v "${order_asset}"|sort|uniq -d|sort -t. -k2|cat - ${user_path}/all_accounts.dat >${user_path}/menu_addresses.tmp
-											order_receipient=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp)
+											order_receipient=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "..." 0 0 0 --file ${user_path}/menu_addresses.tmp)
 											rm ${user_path}/menu_addresses.tmp
 											rm ${user_path}/menu_addresses_fungible.tmp
 										else
@@ -4309,7 +4309,7 @@ do
 							while [ $quit_menu = 0 ]
 							do
 								###BROWSER OVERVIEW######################################
-								browse_type=$(dialog --cancel-label "$dialog_cancel" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
+								browse_type=$(dialog --cancel-label "$dialog_cancel" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -4320,7 +4320,7 @@ do
 													while [ $quit_asset_menu = 0 ]
 													do
 														###ASSET OVERVIEW########################################
-														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
+														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
 														then
@@ -4466,7 +4466,7 @@ do
 													while [ $quit_user_menu = 0 ]
 													do
 														###USERS OVERVIEW########################################
-														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -4486,7 +4486,7 @@ do
 															quit_trx_menu=0
 															while [ $quit_trx_menu = 0 ]
 															do
-																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 																rt_query=$?
 																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
@@ -4513,7 +4513,7 @@ do
 													def_string=$(head -1 ${user_path}/dialog_browser_trx.tmp)
 													while [ $quit_trx_loop = 0 ]
 													do
-														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 														rt_query=$?
 														if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 														then
@@ -4592,7 +4592,7 @@ do
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
-								decision=$(dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name $core_system_version" --output-fd 1 --default-item "${menu_item_selected}" --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp)
+								decision=$(dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name $core_system_version" --output-fd 1 --default-item "${menu_item_selected}" --no-hot-list --scrollbar --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp)
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
