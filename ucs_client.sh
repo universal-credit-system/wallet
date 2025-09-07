@@ -3976,7 +3976,6 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									LANG="en_US.UTF-8"
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 									rt_query=$?
 								else
