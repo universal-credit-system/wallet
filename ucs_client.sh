@@ -3097,7 +3097,7 @@ do
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
-															new_theme_file=$(ls -1 ${script_path}/theme/|grep "${theme_selection}")
+															new_theme_file=$(ls -1 ${script_path}/theme/|grep -w "${theme_selection}")
 															if [ ! $dialogrc_set = $new_theme_file ]
 															then
 																sed -i "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" ${script_path}/control/config.conf
@@ -3976,6 +3976,7 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
+									LANG="en_US.UTF-8"
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 									rt_query=$?
 								else
