@@ -17,7 +17,7 @@ The [Universal Credit System](https://www.universal-credit-system.org) Wallet is
 ## Technologies used
 The program was written as **bourne shell script (#!/bin/sh)**
 
-The script depends on other programs. Most of them are **core utilities**, which means that depending on your version of the core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. During setup the `install.sh` script will perform a check if any program is missing so you don't need to check them yourself.
+The script depends on other programs. Most of them are **core utilities**, which means that depending on your version of the core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. The setup script `install.sh` checks if any programs are missing and will install them.
 
 The following programs are used:
 
@@ -82,8 +82,7 @@ Step into this directory using `cd`
 cd wallet/
 ```
 
-Now you can execute the install.sh script. The script will check for depending programs and if all depending programs are installed the setup will continue. 
-If there is a program that needs to be installed the script will display the program names and then quit. In this case you have to manually install these programs first and then run `install.sh` script again.
+Now you can execute the install.sh script. The script will check for depending programs and will install them if necessary.
 ```bash
 ./install.sh
 ```
