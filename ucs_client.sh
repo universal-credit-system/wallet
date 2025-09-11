@@ -3647,7 +3647,7 @@ do
 														if [ $rt_query = 1 ]
 														then
 															quit_file_path=0
-															path_to_search=$script_path
+															path_to_search="${script_path}/"
 															while [ $quit_file_path = 0 ]
 															do
 																###IF USER WANTS FILE##############################
