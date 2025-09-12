@@ -4564,9 +4564,8 @@ do
 										if [ $trx_confirmations -ge $confirmations_from_users ]
 										then
 											trx_blacklisted=$(grep -c "${trx_filename}" ${user_path}/blacklisted_trx.dat)
-											sender_blacklisted=$(grep -c "${sender}" ${user_path}/blacklisted_accounts.dat)
-											receiver_blacklisted=$(grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat)
-											if [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted = 0 ]
+											user_blacklisted=$(grep -c "${sender}\|${receiver}" ${user_path}/blacklisted_accounts.dat)
+											if [ $trx_blacklisted = 0 ] && [ $user_blacklisted = 0 ]
 											then
 												trx_color="\Z2"
 											else
@@ -4614,7 +4613,9 @@ do
 											trx_date=${trx_date%%.*}
 										fi
 										trx_file=$(basename $(grep "${trx_date}" ${user_path}/my_trx.tmp))
-										trx_amount=$(echo $decision|cut -d '|' -f3|sed -e 's/+//g' -e 's/-//g')
+										trx_amount_raw=$(echo "${decision}"|cut -d '|' -f3)
+										trx_amount=$(echo "${trx_amount_raw}"|sed -e 's/+//g' -e 's/-//g')
+										val_sign=$(echo "${decision}"|grep -c "+")
 										trx_hash=$(sha256sum ${script_path}/trx/${trx_file})
 										trx_hash=${trx_hash%% *}
 										trx_file_path="${script_path}/trx/${trx_file}"
@@ -4630,13 +4631,7 @@ do
 											purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
 											purpose_key_end=$(( purpose_key_end - 1 ))
 											purpose_key_encrypted=$(sed -n "${purpose_key_start},${purpose_key_end}p" $trx_file_path)
-											###GROUP COMMANDS TO OPEN FILE ONLY ONCE###############
-											{
-												echo "-----BEGIN PGP MESSAGE-----"
-												echo ""
-												echo "${purpose_key_encrypted}"
-												echo "-----END PGP MESSAGE-----"
-											} >${user_path}/history_purpose_key_encrypted.tmp
+											printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_key_encrypted}\n-----END PGP MESSAGE-----\n" >${user_path}/history_purpose_key_encrypted.tmp
 											echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/history_purpose_key_decrypted.tmp --decrypt ${user_path}/history_purpose_key_encrypted.tmp 2>/dev/null
 											rt_query=$?
 											if [ $rt_query = 0 ]
@@ -4647,13 +4642,7 @@ do
 												purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
 												purpose_end=$(( purpose_end - 1 ))
 												purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
-												###GROUP COMMANDS TO OPEN FILE ONLY ONCE###############
-												{
-													echo "-----BEGIN PGP MESSAGE-----"
-													echo ""
-													echo "${purpose_encrypted}"
-													echo "-----END PGP MESSAGE-----"
-												} >${user_path}/history_purpose_encrypted.tmp
+												printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_encrypted}\n-----END PGP MESSAGE-----\n" >${user_path}/history_purpose_encrypted.tmp
 												echo "${purpose_key}"|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --passphrase-fd 0 --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 												rt_query=$?
 												if [ $rt_query = 0 ]
@@ -4714,13 +4703,11 @@ do
 										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=${decision#*|*|*|*}
-										if [ $sender = $handover_account ]
+										if [ $val_sign = 0 ]
 										then
-											dialog_history_show_trx_out_display=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
-											dialog_history_show_trx=$dialog_history_show_trx_out_display
+											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										else
-											dialog_history_show_trx_in_display=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
-											dialog_history_show_trx=$dialog_history_show_trx_in_display
+											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										fi
 										if [ $purpose_there = 1 ] || [ $purpose_there = 2 ]
 										then
