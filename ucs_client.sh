@@ -4533,13 +4533,15 @@ do
 								fi
 							done
 							;;
-				"$dialog_history")	rm ${user_path}/*.tmp 2>/dev/null
+				"$dialog_history")	###CREATE A LIST WITH ALL TRX CONCERNING USER##########
 							grep -s -l ":${handover_account}" ${script_path}/trx/*|sort -r -t . -k2 >${user_path}/my_trx.tmp
 							no_trx=$(wc -l <${user_path}/my_trx.tmp)
 							if [ $no_trx -gt 0 ]
 							then
+								rm ${user_path}/history_list.tmp 2>/dev/null
 								while read trx_file
 								do
+									###EXTRACT TRANSACTION DATA############################
 									trx_filename=$(basename "${trx_file}")
 									sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file)
 									receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file)
@@ -4556,6 +4558,7 @@ do
 									else
 										trx_signed=0
 									fi
+									###BUILD LIST OF TRANSACTIONS##########################
 									if [ $trx_signed -gt 0 ]
 									then
 										if [ $trx_confirmations -ge $confirmations_from_users ]
@@ -4592,6 +4595,7 @@ do
 							overview_quit=0
 							while [ $overview_quit = 0 ]
 							do
+								###DISPLAY LIST OF TRANSACTIONS########################
 								decision=$(dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name $core_system_version" --output-fd 1 --default-item "${menu_item_selected}" --no-hot-list --scrollbar --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp)
 								rt_query=$?
 								if [ $rt_query = 0 ]
@@ -4600,6 +4604,7 @@ do
 									dialog_history_noresults=${dialog_history_noresult%% *}
 									if [ ! "${decision}" = "${dialog_history_noresults}" ]
 									then
+										###GET DETAILS if SELECTED TRANSACTION DETAILS#########
 										trx_date_extracted=${decision%%|*}
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
@@ -4615,6 +4620,7 @@ do
 										trx_file_path="${script_path}/trx/${trx_file}"
 										sender=$(awk -F: '/:SNDR:/{print $3}' $trx_file_path)
 										receiver=$(awk -F: '/:RCVR:/{print $3}' $trx_file_path)
+										###EXTRACT PURPOSE#####################################
 										purpose_there=0
 										purpose_dialog_string="-"
 										if [ "${receiver}" = "${handover_account}" ]
@@ -4624,7 +4630,7 @@ do
 											purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
 											purpose_key_end=$(( purpose_key_end - 1 ))
 											purpose_key_encrypted=$(sed -n "${purpose_key_start},${purpose_key_end}p" $trx_file_path)
-											###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+											###GROUP COMMANDS TO OPEN FILE ONLY ONCE###############
 											{
 												echo "-----BEGIN PGP MESSAGE-----"
 												echo ""
@@ -4641,7 +4647,7 @@ do
 												purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' $trx_file_path)
 												purpose_end=$(( purpose_end - 1 ))
 												purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" $trx_file_path)
-												###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
+												###GROUP COMMANDS TO OPEN FILE ONLY ONCE###############
 												{
 													echo "-----BEGIN PGP MESSAGE-----"
 													echo ""
@@ -4654,7 +4660,7 @@ do
 												then
 													if [ -f ${user_path}/history_purpose_decrypted.tmp ] && [ -s ${user_path}/history_purpose_decrypted.tmp ]
 													then
-														###CHECK IF FILE CONTAINS TEXT OR ELSE######################################
+														###CHECK IF FILE CONTAINS TEXT OR ELSE#################
 														is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
 														if [ $is_text = 0 ]
 														then
@@ -4667,8 +4673,10 @@ do
 													fi
 												fi
 											fi
+											rm ${user_path}/history_purpose_key_*.tmp 2>/dev/null
+											rm ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 										fi
-										rm ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
+										###CHECK STATUS OF TRANSACTION#########################
 										trx_status=""
 										if [ -f ${script_path}/proofs/${sender}/${sender}.txt ] && [ -s ${script_path}/proofs/${sender}/${sender}.txt ]
 										then
@@ -4699,6 +4707,7 @@ do
 										then
 											trx_status="OK"
 										fi
+										###GET CONFIRMATIONS AND DEPENDING USERS###############
 										user_total_depend=$(grep -c -v "${sender}\|${receiver}" ${user_path}/depend_accounts.dat)
 										user_total_all=$(grep -c -v "${sender}\|${receiver}" ${user_path}/all_accounts.dat)
 										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -f ${user_path}/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
@@ -4724,7 +4733,7 @@ do
 												then
 													dialog --cancel-label "[...]" --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decrypted.tmp 0 0 2>/dev/null
 													rt_query=$?
-													if [ $rt_query = 2 ]
+													if [ $rt_query = 1 ]
 													then
 														open_write_dialog=1
 													fi
@@ -4735,22 +4744,44 @@ do
 													quit_file_path=0
 													while [ $quit_file_path = 0 ]
 													do
-														###LET USER SELECT A PATH################################################
+														###LET USER SELECT A PATH##############################
 														file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_choose" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
-															###CHECK IF ITS A DIRECTORY##############################################
+															###CHECK IF ITS A DIRECTORY############################
 															if [ -d "${file_path}" ]
 															then
-																cp ${user_path}/history_purpose_decrypted.tmp ${file_path}/decrypted_$(date +%s)_${trx_file}
-															else
-																###CHECK IF ITS A FILE AND IF ITS EXIST##################################
-																if [ ! -e "${file_path}" ]
+																stamp=$(date +%s)
+																cp ${user_path}/history_purpose_decrypted.tmp ${file_path}/decrypted_${stamp}_${trx_file} || rt_query=1
+																if [ $rt_query = 0 ]
 																then
-																	###COPY THE FILE TO USER SELECTED PATH###################################
-																	cp ${user_path}/history_purpose_decrypted.tmp ${file_path}
+																	file_path="${file_path}/decrypted_${stamp}_${trx_file}"
 																	quit_file_path=1
+																fi
+															else
+																if [ -n "${file_path}" ]
+																then
+																	###CHECK PATH##########################################
+																	parent_dir=$(dirname "${file_path}")
+																	if [ ! -e "${file_path}" ] && [ -d "${parent_dir}" ]
+																	then
+																		###COPY THE FILE TO USER SELECTED PATH#################
+																		cp ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
+																		if [ $rt_query = 0 ]
+																		then
+																			quit_file_path=1
+																		fi
+																	fi
+																fi
+															fi
+															if [ $quit_file_path = 1 ] && [ $rt_query = 0 ]
+															then
+																dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
+															else
+																if [ $rt_query = 1 ]
+																then
+																	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 																fi
 															fi
 														else
@@ -4768,10 +4799,10 @@ do
 									fi
 								else
 									overview_quit=1
-									rm ${user_path}/history_list.tmp 2>/dev/null
 								fi
 							done
-							rm ${user_path}/*.tmp 2>/dev/null
+							rm ${user_path}/my_trx.tmp 2>/dev/null
+							rm ${user_path}/history_list.tmp 2>/dev/null
 							;;
 				"$dialog_stats")	###IF CMD_ASSET NOT SET USE UCC################
 							if [ -z "${cmd_asset}" ]
