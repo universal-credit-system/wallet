@@ -2575,6 +2575,12 @@ check_period_tsa=21600
 trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
 dh_key_length=2048
+max_len_name=30
+rnd_len_name=20
+max_len_pin=5
+rnd_len_pin=5
+max_len_pw=10
+rnd_len_pw=30
 main_asset="UCC"
 last_ledger=""
 default_tsa=""
@@ -2902,12 +2908,12 @@ do
 							do
 								if [ $gui_mode = 1 ]
 								then
-									account_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}")
+									account_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_name --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}")
 									rt_query=$?
 								else
 									if [ -z "${cmd_user}" ]
 									then
-										account_name=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 20)
+										account_name=$(tr -dc A-Za-z0-9 </dev/urandom|head -c $rnd_len_name)
 									else
 										account_name=$cmd_user
 									fi
@@ -2930,12 +2936,12 @@ do
 											do
 												if [ $gui_mode = 1 ]
 												then
-													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
+													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pin --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
 													rt_query=$?
 												else
 													if [ -z "${cmd_pin}" ]
 													then
-														account_pin_first=$(tr -dc 0-9 </dev/urandom|head -c 5)
+														account_pin_first=$(tr -dc 0-9 </dev/urandom|head -c $rnd_len_pin)
 														account_pin_second=$account_pin_first
 													else
 														account_pin_first=$cmd_pin
@@ -2952,7 +2958,7 @@ do
 														if [ $gui_mode = 1 ]
 														then
 															clear
-															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 5 --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
+															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pin --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
 															rt_query=$?
 														else
 															rt_query=0
@@ -2970,12 +2976,12 @@ do
 		       														do
 																	if [ $gui_mode = 1 ]
 																	then
-																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
+																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pw --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
 																		rt_query=$?
 																	else
 																		if [ -z "${cmd_pw}" ]
 																		then
-																			account_password_first=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 10)
+																			account_password_first=$(tr -dc A-Za-z0-9 </dev/urandom|head -c $rnd_len_pw)
 																			account_password_second=$account_password_first
 																		else
 																			account_password_first=$cmd_pw
@@ -2992,7 +2998,7 @@ do
 																			if [ $gui_mode = 1 ]
 																			then
 																				clear
-																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
+																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pw --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
 																				rt_query=$?
 																			else
 																				rt_query=0
