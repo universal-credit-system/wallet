@@ -11,6 +11,7 @@ dd
 dialog
 dirname
 echo
+file
 find
 flock
 gpg
