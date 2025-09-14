@@ -17,52 +17,7 @@ The [Universal Credit System](https://www.universal-credit-system.org) Wallet is
 ## Technologies used
 The program was written as **bourne shell script (#!/bin/sh)**
 
-The script depends on other programs. Most of them are **core utilities**, which means that depending on your version of the core utils they should be already installed. But some programs (like i.e. ``bc``, ``openssl``, ``curl`` and some more) maybe not. The setup script `install.sh` checks if any programs are missing and will install them.
-
-The following programs are used:
-
-* **awk**     used to sort/filter data
-* **basename** used to strip directory and suffix from filenames
-* **bc**      used for floating point calculations
-* **cat**     used to concatenate content
-* **chmod**   used to change permissions
-* **cp**      used to copy files
-* **curl**    used to send query to TSA and request response
-* **cut**     used to extract data from streams
-* **date**    used for date operations
-* **dd**      used to convert files
-* **dialog**  used as GUI
-* **dirname** used to strip non-directory suffix from file name
-* **echo**    used to write output
-* **expr**    used for calculations
-* **file**    used to check file types
-* **find**    used to search files/directories
-* **flock**   used to manage read locks for multi user setups 
-* **gpg**     used for transaction signing
-* **grep**    used to search files
-* **head**    used to display heading lines/bytes of a file
-* **ls**      used to list files and directories
-* **mkdir**   used to create folders and subfolders
-* **mktemp**  used to create files with unique IDs
-* **mv**      used to move files
-* **netcat**  used to send/request files
-* **openssl** used for TSA stamp verification
-* **printf**  used to write output
-* **rm**      used to delete files
-* **sed**     used to modify files
-* **sha224sum** used to hash files
-* **sha256sum** used to hash files
-* **sort**    used to sort files
-* **stat**    used to get permissions of files/directories
-* **tail**    used to display tailing lines of a file
-* **tar**     used to create the transaction file
-* **test**    used to test files
-* **touch**   used to create files
-* **tr**      used to convert chars
-* **umask**   used to determine umask
-* **uniq**    used to filter files
-* **wc**      used to count lines, words, bytes
-* **wget**    used to fetch certificate files of TSA from Internet
+The script depends on other programs (see list of [programs used](https://github.com/universal-credit-system/wallet/blob/master/control/install.dep)). Most of them are **core utilities**, which means that they should be already installed. But programs like ``bc``, ``openssl``, ``curl`` and others maybe not and need to be installed. The setup script `install.sh` will check if any programs are missing and will install them.
 
 ## Installation
 **Assuming you use APT as packaging tool, the command `apt-get install` is used. Please note that if you are using any other packaging tool than APT the command for installing a package might be different. This means you have the change `apt-get install` to the command your packaging tool is using!**
@@ -72,7 +27,7 @@ Install Git (you may use `sudo` in front)
 apt-get install git
 ```
 
-Clone the GitHub repository
+Clone this GitHub repository
 ```bash
 git clone https://github.com/universal-credit-system/wallet
 ```
@@ -82,7 +37,7 @@ Step into this directory using `cd`
 cd wallet/
 ```
 
-Now you can execute the install.sh script. The script will check for depending programs and will install them if necessary.
+Now you can execute the install.sh script. The script will check for depending programs and will install them if necessary
 ```bash
 ./install.sh
 ```
