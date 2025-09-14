@@ -4845,18 +4845,22 @@ do
 
 							###TRANSACTION VOLUME TOTAL####################
 							total_volume_trx=0
-							for amount in $(grep "AMNT:" /dev/null $(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*)|cut -d ':' -f4)
+							for amount in $(grep "AMNT:" /dev/null $(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*))
 							do
-								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc|sed 's/^\./0./g')
+								amount=${amount#*:*:*:}
+								total_volume_trx=$(echo "scale=9;$total_volume_trx + $amount"|bc)
 							done
+							total_volume_trx=$(echo "$total_volume_trx"|sed 's/^\./0./g')
 
 							###TRANSACTION VOLUME TODAY####################
 							total_volume_trx_today=0
 							for trx in $(grep -s -l "ASST:${cmd_asset}" ${script_path}/trx/*|awk -F. -v date_stamp=$(date -u +%s --date="$(date +%Y%m%d)") -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
 							do
-								amount=$(grep "AMNT:" "${trx}"|cut -d ':' -f3)
-								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc|sed 's/^\./0./g')
+								amount=$(grep "AMNT:" "${trx}")
+								amount=${amount#*:*:}
+								total_volume_trx_today=$(echo "scale=9;$total_volume_trx_today + $amount"|bc)
 							done
+							total_volume_trx_today=$(echo "$total_volume_trx_today"|sed 's/^\./0./g')
 
 							if [ $gui_mode = 1 ]
 							then
