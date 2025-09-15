@@ -3945,7 +3945,6 @@ do
 																	exit 0
 																fi
 															else
-																rm ${trx_path_output}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
 																rm ${trx_path_output}/${handover_account}_${trx_now_form}.trx 2>/dev/null
 																rm ${last_trx} 2>/dev/null
 															fi
@@ -4251,7 +4250,7 @@ do
 									###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
 									#cp ${script_path}/${handover_account}_${now_stamp}.sync ${user_path}/${handover_account}_${now_stamp}.sync
 									###################################################################################
-									if [ ! $sync_path_output = $script_path ]
+									if [ ! $sync_path_output = $script_path ] && [ -d $sync_path_output ]
 									then
 										mv ${script_path}/${handover_account}_${now_stamp}.sync ${sync_path_output}/${handover_account}_${now_stamp}.sync
 									fi
