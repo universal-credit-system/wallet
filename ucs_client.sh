@@ -2555,15 +2555,13 @@ urlencode(){
       		  l = length(s)
       		  for (i = 1; i <= l; i++) {
       		  	c = substr(s, i, 1)
-      		  	r = r "" (c ~ /^[-._~0-9a-zA-Z]$/ ? c : hex[c])
+      		  	r = r "" (c ~ /^[0-9a-zA-Z]$/ ? c : hex[c])
 		  }
 		  return r
     		}
-    		BEGIN {
-			for (i = 1; i < ARGC; i++) {
-				print urlencode(ARGV[i])
-			}
-		}' "$(cat ${file_path})") || rt_query = 1
+    		{
+			print urlencode($0)
+		}' ${file_path}|tr '\n' '#'|sed "s/#/%0A/g") || rt_query = 1
 		return $rt_query
 }
 ##################
