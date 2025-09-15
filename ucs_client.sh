@@ -4731,7 +4731,7 @@ do
 												fi
 												if [ $purpose_there = 2 ] || [ $open_write_dialog = 1 ]
 												then
-													path_to_search=$script_path
+													path_to_search="${script_path}/"
 													quit_file_path=0
 													while [ $quit_file_path = 0 ]
 													do
@@ -4743,37 +4743,33 @@ do
 															###CHECK IF ITS A DIRECTORY############################
 															if [ -d "${file_path}" ]
 															then
-																stamp=$(date +%s)
-																cp ${user_path}/history_purpose_decrypted.tmp ${file_path}/decrypted_${stamp}_${trx_file} || rt_query=1
-																if [ $rt_query = 0 ]
-																then
-																	file_path="${file_path}/decrypted_${stamp}_${trx_file}"
-																	quit_file_path=1
-																fi
+																file_path=$(echo "$file_path"|sed "s:/*$::g")
+																file_path="${file_path}/decrypted_$(date +%s)_${trx_file}"
 															else
 																if [ -n "${file_path}" ]
 																then
 																	###CHECK PATH##########################################
 																	parent_dir=$(dirname "${file_path}")
-																	if [ ! -e "${file_path}" ] && [ -d "${parent_dir}" ]
+																	if [ -e "${file_path}" ] || [ ! -d "${parent_dir}" ]
 																	then
-																		###COPY THE FILE TO USER SELECTED PATH#################
-																		cp ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
-																		if [ $rt_query = 0 ]
-																		then
-																			quit_file_path=1
-																		fi
+																		rt_query=1
 																	fi
+																else
+																	rt_query=1
 																fi
 															fi
-															if [ $quit_file_path = 1 ] && [ $rt_query = 0 ]
+															if [ $rt_query = 0 ]
 															then
-																dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
-															else
-																if [ $rt_query = 1 ]
+																cp ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
+																if [ $rt_query = 0 ]
 																then
-																	dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
+																	dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
+																	quit_file_path=1
 																fi
+															fi
+															if [ $rt_query = 1 ]
+															then
+																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 															fi
 														else
 															quit_file_path=1
