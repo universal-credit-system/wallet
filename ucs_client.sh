@@ -4424,85 +4424,87 @@ do
 																			dialog_asset_add_value=$dialog_asset_price
 																		fi
 																		###ASK FOR A NAME########################################
-																		asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "")
-																		rt_query=$?
-																		if [ $rt_query = 0 ]
-																		then
-																			is_alnum=$(echo "${asset_name}"|grep -c '[^[:alnum:]]')
-																			if [ $is_alnum = 0 ]
+																		quit_name=0
+																		while [ $quit_name = 0 ]
+																		do
+																			asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "")
+																			rt_query=$?
+																			if [ $rt_query = 0 ]
 																			then
-																				###ASK FOR A DESCRIPTION#########################
-																				touch ${user_path}/asset_description_blank.tmp
-																				dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
-																				rt_query=$?
-																				rm ${user_path}/asset_description_blank.tmp
-																				if [ $rt_query -lt 2 ]
+																				check_input "${asset_name}" 0
+																				if [ $rt_query = 0 ]
 																				then
-																					if [ $rt_query = 1 ]
+																					###ASK FOR A DESCRIPTION#########################
+																					touch ${user_path}/asset_description_blank.tmp
+																					dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
+																					rt_query=$?
+																					rm ${user_path}/asset_description_blank.tmp
+																					if [ $rt_query -lt 2 ]
 																					then
-																						path_to_search="${script_path}/"
-																						quit_file_path=0
-																						while [ $quit_file_path = 0 ]
+																						if [ $rt_query = 1 ]
+																						then
+																							path_to_search="${script_path}/"
+																							quit_file_path=0
+																							while [ $quit_file_path = 0 ]
+																							do
+																								###IF USER WANTS FILE##############################
+																								file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+																								rt_query=$?
+																								if [ $rt_query = 0 ]
+																								then
+																									if [ -f "${file_path}" ] && [ -s "${file_path}" ]
+																									then
+																										### CHECK FOR MAX PURPOSE SIZE #################################
+																										if [ $(wc -c <${file_path}) -le $asset_max_size_description_bytes ]
+																										then
+																											is_text=$(file ${file_path}|grep -c "text")
+																											if [ $is_text = 1 ]
+																											then
+																												cp ${file_path} ${user_path}/asset_description.tmp
+																											else
+																												base64 -w 0 ${file_path} >${user_path}/asset_description.tmp
+																											fi
+																											quit_file_path=1
+																										else
+																											path_to_search=$file_path
+																											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $asset_max_size_description_bytes Bytes!" 0 0
+																										fi
+																									else
+																										if [ -d "${file_path}" ]
+																										then
+																											path_to_search=$file_path
+																										fi
+																									fi
+																								else
+																									quit_file_path=1
+																								fi
+																							done	
+																						fi
+																						###ENCODE DESCRIPTION############################
+																						enc_string=""
+																						urlencode "${user_path}/asset_description.tmp"
+																						rm ${user_path}/asset_description.tmp
+
+																						###ASSIGN ENCODED RESULT#########################
+																						asset_description=$enc_string
+																						quit_asset_value=0
+																						while [ $quit_asset_value = 0 ]
 																						do
-																							###IF USER WANTS FILE##############################
-																							file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+																							###GET QUANTITY OR PRICE#########################
+																							asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "1.0")
 																							rt_query=$?
 																							if [ $rt_query = 0 ]
 																							then
-																								if [ -f "${file_path}" ] && [ -s "${file_path}" ]
+																								###CHECK VALUE FOR FORMAT SIZE ETC###############
+																								asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
+																								if [ $asset_value_alnum = 0 ] && [ ${#asset_value} -gt 0 ]
 																								then
-																									### CHECK FOR MAX PURPOSE SIZE #################################
-																									if [ $(wc -c <${file_path}) -le $asset_max_size_description_bytes ]
-																									then
-																										is_text=$(file ${file_path}|grep -c "text")
-																										if [ $is_text = 1 ]
-																										then
-																											cp ${file_path} ${user_path}/asset_description.tmp
-																										else
-																											base64 -w 0 ${file_path} >${user_path}/asset_description.tmp
-																										fi
-																										quit_file_path=1
-																									else
-																										path_to_search=$file_path
-																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $asset_max_size_description_bytes Bytes!" 0 0
-																									fi
-																								else
-																									if [ -d "${file_path}" ]
-																									then
-																										path_to_search=$file_path
-																									fi
-																								fi
-																							else
-																								quit_file_path=1
-																							fi
-																						done	
-																					fi
-																					###ENCODE DESCRIPTION############################
-																					enc_string=""
-																					urlencode "${user_path}/asset_description.tmp"
-																					rm ${user_path}/asset_description.tmp
-
-																					###ASSIGN ENCODED RESULT#########################
-																					asset_description=$enc_string
-																					quit_asset_value=0
-																					while [ $quit_asset_value = 0 ]
-																					do
-																						###GET QUANTITY OR PRICE#########################
-																						asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "")
-																						rt_query=$?
-																						if [ $rt_query = 0 ]
-																						then
-																							asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
-																							if [ $asset_value_alnum = 0 ]
-																							then
-																								asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
-																								value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
-																								value_mod=$(echo "${value_mod} > 0"|bc)
-																								if [ $value_mod = 0 ]
-																								then
+																									asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
+																									value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
+																									value_mod=$(echo "${value_mod} > 0"|bc)
 																									asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
 																									is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
-																									if [ $is_amount_big_enough = 1 ]
+																									if [ $value_mod = 0 ] && [ $is_amount_big_enough = 1 ]
 																									then
 																										if [ $rt_query = 0 ]
 																										then
@@ -4540,28 +4542,30 @@ do
 																													last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
 																													echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
 																												fi
+																												quit_creation=1
 																											fi
 																											quit_asset_value=1
-																											quit_creation=1
+																											quit_name=1
 																										fi
 																									else
 																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 																									fi
 																								else
-																									dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																									dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 																								fi
 																							else
-																								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
+																								quit_asset_value=1
+																								quit_name=1
 																							fi
-																						else
-																							quit_asset_value=1
-																						fi
-																					done
+																						done
+																					else
+																						quit_name=1
+																					fi
 																				fi
 																			else
-																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
+																				quit_name=1
 																			fi
-																		fi
+																		done
 																	else
 																		quit_creation=1
 																	fi
