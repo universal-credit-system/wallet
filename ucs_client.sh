@@ -894,9 +894,8 @@ check_archive(){
 					bad_chars_there=$(cat ${user_path}/tar_check.tmp|sed 's#/##g'|sed 's/\.//g'|grep -c '[^[:alnum:]]')
 					if [ $bad_chars_there -eq 0 ]
 					then
-						files_not_homedir=""
-
 						###GO THROUGH CONTENT LIST LINE BY LINE#######################
+						files_not_homedir=""
 						while read line
 						do
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
@@ -1080,8 +1079,7 @@ check_assets(){
 					asset_acknowledged=0
 					asset=$line
 					asset_data=$(grep "asset_" ${script_path}/assets/${asset}|grep "=")
-					asset_description=$(echo "$asset_data"|grep "asset_description")
-					asset_description=${asset_description#*=}
+					asset_description=$(echo "$asset_data"|awk -F= '/asset_description/{print $2}'|sed -e 's:^"::g' -e 's:"*$::g')
 					asset_symbol=${asset%%.*}
 					asset_stamp=${asset#*.}
 					asset_price=$(echo "$asset_data"|grep "asset_price")
@@ -1097,12 +1095,12 @@ check_assets(){
 					if [ $stamp_only_digits = 0 ] && [ $stamp_size -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ -n "${asset_description}" ] && [ -n "${asset_fungible}" ]
+						if [ $(echo "${asset_description}"|grep -c -v '[a-zA-Z0-9%]') = 0 ] && [ -n "${asset_fungible}" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo $asset_symbol|grep -c '[^[:alnum:]]')
 							symbol_size=${#asset_symbol}
-							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ]
+							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ] && [ "$(wc -c <${script_path}/assets/${asset})" -le $asset_max_size_bytes ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
 								asset_already_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|grep -c "${asset}")
@@ -1154,7 +1152,6 @@ check_assets(){
 						fi
 					fi
 				fi
-
 				###WRITE ENTY TO BLACKLIST IF NOT ACKNOWLEDGED########
 				if [ $asset_acknowledged = 0 ]
 				then
@@ -2572,6 +2569,8 @@ initial_coinload=365250
 check_period_tsa=21600
 trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
+asset_max_size_bytes=8350
+asset_max_size_description_bytes=8192
 dh_key_length=2048
 max_len_name=30
 rnd_len_name=20
@@ -4312,7 +4311,7 @@ do
 							while [ $quit_menu = 0 ]
 							do
 								###BROWSER OVERVIEW######################################
-								browse_type=$(dialog --cancel-label "$dialog_cancel" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
+								browse_type=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
 								rt_query=$?
 								if [ $rt_query = 0 ]
 								then
@@ -4323,7 +4322,7 @@ do
 													while [ $quit_asset_menu = 0 ]
 													do
 														###ASSET OVERVIEW########################################
-														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_cancel" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
+														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_main_back" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
 														then
@@ -4331,48 +4330,160 @@ do
 															def_string_asset=$asset
 															if [ $rt_query = 0 ]
 															then
-																###DISPLAY DETAILED ASSET INFORMATION####################
-																dialog --exit-label "$dialog_main_back" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${asset}" 0 0
-															else
-																asset_name=""
-																quit_asset_name=0
-																while [ $quit_asset_name = 0 ]
+																quit_asset_overview=0
+																while [ $quit_asset_overview = 0 ]
 																do
-																	###ASK FOR A NAME########################################
-																	asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "${asset_name}")
+																	###DISPLAY DETAILED ASSET INFORMATION####################
+																	dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${asset}" 0 0
 																	rt_query=$?
-																	if [ $rt_query = 0 ]
+																	if [ $rt_query = 3 ]
 																	then
-																		is_alnum=$(echo "${asset_name}"|grep -c '[^[:alnum:]]')
-																		if [ $is_alnum = 0 ]
+																		###GET DESCRIPTION#######################################
+																		descr_full=$(awk -F= '/asset_description/{print $2}' ${script_path}/assets/${asset}|sed -e 's:^"::g' -e 's:"*$::g')
+																		###URLDECODE#############################################
+																		printf "%s" "${descr_full}"|awk -niord '{printf RT?$0chr("0x"substr(RT,2)):$0}' RS=%.. >${user_path}/asset_description.tmp
+																		###TRY TO BASE64 DECODE##################################
+																		base64 -d ${user_path}/asset_description.tmp >${user_path}/asset_description_.tmp
+																		rt_query=$?
+																		if [ $rt_query = 0 ]
 																		then
-																			###ASK FOR A DESCRIPTION#########################
-																			touch ${user_path}/asset_description_blank.tmp
-																			dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
+																			###MOVE DECODED DESCRIPTION##############################
+																			rt_query=3
+																			mv ${user_path}/asset_description_.tmp ${user_path}/asset_description.tmp || rt_query=0
+																		else
+																			###DISPLAY ASSET DESCRIPTION#############################
+																			dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${user_path}/asset_description.tmp" 0 0
 																			rt_query=$?
-																			if [ $rt_query = 0 ]
-																			then
-																				enc_string=""
-
-																				###ENCODE DESCRIPTION############################
-																				urlencode "${user_path}/asset_description.tmp"
-																				rm ${user_path}/asset_description.tmp
-
-																				###ASSIGN ENCODED RESULT#########################
-																				asset_description=$enc_string
-
-																				###ASK IF FUNGIBLE OR NOT########################
-																				dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
-																				fungible=$?
-																				if [ $fungible = 0 ] || [ $fungible = 1 ]
+																		fi
+																		rm ${user_path}/asset_description_.tmp 2>/dev/null
+																		if [ $rt_query = 3 ]
+																		then
+																			path_to_search="${script_path}/"
+																			quit_file_path=0
+																			while [ $quit_file_path = 0 ]
+																			do
+																				###LET USER SELECT A PATH##############################
+																				file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_choose" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+																				rt_query=$?
+																				if [ $rt_query = 0 ]
 																				then
-																					if [ $fungible = 0 ]
+																					###CHECK IF ITS A DIRECTORY############################
+																					if [ -d "${file_path}" ]
 																					then
-																						dialog_asset_add_value=$dialog_asset_quantity
+																						file_path=$(echo "$file_path"|sed "s:/*$::g")
+																						file_path="${file_path}/description_$(date +%s)_${asset}"
 																					else
-																						dialog_asset_add_value=$dialog_asset_price
+																						if [ -n "${file_path}" ]
+																						then
+																							###CHECK PATH##########################################
+																							parent_dir=$(dirname "${file_path}")
+																							if [ -e "${file_path}" ] || [ ! -d "${parent_dir}" ]
+																							then
+																								rt_query=1
+																							fi
+																						else
+																							rt_query=1
+																						fi
 																					fi
+																					if [ $rt_query = 0 ]
+																					then
+																						mv ${user_path}/asset_description.tmp ${file_path} || rt_query=1
+																						if [ $rt_query = 0 ]
+																						then
+																							dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
+																							quit_file_path=1
+																						fi
+																					fi
+																					if [ $rt_query = 1 ]
+																					then
+																						dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
+																					fi
+																				else
+																					quit_file_path=1
+																				fi
+																			done
+																		fi
+																		rm ${user_path}/asset_description.tmp 2>/dev/null
+																	else
+																		quit_asset_overview=1
+																	fi
+																done
+															else
+																quit_creation=0
+																while [ $quit_creation = 0 ]
+																do
+																	###ASK IF FUNGIBLE OR NOT########################
+																	dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
+																	fungible=$?
+																	if [ $fungible -lt 2 ]
+																	then
+																		if [ $fungible = 0 ]
+																		then
+																			dialog_asset_add_value=$dialog_asset_quantity
+																		else
+																			dialog_asset_add_value=$dialog_asset_price
+																		fi
+																		###ASK FOR A NAME########################################
+																		asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "")
+																		rt_query=$?
+																		if [ $rt_query = 0 ]
+																		then
+																			is_alnum=$(echo "${asset_name}"|grep -c '[^[:alnum:]]')
+																			if [ $is_alnum = 0 ]
+																			then
+																				###ASK FOR A DESCRIPTION#########################
+																				touch ${user_path}/asset_description_blank.tmp
+																				dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
+																				rt_query=$?
+																				rm ${user_path}/asset_description_blank.tmp
+																				if [ $rt_query -lt 2 ]
+																				then
+																					if [ $rt_query = 1 ]
+																					then
+																						path_to_search="${script_path}/"
+																						quit_file_path=0
+																						while [ $quit_file_path = 0 ]
+																						do
+																							###IF USER WANTS FILE##############################
+																							file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
+																							rt_query=$?
+																							if [ $rt_query = 0 ]
+																							then
+																								if [ -f "${file_path}" ] && [ -s "${file_path}" ]
+																								then
+																									### CHECK FOR MAX PURPOSE SIZE #################################
+																									if [ $(wc -c <${file_path}) -le $asset_max_size_description_bytes ]
+																									then
+																										is_text=$(file ${file_path}|grep -c "text")
+																										if [ $is_text = 1 ]
+																										then
+																											cp ${file_path} ${user_path}/asset_description.tmp
+																										else
+																											base64 -w 0 ${file_path} >${user_path}/asset_description.tmp
+																										fi
+																										quit_file_path=1
+																									else
+																										path_to_search=$file_path
+																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_size $asset_max_size_description_bytes Bytes!" 0 0
+																									fi
+																								else
+																									if [ -d "${file_path}" ]
+																									then
+																										path_to_search=$file_path
+																									fi
+																								fi
+																							else
+																								quit_file_path=1
+																							fi
+																						done	
+																					fi
+																					###ENCODE DESCRIPTION############################
+																					enc_string=""
+																					urlencode "${user_path}/asset_description.tmp"
+																					rm ${user_path}/asset_description.tmp
 
+																					###ASSIGN ENCODED RESULT#########################
+																					asset_description=$enc_string
 																					quit_asset_value=0
 																					while [ $quit_asset_value = 0 ]
 																					do
@@ -4398,7 +4509,6 @@ do
 																											###WRITE ASSET###########################
 																											asset_stamp=$(date +%s)
 																											{
-																											echo "asset_name=\"${asset_name}\""
 																											echo "asset_fungible=${fungible}"
 																											if [ $fungible = 0 ]
 																											then
@@ -4412,7 +4522,7 @@ do
 																											#########################################
 
 																											###CONFIRM###############################
-																											dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
+																											dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
 																											rt_query=$?
 																											if [ $rt_query = 0 ]
 																											then
@@ -4432,7 +4542,7 @@ do
 																												fi
 																											fi
 																											quit_asset_value=1
-																											quit_asset_name=1
+																											quit_creation=1
 																										fi
 																									else
 																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
@@ -4448,13 +4558,12 @@ do
 																						fi
 																					done
 																				fi
+																			else
+																				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 																			fi
-																			rm ${user_path}/asset_description_blank.tmp 2>/dev/null
-																		else
-																			dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 																		fi
 																	else
-																		quit_asset_name=1
+																		quit_creation=1
 																	fi
 																done
 															fi
@@ -4469,7 +4578,7 @@ do
 													while [ $quit_user_menu = 0 ]
 													do
 														###USERS OVERVIEW########################################
-														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
+														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
 														rt_query=$?
 														if [ $rt_query = 0 ]
 														then
@@ -4489,7 +4598,7 @@ do
 															quit_trx_menu=0
 															while [ $quit_trx_menu = 0 ]
 															do
-																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 																rt_query=$?
 																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
@@ -4516,7 +4625,7 @@ do
 													def_string=$(head -1 ${user_path}/dialog_browser_trx.tmp)
 													while [ $quit_trx_loop = 0 ]
 													do
-														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_cancel" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
+														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 														rt_query=$?
 														if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
 														then
@@ -4759,7 +4868,7 @@ do
 															fi
 															if [ $rt_query = 0 ]
 															then
-																cp ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
+																mv ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
 																if [ $rt_query = 0 ]
 																then
 																	dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0

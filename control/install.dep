@@ -1,4 +1,5 @@
 awk
+base64
 basename
 bc
 cat
