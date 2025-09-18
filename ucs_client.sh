@@ -2569,7 +2569,7 @@ initial_coinload=365250
 check_period_tsa=21600
 trx_max_size_bytes=3164
 trx_max_size_purpose_bytes=1024
-asset_max_size_bytes=8350
+asset_max_size_bytes=24734
 asset_max_size_description_bytes=8192
 dh_key_length=2048
 max_len_name=30
@@ -4342,20 +4342,9 @@ do
 																		descr_full=$(awk -F= '/asset_description/{print $2}' ${script_path}/assets/${asset}|sed -e 's:^"::g' -e 's:"*$::g')
 																		###URLDECODE#############################################
 																		printf "%s" "${descr_full}"|awk -niord '{printf RT?$0chr("0x"substr(RT,2)):$0}' RS=%.. >${user_path}/asset_description.tmp
-																		###TRY TO BASE64 DECODE##################################
-																		base64 -d ${user_path}/asset_description.tmp >${user_path}/asset_description_.tmp
+																		###DISPLAY ASSET DESCRIPTION#############################
+																		dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${user_path}/asset_description.tmp" 0 0
 																		rt_query=$?
-																		if [ $rt_query = 0 ]
-																		then
-																			###MOVE DECODED DESCRIPTION##############################
-																			rt_query=3
-																			mv ${user_path}/asset_description_.tmp ${user_path}/asset_description.tmp || rt_query=0
-																		else
-																			###DISPLAY ASSET DESCRIPTION#############################
-																			dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${user_path}/asset_description.tmp" 0 0
-																			rt_query=$?
-																		fi
-																		rm ${user_path}/asset_description_.tmp 2>/dev/null
 																		if [ $rt_query = 3 ]
 																		then
 																			path_to_search="${script_path}/"
@@ -4435,12 +4424,13 @@ do
 																				if [ $rt_query = 0 ]
 																				then
 																					###ASK FOR A DESCRIPTION#########################
-																					touch ${user_path}/asset_description_blank.tmp
-																					dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
-																					rt_query=$?
-																					rm ${user_path}/asset_description_blank.tmp
-																					if [ $rt_query -lt 2 ]
-																					then
+																					quit_descr=0
+																					while [ $quit_descr = 0 ]
+																					do
+																						touch ${user_path}/asset_description_blank.tmp
+																						dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
+																						rt_query=$?
+																						rm ${user_path}/asset_description_blank.tmp
 																						if [ $rt_query = 1 ]
 																						then
 																							path_to_search="${script_path}/"
@@ -4476,91 +4466,100 @@ do
 																										fi
 																									fi
 																								else
+																									rt_query=3
 																									quit_file_path=1
 																								fi
 																							done	
 																						fi
-																						###ENCODE DESCRIPTION############################
-																						enc_string=""
-																						urlencode "${user_path}/asset_description.tmp"
-																						rm ${user_path}/asset_description.tmp
+																						if [ $rt_query = 0 ] || [ $rt_query = 1 ]
+																						then
+																							###ENCODE DESCRIPTION############################
+																							enc_string=""
+																							urlencode "${user_path}/asset_description.tmp"
+																							rm ${user_path}/asset_description.tmp
 
-																						###ASSIGN ENCODED RESULT#########################
-																						asset_description=$enc_string
-																						quit_asset_value=0
-																						while [ $quit_asset_value = 0 ]
-																						do
-																							###GET QUANTITY OR PRICE#########################
-																							asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "1.0")
-																							rt_query=$?
-																							if [ $rt_query = 0 ]
-																							then
-																								###CHECK VALUE FOR FORMAT SIZE ETC###############
-																								asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
-																								if [ $asset_value_alnum = 0 ] && [ ${#asset_value} -gt 0 ]
+																							###ASSIGN ENCODED RESULT#########################
+																							asset_description=$enc_string
+																							quit_asset_value=0
+																							while [ $quit_asset_value = 0 ]
+																							do
+																								###GET QUANTITY OR PRICE#########################
+																								asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "1.0")
+																								rt_query=$?
+																								if [ $rt_query = 0 ]
 																								then
-																									asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
-																									value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
-																									value_mod=$(echo "${value_mod} > 0"|bc)
-																									asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
-																									is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
-																									if [ $value_mod = 0 ] && [ $is_amount_big_enough = 1 ]
+																									###CHECK VALUE FOR FORMAT SIZE ETC###############
+																									asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
+																									if [ $asset_value_alnum = 0 ] && [ ${#asset_value} -gt 0 ]
 																									then
-																										if [ $rt_query = 0 ]
+																										asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
+																										value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
+																										value_mod=$(echo "${value_mod} > 0"|bc)
+																										asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
+																										is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
+																										if [ $value_mod = 0 ] && [ $is_amount_big_enough = 1 ]
 																										then
-																											###WRITE ASSET###########################
-																											asset_stamp=$(date +%s)
-																											{
-																											echo "asset_fungible=${fungible}"
-																											if [ $fungible = 0 ]
-																											then
-																												echo "asset_quantity=${asset_value_formatted}"
-																												echo "asset_owner=\"${handover_account}\""
-																											else
-																												echo "asset_price=${asset_value_formatted}"
-																											fi
-																											echo "asset_description=\"${asset_description}\""
-																											} >${user_path}/${asset_name}.${asset_stamp}
-																											#########################################
-
-																											###CONFIRM###############################
-																											dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
-																											rt_query=$?
 																											if [ $rt_query = 0 ]
 																											then
-																												###COPY INTO ASSETS FOLDER###############
-																												mv ${user_path}/${asset_name}.${asset_stamp} ${script_path}/assets/${asset_name}.${asset_stamp}
-
-																												###DISPLAY SUCCESS MESSAGE###############
-																												dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_asset_add_successfull" 0 0
-
-																												###CHECK ASSETS##########################
-																												check_assets
-																												if [ $fungible = 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) = 0 ]
+																												###WRITE ASSET###########################
+																												asset_stamp=$(date +%s)
+																												{
+																												echo "asset_fungible=${fungible}"
+																												if [ $fungible = 0 ]
 																												then
-																													###CREATE LEDGER ENTRY###################
-																													last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
-																													echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
+																													echo "asset_quantity=${asset_value_formatted}"
+																													echo "asset_owner=\"${handover_account}\""
+																												else
+																													echo "asset_price=${asset_value_formatted}"
 																												fi
-																												quit_creation=1
+																												echo "asset_description=\"${asset_description}\""
+																												} >${user_path}/${asset_name}.${asset_stamp}
+
+																												###CONFIRM###############################
+																												dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
+																												rt_query=$?
+																												if [ $rt_query = 0 ]
+																												then
+																													###COPY INTO ASSETS FOLDER###############
+																													mv ${user_path}/${asset_name}.${asset_stamp} ${script_path}/assets/${asset_name}.${asset_stamp}
+
+																													###DISPLAY SUCCESS MESSAGE###############
+																													dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_asset_add_successfull" 0 0
+
+																													###CHECK ASSETS##########################
+																													check_assets
+																													if [ $fungible = 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) = 0 ]
+																													then
+																														###CREATE LEDGER ENTRY###################
+																														last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
+																														echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>${user_path}/${last_ledger}
+																													fi
+																													quit_creation=1
+																												fi
+																												quit_asset_value=1
+																												quit_descr=1
+																												quit_name=1
 																											fi
-																											quit_asset_value=1
-																											quit_name=1
+																										else
+																											dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 																										fi
 																									else
-																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
+																										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 																									fi
 																								else
-																									dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
+																									quit_asset_value=1
+																									quit_descr=1
+																									quit_name=1
 																								fi
-																							else
-																								quit_asset_value=1
+																							done
+																						else
+																							if [ ! $rt_query = 3 ]
+																							then
+																								quit_descr=1
 																								quit_name=1
 																							fi
-																						done
-																					else
-																						quit_name=1
-																					fi
+																						fi
+																					done
 																				fi
 																			else
 																				quit_name=1
