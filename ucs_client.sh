@@ -4516,7 +4516,7 @@ do
 																												} >${user_path}/${asset_name}.${asset_stamp}
 
 																												###CONFIRM###############################
-																												dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
+																												dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} : ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
 																												rt_query=$?
 																												if [ $rt_query = 0 ]
 																												then
