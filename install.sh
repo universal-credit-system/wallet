@@ -239,5 +239,6 @@ then
 		sed -i 's/use-keyboxd//g' ~/.gnupg/common.conf
 		printf "%b" "DONE\n"
 	fi
+	printf "%b" "INFO: Installation finished\n"
 fi
 
