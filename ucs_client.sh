@@ -2771,7 +2771,7 @@ then
 	done
 	if [ $no_ledger = 1 ]
 	then
-		if [ $cmd_action = "create_trx" ]
+		if [ "${cmd_action}" = "create_trx" ]
 		then
 			no_ledger=0
 		fi
@@ -4204,7 +4204,7 @@ do
 								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 								{
 									###SET VARIABLES#############################
-									if [ $gui_mode = 0 ] && [ $cmd_type = "partial" ]
+									if [ $gui_mode = 0 ] && [ "${cmd_type}" = "partial" ]
 									then
 										accounts_list="${user_path}/depend_accounts.dat"
 										trx_list="${user_path}/depend_trx.dat"
@@ -4286,7 +4286,7 @@ do
 							action_done=1
 							make_ledger=1
 						else
-							if [ $cmd_action = "sync_uca" ]
+							if [ "${cmd_action}" = "sync_uca" ]
 							then
 								request_uca
 								update_tsa
