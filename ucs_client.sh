@@ -3981,13 +3981,13 @@ do
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 									rt_query=$?
 								else
-									rt_query=0
 									file_path=$cmd_path
+									rt_query=0
 								fi
 								if [ $rt_query = 0 ]
 								then
 									rt_query=1
-									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
+									if [ -n "${file_path}" ] && [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 									then
 										cd ${script_path} || exit 13
 										if [ $gui_mode = 1 ]
@@ -4102,13 +4102,13 @@ do
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
  						       			rt_query=$?
 								else
-									rt_query=0
 									file_path=$cmd_path
+									rt_query=0
 								fi
 								if [ $rt_query = 0 ]
 								then
 									rt_query=1
-									if [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
+									if [ -n "${file_path}" ] && [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 		  							then
 										cd ${script_path} || exit 13
 										if [ $gui_mode = 1 ]
