@@ -33,91 +33,78 @@ login_account(){
 			if [ "${key_file}" = "${key_login}" ]
 			then
 				account_found=1
-				echo "${key_file}" >>${script_path}/logon_${my_pid}.tmp
+				break
 			fi
 		done
 
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ $account_found = 1 ]
 		then
-			for user in $(cat ${script_path}/logon_${my_pid}.tmp)
-			do
+			rt_query=0
+			if [ $observer = 0 ]
+			then
 				###TEST KEY BY ENCRYPTING A MESSAGE##########################
 				echo $login_name >${script_path}/account_${my_pid}.tmp
-				echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${user} -r ${user} --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
+				echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${key_file} -r ${key_file} --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ $rt_query = 0 ]
 				then
-					###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
-					if [ -z "${cmd_sender}" ]
-					then
-						name_hash=$(echo "${login_name}"|sha224sum)
-						name_hash=${name_hash%% *}
-						if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
-						then
-							echo "${name_hash}" >>${script_path}/control/accounts.db
-						fi
-					fi
-
 					###REMOVE ENCRYPTION SOURCE FILE#############################
 					rm ${script_path}/account_${my_pid}.tmp
 
 					####TEST KEY BY DECRYPTING THE MESSAGE#######################
 					echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${script_path}/account_${my_pid}.tmp --decrypt ${script_path}/account_${my_pid}.tmp.gpg 1>/dev/null 2>/dev/null
 					rt_query=$?
-					if [ $rt_query = 0 ]
-					then
-						extracted_name=$(cat ${script_path}/account_${my_pid}.tmp)
-						if [ "${extracted_name}" = "${login_name}" ]
-						then
-							handover_account=$user
-							user_logged_in=1
-							break
-						fi
-					fi
-				else
-					rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
 				fi
-			done
-			###REMOVE TMP FILES##########################################
-			rm ${script_path}/account_${my_pid}.tmp 2>/dev/null
-			rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
-			rm ${script_path}/logon_${my_pid}.tmp 2>/dev/null
-
-			###IF USER LOGGED IN#########################################
-			if [ $user_logged_in = 1 ]
+				rm ${script_path}/account_${my_pid}.tmp 2>/dev/null
+				rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
+			fi
+			if [ $rt_query = 0 ]
 			then
-				###SET USERPATH##############################################
-				user_path="${script_path}/userdata/${handover_account}"
+				###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
+				if [ -z "${cmd_sender}" ]
+				then
+					name_hash=$(echo "${login_name}"|sha224sum)
+					name_hash=${name_hash%% *}
+					if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
+					then
+						echo "${name_hash}" >>${script_path}/control/accounts.db
+					fi
+				fi
+				handover_account=$key_file
+				user_logged_in=1
+			fi
+		else
+			if [ -n "${cmd_sender}" ] && [ -s ${script_path}/keys/${cmd_sender} ]
+			then
+				handover_account=$cmd_sender
+				user_logged_in=1
+				observer=1
+			fi
+		fi
 
-				###CHECK IF USERPATH EXISTS IF NOT SET UP####################
-				if [ ! -d ${script_path}/userdata/${handover_account} ]
-				then
-					mkdir ${script_path}/userdata/${handover_account}
-					mkdir ${script_path}/userdata/${handover_account}/temp
-					mkdir ${script_path}/userdata/${handover_account}/temp/assets
-					mkdir ${script_path}/userdata/${handover_account}/temp/keys
-					mkdir ${script_path}/userdata/${handover_account}/temp/proofs
-					mkdir ${script_path}/userdata/${handover_account}/temp/trx
-				fi
+		###IF USER LOGGED IN#########################################
+		if [ $user_logged_in = 1 ]
+		then
+			###SET USERPATH##############################################
+			user_path="${script_path}/userdata/${handover_account}"
 
-				####DISPLAY WELCOME MESSAGE##################################
-				if [ $gui_mode = 1 ]
-				then
-					###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
-					dialog_login_welcome_display=$(echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g")
-					dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_login_welcome_display" 0 0
-					sleep 1
-				fi
-			else
-				if [ $gui_mode = 1 ]
-				then
-					###DISPLAY MESSAGE THAT LOGIN FAILED#######################################
-					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
-					clear
-				else
-					exit 1
-				fi
+			###CHECK IF USERPATH EXISTS IF NOT SET UP####################
+			if [ ! -d ${script_path}/userdata/${handover_account} ]
+			then
+				mkdir -p ${script_path}/userdata/${handover_account}/temp/assets
+				mkdir ${script_path}/userdata/${handover_account}/temp/keys
+				mkdir ${script_path}/userdata/${handover_account}/temp/proofs
+				mkdir ${script_path}/userdata/${handover_account}/temp/trx
+			fi
+
+			####DISPLAY WELCOME MESSAGE##################################
+			if [ $gui_mode = 1 ]
+			then
+				###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
+				dialog_login_welcome_display=$(echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g")
+				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_login_welcome_display" 0 0
+				sleep 1
 			fi
 		else
 			if [ $gui_mode = 1 ]
@@ -126,7 +113,12 @@ login_account(){
 				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
 				clear
 			else
-				exit 2
+				if [ $account_found = 0 ]
+				then
+					exit 2
+				else
+					exit 1
+				fi
 			fi
 		fi
 		action_done=1
@@ -167,9 +159,7 @@ create_keys(){
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
 			mkdir ${script_path}/proofs/${create_name_hashed}
-			mkdir ${script_path}/userdata/${create_name_hashed}
-			mkdir ${script_path}/userdata/${create_name_hashed}/temp
-			mkdir ${script_path}/userdata/${create_name_hashed}/temp/assets
+			mkdir -p ${script_path}/userdata/${create_name_hashed}/temp/assets
 			mkdir ${script_path}/userdata/${create_name_hashed}/temp/keys
 			mkdir ${script_path}/userdata/${create_name_hashed}/temp/proofs
 			mkdir ${script_path}/userdata/${create_name_hashed}/temp/trx
@@ -2595,6 +2585,7 @@ small_trx=0
 script_path=$(dirname $(readlink -f ${0}))
 my_pid=$$
 gui_mode=1
+observer=0
 
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
@@ -2706,6 +2697,7 @@ then
 									"show_addressbook")	main_menu=$cmd_action
 												;;
 									"show_balance")		main_menu=$dialog_main_logon
+												observer=1
 												;;
 									"show_stats")		user_logged_in=1
 												user_menu=$dialog_stats
@@ -2860,7 +2852,12 @@ do
 																rt_query=0
 																account_password_entered=$cmd_pw
 															else
-																exit 19
+																if [ "${cmd_action}" = "show_balance" ]
+																then
+																	account_password_entered="blank"
+																else
+																	exit 19
+ 																fi
 															fi
 														fi
 							     	   						if [ $rt_query = 0 ]
@@ -3370,7 +3367,7 @@ do
 			if [ $make_ledger = 1 ]
 			then
 				build_ledger $ledger_mode
-				if [ $make_new_index = 1 ]
+				if [ $make_new_index = 1 ] && [ $observer = 0 ]
 				then
 					now_stamp=$(date +%s)
 					make_signature "none" $now_stamp 1
@@ -3378,6 +3375,11 @@ do
 				if [ "${cmd_action}" = "show_balance" ]
 				then
 					exit 0
+				else
+					if [ $observer = 1 ]
+					then
+						exit 9
+					fi
 				fi
 				make_ledger=0
 			fi

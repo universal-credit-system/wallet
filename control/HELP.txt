@@ -15,7 +15,7 @@ OPTIONS:
 			restore_backup		to restore a backup
 			sync_uca		to sync with UCAs*
 			show_addressbook	to display all addresses
-			show_balance		to show the users balance*
+			show_balance		to show the users balance
 			show_stats		to display the statistics
 			show_trx		to display trx informations
 			
@@ -98,7 +98,7 @@ VALUE		EXPLANATION
 6		USER/PIN/PASSWORD CONTAINS ALPHA-NUMERICAL CHARACTERS
 7		AMOUNT CONTAINS NON-NUMERICAL CHARACTERS
 8		UNKNOWN INPUT CHECK MODE
-9		COULD NOT ACCESS ASSETS DIRECTORY
+9		ACTION REQUIRES LOGON WITH PASSWORD
 10		USER IS HAS BEEN BLACKLISTED
 11		COULD NOT ACCESS CERTS DIRECTORY
 12		NO NETWORK CONNECTION
