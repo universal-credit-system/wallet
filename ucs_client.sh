@@ -1476,52 +1476,40 @@ check_tsa(){
 								tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
 								tsa_cert_url=$(echo "${tsa_config}"|cut -d ',' -f2)
 								tsa_cert_file=$(basename $tsa_cert_url)
-								tsa_cert_filename=${tsa_cert_file%%.*}
 								tsa_cacert_url=$(echo "${tsa_config}"|cut -d ',' -f3)
 								tsa_cacert_file=$(basename $tsa_cacert_url)
-								tsa_cacert_filename=${tsa_cacert_file%%.*}
 
-								for ca_cert in $(ls -1r ${script_path}/certs/${tsa_service}/${tsa_cacert_filename}.*)
-								do	
-									for tsa_cert in $(ls -1r ${script_path}/certs/${tsa_service}/${tsa_cert_filename}.*)
-									do
-										###CHECK TSA QUERYFILE###################################
-										openssl ts -verify -queryfile ${script_path}/proofs/${account}/${tsa_service}.tsq -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${ca_cert} -untrusted ${tsa_cert} 1>/dev/null 2>/dev/null
+								###CHECK TSA QUERYFILE###################################
+								openssl ts -verify -queryfile ${script_path}/proofs/${account}/${tsa_service}.tsq -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
+								rt_query=$?
+								if [ $rt_query = 0 ]
+								then
+									###WRITE OUTPUT OF RESPONSE TO FILE######################
+									openssl ts -reply -in ${script_path}/proofs/${account}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
+									rt_query=$?
+									if [ $rt_query = 0 ]
+									then
+										###VERIFY TSA RESPONSE###################################
+										openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ $rt_query = 0 ]
 										then
-											###WRITE OUTPUT OF RESPONSE TO FILE######################
-											openssl ts -reply -in ${script_path}/proofs/${account}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
-											rt_query=$?
-											if [ $rt_query = 0 ]
-											then
-												###VERIFY TSA RESPONSE###################################
-												openssl ts -verify -data ${script_path}/keys/${line} -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${ca_cert} -untrusted ${tsa_cert} 1>/dev/null 2>/dev/null
-												rt_query=$?
-												if [ $rt_query = 0 ]
-												then
-													###GET STAMPS###############################
-													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
-													key_stamp=$(head -$counter ${user_path}/gpg_check.tmp|tail -1|cut -d ':' -f6)
+											###GET STAMPS###############################
+											file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
+											key_stamp=$(head -$counter ${user_path}/gpg_check.tmp|tail -1|cut -d ':' -f6)
 
-													###CHECK IF CREATED WITHIN 120 SECONDS######
-													stamp_diff=$(( file_stamp - key_stamp ))
-													if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
-													then
-														###WRITE STAMP TO FILE###################################
-														echo "${account} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
-														account_verified=1
-														break
-													fi
-												fi
+											###CHECK IF CREATED WITHIN 120 SECONDS######
+											stamp_diff=$(( file_stamp - key_stamp ))
+											if [ $stamp_diff -gt 0 ] && [ $stamp_diff -lt 120 ]
+											then
+												###WRITE STAMP TO FILE###################################
+												echo "${account} ${file_stamp}" >>${user_path}/all_accounts_dates.dat
+												account_verified=1
+												break
 											fi
 										fi
-									done
-									if [ $account_verified = 1 ]
-									then
-										break
 									fi
-								done
+								fi
 							fi
 							if [ $account_verified = 1 ]
 							then
@@ -2901,7 +2889,8 @@ do
 							###CHECK IF PARAMETER IS SET TO REBUILD LEDGER###############
 							if [ $user_logged_in = 1 ] && [ $new_ledger = 1 ] && [ $no_ledger = 0 ]
 							then
-								rm "${user_path}"/*.dat 2>/dev/null
+								rm "${user_path}"/*_ledger.dat 2>/dev/null
+								rm "${user_path}"/depend_*.dat 2>/dev/null
 							fi
 							;;
 				"$dialog_main_create")  set -f
