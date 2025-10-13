@@ -1511,10 +1511,6 @@ check_tsa(){
 									fi
 								fi
 							fi
-							if [ $account_verified = 1 ]
-							then
-								break
-							fi
 						done
 					fi
 					if [ $account_verified = 0 ]
