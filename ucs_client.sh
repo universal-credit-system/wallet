@@ -1607,7 +1607,7 @@ check_keys(){
 	  	      		###IMPORT KEY INTO KEYRING ############################
 	  	      		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${account} 2>/dev/null
 		      		rt_query=$?
-		      		if [ ! rt_query = 0 ]
+		      		if [ ! $rt_query = 0 ]
 			       	then
 					echo "${account}" >>${user_path}/blacklisted_accounts.dat
 			       	fi
