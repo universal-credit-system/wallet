@@ -98,24 +98,24 @@ then
 	if [ -n "${pkg_mngr}" ] && [ "$error_detected" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
-		while read line
+		while read program
 		do
-			printf "%b" "INFO: Trying to install ${line} using ${pkg_mngr}...\n"
+			printf "%b" "INFO: Trying to install ${program} using ${pkg_mngr}...\n"
 			case $pkg_mngr in
-				"apk")		apk add $line ;;
-				"apt-get")	apt-get -y install $line ;;
-				"dnf")		dnf -y install $line ;;
-				"pacman")	pacman --noconfirm -S $line ;;
-				"pkg")		pkg install -y $line ;;
-				"yum")		yum -y install $line ;;
-				"zypper")	zypper -n install $line ;;
+				"apk")		apk add $program ;;
+				"apt-get")	apt-get -y install $program ;;
+				"dnf")		dnf -y install $program ;;
+				"pacman")	pacman --noconfirm -S $program ;;
+				"pkg")		pkg install -y $program ;;
+				"yum")		yum -y install $program ;;
+				"zypper")	zypper -n install $program ;;
 			esac
 			rt_query=$?
-			if [ $rt_query -gt 0 ]
+			if [ "$rt_query" -gt 0 ]
 			then
 				error_detected=1
-				echo "Error running the following command: ${pkg_mngr} install ${line}"
-				echo "Maybe the program ${line} is available in a package with different name."
+				echo "Error running the following command: ${pkg_mngr} install ${program}"
+				echo "Maybe the program ${program} is available in a package with different name."
 			fi
 		done <"${script_path}"/install_dep.tmp
 		############################
