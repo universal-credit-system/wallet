@@ -19,7 +19,7 @@ do
 	### CHECK IF PROGRAMM IS UNKNOWN ####
         type "$program" >/dev/null 2>/dev/null
         rt_query=$?
-        if [ $rt_query -gt 0 ]
+        if [ "$rt_query" -gt 0 ]
         then
         	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
         	case $program in
@@ -39,7 +39,7 @@ do
         	esac
         fi
 done <"${script_path}"/control/install.dep
-if [ -f ${script_path}/install_dep.tmp ] && [ -s ${script_path}/install_dep.tmp ]
+if [ -f "${script_path}"/install_dep.tmp ] && [ -s "${script_path}"/install_dep.tmp ]
 then
 	############################
 	###IF APPS ARE TO INSTALL###
@@ -78,10 +78,10 @@ then
 										else
 											###IF PACKAGING MANAGER DETECTION FAILED####
 											error_detected=1
-											no_of_programs=$(wc -l <${script_path}/install_dep.tmp)
+											no_of_programs=$(wc -l <"${script_path}"/install_dep.tmp)
 											echo "ERROR: Couldn't detect the package management system used on this machine!"
 											echo "Found ${no_of_programs} programs that need to be installed:"
-											cat ${script_path}/install_dep.tmp
+											cat "${script_path}"/install_dep.tmp
 											echo "Install these programms first using your package management system and then run install.sh again."
 											############################################
 										fi
@@ -95,7 +95,7 @@ then
 	esac
 	############################
 	
-	if [ -n "${pkg_mngr}" ] && [ $error_detected = 0 ]
+	if [ -n "${pkg_mngr}" ] && [ "$error_detected" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
 		while read line
@@ -111,19 +111,19 @@ then
 				"zypper")	zypper -n install $line ;;
 			esac
 			rt_query=$?
-			if [ ! $rt_query = 0 ]
+			if [ $rt_query -gt 0 ]
 			then
 				error_detected=1
 				echo "Error running the following command: ${pkg_mngr} install ${line}"
 				echo "Maybe the program ${line} is available in a package with different name."
 			fi
-		done <${script_path}/install_dep.tmp
+		done <"${script_path}"/install_dep.tmp
 		############################
 	fi
 fi
 ###REMOVE TMP FILE##########
-rm ${script_path}/install_dep.tmp 2>/dev/null
-if [ $error_detected = 0 ]
+rm "${script_path}"/install_dep.tmp 2>/dev/null
+if [ "$error_detected" -eq 0 ]
 then
 	if [ -n "${specific_user}" ]
 	then
@@ -144,7 +144,7 @@ then
 	user_umask=$(umask)
 	permissions_directories=$(echo "777 - ${user_umask}"|bc)
 	touch ${script_path}/test.tmp
-	permissions_files=$(stat -c '%a' ${script_path}/test.tmp)
+	permissions_files=$(stat -c '%a' "${script_path}"/test.tmp)
 	rm ${script_path}/test.tmp
 	printf "%b" "DONE\n"
 
@@ -158,13 +158,13 @@ then
 
 	### COPY TO PLACE ############
 	printf "%b" "INFO: Copy install_config.conf to config.conf..."
-	cp ${script_path}/control/install_config.conf ${script_path}/control/config.conf
+	cp "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf
 	printf "%b" "DONE\n"
 
 	### WRITE PERMISSIONS ########
 	printf "%b" "INFO: Write umask to config.conf..."
-	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" ${script_path}/control/config.conf
-	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" ${script_path}/control/config.conf
+	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf
+	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf
 	printf "%b" "DONE\n"
 
 	### SET DEFAULT THEME ########
@@ -174,10 +174,10 @@ then
 
 	### SET PATHS ################
 	printf "%b" "INFO: Define paths in config.conf..."
-	sed -i "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" ${script_path}/control/config.conf
-	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" ${script_path}/control/config.conf
+	sed -i "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf
+	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf
+	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf
+	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf
 	printf "%b" "DONE\n"
 
 	### REWRITE CONFIG ###########
