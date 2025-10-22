@@ -38,16 +38,16 @@ login_account(){
 		done
 
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
-		if [ $account_found = 1 ]
+		if [ $account_found -eq 1 ]
 		then
 			rt_query=0
-			if [ $observer = 0 ]
+			if [ $observer -eq 0 ]
 			then
 				###TEST KEY BY ENCRYPTING A MESSAGE##########################
 				echo $login_name >${script_path}/account_${my_pid}.tmp
 				echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --local-user ${key_file} -r ${key_file} --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign ${script_path}/account_${my_pid}.tmp 1>/dev/null 2>/dev/null
 				rt_query=$?
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					###REMOVE ENCRYPTION SOURCE FILE#############################
 					rm ${script_path}/account_${my_pid}.tmp
@@ -59,14 +59,14 @@ login_account(){
 				rm ${script_path}/account_${my_pid}.tmp 2>/dev/null
 				rm ${script_path}/account_${my_pid}.tmp.gpg 2>/dev/null
 			fi
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
 				###WRITE ACCOUNTS.DB ENTRY IF NECESSARY######################
 				if [ -z "${cmd_sender}" ]
 				then
 					name_hash=$(echo "${login_name}"|sha224sum)
 					name_hash=${name_hash%% *}
-					if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) = 0 ]
+					if [ $(grep -c "${name_hash}" ${script_path}/control/accounts.db) -eq 0 ]
 					then
 						echo "${name_hash}" >>${script_path}/control/accounts.db
 					fi
@@ -84,7 +84,7 @@ login_account(){
 		fi
 
 		###IF USER LOGGED IN#########################################
-		if [ $user_logged_in = 1 ]
+		if [ $user_logged_in -eq 1 ]
 		then
 			###SET USERPATH##############################################
 			user_path="${script_path}/userdata/${handover_account}"
@@ -99,7 +99,7 @@ login_account(){
 			fi
 
 			####DISPLAY WELCOME MESSAGE##################################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				###IF SUCCESSFULL DISPLAY WELCOME MESSAGE AND SET LOGIN VARIABLE###########
 				dialog_login_welcome_display=$(echo $dialog_login_welcome|sed "s/<login_name>/${login_name}/g")
@@ -107,13 +107,13 @@ login_account(){
 				sleep 1
 			fi
 		else
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				###DISPLAY MESSAGE THAT LOGIN FAILED#######################################
 				dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_login_fail" 0 0
 				clear
 			else
-				if [ $account_found = 0 ]
+				if [ $account_found -eq 0 ]
 				then
 					exit 2
 				else
@@ -140,7 +140,7 @@ create_keys(){
 		create_name_hashed=$(echo "${create_name_hashed}_${create_pin}"|sha224sum)
 		create_name_hashed=${create_name_hashed%% *}
 
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			###DISPLAY PROGRESS BAR######################################
 			echo "0"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create1" 0 0 0
@@ -149,9 +149,9 @@ create_keys(){
 		###GENERATE KEY##############################################
 		echo "${create_password}"|gpg --batch --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --no-default-keyring --keyring=${script_path}/control/keyring.file --passphrase-fd 0 --pinentry-mode loopback --quick-gen-key ${create_name_hashed} rsa4096 sign,auth,encr none 1>/dev/null 2>/dev/null
 		rt_query=$?
-		if [ $rt_query = 0 ]
+		if [ $rt_query -eq 0 ]
 		then
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				###DISPLAY PROGRESS ON STATUS BAR############################
 				echo "33"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create2" 0 0 0
@@ -169,9 +169,9 @@ create_keys(){
 			key_remove=1
 			echo "${create_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc --passphrase-fd 0 --pinentry-mode loopback --export ${create_name_hashed}
 			rt_query=$?
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
-				if [ $gui_mode = 1 ]
+				if [ $gui_mode -eq 1 ]
 				then
 					###DISPLAY PROGRESS ON STATUS BAR############################
 					echo "66"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create3" 0 0 0
@@ -180,19 +180,19 @@ create_keys(){
 				###EXPORT PRIVATE KEY########################################
 				echo "${create_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --output ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys ${create_name_hashed}
 				rt_query=$?
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					###STEP INTO USER DIRECTORY##################################
 					cd ${user_path} || exit 3
 
 					###WRITE KEY DATA TO FILE####################################
 					key_stamp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|grep "${create_name_hashed}"|cut -d ':' -f6) || rt_query=1
-					if [ $rt_query = 0 ]
+					if [ $rt_query -eq 0 ]
 					then
 						###CREATE TSA QUERY FILE#####################################
 						openssl ts -query -data ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc -no_nonce -sha512 -out ${user_path}/${create_name_hashed}.tsq 1>/dev/null 2>/dev/null
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							###CREATE LIST OF ALL TSAS AND SET GREP PATTERN##############
 							ls -1 ${script_path}/certs >${user_path}/tsa_list.tmp
@@ -200,7 +200,7 @@ create_keys(){
 
 							###AS LONG AS NOT MINIMUM SIGNED ONCE########################
 							is_stamped=0
-							while [ $is_stamped = 0 ]
+							while [ $is_stamped -eq 0 ]
 							do
 								###FOR EACH TSA WITH DEFAULT TSA FIRST#######################
 								for tsa_service in $(echo "${tsa_pattern}"|sort - ${user_path}/tsa_list.tmp|uniq -d)
@@ -222,17 +222,17 @@ create_keys(){
 										###SENT QUERY TO TSA#########################################
 										curl --silent -H "Content-Type: application/timestamp-query" --data-binary @${tsa_service}.tsq ${tsa_connect_string} >${user_path}/${tsa_service}.tsr
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											###VERIFY TSA RESPONSE###################################
 											openssl ts -verify -queryfile ${user_path}/${tsa_service}.tsq -in ${user_path}/${tsa_service}.tsr -CAfile ${script_path}/certs/${tsa_service}/${tsa_cacert_file} -untrusted ${script_path}/certs/${tsa_service}/${tsa_cert_file} 1>/dev/null 2>/dev/null
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												###WRITE OUTPUT OF RESPONSE TO FILE######################
 												openssl ts -reply -in ${user_path}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													###GET FILE STAMP########################################
 													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
@@ -252,7 +252,7 @@ create_keys(){
 												fi
 											fi
 										fi
-										if [ $rt_query = 1 ]
+										if [ $rt_query -eq 1 ]
 										then
 											###IF FAILED RETRY#########################
 											retry_counter=$(( retry_counter + 1 ))
@@ -266,7 +266,7 @@ create_keys(){
 									done
 								done
 								###IF DEFAULT TSA WAS A DEFINED PATTERN BUT NOT AVAILABLE#####
-								if [ $is_stamped = 0 ] && [ "${tsa_pattern}" = "${default_tsa}" ]
+								if [ $is_stamped -eq 0 ] && [ "${tsa_pattern}" = "${default_tsa}" ]
 								then
 									###ENHANCE PATTERN TO ALL TSAS EXCEPT DEFAULT#################
 									tsa_pattern=$(grep -v "${default_tsa}" ${user_path}/tsa_list.tmp)
@@ -282,7 +282,7 @@ create_keys(){
 				fi
 			fi
 		fi
-		if [ $rt_query = 0 ]
+		if [ $rt_query -eq 0 ]
 		then
 			###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
 			cp ${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc ${script_path}/keys/${create_name_hashed}
@@ -302,7 +302,7 @@ create_keys(){
 			###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
 			cp ${user_path}/${create_name_hashed}.sct ${script_path}/control/keys/${create_name_hashed}.sct
 
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				###DISPLAY PROGRESS ON STATUS BAR###########################
 				echo "100"|dialog --title "$dialog_keys_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_keys_create4" 0 0 0
@@ -325,7 +325,7 @@ create_keys(){
 				exit 0
 			fi
 		else
-			if [ $key_remove = 1 ]
+			if [ $key_remove -eq 1 ]
 			then
 				if [ -n "${create_name_hashed}" ]
 				then
@@ -338,13 +338,13 @@ create_keys(){
 					###REMOVE KEYS FROM KEYRING##################################
 					key_fp=$(gpg --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys ${create_name_hashed}|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
 					rt_query=$?
-					if [ $rt_query = 0 ]
+					if [ $rt_query -eq 0 ]
 					then
 						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-secret-keys ${key_fp} 2>/dev/null
 						gpg --batch --yes --no-default-keyring --keyring=${script_path}/control/keyring.file --delete-keys ${key_fp} 2>/dev/null
 					fi
 				fi
-				if [ $gui_mode = 0 ]
+				if [ $gui_mode -eq 0 ]
 				then
 					exit 4
 				fi
@@ -358,7 +358,7 @@ make_signature(){
 			create_index_file=$3
 
 			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
-			if [ $create_index_file = 0 ]
+			if [ $create_index_file -eq 0 ]
 			then
 				###IF NOT WRITE TRX MESSAGE TO FILE##############################
 				message=${script_path}/trx/${handover_account}.${trx_now}
@@ -411,7 +411,7 @@ make_signature(){
 			###SIGN FILE#####################################################
 			echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user ${handover_account} --clearsign ${message_blank} 2>/dev/null
 			rt_query=$?
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
 				mv ${message_blank}.asc ${message}
 			fi
@@ -430,10 +430,10 @@ verify_signature(){
 			###CHECK GPG FILE#############################################
 			gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify ${file_to_verify} >${user_path}/gpg_verify.tmp 2>/dev/null
 			rt_query=$?
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
 				signed_correct=$(grep "GOODSIG" ${user_path}/gpg_verify.tmp|grep -c "${user_signed}")
-				if [ $signed_correct = 0 ]
+				if [ $signed_correct -eq 0 ]
 				then
 					rt_query=1
 				fi
@@ -457,7 +457,7 @@ check_input(){
 		###IF INPUT LESS THAN 1 DISPLAY NOTIFICATION###########################
 		if [ $length_counter -lt 1 ]
 		then
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg2" 0 0
 				rt_query=1
@@ -471,9 +471,9 @@ check_input(){
 				string_check=$(echo "${input_string}"|grep -c '[^[:alnum:]]')
 
 				###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
-				if [ $string_check = 1 ]
+				if [ $string_check -eq 1 ]
 				then
-					if [ $gui_mode = 1 ]
+					if [ $gui_mode -eq 1 ]
 					then
 						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg3" 0 0
 						rt_query=1
@@ -486,9 +486,9 @@ check_input(){
 				string_check=$(echo "${input_string}"|grep -c '[^[:digit:]]')
 
 				###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
-				if [ $string_check = 1 ]
+				if [ $string_check -eq 1 ]
 				then
-					if [ $gui_mode = 1 ]
+					if [ $gui_mode -eq 1 ]
 					then
 						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_check_msg1" 0 0
 						rt_query=1
@@ -506,7 +506,7 @@ build_ledger(){
 		new=$1
 
 		###REDIRECT OUTPUT FOR PROGRESS BAR IF REQUIRED#####
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			progress_bar_redir="1"
 		else
@@ -519,7 +519,7 @@ build_ledger(){
 		###CHECK IF OLD LEDGER THERE########################
 		old_ledger_there=$(ls -1 ${user_path}/*_ledger.dat 2>/dev/null|wc -l)
 
-		if [ $old_ledger_there -gt 0 ] && [ $new = 0 ]
+		if [ $old_ledger_there -gt 0 ] && [ $new -eq 0 ]
 		then
 			###GET LATEST LEDGER AND EXTRACT DATE###############
 			last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
@@ -570,25 +570,25 @@ build_ledger(){
 				asset_data=$(cat ${script_path}/assets/${asset})
 				asset_fungible=$(echo "$asset_data"|grep "asset_fungible=")
 				asset_fungible=${asset_fungible#*=}
-				if [ $asset_fungible = 0 ]
+				if [ $asset_fungible -eq 0 ]
 				then
 					asset_owner=$(echo "$asset_data"|grep "asset_owner="|sed "s/\"//g")
 					asset_owner=${asset_owner#*=}
 					asset_quantity=$(echo "$asset_data"|grep "asset_quantity=")
 					asset_quantity=${asset_quantity#*=}
 					already_exists=$(grep -c "${asset}:${asset_owner}=" ${user_path}/${previous_day}_ledger.dat)
-					if [ $already_exists = 0 ]
+					if [ $already_exists -eq 0 ]
 					then
 						echo "${asset}:${asset_owner}=${asset_quantity}" >>${user_path}/${previous_day}_ledger.dat
 					fi
 				else
 					already_exists=$(grep -c "${main_asset}:${asset}=" ${user_path}/${previous_day}_ledger.dat)
-					if [ $already_exists = 0 ]
+					if [ $already_exists -eq 0 ]
 					then
 						echo "${main_asset}:${asset}=0" >>${user_path}/${previous_day}_ledger.dat
 					fi
 					already_exists=$(grep -c "${asset}:${main_asset}=" ${user_path}/${previous_day}_ledger.dat)
-					if [ $already_exists = 0 ]
+					if [ $already_exists -eq 0 ]
 					then
 						echo "${asset}:${main_asset}=0" >>${user_path}/${previous_day}_ledger.dat
 					fi
@@ -596,7 +596,7 @@ build_ledger(){
 			fi
 		done
 
-		if [ $focus -le $now ] && [ $gui_mode = 1 ]
+		if [ $focus -le $now ] && [ $gui_mode -eq 1 ]
 		then
 			###INIT STATUS BAR##################################
 			now_date_status=$(date -u +%s --date=${now})
@@ -617,7 +617,7 @@ build_ledger(){
 		while [ $focus -le $now ]
 		do
 			###STATUS BAR####################################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				echo "$current_percent_display"
 				current_percent=$(echo "scale=10;${current_percent} + ${percent_per_day}"|bc)
@@ -626,7 +626,7 @@ build_ledger(){
 			#################################################
 
 			###CALCULATE CURRENT COINLOAD####################
-			if [ $day_counter = 1 ]
+			if [ $day_counter -eq 1 ]
 			then
 				coinload=$initial_coinload
 			else
@@ -666,7 +666,7 @@ build_ledger(){
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
 				rt_query=0
 				match=$(grep -s -c "asset_fungible=0" "${asset_full_path}") || rt_query=1
-				if [ $rt_query = 0 ] && [ $match = 1 ]
+				if [ $rt_query -eq 0 ] && [ $match -eq 1 ]
 				then
 					asset_quantity=$(grep "asset_quantity=" "${asset_full_path}")
 					asset_quantity=${asset_quantity#*=}
@@ -676,7 +676,7 @@ build_ledger(){
 				fi
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				match=$(grep -s -c "asset_fungible=1" "${asset_full_path}") || rt_query=1
-				if [ $rt_query = 0 ] && [ $asset_fungible = 1 ]
+				if [ $rt_query -eq 0 ] && [ $asset_fungible -eq 1 ]
 				then
 					###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 					echo "${asset}"|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>${user_path}/${focus}_ledger.dat
@@ -710,7 +710,7 @@ build_ledger(){
 						trx_amount=$(awk -F: '/:AMNT:/{print $3}' $trx_file)
 						trx_asset=$(awk -F: '/:ASST:/{print $3}' $trx_file)
 						sender_in_ledger=$(grep -c "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
-						if [ $sender_in_ledger = 1 ]
+						if [ $sender_in_ledger -eq 1 ]
 						then
 							###GET ACCOUNT BALANCE########################################
 							account_balance=$(grep "${trx_asset}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
@@ -721,7 +721,7 @@ build_ledger(){
 							enough_balance=$(echo "${account_check_balance} >= 0"|bc)
 
 							###CHECK IF BALANCE IS OK#####################################
-							if [ $enough_balance = 1 ]
+							if [ $enough_balance -eq 1 ]
 							then
 								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)#############
 								echo "${trx_path} ${trx_hash}" >>${user_path}/${focus}_index_trx.dat
@@ -734,7 +734,7 @@ build_ledger(){
 
 								###CHECK IF RECEIVER IS ASSET#################################
 								is_asset=$(grep -c "${trx_receiver}" ${user_path}/all_assets.dat)
-								if [ $is_asset = 1 ]
+								if [ $is_asset -eq 1 ]
 								then
 									is_fungible=$(grep -c "asset_fungible=1" ${script_path}/assets/${trx_receiver})
 								fi
@@ -742,17 +742,17 @@ build_ledger(){
 
 								###CHECK IF RECEIVER IS IN LEDGER#############################
 								receiver_in_ledger=$(grep -c "${trx_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
-								if [ $receiver_in_ledger = 0 ]
+								if [ $receiver_in_ledger -eq 0 ]
 								then
 									###CHECK IF RECEIVER IS IN LEDGER WITH UCC BALANCE############
 									receiver_in_ledger=$(grep -c "${main_asset}:${trx_receiver}" ${user_path}/${focus}_ledger.dat)
-									if [ $receiver_in_ledger = 1 ]
+									if [ $receiver_in_ledger -eq 1 ]
 									then
 										###CHECK IF RECEIVER IS ASSET#################################
-										if [ $is_asset = 1 ]
+										if [ $is_asset -eq 1 ]
 										then
 											###CHECK IF ASSET IS FUNGIBLE################################
-											if [ $is_fungible = 1 ]
+											if [ $is_fungible -eq 1 ]
 											then
 												echo "${trx_asset}:${trx_receiver}=0" >>${user_path}/${focus}_ledger.dat
 											else
@@ -764,7 +764,7 @@ build_ledger(){
 										fi
 									fi
 								fi
-								if [ $receiver_in_ledger = 1 ]
+								if [ $receiver_in_ledger -eq 1 ]
 								then
 									###GET CONFIRMATIONS##########################################
 									total_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
@@ -785,7 +785,7 @@ build_ledger(){
 										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" ${user_path}/${focus}_ledger.dat
 
 										###CHECK IF EXCHANGE REQUIRED#################################
-										if [ $is_asset = 1 ] && [ $is_fungible = 1 ]
+										if [ $is_asset -eq 1 ] && [ $is_fungible -eq 1 ]
 										then
 											###EXCHANGE###################################################
 											asset_type_price=$(grep "asset_price=" ${script_path}/assets/${trx_asset})
@@ -796,7 +796,7 @@ build_ledger(){
 
 											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
 											receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
-											if [ $receiver_in_ledger = 1 ]
+											if [ $receiver_in_ledger -eq 1 ]
 											then
 												sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" ${user_path}/${focus}_ledger.dat)
 												sender_old_balance=${sender_old_balance#*=}
@@ -830,7 +830,7 @@ build_ledger(){
 			day_counter=$(( day_counter + 1 ))
 			##############################################################
 		done|dialog --title "$dialog_ledger_title" --backtitle "$core_system_name $core_system_version" --gauge "$dialog_ledger" 0 0 0 2>/dev/null 1>&${progress_bar_redir}
-		if [ $gui_mode = 0 ]
+		if [ $gui_mode -eq 0 ]
 		then
 			###CHECK IF BALANCE NEED TO BE DISPLAYED######################
 			show_balance=0
@@ -846,7 +846,7 @@ build_ledger(){
 				"show_balance")	show_balance=1
 						;;
 			esac
-			if [ $show_balance = 1 ]
+			if [ $show_balance -eq 1 ]
 			then
 				out_stamp=$(date +%s.%3N)
 				last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
@@ -868,7 +868,7 @@ check_archive(){
 			###CHECK TARFILE CONTENT######################################
 			tar -tvf $path_to_tarfile|grep -v '//*$' >${user_path}/tar_check_temp.tmp
 			rt_query=$?
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
 				###REMOVE DOUBLE-ENTRIES IN TAR-FILE##########################
 				sort -u ${user_path}/tar_check_temp.tmp >${user_path}/tar_check_full.tmp
@@ -891,7 +891,7 @@ check_archive(){
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 							files_not_homedir=${line%%/*}
 							case $files_not_homedir in
-								"assets")	if [ $import_fungible_assets = 1 ] || [ $import_non_fungible_assets = 1 ]
+								"assets")	if [ $import_fungible_assets -eq 1 ] || [ $import_non_fungible_assets -eq 1 ]
 										then
 											if [ ! -d ${script_path}/$line ]
 											then
@@ -902,7 +902,7 @@ check_archive(){
 												then
 													rt_query=1
 												else
-													if [ $check_mode = 0 ]
+													if [ $check_mode -eq 0 ]
 													then
 														if [ ! -s ${script_path}/$line ]
 														then
@@ -923,7 +923,7 @@ check_archive(){
 											then
 												rt_query=1
 											else
-												if [ $check_mode = 0 ]
+												if [ $check_mode -eq 0 ]
 												then
 													if [ ! -s ${script_path}/$line ]
 													then
@@ -946,7 +946,7 @@ check_archive(){
 											else
 												if [ $(grep "${line}" ${user_path}/tar_check_full.tmp|awk '{print $3}' -) -le $trx_max_size_bytes ]
 												then
-													if [ $check_mode = 0 ]
+													if [ $check_mode -eq 0 ]
 													then
 														if [ ! -s ${script_path}/$line ]
 														then
@@ -964,7 +964,7 @@ check_archive(){
 											file_usr=${line#*/}
 											file_usr=${file_usr%%/*}
 											file_usr_correct=$(echo "$file_usr"|grep -c '[^[:alnum:]]')
-											if [ $file_usr_correct = 0 ]
+											if [ $file_usr_correct -eq 0 ]
 											then
 												file_full=${line#*/*/}
 												file_ext=${file_full#*.}
@@ -974,7 +974,7 @@ check_archive(){
 														do
 															if [ "${tsa_service}" = "${tsa_name}" ]
 															then
-																if [ $check_mode = 0 ]
+																if [ $check_mode -eq 0 ]
 																then
 																	if [ ! -s ${script_path}/$line ]
 																	then
@@ -991,7 +991,7 @@ check_archive(){
 														do
 															if [ "${tsa_service}" = "${tsa_name}" ]
 															then
-																if [ $check_mode = 0 ]
+																if [ $check_mode -eq 0 ]
 																then
 																	if [ ! -s ${script_path}/$line ]
 																	then
@@ -1019,7 +1019,7 @@ check_archive(){
 								*)		rt_query=1
 										;;
 							esac
-							if [ $rt_query = 1 ]
+							if [ $rt_query -eq 1 ]
 							then
 								break
 							fi
@@ -1082,15 +1082,15 @@ check_assets(){
 					stamp_size=${#asset_stamp}
 
 					###CHECK IF STAMP IS OKAY######################################
-					if [ $stamp_only_digits = 0 ] && [ $stamp_size -eq 10 ]
+					if [ $stamp_only_digits -eq 0 ] && [ $stamp_size -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ $(echo "${asset_description}"|grep -c -v '[a-zA-Z0-9%]') = 0 ] && [ -n "${asset_fungible}" ]
+						if [ $(echo "${asset_description}"|grep -c -v '[a-zA-Z0-9%]') -eq 0 ] && [ -n "${asset_fungible}" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo $asset_symbol|grep -c '[^[:alnum:]]')
 							symbol_size=${#asset_symbol}
-							if [ $symbol_check = 0 ] && [ $symbol_size -le 10 ] && [ "$(wc -c <${script_path}/assets/${asset})" -le $asset_max_size_bytes ]
+							if [ $symbol_check -eq 0 ] && [ $symbol_size -le 10 ] && [ "$(wc -c <${script_path}/assets/${asset})" -le $asset_max_size_bytes ]
 							then
 								###CHECK IF ASSET ALREADY EXISTS###############################
 								asset_already_exists=$(cat ${user_path}/ack_assets.dat ${user_path}/all_assets.dat|grep -c "${asset}")
@@ -1098,7 +1098,7 @@ check_assets(){
 								then
 									asset_owner_ok=0
 									###IF NON FUNGIBLE ASSET#####################################
-									if [ $asset_fungible = 0 ]
+									if [ $asset_fungible -eq 0 ]
 									then
 										###CHECK ASSET HARDCAP#######################################
 										if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
@@ -1111,7 +1111,7 @@ check_assets(){
 											then
 												test -f ${script_path}/keys/"${asset_owner}"
 												rt_query=$?
-												if [ $? = 0 ]
+												if [ $? -eq 0 ]
 												then
 													asset_owner_ok=1
 												fi
@@ -1119,20 +1119,20 @@ check_assets(){
 										fi
 									else
 										###IF FUNGIBLE ASSET#########################################
-										if [ $asset_fungible = 1 ]
+										if [ $asset_fungible -eq 1 ]
 										then
 											check_value=$asset_price
 											asset_owner_ok=1
 										fi
 									fi
-									if [ $asset_owner_ok = 1 ]
+									if [ $asset_owner_ok -eq 1 ]
 									then
 										###CHECK ASSET PRICE###################################
 										rt_query=0
 										is_amount_ok=$(echo "$check_value >= 0.000000001"|bc) || rt_query=1
 										is_amount_mod=$(echo "$check_value % 0.000000001"|bc) || rt_query=1
 										is_amount_mod=$(echo "${is_amount_mod} > 0"|bc) || rt_query=1
-										if [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ] && [ $rt_query = 0 ]
+										if [ $is_amount_ok -eq 1 ] && [ $is_amount_mod -eq 0 ] && [ $rt_query -eq 0 ]
 										then
 											asset_acknowledged=1
 										fi
@@ -1143,7 +1143,7 @@ check_assets(){
 					fi
 				fi
 				###WRITE ENTY TO BLACKLIST IF NOT ACKNOWLEDGED########
-				if [ $asset_acknowledged = 0 ]
+				if [ $asset_acknowledged -eq 0 ]
 				then
 					echo "$line" >>${user_path}/blacklisted_assets.dat
 				fi
@@ -1171,7 +1171,7 @@ check_blacklist(){
 			am_i_blacklisted=$(grep -c "${handover_account}" ${user_path}/blacklisted_accounts.dat)
 			if [ $am_i_blacklisted -gt 0 ]
 			then
-				if [ $gui_mode = 1 ]
+				if [ $gui_mode -eq 1 ]
 				then
 					dialog_blacklisted_display=$(echo $dialog_blacklisted|sed "s/<account_name>/${handover_account}/g")
 					dialog --title "$dialog_type_title_warning" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_blacklisted_display" 0 0
@@ -1213,7 +1213,7 @@ update_tsa(){
 				fi
 
 				###CHECK TSA.CRT, CACERT.PEM AND ROOT_CA.CRL#####
-				while [ $tsa_checked = 0 ]
+				while [ $tsa_checked -eq 0 ]
 				do
 					###GET TSA CONFIG################################
 					tsa_config=$(grep "${tsa_service}" ${script_path}/control/tsa.conf)
@@ -1240,12 +1240,12 @@ update_tsa(){
 					else
 						tsa_update_required=1
 					fi
-					if [ $tsa_update_required = 1 ]
+					if [ $tsa_update_required -eq 1 ]
 					then
 						###DOWNLOAD TSA.CRT###############################
 						wget -o /dev/null -q -O ${tsa_cert_file} ${tsa_cert_url}
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							###GET DATES######################################
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
@@ -1287,12 +1287,12 @@ update_tsa(){
 					else
 						tsa_update_required=1
 					fi
-					if [ $tsa_update_required = 1 ]
+					if [ $tsa_update_required -eq 1 ]
 					then
 						###DOWNLOAD CACERT.PEM############################
 						wget -o /dev/null -q -O ${tsa_cacert_file} ${tsa_cert_url}
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							###GET DATES######################################
 							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in ${script_path}/certs/${tsa_cacert_file} -noout -dates|grep "notBefore"|cut -d '=' -f2)")
@@ -1318,7 +1318,7 @@ update_tsa(){
 					fi
 
 					###IF TSA.CRT AND CACERT.PEM ARE THERE############
-					if [ $tsa_cert_available = 1 ] && [ $tsa_rootcert_available = 1 ]
+					if [ $tsa_cert_available -eq 1 ] && [ $tsa_rootcert_available -eq 1 ]
 					then
 						###GET TSA CRL URL FIRST BY CRT THEN BY CONFIG####
 						tsa_crl_url=""
@@ -1333,7 +1333,7 @@ update_tsa(){
 								tsa_checked=1
 							fi
 						fi
-						if [ $tsa_checked = 0 ]
+						if [ $tsa_checked -eq 0 ]
 						then
 							###GET CRL FILE###########################################
 							tsa_crl_file=$(basename $tsa_crl_url)
@@ -1389,12 +1389,12 @@ update_tsa(){
 										cat ${script_path}/certs/${tsa_service}/${tsa_cacert_file} ${script_path}/certs/${tsa_service}/${tsa_crl_file} >${script_path}/certs/${tsa_service}/crl_chain.pem
 										openssl verify -crl_check -CAfile ${script_path}/certs/${tsa_service}/crl_chain.pem ${script_path}/certs/${tsa_service}/${tsa_cert_file} >/dev/null 2>/dev/null
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											tsa_checked=1
 										else
 											tsa_update_required=1
-											if [ $crl_retry_counter = 1 ]
+											if [ $crl_retry_counter -eq 1 ]
 											then
 												file_name=${tsa_cert_file%%.*}
 												file_ext=${tsa_cert_file#*.}
@@ -1409,7 +1409,7 @@ update_tsa(){
 									fi
 								fi
 								###IF SUCCESSFULLY CHECKED WRITE ENTRY############
-								if [ $tsa_checked = 1 ]
+								if [ $tsa_checked -eq 1 ]
 								then
 									date +%s >${script_path}/certs/${tsa_service}/tsa_check_crl_timestamp.dat
 								fi
@@ -1423,7 +1423,7 @@ update_tsa(){
 						then
 							sleep $retry_wait_seconds
 						else
-							if [ $gui_mode = 1 ]
+							if [ $gui_mode -eq 1 ]
 							then
 								dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --infobox "$dialog_no_network" 0 0
 								sleep 10
@@ -1488,17 +1488,17 @@ check_tsa(){
 										###CHECK TSA QUERYFILE###################################
 										openssl ts -verify -queryfile ${script_path}/proofs/${account}/${tsa_service}.tsq -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${ca_cert} -untrusted ${tsa_cert} 1>/dev/null 2>/dev/null
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											###WRITE OUTPUT OF RESPONSE TO FILE######################
 											openssl ts -reply -in ${script_path}/proofs/${account}/${tsa_service}.tsr -text >${user_path}/tsa_check.tmp 2>/dev/null
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												###VERIFY TSA RESPONSE###################################
 												openssl ts -verify -data ${script_path}/keys/${account} -in ${script_path}/proofs/${account}/${tsa_service}.tsr -CAfile ${ca_cert} -untrusted ${tsa_cert} 1>/dev/null 2>/dev/null
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													###GET STAMPS###############################
 													file_stamp=$(date -u +%s --date="$(grep "Time stamp" ${user_path}/tsa_check.tmp|cut -c 13-37)")
@@ -1527,19 +1527,19 @@ check_tsa(){
 											fi
 										fi
 									done
-									if [ $account_verified = 1 ]
+									if [ $account_verified -eq 1 ]
 									then
 										break
 									fi
 								done
 							fi
-							if [ $account_verified = 1 ]
+							if [ $account_verified -eq 1 ]
 							then
 								break
 							fi
 						done
 					fi
-					if [ $account_verified = 0 ]
+					if [ $account_verified -eq 0 ]
 					then
 						echo $line >>${user_path}/blacklisted_accounts.dat
 					fi
@@ -1599,7 +1599,7 @@ check_keys(){
 		###CHECK IF KEYS IN KEYRING IMPORT THEM IF NOT#########
 		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --with-colons --list-keys 2>/dev/null|grep "uid"|cut -d ':' -f10 >${user_path}/keylist_gpg.tmp
   	        rt_query=$?
-  	        if [ $rt_query = 0 ]
+  	        if [ $rt_query -eq 0 ]
   	        then
   	        	###GO THROUGH ACCOUNTS NOT IN GPG KEYRING##############
 	  	        for account in $(grep -v -f ${user_path}/keylist_gpg.tmp ${user_path}/all_keys.tmp)
@@ -1607,7 +1607,7 @@ check_keys(){
 	  	      		###IMPORT KEY INTO KEYRING ############################
 	  	      		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${account} 2>/dev/null
 		      		rt_query=$?
-		      		if [ ! $rt_query = 0 ]
+		      		if [ ! $rt_query -eq 0 ]
 			       	then
 					echo "${account}" >>${user_path}/blacklisted_accounts.dat
 			       	fi
@@ -1703,7 +1703,7 @@ check_trx(){
 					###VERIFY SIGNATURE OF TRANSACTION######################
 					verify_signature $file_to_check $user_to_check
 					rt_query=$?
-					if [ $rt_query = 0 ]
+					if [ $rt_query -eq 0 ]
 					then
 						###GET DATES############################################
 						trx_date_filename=${line#*.}
@@ -1711,10 +1711,10 @@ check_trx(){
 						trx_date_formatted=${trx_date_inside%%.*}
 						trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' $file_to_check)
 						###IF RECEIVER NOT A USER###############################
-						if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat) = 0 ]
+						if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_accounts_dates.dat) -eq 0 ]
 						then
 							###IF RECEIVER NOT A ASSET##############################
-							if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) = 0 ]
+							if [ $(grep -c "${trx_receiver_date}" ${user_path}/all_assets.dat) -eq 0 ]
 							then
 								###GET DATE#############################################
 								trx_receiver_date=${trx_receiver_date#*.}
@@ -1754,12 +1754,12 @@ check_trx(){
 							purpose_end=$(( purpose_end - 1 ))
 							purpose=$(sed -n "${purpose_start},${purpose_end}p" $file_to_check)
 							purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
-							if [ $purpose_key_contains_alnum = 0 ] && [ $purpose_contains_alnum = 0 ]
+							if [ $purpose_key_contains_alnum -eq 0 ] && [ $purpose_contains_alnum -eq 0 ]
 							then
 								###CHECK IF ASSET TYPE EXISTS###########################
 								trx_asset=$(awk -F: '/:ASST:/{print $3}' $file_to_check)
 								asset_already_exists=$(grep -c "${trx_asset}" ${user_path}/all_assets.dat)
-								if [ $asset_already_exists = 1 ]
+								if [ $asset_already_exists -eq 1 ]
 								then
 									###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
 									trx_amount=$(awk -F: '/:AMNT:/{print $3}' $file_to_check)
@@ -1772,17 +1772,17 @@ check_trx(){
 									then
 										####CHECK IF USER HAS INDEXED THE TRANSACTION###########
 										is_trx_signed=$(grep -c "trx/${line}" ${script_path}/proofs/${user_to_check}/${user_to_check}.txt)
-										if [ $is_trx_signed = 1 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+										if [ $is_trx_signed -eq 1 ] && [ $is_amount_ok -eq 1 ] && [ $is_amount_mod -eq 0 ]
 										then
 											trx_acknowledged=1
 										else
-											if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+											if [ $delete_trx_not_indexed -eq 0 ] && [ $is_amount_ok -eq 1 ] && [ $is_amount_mod -eq 0 ]
 											then
 												trx_acknowledged=1
 											fi
 										fi
 									else
-										if [ $delete_trx_not_indexed = 0 ] && [ $is_amount_ok = 1 ] && [ $is_amount_mod = 0 ]
+										if [ $delete_trx_not_indexed -eq 0 ] && [ $is_amount_ok -eq 1 ] && [ $is_amount_mod -eq 0 ]
 										then
 											trx_acknowledged=1
 										fi
@@ -1793,7 +1793,7 @@ check_trx(){
 					fi
 				fi
 			fi
-			if [ $trx_acknowledged = 0 ]
+			if [ $trx_acknowledged -eq 0 ]
 			then
 				if [ ! ${user_to_check} = ${handover_account} ]
 				then
@@ -1823,7 +1823,7 @@ check_trx(){
 }
 process_new_files(){
 			process_mode=$1
-			if [ $process_mode = 0 ]
+			if [ $process_mode -eq 0 ]
 			then
 				###CREATE TMP FILE##################################
 				touch ${user_path}/remove_list.tmp
@@ -1833,19 +1833,19 @@ process_new_files(){
 					###CHECK IF USER ALREADY EXISTS#####################
 					user_to_verify=$(basename -s ".txt" $new_index_file)
 					user_already_there=$(cat ${user_path}/all_accounts.dat|grep -c "${user_to_verify}")
-					if [ $user_already_there = 1 ]
+					if [ $user_already_there -eq 1 ]
 					then
 						###VERIFY SIGNATURE OF USER#########################
 						verify_signature ${user_path}/temp/${new_index_file} $user_to_verify
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							###GO THROUGH ALL ASSETS OF NEW INDEX FILE##########
 							for new_index_asset in $(grep "assets/" ${user_path}/temp/${new_index_file})
 							do
 								###COMPARE HASHES###################################
 								is_asset_there=$(grep -c "${new_index_asset}" ${script_path}/proofs/${handover_account}/${handover_account}.txt)
-								if [ $is_asset_there = 0 ]
+								if [ $is_asset_there -eq 0 ]
 								then
 									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 								fi
@@ -1856,7 +1856,7 @@ process_new_files(){
 					else
 						###CHECK IF USER KEY IS CONTAINED#############
 						user_new=$(ls -1 ${user_path}/temp/keys|grep -c "${user_to_verify}")
-						if [ $user_new = 0 ]
+						if [ $user_new -eq 0 ]
 						then
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 						else
@@ -1943,7 +1943,7 @@ process_new_files(){
 						fi
 					else
 						###ENSURE THAT NEW TRANSACTIONS ARE OLDER##################
-						if [ $(wc -l <${user_path}/old_unique_filelist.tmp) = 0 ] && [ -s ${user_path}/old_index_filelist.tmp ]
+						if [ $(wc -l <${user_path}/old_unique_filelist.tmp) -eq 0 ] && [ -s ${user_path}/old_index_filelist.tmp ]
 						then
 							old_date=$(tail -1 ${user_path}/old_index_filelist.tmp)
 							old_date=${old_date%% *}
@@ -1953,7 +1953,7 @@ process_new_files(){
 							new_date=${new_date%% *}
 							new_date=${new_date#*/}
 							new_date=${new_date#*.}
-							if [ $(echo "${old_date} < ${new_date}"|bc) = 0 ]
+							if [ $(echo "${old_date} < ${new_date}"|bc) -eq 0 ]
 							then
 								echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>${user_path}/remove_list.tmp
 							fi
@@ -1983,7 +1983,7 @@ process_new_files(){
 				done <${user_path}/files_to_fetch.tmp
 
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
-				if [ $files_replaced = 1 ]
+				if [ $files_replaced -eq 1 ]
 				then
 					rm ${script_path}/userdata/${handover_account}/*.dat
 				fi
@@ -1992,7 +1992,7 @@ process_new_files(){
 			do
 				is_asset=$(echo $line|grep -c "assets/")
 				is_fungible=$(grep -c "asset_fungible=1" ${user_path}/temp/${line})
-				if [ -h ${user_path}/temp/${line} ] || [ -x ${user_path}/temp/${line} ] || [ $is_asset = 1 ] && [ $is_fungible = 1 ] && [ $import_fungible_assets = 0 ] || [ $is_asset = 1 ] && [ $is_fungible = 0 ] && [ $import_non_fungible_assets = 0 ]
+				if [ -h ${user_path}/temp/${line} ] || [ -x ${user_path}/temp/${line} ] || [ $is_asset -eq 1 ] && [ $is_fungible -eq 1 ] && [ $import_fungible_assets -eq 0 ] || [ $is_asset -eq 1 ] && [ $is_fungible -eq 0 ] && [ $import_non_fungible_assets -eq 0 ]
 				then
 					rm ${user_path}/temp/${line}
 				fi
@@ -2102,7 +2102,7 @@ get_dependencies(){
 			else
 				first_start=1
 			fi
-			if [ $first_start = 0 ]
+			if [ $first_start -eq 0 ]
 			then
 				if [ -e ${user_path}/depend_trx.dat ]
 				then
@@ -2119,7 +2119,7 @@ get_dependencies(){
 			fi
 
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
-			if [ $only_process_depend = 1 ]
+			if [ $only_process_depend -eq 1 ]
 			then
 				counter=1
 				echo "${handover_account}" >${user_path}/depend_accounts.dat
@@ -2132,14 +2132,14 @@ get_dependencies(){
 					do
 						echo "${trx}" >>${user_path}/depend_trx.dat
 						receiver=$(awk -F: '/:RCVR:/{print $3}' ${script_path}/trx/${trx})
-						if [ $(grep -c "$receiver" ${user_path}/all_assets.dat) = 0 ] && [ $(grep -c "$receiver" ${user_path}/all_accounts.dat) = 1 ]
+						if [ $(grep -c "$receiver" ${user_path}/all_assets.dat) -eq 0 ] && [ $(grep -c "$receiver" ${user_path}/all_accounts.dat) -eq 1 ]
 						then
 							echo $receiver >>${user_path}/depend_user_list.tmp
 						fi
 					done
 					for user in $(sort -u ${user_path}/depend_user_list.tmp)
 					do
-						if [ $(grep -c "${user}" ${user_path}/depend_accounts.dat) = 0 ]
+						if [ $(grep -c "${user}" ${user_path}/depend_accounts.dat) -eq 0 ]
 						then
 							echo $user >>${user_path}/depend_accounts.dat
 						fi
@@ -2182,13 +2182,13 @@ get_dependencies(){
 			depend_trx_new_hash=${depend_trx_new_hash%% *}
 			depend_confirmations_new_hash=$(sha256sum ${user_path}/depend_confirmations.dat)
 			depend_confirmations_new_hash=${depend_confirmations_new_hash%% *}
-			if [ "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ] && [ "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ] && [ "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ] && [ $own_index_there = 1 ]
+			if [ "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ] && [ "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ] && [ "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ] && [ $own_index_there -eq 1 ]
 			then
 				make_new_index=0
 				ledger_mode=0
 			else
 				make_new_index=1
-				if [ $first_start = 0 ]
+				if [ $first_start -eq 0 ]
 				then
 					ledger_mode=0
 					touch ${user_path}/dates.tmp
@@ -2253,7 +2253,7 @@ request_uca(){
 		rm ${user_path}/dhsecret_*.* 2>/dev/null
 
 		### GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR ######
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			rm ${user_path}/uca_list.tmp 2>/dev/null
 			total_number_uca=$(wc -l <${script_path}/control/uca.conf)
@@ -2299,7 +2299,7 @@ request_uca(){
 			out_file="${user_path}/uca_${uca_info_hashed}.out"
 
 			### STATUS BAR FOR GUI ##############################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
@@ -2309,28 +2309,28 @@ request_uca(){
 			#openssl genpkey -genparam -algorithm DH -out - >${user_path}/dhparams.pem 2>/dev/null
 			openssl dhparam -dsaparam -out - $dh_key_length >${user_path}/dhparams.pem 2>/dev/null
 			rt_query=$?
-			if [ $rt_query = 0 ]
+			if [ $rt_query -eq 0 ]
 			then
 				### GENERATE KEY ##################################
 				openssl genpkey -paramfile ${user_path}/dhparams.pem -out - >${user_path}/dhkey_send.pem
 				rt_query=$?
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					### GET PUBLIC KEY ################################
 					openssl pkey -in ${user_path}/dhkey_send.pem -pubout -out - >${user_path}/dhpub_send.pem
 					rt_query=$?
-					if [ $rt_query = 0 ]
+					if [ $rt_query -eq 0 ]
 					then
 						### ENCRYPT ID AND INDEX ##########################
 						session_key=$(date -u +%Y%m%d)
 						echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 ${user_path}/dhuser.dat >${user_path}/dhuser.tmp
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							### SEND CLIENT INFO, DH PARAMS AND PUBKEY ########
 							cat ${user_path}/dhuser.tmp ${user_path}/dhparams.pem ${user_path}/dhpub_send.pem|netcat -q 10 -w 120 ${uca_connect_string} ${uca_rcv_port} >${out_file} 2>/dev/null
 							rt_query=$?
-							if [ $rt_query = 0 ]
+							if [ $rt_query -eq 0 ]
 							then
 								### GET SIZE OF HEADER AND BODY ###################
 								total_lines_header=$(grep -n "END PUBLIC KEY" ${out_file}|cut -d ':' -f1)
@@ -2349,7 +2349,7 @@ request_uca(){
 								### CALCULATE SHARED SECRET #######################
 								openssl pkeyutl -derive -inkey ${user_path}/dhkey_send.pem -peerkey ${user_path}/dhpub_receive.pem -out - >${user_path}/dhsecret_${uca_info_hashed}.dat
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									### EXTRACT SHARED SECRET #########################
 									shared_secret=$(sha224sum <${user_path}/dhsecret_${uca_info_hashed}.dat)
@@ -2358,7 +2358,7 @@ request_uca(){
 									### DECRYPT SERVER INFO ###########################
 									echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output - --passphrase-fd 0 --decrypt ${user_path}/dhuser_${uca_info_hashed}.tmp >${user_path}/dhuser_${uca_info_hashed}.dat 2>/dev/null
 									rt_query=$?
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
 										### CUT OUT BODY AND MOVE FILE ####################
 										dd skip=${total_bytes_header} count=${total_bytes_count} if=${out_file} of=${out_file}.tmp bs=1 2>/dev/null
@@ -2367,12 +2367,12 @@ request_uca(){
 										### DECRYPT RECEIVED DATA #########################
 										echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output ${sync_file} --passphrase-fd 0 --decrypt ${out_file} 2>/dev/null
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											### CHECK FILE ####################################
 											check_archive ${sync_file} 0
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												### STEP INTO USERDATA/USER/TEMP ##################
 												cd ${user_path}/temp || exit 15
@@ -2380,7 +2380,7 @@ request_uca(){
 												### EXTRACT FILE ##################################
 												tar -xzf ${sync_file} -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													process_new_files 0
 													set_permissions
@@ -2400,11 +2400,11 @@ request_uca(){
 			rm ${sync_file} 2>/dev/null
 
 			### PROGRESSBAR FOR GUI #############################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" ${user_path}/uca_list.tmp
 				else
@@ -2412,7 +2412,7 @@ request_uca(){
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			else
-				if [ ! $rt_query = 0 ]
+				if [ ! $rt_query -eq 0 ]
 				then
 					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 				fi
@@ -2434,7 +2434,7 @@ send_uca(){
 		out_file="${user_path}/${handover_account}_${now_stamp}.out"
 
 		### GET TOTAL NUMBER FOR PROGRESSBAR ################
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			rm ${user_path}/uca_list.tmp 2>/dev/null
 			total_number_uca=$(wc -l <${script_path}/control/uca.conf)
@@ -2462,7 +2462,7 @@ send_uca(){
 			uca_info_hashed=${uca_info_hashed%% *}
 
 			### STATUS BAR FOR GUI ##############################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" ${user_path}/uca_list.tmp
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
@@ -2491,17 +2491,17 @@ send_uca(){
 				cd ${script_path} || exit 13
 				tar -czf ${out_file} -T ${user_path}/files_list.tmp --dereference --hard-dereference
 				rt_query=$?
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					### ENCRYPT USERDATA ################################
 					echo "${session_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${user_path}/dhuser.tmp --passphrase-fd 0 ${user_path}/dhuser_id.dat
 					rt_query=$?
-					if [ $rt_query = 0 ]
+					if [ $rt_query -eq 0 ]
 					then
 						### ENCRYPT SYNCFILE ################################
 						echo "${shared_secret}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output ${sync_file} --passphrase-fd 0 ${out_file}
 						rt_query=$?
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							### SEND KEY AND SYNCFILE VIA DIFFIE-HELLMAN ########
 							cat ${user_path}/dhuser.tmp ${sync_file}|netcat -w 5 ${uca_connect_string} ${uca_snd_port} >/dev/null 2>/dev/null
@@ -2522,11 +2522,11 @@ send_uca(){
 			rm ${user_path}/files_list.tmp 2>/dev/null
 
 			### PROGRESS BAR ###################################
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
-				if [ $rt_query = 0 ]
+				if [ $rt_query -eq 0 ]
 				then
 					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" ${user_path}/uca_list.tmp
 				else
@@ -2534,7 +2534,7 @@ send_uca(){
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			else
-				if [ ! $rt_query = 0 ]
+				if [ ! $rt_query -eq 0 ]
 				then
 					echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
 				fi
@@ -2780,7 +2780,7 @@ then
 		esac
 		shift
 	done
-	if [ $no_ledger = 1 ]
+	if [ $no_ledger -eq 1 ]
 	then
 		if [ "${cmd_action}" = "create_trx" ]
 		then
@@ -2788,18 +2788,18 @@ then
 		fi
 	fi
 fi
-while [ $end_program = 0 ]
+while [ $end_program -eq 0 ]
 do
-	if [ $user_logged_in = 0 ]
+	if [ $user_logged_in -eq 0 ]
 	then
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			main_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-items --no-hot-list --menu "$(cat ${script_path}/control/logo.dat 2>/dev/null || echo "<control/logo.dat>")" 22 43 5 "$dialog_main_logon" "$dialog_main_create" "$dialog_main_settings" "$dialog_main_backup" "$dialog_main_end")
 			rt_query=$?
 		else
 			rt_query=0
 		fi
-		if [ ! $rt_query = 0 ]
+		if [ ! $rt_query -eq 0 ]
 		then
 			clear
 			exit 0
@@ -2809,9 +2809,9 @@ do
 							account_name_entered="blank"
 							account_pin_entered="12345"
 							account_name_entered_correct=0
-							while [ $account_name_entered_correct = 0 ]
+							while [ $account_name_entered_correct -eq 0 ]
 							do
-								if [ $gui_mode = 1 ]
+								if [ $gui_mode -eq 1 ]
 								then
 									account_name_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 30 --inputbox "$dialog_login_display_account" 0 0 "$cmd_user")
 									rt_query=$?
@@ -2827,16 +2827,16 @@ do
 										fi
 									fi
 								fi
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									check_input "${account_name_entered}" 0
 									rt_query=$?
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
 										account_pin_entered_correct=0
-										while [ $account_pin_entered_correct = 0 ]
+										while [ $account_pin_entered_correct -eq 0 ]
 										do
-											if [ $gui_mode = 1 ]
+											if [ $gui_mode -eq 1 ]
 											then
 												account_pin_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --output-fd 1 --max-input 5 --insecure --passwordbox "$dialog_login_display_loginkey" 0 0 "$cmd_pin")
 												rt_query=$?
@@ -2852,16 +2852,16 @@ do
 													fi
 												fi
 											fi
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												check_input "${account_pin_entered}" 1
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 										       		then
 													account_password_entered_correct=0
-	     												while [ $account_password_entered_correct = 0 ]
+	     												while [ $account_password_entered_correct -eq 0 ]
 	       												do
-														if [ $gui_mode = 1 ]
+														if [ $gui_mode -eq 1 ]
 														then
 															account_password_entered=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_logon" --backtitle "$core_system_name $core_system_version" --max-input 30 --output-fd 1 --insecure --passwordbox "$dialog_login_display_pw" 0 0 "$cmd_pw")
 															rt_query=$?
@@ -2879,11 +2879,11 @@ do
  																fi
 															fi
 														fi
-							     	   						if [ $rt_query = 0 ]
+							     	   						if [ $rt_query -eq 0 ]
 							       							then
 															check_input "${account_password_entered}" 0
 															rt_query=$?
-															if [ $rt_query = 0 ]
+															if [ $rt_query -eq 0 ]
 															then
 																login_account "${account_name_entered}" "${account_pin_entered}" "${account_password_entered}"
 																account_password_entered_correct=1
@@ -2909,7 +2909,7 @@ do
 							done
 							set +f
 							###CHECK IF PARAMETER IS SET TO REBUILD LEDGER###############
-							if [ $user_logged_in = 1 ] && [ $new_ledger = 1 ] && [ $no_ledger = 0 ]
+							if [ $user_logged_in -eq 1 ] && [ $new_ledger -eq 1 ] && [ $no_ledger -eq 0 ]
 							then
 								rm "${user_path}"/*_ledger.dat 2>/dev/null
 								rm "${user_path}"/depend_*.dat 2>/dev/null
@@ -2918,9 +2918,9 @@ do
 				"$dialog_main_create")  set -f
 							account_name_inputbox=""
 							account_name_entered_correct=0
-							while [ $account_name_entered_correct = 0 ]
+							while [ $account_name_entered_correct -eq 0 ]
 							do
-								if [ $gui_mode = 1 ]
+								if [ $gui_mode -eq 1 ]
 								then
 									account_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_name --output-fd 1 --inputbox "$dialog_keys_account" 0 0 "${account_name_inputbox}")
 									rt_query=$?
@@ -2933,22 +2933,22 @@ do
 									fi
 									rt_query=0
 								fi
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									check_input "${account_name}" 0
 									rt_query=$?
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
 										name_hash=$(echo "${account_name}"|sha224sum)
 										name_hash=${name_hash%% *}
 										already_there=$(grep -c "${name_hash}" ${script_path}/control/accounts.db)
-										if [ $already_there = 0 ]
+										if [ $already_there -eq 0 ]
 										then
 											account_pin_inputbox=""
 											account_pin_entered_correct=0
-											while [ $account_pin_entered_correct = 0 ]
+											while [ $account_pin_entered_correct -eq 0 ]
 											do
-												if [ $gui_mode = 1 ]
+												if [ $gui_mode -eq 1 ]
 												then
 													account_pin_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --extra-button --extra-label "RANDOM" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pin --output-fd 1 --inputbox "$dialog_keys_pin1" 0 0 "$account_pin_inputbox")
 													rt_query=$?
@@ -2963,13 +2963,13 @@ do
 													fi
 													rt_query=0
 												fi
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													check_input "${account_pin_first}" 1
 													rt_query=$?
-													if [ $rt_query = 0 ]
+													if [ $rt_query -eq 0 ]
 													then
-														if [ $gui_mode = 1 ]
+														if [ $gui_mode -eq 1 ]
 														then
 															clear
 															account_pin_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pin --output-fd 1 --inputbox "$dialog_keys_pin2" 0 0 "$account_pin_inputbox")
@@ -2977,7 +2977,7 @@ do
 														else
 															rt_query=0
 														fi
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 					       										if [ ! "${account_pin_first}" = "${account_pin_second}" ]
 															then
@@ -2986,9 +2986,9 @@ do
 																clear
 															else
 																account_password_entered_correct=0
-		     														while [ $account_password_entered_correct = 0 ]
+		     														while [ $account_password_entered_correct -eq 0 ]
 		       														do
-																	if [ $gui_mode = 1 ]
+																	if [ $gui_mode -eq 1 ]
 																	then
 																		account_password_first=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pw --output-fd 1 --insecure --passwordbox "$dialog_keys_pw1" 0 0)
 																		rt_query=$?
@@ -3003,13 +3003,13 @@ do
 																		fi
 																		rt_query=0
 																	fi
-																	if [ $rt_query = 0 ]
+																	if [ $rt_query -eq 0 ]
 																	then
 		       																check_input "${account_password_first}" 0
 																		rt_query=$?
-																		if [ $rt_query = 0 ]
+																		if [ $rt_query -eq 0 ]
 																		then
-																			if [ $gui_mode = 1 ]
+																			if [ $gui_mode -eq 1 ]
 																			then
 																				clear
 																				account_password_second=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --max-input $max_len_pw --output-fd 1 --insecure --passwordbox "$dialog_keys_pw2" 0 0)
@@ -3017,7 +3017,7 @@ do
 																			else
 																				rt_query=0
 																			fi
-																			if [ $rt_query = 0 ]
+																			if [ $rt_query -eq 0 ]
 																			then
 					       															if [ ! "${account_password_first}" = "${account_password_second}" ]
 																				then
@@ -3031,7 +3031,7 @@ do
 																					update_tsa
 																					create_keys "${account_name}" "${account_pin_second}" "${account_password_second}"
 																					rt_query=$?
-																					if [ $rt_query = 0 ]
+																					if [ $rt_query -eq 0 ]
 																					then
 																						dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_success" 0 0
 																					else
@@ -3052,7 +3052,7 @@ do
 														fi
 													fi
 												else
-													if [ $rt_query = 3 ]
+													if [ $rt_query -eq 3 ]
 													then
 														account_pin_inputbox=$(tr -dc 0-9 </dev/urandom|head -c 5)
 													else
@@ -3061,7 +3061,7 @@ do
 												fi
 											done
 										else
-											if [ $gui_mode = 1 ]
+											if [ $gui_mode -eq 1 ]
 											then
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_keys_exists" 0 0
 											else
@@ -3070,7 +3070,7 @@ do
 										fi
 									fi
 								else
-									if [ $rt_query = 3 ]
+									if [ $rt_query -eq 3 ]
 									then
 										account_name_inputbox=$(tr -dc A-Za-z0-9 </dev/urandom|head -c 20)
 									else
@@ -3085,7 +3085,7 @@ do
 								do
 									settings_menu=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_main_back" --backtitle "$core_system_name $core_system_version" --output-fd 1 --colors --no-hot-list --menu "$dialog_main_settings" 0 5 0 "$dialog_main_lang" "" "$dialog_main_theme" "" "config.conf" "")
 									rt_query=$?
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
 										case $settings_menu in
 											"$dialog_main_lang")	for language_file in $(ls -1 ${script_path}/lang/)
@@ -3096,7 +3096,7 @@ do
 														done
 														lang_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file ${script_path}/lang_list.tmp)
 														rt_query=$?
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 															new_lang_file=$(ls -1 ${script_path}/lang/|grep "lang_${lang_selection}_")
 															if [ ! $lang_file = $new_lang_file ]
@@ -3115,7 +3115,7 @@ do
 														done
 														theme_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --menu "$dialog_theme" 0 0 0 --file ${script_path}/theme_list.tmp)
 														rt_query=$?
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 															new_theme_file=$(ls -1 ${script_path}/theme/|grep -w "${theme_selection}")
 															if [ ! $dialogrc_set = $new_theme_file ]
@@ -3140,19 +3140,19 @@ do
 															### DISPLAY INPUTMENU DIALOG ####################
 															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --no-hot-list --inputmenu "CONFIG.CONF" 30 70 10 --file ${script_path}/config_${my_pid}.tmp)
 															rt_query=$?
-															if [ $rt_query = 3 ]
+															if [ $rt_query -eq 3 ]
 															then
 																entry=$(echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}')
 																old_value=$(grep "${entry}" ${script_path}/config_${my_pid}.tmp|awk -F= '{print $2}'|sed 's/ //g')
 																new_value=$(echo "${changed}"|awk '{print $3}')
 																sed -i "s#${entry}=${old_value}#${entry}=${new_value}#" ${script_path}/control/config.conf
 															else
-																if [ $rt_query = 1 ]
+																if [ $rt_query -eq 1 ]
 																then
 																	touch ${script_path}/config_${my_pid}_add.tmp
 																	dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "CONFIG.CONF+" --backtitle "$core_system_name $core_system_version" --editbox ${script_path}/config_${my_pid}_add.tmp 20 80 2>${script_path}/config_${my_pid}_added.tmp
 																	rt_query=$?
-																	if [ $rt_query = 0 ]
+																	if [ $rt_query -eq 0 ]
 																	then
 																		cat ${script_path}/config_${my_pid}_added.tmp >>${script_path}/control/config.conf
 																	fi
@@ -3171,7 +3171,7 @@ do
 									fi
 								done
 								;;
-				"$dialog_main_backup")	if [ $gui_mode = 1 ]
+				"$dialog_main_backup")	if [ $gui_mode -eq 1 ]
 							then
 								dialog --yes-label "$dialog_backup_create" --no-label "$dialog_backup_restore" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_backup_text" 0 0
 								rt_query=$?
@@ -3183,16 +3183,16 @@ do
 												;;
 								esac
 							fi
-							if [ $rt_query = 0 ]
+							if [ $rt_query -eq 0 ]
 							then
 								cd ${script_path} || exit 13
 								now_stamp=$(date +%s)
 								tar -czf ${script_path}/backup/${now_stamp}.bcp assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									backup_file="${now_stamp}.bcp"
-									if [ $gui_mode = 1 ]
+									if [ $gui_mode -eq 1 ]
 									then
 										dialog_backup_success_display=$(echo $dialog_backup_create_success|sed "s/<backup_file>/${backup_file}/g")
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_success_display" 0 0
@@ -3202,7 +3202,7 @@ do
 									fi
 								else
 									rm ${script_path}/backup/${now_stamp}.bcp 2>/dev/null
-									if [ $gui_mode = 1 ]
+									if [ $gui_mode -eq 1 ]
 									then
 										dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_create_fail" 0 0
 									else
@@ -3212,7 +3212,7 @@ do
 							else
 								if [ ! $rt_query = 255 ]
 								then
-									if [ $gui_mode = 1 ]
+									if [ $gui_mode -eq 1 ]
 									then
 										find ${script_path}/backup/ -maxdepth 1 -type f -name "*.bcp"|sort -r -t . -k1 >${script_path}/backups_list.tmp
 										if [ $(wc -l <${script_path}/backups_list.tmp) -gt 0 ]
@@ -3229,7 +3229,7 @@ do
 										fi
 										backup_decision=$(dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --scrollbar --menu "$dialog_backup_menu" 0 0 0 --file ${script_path}/backup_list.tmp)
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											no_results=${dialog_history_noresult%% *}
 											if [ ! "${backup_decision}" = "${no_results}" ]
@@ -3264,7 +3264,7 @@ do
 											file_path=$cmd_path
 											tar -tf $file_path >/dev/null
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												purge_files
 												tar -xzf $file_path --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
@@ -3305,7 +3305,7 @@ do
 										signature="ERROR_VERIFY_SIGNATURE"
 										gpg --status-fd 1 --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --verify "${trx}" >${script_path}/gpg_${my_pid}_verify.tmp 2>/dev/null
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											signed_correct=$(grep "GOODSIG" ${script_path}/gpg_${my_pid}_verify.tmp|grep -c "${sender}")
 											if [ $signed_correct -ge 1 ]
@@ -3346,7 +3346,7 @@ do
 									fi
 								fi
 							done
-							if [ $rt_code = 0 ]
+							if [ $rt_code -eq 0 ]
 							then
 								exit 0
 							else
@@ -3358,7 +3358,7 @@ do
 
 	else
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ] && [ ! "${cmd_action}" = "show_stats" ]
+		if [ $auto_uca_start -eq 1 ] && [ $no_ledger -eq 0 ] && [ ! "${cmd_action}" = "show_stats" ]
 		then
 			request_uca
 		fi
@@ -3371,7 +3371,7 @@ do
 		fi
 
 		###ON EACH START AND AFTER EACH ACTION#####
-		if [ $action_done = 1 ]
+		if [ $action_done -eq 1 ]
 		then
 			update_tsa
 			check_tsa
@@ -3382,12 +3382,12 @@ do
 			ledger_mode=$?
 			action_done=0
 		fi
-		if [ $no_ledger = 0 ]
+		if [ $no_ledger -eq 0 ]
 		then
-			if [ $make_ledger = 1 ]
+			if [ $make_ledger -eq 1 ]
 			then
 				build_ledger $ledger_mode
-				if [ $make_new_index = 1 ] && [ $observer = 0 ]
+				if [ $make_new_index -eq 1 ] && [ $observer -eq 0 ]
 				then
 					now_stamp=$(date +%s)
 					make_signature "none" $now_stamp 1
@@ -3396,7 +3396,7 @@ do
 				then
 					exit 0
 				else
-					if [ $observer = 1 ]
+					if [ $observer -eq 1 ]
 					then
 						exit 9
 					fi
@@ -3414,19 +3414,19 @@ do
 		fi
 
 		###IF AUTO-UCA-SYNC########################
-		if [ $auto_uca_start = 1 ] && [ $no_ledger = 0 ] && [ ! "${cmd_action}" = "show_stats" ]
+		if [ $auto_uca_start -eq 1 ] && [ $no_ledger -eq 0 ] && [ ! "${cmd_action}" = "show_stats" ]
 		then
 			send_uca
 		fi
 
 		###SET UCA TRIGGER BACK TO 0###############
-		if [ $uca_trigger = 1 ]
+		if [ $uca_trigger -eq 1 ]
 		then
 			auto_uca_start=0
 			uca_trigger=0
 		fi
 
-		if [ $gui_mode = 1 ]
+		if [ $gui_mode -eq 1 ]
 		then
 			dialog_main_menu_text_display=$(echo $dialog_main_menu_text|sed -e "s/<login_name>/${login_name}/g" -e "s/<handover_account>/${handover_account}/g" -e "s/<account_my_balance>/${account_my_balance}/g")
 			user_menu=$(dialog --ok-label "$dialog_main_choose" --no-cancel --title "$dialog_main_menu" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-items --no-hot-list --menu "$dialog_main_menu_text_display" 0 0 0 "$dialog_send" "$dialog_receive" "$dialog_sync" "$dialog_uca" "$dialog_browser" "$dialog_history" "$dialog_stats" "$dialog_logout")
@@ -3435,14 +3435,14 @@ do
 			rt_query=0
 		fi
 
-		if [ ! $rt_query = 0 ]
+		if [ ! $rt_query -eq 0 ]
 		then
 			user_logged_in=0
 			action_done=1
 			make_ledger=1
 			clear
 		else
-			if [ $gui_mode = 1 ]
+			if [ $gui_mode -eq 1 ]
 			then
 				clear
 			fi
@@ -3450,21 +3450,21 @@ do
 				"$dialog_send")	asset_found=0
 						receiver_is_asset=0
 						grep "${handover_account}" ${user_path}/${now}_ledger.dat|cut -d ':' -f1|sort -t. -k1 -k2 >${user_path}/menu_assets.tmp
-						if [ $gui_mode = 1 ]
+						if [ $gui_mode -eq 1 ]
 						then
 							def_string_asset=$(head -1 ${user_path}/menu_assets.tmp)
 						fi
-						while [ $asset_found = 0 ]
+						while [ $asset_found -eq 0 ]
 						do
-							if [ $gui_mode = 1 ]
+							if [ $gui_mode -eq 1 ]
 							then
 								quit_asset_loop=0
-								while [ $quit_asset_loop = 0 ]
+								while [ $quit_asset_loop -eq 0 ]
 								do
 									###ASSET OVERVIEW################################
 									order_asset=$(dialog --cancel-label "$dialog_cancel" --extra-button --extra-label "$dialog_show" --default-item "$def_string_asset" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_assets:" 0 0 0 --file ${user_path}/menu_assets.tmp)
 									rt_query=$?
-									if [ $rt_query = 3 ]
+									if [ $rt_query -eq 3 ]
 									then
 										###SET DEFAULT-ITEM OF DIALOG MENU###############
 										def_string_asset=$order_asset
@@ -3476,21 +3476,21 @@ do
 									fi
 								done
 							else
-								if [ -z "${cmd_asset}" ] && [ $(wc -l <${user_path}/menu_assets.tmp) = 1 ]
+								if [ -z "${cmd_asset}" ] && [ $(wc -l <${user_path}/menu_assets.tmp) -eq 1 ]
 								then
 									order_asset=$main_asset
 								else
 									order_asset=$cmd_asset
 								fi
 								asset_there=$(grep -c -w "${order_asset}" ${user_path}/menu_assets.tmp)
-								if [ $asset_there = 1 ]
+								if [ $asset_there -eq 1 ]
 								then
 									rt_query=0
 								else
 									exit 27
 								fi
 							fi
-							if [ $rt_query = 0 ]
+							if [ $rt_query -eq 0 ]
 							then
 								currency_symbol=$order_asset
 								asset_found=1
@@ -3498,9 +3498,9 @@ do
 								amount_selected=1
 								order_aborted=0
 								order_receiver=""
-								while [ $receiver_found = 0 ]
+								while [ $receiver_found -eq 0 ]
 								do
-									if [ $gui_mode = 1 ]
+									if [ $gui_mode -eq 1 ]
 									then
 										###USER OVERVIEW####################################################
 										order_receiver=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input 56 --output-fd 1 --inputbox "$dialog_send_address" 0 0 "$order_receiver")
@@ -3509,12 +3509,12 @@ do
 										rt_query=0
 										order_receiver=$cmd_receiver
 									fi
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
 										if [ -n "${order_receiver}" ]
 										then
 											###CHECK IF RECEIVER IS USER OR ASSET###############################
-											if [ $(grep -c -w "${order_receiver}" ${user_path}/all_accounts.dat) = 1 ]
+											if [ $(grep -c -w "${order_receiver}" ${user_path}/all_accounts.dat) -eq 1 ]
 											then
 												receiver_found=1
 												amount_selected=0
@@ -3522,13 +3522,13 @@ do
 												asset_there=$(grep -c -w "${order_receiver}" ${user_path}/all_assets.dat)
 												asset=$(grep -w "${order_receiver}" ${user_path}/all_assets.dat)
 												is_fungible=$(cat ${script_path}/assets/${asset}|grep -c "asset_fungible=1" 2>/dev/null)
-												if [ $asset_there = 1 ] && [ $is_fungible = 1 ]
+												if [ $asset_there -eq 1 ] && [ $is_fungible -eq 1 ]
 												then
 													receiver_is_asset=1
 													receiver_found=1
 													amount_selected=0
 												else
-													if [ $gui_mode = 1 ]
+													if [ $gui_mode -eq 1 ]
 													then
 														dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_history_noresult" 0 0
 													else
@@ -3536,11 +3536,11 @@ do
 													fi
 												fi
 											fi
-											while [ $amount_selected = 0 ]
+											while [ $amount_selected -eq 0 ]
 											do
 												account_my_balance=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
 												account_my_balance=${account_my_balance#*=}
-												if [ $gui_mode = 1 ]
+												if [ $gui_mode -eq 1 ]
 												then
 													dialog_send_amount_display=$(echo $dialog_send_amount|sed -e "s/<account_my_balance>/${account_my_balance}/g" -e "s/<currency_symbol>/${currency_symbol}/g")
 													order_amount=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --output-fd 1 --inputbox "$dialog_send_amount_display" 0 0 "1.000000000")
@@ -3549,18 +3549,18 @@ do
 													rt_query=0
 													order_amount=$cmd_amount
 												fi
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													order_amount_alnum=$(echo $order_amount|grep -c '[^0-9.,]')
-													if [ $order_amount_alnum = 0 ]
+													if [ $order_amount_alnum -eq 0 ]
 													then
 														order_amount_formatted=$(echo $order_amount|sed -e 's/,/./g' -e 's/ //g')
 														amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
 														amount_big_enough=$(echo "${amount_mod} > 0"|bc)
-														if [ $amount_big_enough = 0 ]
+														if [ $amount_big_enough -eq 0 ]
 														then
 															order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
-															if [ $receiver_is_asset = 1 ]
+															if [ $receiver_is_asset -eq 1 ]
 															then
 																asset=$order_receiver
 															else
@@ -3572,14 +3572,14 @@ do
 															amount_big_enough=$(echo "${order_amount_formatted} < ${asset_value}"|bc)
 															dialog_send_amount_not_big_enough=$(echo "$dialog_send_amount_not_big_enough"|sed "s/0.000000001/${asset_value}/g")
 														fi
-														if [ $amount_big_enough = 0 ]
+														if [ $amount_big_enough -eq 0 ]
 														then
 															enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
-															if [ $enough_balance = 1 ]
+															if [ $enough_balance -eq 1 ]
 															then
 																amount_selected=1
 															else
-																if [ $gui_mode = 1 ]
+																if [ $gui_mode -eq 1 ]
 																then
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_nobalance" 0 0
 																else
@@ -3587,7 +3587,7 @@ do
 																fi
 															fi
 														else
-															if [ $gui_mode = 1 ]
+															if [ $gui_mode -eq 1 ]
 															then
 																dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_amount_not_big_enough" 0 0
 															else
@@ -3595,7 +3595,7 @@ do
 															fi
 														fi
 													else
-														if [ $gui_mode = 1 ]
+														if [ $gui_mode -eq 1 ]
 														then
 															dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail_amount" 0 0
 														else
@@ -3610,12 +3610,12 @@ do
 											done
 										fi
 									else
-										if [ $rt_query = 1 ]
+										if [ $rt_query -eq 1 ]
 										then
 											rm ${user_path}/menu_addresses_fungible.tmp 2>/dev/null
 											touch ${user_path}/menu_addresses_fungible.tmp
 											fungible_list=$(grep -l "asset_fungible=1" ${script_path}/assets/*|grep -f ${user_path}/all_assets.dat)
-											if [ $(grep -c "asset_fungible=1" ${script_path}/assets/${order_asset}) = 1 ] && [ -n "${fungible_list}" ]
+											if [ $(grep -c "asset_fungible=1" ${script_path}/assets/${order_asset}) -eq 1 ] && [ -n "${fungible_list}" ]
 											then
 												basename -a $(echo "${fungible_list}") >${user_path}/menu_addresses_fungible.tmp
 											fi
@@ -3629,28 +3629,28 @@ do
 										fi
 									fi
 								done
-								if [ $order_aborted = 0 ]
+								if [ $order_aborted -eq 0 ]
 								then
 									is_text=0
 									is_file=0
 									touch ${user_path}/trx_purpose_blank.tmp
-									if [ $receiver_is_asset = 0 ]
+									if [ $receiver_is_asset -eq 0 ]
 									then
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 											###LOOP UNTIL A PURPOSE HAS BEEN DEFINED##############
 											quit_purpose_loop=0
-											while [ $quit_purpose_loop = 0 ]
+											while [ $quit_purpose_loop -eq 0 ]
 											do
 												###DISPLAY INPUTFIELD FOR ORDER PURPOSE###############
 												order_purpose=$(dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --max-input $trx_max_size_purpose_bytes --output-fd 1 --inputbox "$dialog_send_purpose" 0 0 "")
 												rt_query=$?
-												if [ $rt_query = 1 ]
+												if [ $rt_query -eq 1 ]
 												then
 													###IF USER WANTS EDITBOX##############################
 													dialog --ok-label "$dialog_next" --cancel-label "..." --help-button --help-label "$dialog_cancel" --title "$dialog_send_purpose" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/trx_purpose_blank.tmp 20 80 2>${user_path}/trx_purpose_edited.tmp
 													rt_query=$?
-													if [ $rt_query = 0 ]
+													if [ $rt_query -eq 0 ]
 													then
 														### CHECK FOR MAX PURPOSE SIZE #################################
 														if [ $(wc -c <${user_path}/trx_purpose_edited.tmp) -le $trx_max_size_purpose_bytes ]
@@ -3662,16 +3662,16 @@ do
 															cp ${user_path}/trx_purpose_edited.tmp ${user_path}/trx_purpose_blank.tmp
 														fi
 													else
-														if [ $rt_query = 1 ]
+														if [ $rt_query -eq 1 ]
 														then
 															quit_file_path=0
 															path_to_search="${script_path}/"
-															while [ $quit_file_path = 0 ]
+															while [ $quit_file_path -eq 0 ]
 															do
 																###IF USER WANTS FILE##############################
 																file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 																rt_query=$?
-																if [ $rt_query = 0 ]
+																if [ $rt_query -eq 0 ]
 																then
 																	if [ -f "${file_path}" ] && [ -s "${file_path}" ]
 																	then
@@ -3728,9 +3728,9 @@ do
 										###SET PURPOSE TO EXCHANGE##############################
 										order_purpose="EXCHANGE"
 									fi
-									if [ $rt_query = 0 ]
+									if [ $rt_query -eq 0 ]
 									then
-										if [ $is_text = 0 ] && [ $is_file = 0 ]
+										if [ $is_text -eq 0 ] && [ $is_file -eq 0 ]
 										then
 											###ENCRYPT ORDER PURPOSE################################
 											printf "%b" "${order_purpose}" >${user_path}/trx_purpose_edited.tmp
@@ -3741,7 +3741,7 @@ do
 											###COPY FILE TO SEND AS PURPOSE#########################
 											cp ${order_purpose_path} ${user_path}/trx_purpose_edited.tmp
 										fi
-										if [ $receiver_is_asset = 0 ]
+										if [ $receiver_is_asset -eq 0 ]
 										then
 											receiver=$order_receiver
 										else
@@ -3758,7 +3758,7 @@ do
 										rm ${user_path}/trx_purpose_blank.tmp
 										rm ${user_path}/trx_purpose_edited.tmp 2>/dev/null
 										########################################################
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 											###ASK FOR FINAL CONFIRMATION############################
 											currency_symbol=$order_asset
@@ -3770,38 +3770,38 @@ do
 										else
 											rt_query=0
 										fi
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											trx_now=$(date +%s.%3N)
 											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" ${trx_now} 0
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												last_trx="${script_path}/trx/${handover_account}.${trx_now}"
 												verify_signature ${last_trx} ${handover_account}
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
-													if [ $receiver_is_asset = 0 ]
+													if [ $receiver_is_asset -eq 0 ]
 													then
-														if [ $gui_mode = 1 ] && [ ! $small_trx = 255 ]
+														if [ $gui_mode -eq 1 ] && [ ! $small_trx = 255 ]
 														then
 															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_trx" 0 0
 															small_trx=$?
 														fi
 													fi
-													if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+													if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 													then
 														receiver_index_file="${script_path}/proofs/${order_receiver}/${order_receiver}.txt"
 														###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 														{
-															if [ $small_trx = 0 ] && [ -f $receiver_index_file ] && [ -s $receiver_index_file ]
+															if [ $small_trx -eq 0 ] && [ -f $receiver_index_file ] && [ -s $receiver_index_file ]
 															then
 																###GET ASSETS###################################################
 																while read line
 																do
 																	asset_there=$(grep -c "assets/${line}" $receiver_index_file)
-																	if [ $asset_there = 0 ]
+																	if [ $asset_there -eq 0 ]
 																	then
 																		echo "assets/${line}"
 																	fi
@@ -3811,7 +3811,7 @@ do
 																while read line
 																do
 																	key_there=$(grep -c "keys/${line}" $receiver_index_file)
-																	if [ $key_there = 0 ]
+																	if [ $key_there -eq 0 ]
 																	then
 																		echo "keys/${line}"
 																	fi
@@ -3819,7 +3819,7 @@ do
 																	do
 																		file=$(basename $tsa_file)
 																		tsa_file_there=$(grep -c "proofs/${line}/${file}" $receiver_index_file)
-																		if [ $tsa_file_there = 0 ]
+																		if [ $tsa_file_there -eq 0 ]
 																		then
 																			echo "proofs/${line}/${file}"
 																		fi
@@ -3834,7 +3834,7 @@ do
 																while read line
 																do
 																	trx_there=$(grep -c "trx/${line}" $receiver_index_file)
-																	if [ $trx_there = 0 ]
+																	if [ $trx_there -eq 0 ]
 																	then
 																		echo "trx/${line}"
 																	fi
@@ -3872,17 +3872,17 @@ do
 													echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>${user_path}/${now}_index_trx.dat
 													make_signature "none" ${trx_now} 1
 													rt_query=$?
-													if [ $rt_query = 0 ]
+													if [ $rt_query -eq 0 ]
 													then
 														trx_now_form=$(echo "$trx_now"|sed 's/\./_/g')
-														if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+														if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 														then
 															cd ${script_path} || exit 13
 															tar -czf ${handover_account}_${trx_now_form}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
 															rt_query=$?
 															rm ${user_path}/files_list.tmp 2>/dev/null
 														fi
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
 															###SET BALANCE################################################################
@@ -3897,7 +3897,7 @@ do
 															##############################################################################
 
 															###WRITE OUTPUT IN CMD MODE BEFORE LEDGER IS DELETED ARE DELETED##############
-															if [ $gui_mode = 0 ]
+															if [ $gui_mode -eq 0 ]
 															then
 																out_stamp=$(date +%s.%3N)
 																cmd_output=$(grep "${order_asset}:${handover_account}" ${user_path}/${now}_ledger.dat)
@@ -3910,14 +3910,14 @@ do
 															ledger_mode=$?
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
-															if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+															if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 															then
 																echo "${order_receiver}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now_form}.trx --passphrase-fd 0 ${handover_account}_${trx_now_form}.trx.tmp
 																rt_query=$?
 															fi
-															if [ $rt_query = 0 ]
+															if [ $rt_query -eq 0 ]
 															then
-																if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+																if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
 																	rm ${script_path}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
@@ -3935,9 +3935,9 @@ do
 																		fi
 																	fi
 																fi
-																if [ $gui_mode = 1 ]
+																if [ $gui_mode -eq 1 ]
 																then
-																	if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+																	if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 																	then
 																		dialog_send_success_display=$(echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g")
 																	else
@@ -3946,7 +3946,7 @@ do
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																else
 																	echo "TRX:trx/${handover_account}.${trx_now}"
-																	if [ $receiver_is_asset = 0 ] && [ ! $small_trx = 255 ]
+																	if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx = 255 ]
 																	then
 																		if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																		then
@@ -3969,9 +3969,9 @@ do
 													fi
 												fi
 											fi
-											if [ ! $rt_query = 0 ]
+											if [ ! $rt_query -eq 0 ]
 											then
-												if [ $gui_mode = 1 ]
+												if [ $gui_mode -eq 1 ]
 												then
 													dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_fail" 0 0
 												else
@@ -3989,9 +3989,9 @@ do
 						;;
 				"$dialog_receive")	file_found=0
 							path_to_search=$trx_path_input
-							while [ $file_found = 0 ]
+							while [ $file_found -eq 0 ]
 							do
-								if [ $gui_mode = 1 ]
+								if [ $gui_mode -eq 1 ]
 								then
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 									rt_query=$?
@@ -3999,13 +3999,13 @@ do
 									file_path=$cmd_path
 									rt_query=0
 								fi
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									rt_query=1
 									if [ -n "${file_path}" ] && [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 									then
 										cd ${script_path} || exit 13
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 											all_extract=0
 										else
@@ -4016,10 +4016,10 @@ do
 										rm ${user_path}/trx_decr.tmp 2>/dev/null
 										echo "${handover_account}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/trx_decr.tmp --decrypt ${file_path} 1>/dev/null 2>/dev/null
 										rt_query=$?
-										if [ $rt_query = 0 ]
+										if [ $rt_query -eq 0 ]
 										then
 											###CHECK ARCHIVE###########################################
-											if [ $all_extract = 0 ]
+											if [ $all_extract -eq 0 ]
 											then
 												check_archive ${user_path}/trx_decr.tmp 0
 												rt_query=$?
@@ -4029,21 +4029,21 @@ do
 											fi
 
 											###UNPACK ARCHIVE##########################################
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												cd ${user_path}/temp || exit 15
 												tar -xzf ${user_path}/trx_decr.tmp -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
-													if [ $all_extract = 0 ]
+													if [ $all_extract -eq 0 ]
 													then
 														process_new_files 0
 													else
 														process_new_files 1
 													fi
 													set_permissions
-													if [ $gui_mode = 1 ]
+													if [ $gui_mode -eq 1 ]
 													then
 														file_found=1
 														action_done=1
@@ -4057,7 +4057,7 @@ do
 														get_dependencies
 														ledger_mode=$?
 														build_ledger $ledger_mode
-														if [ $make_new_index = 1 ]
+														if [ $make_new_index -eq 1 ]
 														then
 															now_stamp=$(date +%s)
 															make_signature "none" $now_stamp 1
@@ -4077,9 +4077,9 @@ do
 										fi
 										rm ${user_path}/trx_decr.tmp 2>/dev/null
 									fi
-									if [ ! $rt_query = 0 ]
+									if [ ! $rt_query -eq 0 ]
 									then
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
 											dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
@@ -4092,7 +4092,7 @@ do
 								fi
 							done
 							;;
-				"$dialog_sync")	if [ $gui_mode = 1 ]
+				"$dialog_sync")	if [ $gui_mode -eq 1 ]
 						then
 							dialog --yes-label "$dialog_sync_read" --no-label "$dialog_sync_create" --title "$dialog_sync" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_io" 0 0
 							rt_query=$?
@@ -4106,13 +4106,13 @@ do
 										;;
 							esac
 						fi
-						if [ $rt_query = 0 ]
+						if [ $rt_query -eq 0 ]
 						then
 							file_found=0
 							path_to_search=$sync_path_input
-	      				  		while [ $file_found = 0 ]
+	      				  		while [ $file_found -eq 0 ]
 							do
-								if [ $gui_mode = 1 ]
+								if [ $gui_mode -eq 1 ]
 								then
 									file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
  						       			rt_query=$?
@@ -4120,13 +4120,13 @@ do
 									file_path=$cmd_path
 									rt_query=0
 								fi
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									rt_query=1
 									if [ -n "${file_path}" ] && [ ! -d "${file_path}" ] && [ -f "${file_path}" ] && [ -s "${file_path}" ]
 		  							then
 										cd ${script_path} || exit 13
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 				 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
 											all_extract=$?
@@ -4142,7 +4142,7 @@ do
 										fi
 										if [ ! $all_extract = 255 ]
 										then
-											if [ $all_extract = 0 ]
+											if [ $all_extract -eq 0 ]
 											then
 												check_archive $file_path 0
 												rt_query=$?
@@ -4150,21 +4150,21 @@ do
 												check_archive $file_path 1
 												rt_query=$?
 											fi
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												cd ${user_path}/temp || exit 15
 							       			 		tar -xzf $file_path -T ${user_path}/files_to_fetch.tmp --no-same-owner --no-same-permissions --no-overwrite-dir --keep-directory-symlink --dereference --hard-dereference
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
-													if [ $all_extract = 0 ]
+													if [ $all_extract -eq 0 ]
 													then
 														process_new_files 0
 													else
 														process_new_files 1
 													fi
 													set_permissions
-													if [ $gui_mode = 1 ]
+													if [ $gui_mode -eq 1 ]
 													then
 														file_found=1
 														action_done=1
@@ -4178,7 +4178,7 @@ do
 														get_dependencies
 														ledger_mode=$?
 														build_ledger $ledger_mode
-														if [ $make_new_index = 1 ]
+														if [ $make_new_index -eq 1 ]
 														then
 															now_stamp=$(date +%s)
 															make_signature "none" $now_stamp 1
@@ -4199,9 +4199,9 @@ do
 											file_found=1
 										fi
 									fi
-									if [ ! $rt_query = 0 ]
+									if [ ! $rt_query -eq 0 ]
 									then
-										if [ $gui_mode = 1 ]
+										if [ $gui_mode -eq 1 ]
 										then
 											dialog_sync_import_fail_display=$(echo $dialog_sync_import_fail|sed "s#<file>#${file_path}#g")
 			       								dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_import_fail_display" 0 0
@@ -4219,7 +4219,7 @@ do
 								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 								{
 									###SET VARIABLES#############################
-									if [ $gui_mode = 0 ] && [ "${cmd_type}" = "partial" ]
+									if [ $gui_mode -eq 0 ] && [ "${cmd_type}" = "partial" ]
 									then
 										accounts_list="${user_path}/depend_accounts.dat"
 										trx_list="${user_path}/depend_trx.dat"
@@ -4258,7 +4258,7 @@ do
 								cd ${script_path} || exit 13
 								tar -czf ${handover_account}_${now_stamp}.sync -T ${user_path}/files_list.tmp --dereference --hard-dereference
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									rm ${user_path}/files_list.tmp 2>/dev/null
 									###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
@@ -4268,7 +4268,7 @@ do
 									then
 										mv ${script_path}/${handover_account}_${now_stamp}.sync ${sync_path_output}/${handover_account}_${now_stamp}.sync
 									fi
-									if [ $gui_mode = 1 ]
+									if [ $gui_mode -eq 1 ]
 									then
 										dialog_sync_create_success_display=$(echo $dialog_sync_create_success|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g")
 										dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_sync_create_success_display" 0 0
@@ -4291,9 +4291,9 @@ do
 						fi
 						;;
 				"$dialog_uca")	session_key=$(date -u +%Y%m%d)
-						if [ $gui_mode = 1 ]
+						if [ $gui_mode -eq 1 ]
 						then
-							if [ $auto_uca_start = 0 ]
+							if [ $auto_uca_start -eq 0 ]
 							then
 								uca_trigger=1
 								auto_uca_start=1
@@ -4312,7 +4312,7 @@ do
 								get_dependencies
 								ledger_mode=$?
 								build_ledger $ledger_mode
-								if [ $make_new_index = 1 ]
+								if [ $make_new_index -eq 1 ]
 								then
 									now_stamp=$(date +%s)
 									make_signature "none" $now_stamp 1
@@ -4323,35 +4323,35 @@ do
 						fi
 						;;
 				"$dialog_browser")	quit_menu=0
-							while [ $quit_menu = 0 ]
+							while [ $quit_menu -eq 0 ]
 							do
 								###BROWSER OVERVIEW######################################
 								browse_type=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_browser" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --menu "$dialog_select" 0 0 0 "$dialog_assets" "$dialog_users" "$dialog_trx")
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									case $browse_type in
 										"$dialog_assets")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
 													def_string_asset=$(head -1 ${user_path}/all_assets.dat)								
 													quit_asset_menu=0
-													while [ $quit_asset_menu = 0 ]
+													while [ $quit_asset_menu -eq 0 ]
 													do
 														###ASSET OVERVIEW########################################
 														asset=$(dialog --ok-label "$dialog_show" --extra-button --extra-label "$dialog_add" --cancel-label "$dialog_main_back" --default-item "$def_string_asset" --title "$dialog_browser : $dialog_assets" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_assets.dat)
 														rt_query=$?
-														if [ $rt_query = 0 ] || [ $rt_query = 3 ]
+														if [ $rt_query -eq 0 ] || [ $rt_query -eq 3 ]
 														then
 															###SET DEFAULT-ITEM OF DIALOG MENU#######################
 															def_string_asset=$asset
-															if [ $rt_query = 0 ]
+															if [ $rt_query -eq 0 ]
 															then
 																quit_asset_overview=0
-																while [ $quit_asset_overview = 0 ]
+																while [ $quit_asset_overview -eq 0 ]
 																do
 																	###DISPLAY DETAILED ASSET INFORMATION####################
 																	dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/assets/${asset}" 0 0
 																	rt_query=$?
-																	if [ $rt_query = 3 ]
+																	if [ $rt_query -eq 3 ]
 																	then
 																		###GET DESCRIPTION#######################################
 																		descr_full=$(awk -F= '/asset_description/{print $2}' ${script_path}/assets/${asset}|sed -e 's:^"::g' -e 's:"*$::g')
@@ -4360,16 +4360,16 @@ do
 																		###DISPLAY ASSET DESCRIPTION#############################
 																		dialog --ok-label "$dialog_main_back" --extra-button --extra-label "[...]" --title "$dialog_assets : $asset" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${user_path}/asset_description.tmp" 0 0
 																		rt_query=$?
-																		if [ $rt_query = 3 ]
+																		if [ $rt_query -eq 3 ]
 																		then
 																			path_to_search="${script_path}/"
 																			quit_file_path=0
-																			while [ $quit_file_path = 0 ]
+																			while [ $quit_file_path -eq 0 ]
 																			do
 																				###LET USER SELECT A PATH##############################
 																				file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_choose" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 																				rt_query=$?
-																				if [ $rt_query = 0 ]
+																				if [ $rt_query -eq 0 ]
 																				then
 																					###CHECK IF ITS A DIRECTORY############################
 																					if [ -d "${file_path}" ]
@@ -4389,16 +4389,16 @@ do
 																							rt_query=1
 																						fi
 																					fi
-																					if [ $rt_query = 0 ]
+																					if [ $rt_query -eq 0 ]
 																					then
 																						mv ${user_path}/asset_description.tmp ${file_path} || rt_query=1
-																						if [ $rt_query = 0 ]
+																						if [ $rt_query -eq 0 ]
 																						then
 																							dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 																							quit_file_path=1
 																						fi
 																					fi
-																					if [ $rt_query = 1 ]
+																					if [ $rt_query -eq 1 ]
 																					then
 																						dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 																					fi
@@ -4414,14 +4414,14 @@ do
 																done
 															else
 																quit_creation=0
-																while [ $quit_creation = 0 ]
+																while [ $quit_creation -eq 0 ]
 																do
 																	###ASK IF FUNGIBLE OR NOT########################
 																	dialog --yes-label "NON-FUNGIBLE" --no-label "FUNGIBLE" --help-button --help-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_asset_type" 0 0
 																	fungible=$?
 																	if [ $fungible -lt 2 ]
 																	then
-																		if [ $fungible = 0 ]
+																		if [ $fungible -eq 0 ]
 																		then
 																			dialog_asset_add_value=$dialog_asset_quantity
 																		else
@@ -4429,33 +4429,33 @@ do
 																		fi
 																		###ASK FOR A NAME########################################
 																		quit_name=0
-																		while [ $quit_name = 0 ]
+																		while [ $quit_name -eq 0 ]
 																		do
 																			asset_name=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_browser : $dialog_assets : $dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 10 --output-fd 1 --inputbox "$dialog_name" 0 0 "")
 																			rt_query=$?
-																			if [ $rt_query = 0 ]
+																			if [ $rt_query -eq 0 ]
 																			then
 																				check_input "${asset_name}" 0
-																				if [ $rt_query = 0 ]
+																				if [ $rt_query -eq 0 ]
 																				then
 																					###ASK FOR A DESCRIPTION#########################
 																					quit_descr=0
-																					while [ $quit_descr = 0 ]
+																					while [ $quit_descr -eq 0 ]
 																					do
 																						touch ${user_path}/asset_description_blank.tmp
 																						dialog --ok-label "$dialog_next" --cancel-label "[...]" --help-button --help-label "$dialog_cancel" --title "$dialog_asset_description" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/asset_description_blank.tmp 20 80 2>${user_path}/asset_description.tmp
 																						rt_query=$?
 																						rm ${user_path}/asset_description_blank.tmp
-																						if [ $rt_query = 1 ]
+																						if [ $rt_query -eq 1 ]
 																						then
 																							path_to_search="${script_path}/"
 																							quit_file_path=0
-																							while [ $quit_file_path = 0 ]
+																							while [ $quit_file_path -eq 0 ]
 																							do
 																								###IF USER WANTS FILE##############################
 																								file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_read" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 																								rt_query=$?
-																								if [ $rt_query = 0 ]
+																								if [ $rt_query -eq 0 ]
 																								then
 																									if [ -f "${file_path}" ] && [ -s "${file_path}" ]
 																									then
@@ -4463,7 +4463,7 @@ do
 																										if [ $(wc -c <${file_path}) -le $asset_max_size_description_bytes ]
 																										then
 																											is_text=$(file ${file_path}|grep -c "text")
-																											if [ $is_text = 1 ]
+																											if [ $is_text -eq 1 ]
 																											then
 																												cp ${file_path} ${user_path}/asset_description.tmp
 																											else
@@ -4486,7 +4486,7 @@ do
 																								fi
 																							done	
 																						fi
-																						if [ $rt_query = 0 ] || [ $rt_query = 1 ]
+																						if [ $rt_query -eq 0 ] || [ $rt_query -eq 1 ]
 																						then
 																							###ENCODE DESCRIPTION############################
 																							enc_string=""
@@ -4496,31 +4496,31 @@ do
 																							###ASSIGN ENCODED RESULT#########################
 																							asset_description=$enc_string
 																							quit_asset_value=0
-																							while [ $quit_asset_value = 0 ]
+																							while [ $quit_asset_value -eq 0 ]
 																							do
 																								###GET QUANTITY OR PRICE#########################
 																								asset_value=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_add" --backtitle "$core_system_name $core_system_version" --max-input 20 --output-fd 1 --inputbox "$dialog_asset_add_value" 0 0 "1.0")
 																								rt_query=$?
-																								if [ $rt_query = 0 ]
+																								if [ $rt_query -eq 0 ]
 																								then
 																									###CHECK VALUE FOR FORMAT SIZE ETC###############
 																									asset_value_alnum=$(echo $asset_value|grep -c '[^0-9.,]')
-																									if [ $asset_value_alnum = 0 ] && [ ${#asset_value} -gt 0 ]
+																									if [ $asset_value_alnum -eq 0 ] && [ ${#asset_value} -gt 0 ]
 																									then
 																										asset_value_formatted=$(echo $asset_value|sed -e 's/,/./g' -e 's/ //g')
 																										value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
 																										value_mod=$(echo "${value_mod} > 0"|bc)
 																										asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
 																										is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
-																										if [ $value_mod = 0 ] && [ $is_amount_big_enough = 1 ]
+																										if [ $value_mod -eq 0 ] && [ $is_amount_big_enough -eq 1 ]
 																										then
-																											if [ $rt_query = 0 ]
+																											if [ $rt_query -eq 0 ]
 																											then
 																												###WRITE ASSET###########################
 																												asset_stamp=$(date +%s)
 																												{
 																												echo "asset_fungible=${fungible}"
-																												if [ $fungible = 0 ]
+																												if [ $fungible -eq 0 ]
 																												then
 																													echo "asset_quantity=${asset_value_formatted}"
 																													echo "asset_owner=\"${handover_account}\""
@@ -4533,7 +4533,7 @@ do
 																												###CONFIRM###############################
 																												dialog --ok-label "$dialog_add" --extra-button --extra-label "$dialog_cancel" --title "${dialog_add} : ${asset_name}.${asset_stamp}?" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/${asset_name}.${asset_stamp}" 0 0
 																												rt_query=$?
-																												if [ $rt_query = 0 ]
+																												if [ $rt_query -eq 0 ]
 																												then
 																													###COPY INTO ASSETS FOLDER###############
 																													mv ${user_path}/${asset_name}.${asset_stamp} ${script_path}/assets/${asset_name}.${asset_stamp}
@@ -4543,7 +4543,7 @@ do
 
 																													###CHECK ASSETS##########################
 																													check_assets
-																													if [ $fungible = 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) = 0 ]
+																													if [ $fungible -eq 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) -eq 0 ]
 																													then
 																														###CREATE LEDGER ENTRY###################
 																														last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
@@ -4568,7 +4568,7 @@ do
 																								fi
 																							done
 																						else
-																							if [ ! $rt_query = 3 ]
+																							if [ ! $rt_query -eq 3 ]
 																							then
 																								quit_descr=1
 																								quit_name=1
@@ -4593,12 +4593,12 @@ do
 										"$dialog_users")	###SET DEFAULT-ITEM OF DIALOG MENU#######################
 													def_string_user=$(head -1 ${user_path}/all_accounts.dat)
 													quit_user_menu=0
-													while [ $quit_user_menu = 0 ]
+													while [ $quit_user_menu -eq 0 ]
 													do
 														###USERS OVERVIEW########################################
 														user=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_user" --title "$dialog_browser : $dialog_users" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/all_accounts.dat)
 														rt_query=$?
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 															###SET DEFAULT ITEM######################################
 															def_string_user=$user
@@ -4614,11 +4614,11 @@ do
 															def_string_trx=$(head -1 ${user_path}/dialog_browser_trx.tmp)
 
 															quit_trx_menu=0
-															while [ $quit_trx_menu = 0 ]
+															while [ $quit_trx_menu -eq 0 ]
 															do
 																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "$user:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 																rt_query=$?
-																if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
+																if [ $rt_query -eq 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
 																	def_string_trx=$selected_trx
 																	dialog --exit-label "$dialog_main_back" --title "$dialog_browser:" --backtitle "$core_system_name $core_system_version" --textbox "${script_path}/trx/$selected_trx" 0 0
@@ -4641,11 +4641,11 @@ do
 													fi
 													quit_trx_loop=0
 													def_string=$(head -1 ${user_path}/dialog_browser_trx.tmp)
-													while [ $quit_trx_loop = 0 ]
+													while [ $quit_trx_loop -eq 0 ]
 													do
 														selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "${def_string}" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file ${user_path}/dialog_browser_trx.tmp)
 														rt_query=$?
-														if [ $rt_query = 0 ] && [ ! "${selected_trx}" = "0" ]
+														if [ $rt_query -eq 0 ] && [ ! "${selected_trx}" = "0" ]
 														then
 															def_string=$selected_trx
 															dialog --exit-label "$dialog_main_back" --title "$dialog_browser:" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${script_path}/trx/${selected_trx}" 0 0
@@ -4695,7 +4695,7 @@ do
 										then
 											trx_blacklisted=$(grep -c "${trx_filename}" ${user_path}/blacklisted_trx.dat)
 											user_blacklisted=$(grep -c "${sender}\|${receiver}" ${user_path}/blacklisted_accounts.dat)
-											if [ $trx_blacklisted = 0 ] && [ $user_blacklisted = 0 ]
+											if [ $trx_blacklisted -eq 0 ] && [ $user_blacklisted -eq 0 ]
 											then
 												trx_color="\Z2"
 											else
@@ -4722,12 +4722,12 @@ do
 							menu_item_selected=$(head -1 ${user_path}/history_list.tmp)
 							menu_item_selected=${menu_item_selected%% *}
 							overview_quit=0
-							while [ $overview_quit = 0 ]
+							while [ $overview_quit -eq 0 ]
 							do
 								###DISPLAY LIST OF TRANSACTIONS########################
 								decision=$(dialog --colors --ok-label "$dialog_open" --cancel-label "$dialog_main_back" --title "$dialog_history" --backtitle "$core_system_name $core_system_version" --output-fd 1 --default-item "${menu_item_selected}" --no-hot-list --scrollbar --menu "$dialog_history_menu" 0 0 0 --file ${user_path}/history_list.tmp)
 								rt_query=$?
-								if [ $rt_query = 0 ]
+								if [ $rt_query -eq 0 ]
 								then
 									menu_item_selected=$decision
 									dialog_history_noresults=${dialog_history_noresult%% *}
@@ -4738,7 +4738,7 @@ do
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
-										if [ $(grep -c "${trx_date}" ${user_path}/my_trx.tmp) = 0 ]
+										if [ $(grep -c "${trx_date}" ${user_path}/my_trx.tmp) -eq 0 ]
 										then
 											trx_date=${trx_date%%.*}
 										fi
@@ -4764,7 +4764,7 @@ do
 											printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_key_encrypted}\n-----END PGP MESSAGE-----\n" >${user_path}/history_purpose_key_encrypted.tmp
 											echo "${login_password}"|gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output ${user_path}/history_purpose_key_decrypted.tmp --decrypt ${user_path}/history_purpose_key_encrypted.tmp 2>/dev/null
 											rt_query=$?
-											if [ $rt_query = 0 ]
+											if [ $rt_query -eq 0 ]
 											then
 												purpose_key=$(cat ${user_path}/history_purpose_key_decrypted.tmp)
 												purpose_start=$(awk -F: '/:PRPS:/{print NR}' $trx_file_path)
@@ -4775,13 +4775,13 @@ do
 												printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_encrypted}\n-----END PGP MESSAGE-----\n" >${user_path}/history_purpose_encrypted.tmp
 												echo "${purpose_key}"|gpg --batch --no-tty --pinentry-mode loopback --output ${user_path}/history_purpose_decrypted.tmp --passphrase-fd 0 --decrypt ${user_path}/history_purpose_encrypted.tmp 2>/dev/null
 												rt_query=$?
-												if [ $rt_query = 0 ]
+												if [ $rt_query -eq 0 ]
 												then
 													if [ -f ${user_path}/history_purpose_decrypted.tmp ] && [ -s ${user_path}/history_purpose_decrypted.tmp ]
 													then
 														###CHECK IF FILE CONTAINS TEXT OR ELSE#################
 														is_text=$(file ${user_path}/history_purpose_decrypted.tmp|grep -c -v "text")
-														if [ $is_text = 0 ]
+														if [ $is_text -eq 0 ]
 														then
 															purpose_there=1
 															purpose_dialog_string="[...]"
@@ -4803,26 +4803,26 @@ do
 										else
 											trx_signed=0
 										fi
-										if [ $trx_signed = 0 ]
+										if [ $trx_signed -eq 0 ]
 										then
 											trx_status="TRX_IGNORED "
 										fi
 										trx_blacklisted=$(grep -c "${trx_file}" ${user_path}/blacklisted_trx.dat)
-										if [ $trx_blacklisted = 1 ]
+										if [ $trx_blacklisted -eq 1 ]
 										then
 											trx_status="${trx_status}TRX_BLACKLISTED "
 										fi
 										sender_blacklisted=$(grep -c "${sender}" ${user_path}/blacklisted_accounts.dat)
-										if [ $sender_blacklisted = 1 ]
+										if [ $sender_blacklisted -eq 1 ]
 										then
 										trx_status="${trx_status}SDR_BLACKLISTED "
 										fi
 										receiver_blacklisted=$(grep -c "${receiver}" ${user_path}/blacklisted_accounts.dat)
-										if [ $receiver_blacklisted = 1 ]
+										if [ $receiver_blacklisted -eq 1 ]
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
 										fi
-										if [ $trx_signed = 1 ] && [ $trx_blacklisted = 0 ] && [ $sender_blacklisted = 0 ] && [ $receiver_blacklisted = 0 ]
+										if [ $trx_signed -eq 1 ] && [ $trx_blacklisted -eq 0 ] && [ $sender_blacklisted -eq 0 ] && [ $receiver_blacklisted -eq 0 ]
 										then
 											trx_status="OK"
 										fi
@@ -4833,38 +4833,38 @@ do
 										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" ${script_path}/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=${decision#*|*|*|*}
-										if [ $val_sign = 0 ]
+										if [ $val_sign -eq 0 ]
 										then
 											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										else
 											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										fi
-										if [ $purpose_there = 1 ] || [ $purpose_there = 2 ]
+										if [ $purpose_there -eq 1 ] || [ $purpose_there -eq 2 ]
 										then
 											dialog --help-button --help-label "$purpose_dialog_string" --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
 											rt_query=$?
-											if [ $rt_query = 2 ]
+											if [ $rt_query -eq 2 ]
 											then
 												open_write_dialog=0
-												if [ $purpose_there = 1 ]
+												if [ $purpose_there -eq 1 ]
 												then
 													dialog --cancel-label "[...]" --title "$trx_file" --backtitle "$core_system_name $core_system_version" --editbox ${user_path}/history_purpose_decrypted.tmp 0 0 2>/dev/null
 													rt_query=$?
-													if [ $rt_query = 1 ]
+													if [ $rt_query -eq 1 ]
 													then
 														open_write_dialog=1
 													fi
 												fi
-												if [ $purpose_there = 2 ] || [ $open_write_dialog = 1 ]
+												if [ $purpose_there -eq 2 ] || [ $open_write_dialog -eq 1 ]
 												then
 													path_to_search="${script_path}/"
 													quit_file_path=0
-													while [ $quit_file_path = 0 ]
+													while [ $quit_file_path -eq 0 ]
 													do
 														###LET USER SELECT A PATH##############################
 														file_path=$(dialog --ok-label "$dialog_next" --cancel-label "$dialog_cancel" --title "$dialog_main_choose" --backtitle "$core_system_name $core_system_version" --output-fd 1 --fselect "$path_to_search" 20 48)
 														rt_query=$?
-														if [ $rt_query = 0 ]
+														if [ $rt_query -eq 0 ]
 														then
 															###CHECK IF ITS A DIRECTORY############################
 															if [ -d "${file_path}" ]
@@ -4884,16 +4884,16 @@ do
 																	rt_query=1
 																fi
 															fi
-															if [ $rt_query = 0 ]
+															if [ $rt_query -eq 0 ]
 															then
 																mv ${user_path}/history_purpose_decrypted.tmp ${file_path} || rt_query=1
-																if [ $rt_query = 0 ]
+																if [ $rt_query -eq 0 ]
 																then
 																	dialog --title "[...]" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 																	quit_file_path=1
 																fi
 															fi
-															if [ $rt_query = 1 ]
+															if [ $rt_query -eq 1 ]
 															then
 																dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "->${file_path}" 0 0
 															fi
@@ -4982,7 +4982,7 @@ do
 							done
 							total_volume_trx_today=$(echo "$total_volume_trx_today"|sed 's/^\./0./g')
 
-							if [ $gui_mode = 1 ]
+							if [ $gui_mode -eq 1 ]
 							then
 								###IF GUI MODE DISPLAY STATISTICS##############
 								dialog_statistic_display=$(echo $dialog_statistic|sed -e "s/<total_number_coins>/${total_number_coins}/g" -e "s/<total_number_assets>/${total_number_assets}/g" -e "s/<total_number_users>/${total_number_users}/g" -e "s/<total_number_users_local>/${total_number_users_local}/g" -e "s/<total_number_trx>/${total_number_trx}/g" -e "s/<total_number_trx_today>/${total_number_trx_today}/g" -e "s/<total_volume_trx>/${total_volume_trx}/g" -e "s/<total_volume_trx_today>/${total_volume_trx_today}/g")
