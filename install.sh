@@ -130,10 +130,10 @@ then
 											###IF PACKAGING MANAGER DETECTION FAILED####
 											error_detected=1
 											no_of_programs=$(wc -l <"${script_path}"/install_dep.tmp)
-											echo "ERROR: Couldn't detect the package management system used on this machine!"
-											echo "Found ${no_of_programs} programs that need to be installed:"
+											echo "[ ERROR ] Couldn't detect the package management system used on this machine!"
+											echo "[ ERROR ] Found ${no_of_programs} programs that need to be installed:"
 											cat "${script_path}"/install_dep.tmp
-											echo "Install these programms first using your package management system and then run install.sh again."
+											echo "[ ERROR ] Install these programms first using your package management system and then run install.sh again."
 											############################################
 										fi
 									fi
@@ -164,8 +164,8 @@ then
 			if [ "$rt_query" -gt 0 ]
 			then
 				error_detected=1
-				echo "Error running the following command: ${pkg_mngr} install ${program}"
-				echo "Maybe the program ${program} is available in a package with different name."
+				echo "[ ERROR ] Error running the following command: ${pkg_mngr} install ${program}"
+				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
 			fi
 		done <"${script_path}"/install_dep.tmp
 		############################
