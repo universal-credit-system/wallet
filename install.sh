@@ -26,7 +26,7 @@ fi
 if [ $# -gt 0 ]
 then
 	cmd_var=""
-	
+
 	### GO THROUGH PARAMETERS ######
 	while [ $# -gt 0 ]
 	do
@@ -61,7 +61,7 @@ then
 		esac
 		shift
 	done
-	
+
 fi
 
 ### CHECK DEPENDENCIES #######
@@ -144,7 +144,7 @@ then
 				fi
 				;;
 	esac
-	
+
 	if [ -n "${pkg_mngr}" ] && [ "$error_detected" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
@@ -248,7 +248,7 @@ then
 				conf_var_val=$(echo "${config_line}"|cut -d '=' -f2)
 				if [ "$(grep -c "${conf_var}" "${script_path}"/control/config.conf)" -gt 0 ]
 				then
-					printf "%b" "[ INFO ] Configure var ${conf_var} in config.conf..."
+					printf "%b" "[ INFO ] Configure var \$${conf_var} in config.conf..."
 					conf_line=$(grep "${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line}" = "${conf_var}=${conf_var_val}" ]
 					then
