@@ -1,0 +1,25 @@
+COMMAND:
+
+./install.sh [OPTION]
+
+DESCRIPTION:
+
+install.sh is the installation script for the wallet.
+
+At execution the installer script will first check for depending programs. If any programs are
+missing the script tries to identify your local package management system and installs them. The
+script then creates all necessary folders and configures everything for you. It's possible to
+call this script with or without any parameters. You can provide a certain user to switch to
+using 'su' command just after installing the dependencies and before setting up everything.
+
+OPTIONS:
+
+  -env		provide a specific target environment
+  -user		provide a specific user to use for the installation
+  -help		display this help
+
+EXAMPLES:
+
+./install.sh -env termux
+
+./install.sh -user JohnDoe

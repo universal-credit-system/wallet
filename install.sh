@@ -1,17 +1,68 @@
 #!/bin/sh
+print_message(){
+		if [ "$rt_query" -eq 0 ]
+		then
+			printf "%b" "DONE\n"
+		else
+			printf "%b" "FAILED\n"
+			error_detected=1
+		fi
+		rt_query=0
+}
 
-### GET PATH #################
+### SET VARIABLES ##############
 script_path=$(dirname $(readlink -f "${0}"))
-
-### GET ENVIRONMENT###########
-specific_env=$1
-specific_env=$(echo "${specific_env}"|tr '[A-Z]' '[a-z]')
-
-### USER TO INSTALL FOR#######
-specific_user=$2
-
-### SET VARIABLES ############
 error_detected=0
+cmd_env=""
+cmd_user=""
+
+### CHECK FOR STDIN INPUT ######
+if [ ! -t 0 ]
+then
+	set -- $(cat) "$@"
+fi
+
+### ASSIGN VARIABLES ###########
+if [ $# -gt 0 ]
+then
+	cmd_var=""
+	
+	### GO THROUGH PARAMETERS ######
+	while [ $# -gt 0 ]
+	do
+		### GET TARGET VARIABLES #######
+		case $1 in
+			"-env")		cmd_var=$1
+					;;
+			"-user")	cmd_var=$1
+					;;
+			"-debug")	set -x
+					set -v
+					;;
+			"-help")	more "${script_path}"/control/install_HELP.txt
+					exit 0
+					;;
+			*)		### SET TARGET VARIABLES #######
+					case $cmd_var in
+						"-env")		cmd_env=$(echo "${1}"|tr '[A-Z]' '[a-z]')
+								;;
+						"-user")	cmd_user=$1
+								;;
+						*)		cmd_var=$1
+								echo "Wrong Syntax -> $cmd_var !"
+								echo ""
+								echo "To display the HELP run:"
+								echo "./install.sh -help"
+								exit 1
+								;;
+					esac
+					cmd_var=""
+					;;
+		esac
+		shift
+	done
+	
+fi
 
 ### CHECK DEPENDENCIES #######
 while read program
@@ -22,12 +73,12 @@ do
         if [ "$rt_query" -gt 0 ]
         then
         	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
-        	case $program in
+        	case "$program" in
         		"netcat")	echo "netcat-openbsd" >>"${script_path}"/install_dep.tmp
         				;;
         		"gpg")		echo "gnupg"  >>"${script_path}"/install_dep.tmp
         				;;
-        		"openssl")	if [ "${specific_env}" = "termux" ]
+        		"openssl")	if [ "${cmd_env}" = "termux" ]
         				then
         					echo "openssl-tool"  >>"${script_path}"/install_dep.tmp
         				else
@@ -44,7 +95,7 @@ then
 	############################
 	###IF APPS ARE TO INSTALL###
 	###GET PACKAGE MANAGER######
-	case $specific_env in
+	case "$cmd_env" in
 		"termux")	pkg_mngr="pkg"
 				;;
 		*)		pkg_mngr=""
@@ -93,15 +144,14 @@ then
 				fi
 				;;
 	esac
-	############################
 	
 	if [ -n "${pkg_mngr}" ] && [ "$error_detected" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
 		while read program
 		do
-			printf "%b" "INFO: Trying to install ${program} using ${pkg_mngr}...\n"
-			case $pkg_mngr in
+			printf "%b" "[ INFO ] Trying to install ${program} using ${pkg_mngr}...\n"
+			case "$pkg_mngr" in
 				"apk")		apk add $program ;;
 				"apt-get")	apt-get -y install $program ;;
 				"dnf")		dnf -y install $program ;;
@@ -125,68 +175,69 @@ fi
 rm "${script_path}"/install_dep.tmp 2>/dev/null
 if [ "$error_detected" -eq 0 ]
 then
-	if [ -n "${specific_user}" ]
+	rt_query=0
+	if [ -n "${cmd_user}" ]
 	then
-		su - "${specific_user}" || exit 1
+		su - "${cmd_user}" || exit 1
 	fi
 	### CREATE DIRECTORIES #######
-	printf "%b" "INFO: Creating directories..."
-	mkdir -p "${script_path}"/backup
-	mkdir -p "${script_path}"/control/keys
-	mkdir -p "${script_path}"/keys
-	mkdir -p "${script_path}"/proofs
-	mkdir -p "${script_path}"/trx
-	mkdir -p "${script_path}"/userdata
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Creating directories..."
+	mkdir -p "${script_path}"/backup || rt_query=1
+	mkdir -p "${script_path}"/control/keys || rt_query=1
+	mkdir -p "${script_path}"/keys || rt_query=1
+	mkdir -p "${script_path}"/proofs || rt_query=1
+	mkdir -p "${script_path}"/trx || rt_query=1
+	mkdir -p "${script_path}"/userdata || rt_query=1
+	print_message "$rt_query"
 
 	### SAVE UMASK SETTINGS ######
-	printf "%b" "INFO: Getting umask..."
-	user_umask=$(umask)
-	permissions_directories=$(echo "777 - ${user_umask}"|bc)
-	touch ${script_path}/test.tmp
-	permissions_files=$(stat -c '%a' "${script_path}"/test.tmp)
-	rm ${script_path}/test.tmp
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Getting umask..."
+	user_umask=$(umask) || rt_query=1
+	permissions_directories=$(echo "777 - ${user_umask}"|bc) || rt_query=1
+	touch "${script_path}"/test.tmp || rt_query=1
+	permissions_files=$(stat -c '%a' "${script_path}"/test.tmp) || rt_query=1
+	rm "${script_path}"/test.tmp || rt_query=1
+	print_message "$rt_query"
 
 	### IF OLD CONFIG THERE ######
 	if [ -s "${script_path}"/control/config.conf ]
 	then
-		printf "%b" "INFO: Backup old config ( ->control/config.bak )..."
-		mv "${script_path}"/control/config.conf "${script_path}"/control/config.bak
-		printf "%b" "DONE\n"
+		printf "%b" "[ INFO ] Backup old config ( ->control/config.bak )..."
+		mv "${script_path}"/control/config.conf "${script_path}"/control/config.bak || rt_query=1
+		print_message "$rt_query"
 	fi
 
 	### COPY TO PLACE ############
-	printf "%b" "INFO: Copy install_config.conf to config.conf..."
-	cp "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Copy install_config.conf to config.conf..."
+	cp "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf || rt_query=1
+	print_message "$rt_query"
 
 	### WRITE PERMISSIONS ########
-	printf "%b" "INFO: Write umask to config.conf..."
-	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf
-	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Write umask to config.conf..."
+	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf || rt_query=1
+	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf || rt_query=1
+	print_message "$rt_query"
 
 	### SET DEFAULT THEME ########
-	printf "%b" "INFO: Set default theme 'debian.rc' in config.conf..."
-	sed -i "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Set default theme 'debian.rc' in config.conf..."
+	sed -i "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf || rt_query=1
+	print_message "$rt_query"
 
 	### SET PATHS ################
-	printf "%b" "INFO: Define paths in config.conf..."
-	sed -i "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf
-	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf
-	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf
-	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf
-	printf "%b" "DONE\n"
+	printf "%b" "[ INFO ] Define paths in config.conf..."
+	sed -i "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
+	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
+	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
+	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
+	print_message "$rt_query"
 
 	### REWRITE CONFIG ###########
 	if [ -s "${script_path}"/control/config.bak ]
 	then
 		### GET VARIABLES ###########
-		printf "%b" "INFO: Get old configuration of config.bak..."
-		grep "\path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp
-		printf "%b" "DONE\n"
+		printf "%b" "[ INFO ] Get old configuration of config.bak..."
+		grep "\path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp || rt_query=1
+		print_message "$rt_query"
 
 		### READ OLD CONFIG #########
 		while read config_line
@@ -197,29 +248,32 @@ then
 				conf_var_val=$(echo "${config_line}"|cut -d '=' -f2)
 				if [ "$(grep -c "${conf_var}" "${script_path}"/control/config.conf)" -gt 0 ]
 				then
-					printf "%b" "INFO: Configure var ${conf_var} in config.conf..."
+					printf "%b" "[ INFO ] Configure var ${conf_var} in config.conf..."
 					conf_line=$(grep "${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line}" = "${conf_var}=${conf_var_val}" ]
 					then
-						sed -i "s/${conf_line}/${conf_var}=${conf_var_val}/g" "${script_path}"/control/config.conf
+						sed -i "s/${conf_line}/${conf_var}=${conf_var_val}/g" "${script_path}"/control/config.conf || rt_query=1
 					fi
-					printf "%b" "DONE\n"
+					print_message "$rt_query"
 				fi
 			fi
 		done <"${script_path}"/control/config.tmp
 		rm "${script_path}"/control/config.tmp
 	fi
+
 	### IF USER NEVER RAN GPG UNTIL NOW ######
 	if [ ! -d ~/.gnupg/ ]
 	then
 		### RUN GPG ###################
-		printf "%b" "INFO: Running GPG to wake up agent..."
-		gpg '?' 2>/dev/null
-		printf "%b" "DONE\n"
+		printf "%b" "[ INFO ] Wake up gpg-agent..."
+		gpgconf --launch gpg-agent >/dev/null 2>/dev/null || rt_query=1
+		print_message "$rt_query"
 	fi
+
+	### CONFIGURE GPG ########################
 	if [ -s ~/.gnupg/gpg-agent.conf ]
 	then
-		printf "%b" "INFO: Checking gpg-agent.conf configuration..."
+		printf "%b" "[ INFO ] Checking gpg-agent.conf configuration..."
 		while read config_line
 		do
 			if [ "$(grep -c "${config_line}" ~/.gnupg/gpg-agent.conf)" -eq 0 ]
@@ -227,18 +281,27 @@ then
 				echo "${config_line}" >>~/.gnupg/gpg-agent.conf
 			fi
 		done <"${script_path}"/control/gpg-agent.conf
-		printf "%b" "DONE\n"
+		print_message "$rt_query"
 	else
-		printf "%b" "INFO: Copy gpg-agent.conf to ~/.gnupg/ folder..."
-		cp "${script_path}"/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf
-		printf "%b" "DONE\n"
+		printf "%b" "[ INFO ] Copy gpg-agent.conf to ~/.gnupg/ folder..."
+		cp "${script_path}"/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf || rt_query=1
+		print_message "$rt_query"
 	fi
+
+	### REMOVE USAGE OF KEYBOX ###############
 	if [ -s ~/.gnupg/common.conf ]
 	then
-		printf "%b" "INFO: Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
-		sed -i 's/use-keyboxd//g' ~/.gnupg/common.conf
-		printf "%b" "DONE\n"
+		printf "%b" "[ INFO ] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
+		sed -i 's/use-keyboxd//g' ~/.gnupg/common.conf || rt_query=1
+		print_message "$rt_query"
 	fi
-	printf "%b" "INFO: Installation finished\n"
+
+	### DISPLAY OUTPUT #######################
+	error_text="with errors"
+	if [ "$error_detected" -eq 0 ]
+	then
+		error_text="without errors"
+	fi
+	printf "%b" "[ INFO ] Installation finished $error_text. exiting...\n"
 fi
 
