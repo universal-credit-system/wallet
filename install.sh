@@ -6,6 +6,7 @@ print_message(){
 		else
 			printf "%b" "FAILED\n"
 			error_detected=1
+			error_counter=$(( error_counter + 1 ))
 		fi
 		rt_query=0
 }
@@ -14,6 +15,7 @@ print_message(){
 script_path=$(dirname "$(readlink -f "${0}")")
 script_name=$(basename "${0}")
 error_detected=0
+error_counter=0
 cmd_env=""
 cmd_user=""
 
@@ -162,10 +164,10 @@ then
 				"zypper")	zypper -n install "$program" ;;
 			esac
 			rt_query=$?
+			print_message
 			if [ "$rt_query" -gt 0 ]
 			then
-				error_detected=1
-				echo "[ ERROR ] Error running the following command: ${pkg_mngr} install ${program}"
+				echo "[ ERROR ] Error during installation of ${program} using ${pkg_mngr}"
 				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
 			fi
 		done <"${script_path}"/install_dep.tmp
@@ -230,7 +232,7 @@ then
 	sed -i "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
 	sed -i "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
 	sed -i "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### REWRITE CONFIG ###########
 	if [ -s "${script_path}"/control/config.bak ]
@@ -298,10 +300,5 @@ then
 	fi
 fi
 ### DISPLAY OUTPUT #######################
-error_text="with errors"
-if [ "$error_detected" -eq 0 ]
-then
-	error_text="without errors"
-fi
-printf "%b" "[ INFO ] $script_name finished $error_text. exiting...\n"
+printf "%b" "[ INFO ] $script_name finished (errors:$error_counter)\n"
 
