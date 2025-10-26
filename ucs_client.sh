@@ -1607,7 +1607,7 @@ check_keys(){
 	  	      		###IMPORT KEY INTO KEYRING ############################
 	  	      		gpg --batch --no-default-keyring --keyring=${script_path}/control/keyring.file --trust-model always --import ${script_path}/keys/${account} 2>/dev/null
 		      		rt_query=$?
-		      		if [ ! $rt_query -eq 0 ]
+		      		if [ $rt_query -ne 0 ]
 			       	then
 					echo "${account}" >>${user_path}/blacklisted_accounts.dat
 			       	fi
@@ -2412,7 +2412,7 @@ request_uca(){
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			else
-				if [ ! $rt_query -eq 0 ]
+				if [ $rt_query -ne 0 ]
 				then
 					echo "ERROR: UCA-LINK RCV ${uca_connect_string}:${uca_rcv_port} FAILED"
 				fi
@@ -2534,7 +2534,7 @@ send_uca(){
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 $percent_display --file ${user_path}/uca_list.tmp
 			else
-				if [ ! $rt_query -eq 0 ]
+				if [ $rt_query -ne 0 ]
 				then
 					echo "ERROR: UCA-LINK SND ${uca_connect_string}:${uca_snd_port} FAILED"
 				fi
@@ -2799,7 +2799,7 @@ do
 		else
 			rt_query=0
 		fi
-		if [ ! $rt_query -eq 0 ]
+		if [ $rt_query -ne 0 ]
 		then
 			clear
 			exit 0
@@ -3210,7 +3210,7 @@ do
 									fi
 								fi
 							else
-								if [ ! $rt_query -eq 255 ]
+								if [ $rt_query -ne 255 ]
 								then
 									if [ $gui_mode -eq 1 ]
 									then
@@ -3435,7 +3435,7 @@ do
 			rt_query=0
 		fi
 
-		if [ ! $rt_query -eq 0 ]
+		if [ $rt_query -ne 0 ]
 		then
 			user_logged_in=0
 			action_done=1
@@ -3784,13 +3784,13 @@ do
 												then
 													if [ $receiver_is_asset -eq 0 ]
 													then
-														if [ $gui_mode -eq 1 ] && [ ! $small_trx -eq 255 ]
+														if [ $gui_mode -eq 1 ] && [ $small_trx -ne 255 ]
 														then
 															dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_send_trx" 0 0
 															small_trx=$?
 														fi
 													fi
-													if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+													if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 													then
 														receiver_index_file="${script_path}/proofs/${order_receiver}/${order_receiver}.txt"
 														###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
@@ -3875,7 +3875,7 @@ do
 													if [ $rt_query -eq 0 ]
 													then
 														trx_now_form=$(echo "$trx_now"|sed 's/\./_/g')
-														if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+														if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 														then
 															cd ${script_path} || exit 13
 															tar -czf ${handover_account}_${trx_now_form}.trx.tmp -T ${user_path}/files_list.tmp --dereference --hard-dereference
@@ -3910,14 +3910,14 @@ do
 															ledger_mode=$?
 
 															###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
-															if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+															if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 															then
 																echo "${order_receiver}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output ${handover_account}_${trx_now_form}.trx --passphrase-fd 0 ${handover_account}_${trx_now_form}.trx.tmp
 																rt_query=$?
 															fi
 															if [ $rt_query -eq 0 ]
 															then
-																if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+																if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
 																	rm ${script_path}/${handover_account}_${trx_now_form}.trx.tmp 2>/dev/null
@@ -3937,7 +3937,7 @@ do
 																fi
 																if [ $gui_mode -eq 1 ]
 																then
-																	if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+																	if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 																	then
 																		dialog_send_success_display=$(echo $dialog_send_success|sed "s#<file>#${trx_path_output}/${handover_account}_${trx_now}.trx#g")
 																	else
@@ -3946,7 +3946,7 @@ do
 																	dialog --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_send_success_display" 0 0
 																else
 																	echo "TRX:trx/${handover_account}.${trx_now}"
-																	if [ $receiver_is_asset -eq 0 ] && [ ! $small_trx -eq 255 ]
+																	if [ $receiver_is_asset -eq 0 ] && [ $small_trx -ne 255 ]
 																	then
 																		if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																		then
@@ -3969,7 +3969,7 @@ do
 													fi
 												fi
 											fi
-											if [ ! $rt_query -eq 0 ]
+											if [ $rt_query -ne 0 ]
 											then
 												if [ $gui_mode -eq 1 ]
 												then
@@ -4077,7 +4077,7 @@ do
 										fi
 										rm ${user_path}/trx_decr.tmp 2>/dev/null
 									fi
-									if [ ! $rt_query -eq 0 ]
+									if [ $rt_query -ne 0 ]
 									then
 										if [ $gui_mode -eq 1 ]
 										then
@@ -4140,7 +4140,7 @@ do
 														;;
 											esac
 										fi
-										if [ ! $all_extract -eq 255 ]
+										if [ $all_extract -ne 255 ]
 										then
 											if [ $all_extract -eq 0 ]
 											then
@@ -4199,7 +4199,7 @@ do
 											file_found=1
 										fi
 									fi
-									if [ ! $rt_query -eq 0 ]
+									if [ $rt_query -ne 0 ]
 									then
 										if [ $gui_mode -eq 1 ]
 										then
@@ -4214,7 +4214,7 @@ do
 			       					fi
 							done
 						else
-							if [ ! $rt_query -eq 255 ]
+							if [ $rt_query -ne 255 ]
 							then
 								###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 								{
@@ -4543,7 +4543,7 @@ do
 
 																													###CHECK ASSETS##########################
 																													check_assets
-																													if [ $fungible -eq 0 ] && [ ! $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) -eq 0 ]
+																													if [ $fungible -eq 0 ] && [ $(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat) -ne 0 ]
 																													then
 																														###CREATE LEDGER ENTRY###################
 																														last_ledger=$(basename -a ${user_path}/*_ledger.dat|tail -1)
@@ -4568,7 +4568,7 @@ do
 																								fi
 																							done
 																						else
-																							if [ ! $rt_query -eq 3 ]
+																							if [ $rt_query -ne 3 ]
 																							then
 																								quit_descr=1
 																								quit_name=1
