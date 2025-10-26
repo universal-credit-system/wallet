@@ -11,7 +11,8 @@ print_message(){
 }
 
 ### SET VARIABLES ##############
-script_path=$(dirname $(readlink -f "${0}"))
+script_path=$(dirname "$(readlink -f "${0}")")
+script_name=$(basename "${0}")
 error_detected=0
 cmd_env=""
 cmd_user=""
@@ -152,13 +153,13 @@ then
 		do
 			printf "%b" "[ INFO ] Trying to install ${program} using ${pkg_mngr}...\n"
 			case "$pkg_mngr" in
-				"apk")		apk add $program ;;
-				"apt-get")	apt-get -y install $program ;;
-				"dnf")		dnf -y install $program ;;
-				"pacman")	pacman --noconfirm -S $program ;;
-				"pkg")		pkg install -y $program ;;
-				"yum")		yum -y install $program ;;
-				"zypper")	zypper -n install $program ;;
+				"apk")		apk add "$program" ;;
+				"apt-get")	apt-get -y install "$program" ;;
+				"dnf")		dnf -y install "$program" ;;
+				"pacman")	pacman --noconfirm -S "$program" ;;
+				"pkg")		pkg install -y "$program" ;;
+				"yum")		yum -y install "$program" ;;
+				"zypper")	zypper -n install "$program" ;;
 			esac
 			rt_query=$?
 			if [ "$rt_query" -gt 0 ]
@@ -188,7 +189,7 @@ then
 	mkdir -p "${script_path}"/proofs || rt_query=1
 	mkdir -p "${script_path}"/trx || rt_query=1
 	mkdir -p "${script_path}"/userdata || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### SAVE UMASK SETTINGS ######
 	printf "%b" "[ INFO ] Getting umask..."
@@ -197,31 +198,31 @@ then
 	touch "${script_path}"/test.tmp || rt_query=1
 	permissions_files=$(stat -c '%a' "${script_path}"/test.tmp) || rt_query=1
 	rm "${script_path}"/test.tmp || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### IF OLD CONFIG THERE ######
 	if [ -s "${script_path}"/control/config.conf ]
 	then
 		printf "%b" "[ INFO ] Backup old config ( ->control/config.bak )..."
 		mv "${script_path}"/control/config.conf "${script_path}"/control/config.bak || rt_query=1
-		print_message "$rt_query"
+		print_message
 	fi
 
 	### COPY TO PLACE ############
 	printf "%b" "[ INFO ] Copy install_config.conf to config.conf..."
 	cp "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### WRITE PERMISSIONS ########
 	printf "%b" "[ INFO ] Write umask to config.conf..."
 	sed -i "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf || rt_query=1
 	sed -i "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### SET DEFAULT THEME ########
 	printf "%b" "[ INFO ] Set default theme 'debian.rc' in config.conf..."
 	sed -i "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf || rt_query=1
-	print_message "$rt_query"
+	print_message
 
 	### SET PATHS ################
 	printf "%b" "[ INFO ] Define paths in config.conf..."
@@ -237,7 +238,7 @@ then
 		### GET VARIABLES ###########
 		printf "%b" "[ INFO ] Get old configuration of config.bak..."
 		grep "\path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp || rt_query=1
-		print_message "$rt_query"
+		print_message
 
 		### READ OLD CONFIG #########
 		while read config_line
@@ -254,7 +255,7 @@ then
 					then
 						sed -i "s/${conf_line}/${conf_var}=${conf_var_val}/g" "${script_path}"/control/config.conf || rt_query=1
 					fi
-					print_message "$rt_query"
+					print_message
 				fi
 			fi
 		done <"${script_path}"/control/config.tmp
@@ -267,7 +268,7 @@ then
 		### RUN GPG ###################
 		printf "%b" "[ INFO ] Wake up gpg-agent..."
 		gpgconf --launch gpg-agent >/dev/null 2>/dev/null || rt_query=1
-		print_message "$rt_query"
+		print_message
 	fi
 
 	### CONFIGURE GPG ########################
@@ -281,11 +282,11 @@ then
 				echo "${config_line}" >>~/.gnupg/gpg-agent.conf
 			fi
 		done <"${script_path}"/control/gpg-agent.conf
-		print_message "$rt_query"
+		print_message
 	else
 		printf "%b" "[ INFO ] Copy gpg-agent.conf to ~/.gnupg/ folder..."
 		cp "${script_path}"/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf || rt_query=1
-		print_message "$rt_query"
+		print_message
 	fi
 
 	### REMOVE USAGE OF KEYBOX ###############
@@ -293,15 +294,14 @@ then
 	then
 		printf "%b" "[ INFO ] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
 		sed -i 's/use-keyboxd//g' ~/.gnupg/common.conf || rt_query=1
-		print_message "$rt_query"
+		print_message
 	fi
-
-	### DISPLAY OUTPUT #######################
-	error_text="with errors"
-	if [ "$error_detected" -eq 0 ]
-	then
-		error_text="without errors"
-	fi
-	printf "%b" "[ INFO ] Installation finished $error_text. exiting...\n"
 fi
+### DISPLAY OUTPUT #######################
+error_text="with errors"
+if [ "$error_detected" -eq 0 ]
+then
+	error_text="without errors"
+fi
+printf "%b" "[ INFO ] $script_name finished $error_text. exiting...\n"
 
