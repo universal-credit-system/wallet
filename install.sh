@@ -47,7 +47,7 @@ then
 					;;
 			*)		### SET TARGET VARIABLES #######
 					case $cmd_var in
-						"-env")		cmd_env=$(echo "${1}"|tr '[A-Z]' '[a-z]')
+						"-env")		cmd_env=$(echo "${1}"|tr 'A-Z' 'a-z')
 								;;
 						"-user")	cmd_user=$1
 								;;
