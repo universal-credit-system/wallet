@@ -1041,7 +1041,7 @@ check_archive(){
 }
 check_assets(){
 			###MAKE CLEAN START############################################
-			rm "${user_path}/"blacklisted_assets.dat 2>/dev/null
+			rm "${user_path}"/blacklisted_assets.dat 2>/dev/null
 			touch "${user_path}"/blacklisted_assets.dat
 			if [ -f "${user_path}"/all_assets.dat ] && [ -s "${user_path}"/all_assets.dat ]
 			then
