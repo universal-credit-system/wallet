@@ -132,6 +132,7 @@ then
 										else
 											###IF PACKAGING MANAGER DETECTION FAILED####
 											error_detected=1
+											error_counter=1
 											no_of_programs=$(wc -l <"${script_path}"/install_dep.tmp)
 											echo "[ ERROR ] Couldn't detect the package management system used on this machine!"
 											echo "[ ERROR ] Found ${no_of_programs} programs that need to be installed:"
@@ -164,11 +165,12 @@ then
 				"zypper")	zypper -n install "$program" ;;
 			esac
 			rt_query=$?
-			print_message
 			if [ "$rt_query" -gt 0 ]
 			then
 				echo "[ ERROR ] Error during installation of ${program} using ${pkg_mngr}"
 				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
+				error_detected=1
+				error_counter=$(( error_counter + 1 ))
 			fi
 		done <"${script_path}"/install_dep.tmp
 		############################
