@@ -5,7 +5,6 @@ print_message(){
 			printf "%b" "DONE\n"
 		else
 			printf "%b" "FAILED\n"
-			error_detected=1
 			error_counter=$(( error_counter + 1 ))
 		fi
 		rt_query=0
@@ -14,7 +13,6 @@ print_message(){
 ### SET VARIABLES ##############
 script_path=$(dirname "$(readlink -f "${0}")")
 script_name=$(basename "${0}")
-error_detected=0
 error_counter=0
 cmd_env=""
 cmd_user=""
@@ -131,7 +129,6 @@ then
 											pkg_mngr="zypper";
 										else
 											###IF PACKAGING MANAGER DETECTION FAILED####
-											error_detected=1
 											error_counter=1
 											no_of_programs=$(wc -l <"${script_path}"/install_dep.tmp)
 											echo "[ ERROR ] Couldn't detect the package management system used on this machine!"
@@ -149,7 +146,7 @@ then
 				;;
 	esac
 
-	if [ -n "${pkg_mngr}" ] && [ "$error_detected" -eq 0 ]
+	if [ -n "${pkg_mngr}" ] && [ "$error_counter" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
 		while read program
@@ -169,7 +166,6 @@ then
 			then
 				echo "[ ERROR ] Error during installation of ${program} using ${pkg_mngr}"
 				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
-				error_detected=1
 				error_counter=$(( error_counter + 1 ))
 			fi
 		done <"${script_path}"/install_dep.tmp
@@ -178,7 +174,7 @@ then
 fi
 ###REMOVE TMP FILE##########
 rm "${script_path}"/install_dep.tmp 2>/dev/null
-if [ "$error_detected" -eq 0 ]
+if [ "$error_counter" -eq 0 ]
 then
 	rt_query=0
 	if [ -n "${cmd_user}" ]
