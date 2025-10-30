@@ -3614,15 +3614,19 @@ do
 										then
 											rm "${user_path}"/menu_addresses_fungible.tmp 2>/dev/null
 											touch "${user_path}"/menu_addresses_fungible.tmp
-											fungible_list=$(grep -l "asset_fungible=1" "${script_path}"/assets/*|grep -f "${user_path}"/all_assets.dat)
-											if [ "$(grep -c "asset_fungible=1" "${script_path}/assets/${order_asset}")" -eq 1 ] && [ -n "${fungible_list}" ]
+											if [ "$(grep -c "asset_fungible=1" "${script_path}/assets/${order_asset}")" -eq 1 ]
 											then
-												basename -a ${fungible_list} >"${user_path}"/menu_addresses_fungible.tmp
+												{
+												for asset in $(grep -s -l "asset_fungible=1" "${script_path}"/assets/*|grep -f "${user_path}"/all_assets.dat)
+												do
+													basename "${asset}"
+												done
+												}>"${user_path}"/menu_addresses_fungible.tmp
 											fi
-											sort -t. -k2 "${user_path}"/menu_addresses_fungible.tmp "${user_path}"/all_assets.dat|uniq -d|grep -v "${order_asset}"|cat - "${user_path}"/all_accounts.dat >"${user_path}"/menu_addresses.tmp
+											sort -t. -k2 "${user_path}"/menu_addresses_fungible.tmp|grep -v -h -w "${order_asset}" - "${user_path}"/all_accounts.dat >"${user_path}"/menu_addresses.tmp
 											order_receiver=$(dialog --cancel-label "$dialog_main_back" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "..." 0 0 0 --file "${user_path}"/menu_addresses.tmp)
-											rm "${user_path}"/menu_addresses.tmp
-											rm "${user_path}"/menu_addresses_fungible.tmp
+											rm "${user_path}"/menu_addresses_fungible.tmp 2>/dev/null
+											rm "${user_path}"/menu_addresses.tmp 2>/dev/null
 										else
 											receiver_found=1
 											order_aborted=1
