@@ -1832,7 +1832,7 @@ process_new_files(){
 				do
 					###CHECK IF USER ALREADY EXISTS#####################
 					user_to_verify=$(basename -s ".txt" "$new_index_file")
-					user_already_there=$(cat "${user_path}"/all_accounts.dat|grep -c "${user_to_verify}")
+					user_already_there=$(grep -c "${user_to_verify}" "${user_path}"/all_accounts.dat)
 					if [ "$user_already_there" -eq 1 ]
 					then
 						###VERIFY SIGNATURE OF USER#########################
