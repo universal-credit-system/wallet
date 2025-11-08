@@ -729,7 +729,7 @@ build_ledger(){
 
 								###SET BALANCE FOR SENDER#####################################
 								account_new_balance=$account_check_balance
-								sed -i "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" "${user_path}/${focus}_ledger.dat"
+								sed -i."$my_pid".bak "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 								##############################################################
 
 								###CHECK IF RECEIVER IS ASSET#################################
@@ -782,7 +782,7 @@ build_ledger(){
 										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
 										receiver_old_balance=${receiver_old_balance#*=}
 										receiver_new_balance=$(echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g')
-										sed -i "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" "${user_path}/${focus}_ledger.dat"
+										sed -i."$my_pid".bak "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 
 										###CHECK IF EXCHANGE REQUIRED#################################
 										if [ "$is_asset" -eq 1 ] && [ "$is_fungible" -eq 1 ]
@@ -801,7 +801,7 @@ build_ledger(){
 												sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
 												sender_old_balance=${sender_old_balance#*=}
 												sender_new_balance=$(echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g')
-												sed -i "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" "${user_path}/${focus}_ledger.dat"
+												sed -i."$my_pid".bak "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 											else
 												echo "${trx_receiver}:${trx_sender}=${asset_value}" >>"${user_path}/${focus}_ledger.dat"
 											fi
@@ -2301,7 +2301,7 @@ request_uca(){
 			### STATUS BAR FOR GUI ##############################
 			if [ "$gui_mode" -eq 1 ]
 			then
-				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp
+				sed -i.bak "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 "$percent_display" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2406,9 +2406,9 @@ request_uca(){
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
 				if [ "$rt_query" -eq 0 ]
 				then
-					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp
+					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				else
-					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp
+					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_request" 0 0 "$percent_display" --file "${user_path}"/uca_list.tmp
 			else
@@ -2464,7 +2464,7 @@ send_uca(){
 			### STATUS BAR FOR GUI ##############################
 			if [ "$gui_mode" -eq 1 ]
 			then
-				sed -i "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp
+				sed -i.bak "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 "$percent_display" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2528,9 +2528,9 @@ send_uca(){
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
 				if [ "$rt_query" -eq 0 ]
 				then
-					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp
+					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				else
-					sed -i "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp
+					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
 				fi
 				dialog --title "$dialog_uca_full" --backtitle "$core_system_name $core_system_version" --mixedgauge "$dialog_uca_send" 0 0 "$percent_display" --file "${user_path}"/uca_list.tmp
 			else
@@ -3101,7 +3101,7 @@ do
 															new_lang_file=$(ls -1 "${script_path}"/lang/|grep "lang_${lang_selection}_")
 															if [ ! "$lang_file" = "$new_lang_file" ]
 															then
-																sed -i "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf
+																sed -i."$my_pid".bak "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."$my_pid".bak
 																. "${script_path}"/control/config.conf
 																. "${script_path}/lang/${lang_file}"
 															fi
@@ -3120,7 +3120,7 @@ do
 															new_theme_file=$(ls -1 "${script_path}"/theme/|grep -w "${theme_selection}")
 															if [ ! "$dialogrc_set" = "$new_theme_file" ]
 															then
-																sed -i "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf
+																sed -i."$my_pid".bak "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."$my_pid".bak
 																. "${script_path}"/control/config.conf
 																export DIALOGRC="${script_path}/theme/${theme_file}"
 																dialogrc_set="${theme_file}"
@@ -3145,7 +3145,7 @@ do
 																entry=$(echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}')
 																old_value=$(grep "${entry}" "${script_path}/config_${my_pid}.tmp"|awk -F= '{print $2}'|sed 's/ //g')
 																new_value=$(echo "${changed}"|awk '{print $3}')
-																sed -i "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf
+																sed -i."$my_pid".bak "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."$my_pid".bak
 															else
 																if [ "$rt_query" -eq 1 ]
 																then
@@ -3891,7 +3891,7 @@ do
 															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
 															###SET BALANCE################################################################
 															account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
-															sed -i "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat"
+															sed -i."$my_pid".bak "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" && rm "${user_path}/${now}_ledger.dat.${my_pid}.bak" 2>/dev/null
 															##############################################################################
 
 															###WRITE ENTRIES TO FILES#####################################################
