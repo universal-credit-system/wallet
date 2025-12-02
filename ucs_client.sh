@@ -3608,6 +3608,11 @@ do
 													order_aborted=1
 												fi
 											done
+										else
+											if [ "$gui_mode" -eq 0 ]
+											then
+												exit 28
+											fi
 										fi
 									else
 										if [ "$rt_query" -eq 1 ]
