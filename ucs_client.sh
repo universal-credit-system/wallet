@@ -1053,10 +1053,9 @@ check_assets(){
 			fi
 
 			###CREATE LIST OF NEW ASSETS###################################
-			ls -1 "${script_path}"/assets >"${user_path}"/all_assets.dat
-
-			###CREATE LIST OF NEW ASSETS###################################
-			sort -t . -k2 "${user_path}"/all_assets.dat "${user_path}"/ack_assets.dat|uniq -u >"${user_path}"/all_assets.tmp
+			ls -1 "${script_path}"/assets|sort -t . -k2 - "${user_path}"/ack_assets.dat|uniq -u >"${user_path}"/all_assets.tmp
+			
+			###GO THROUGH ASSETS###########################################
 			while read line
 			do
 				###CHECK IF ASSET IS MAIN ASSET################################
@@ -1092,50 +1091,45 @@ check_assets(){
 							symbol_size=${#asset_symbol}
 							if [ "$symbol_check" -eq 0 ] && [ "$symbol_size" -le 10 ] && [ "$(wc -c <"${script_path}/assets/${asset}")" -le "$asset_max_size_bytes" ]
 							then
-								###CHECK IF ASSET ALREADY EXISTS###############################
-								asset_already_exists=$(cat "${user_path}"/ack_assets.dat "${user_path}"/all_assets.dat|grep -c "${asset}")
-								if [ "$asset_already_exists" -gt 0 ]
+								asset_owner_ok=0
+								###IF NON FUNGIBLE ASSET#####################################
+								if [ "$asset_fungible" -eq 0 ]
 								then
-									asset_owner_ok=0
-									###IF NON FUNGIBLE ASSET#####################################
-									if [ "$asset_fungible" -eq 0 ]
+									###CHECK ASSET HARDCAP#######################################
+									if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
 									then
-										###CHECK ASSET HARDCAP#######################################
-										if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
+										check_value=$asset_quantity
+										asset_owner=$(echo "$asset_data"|grep "asset_owner")
+										asset_owner=${asset_owner#*=}
+										###CHECK IF ASSET OWNER IS SET###############################
+										if [ -n "${asset_owner}" ]
 										then
-											check_value=$asset_quantity
-											asset_owner=$(echo "$asset_data"|grep "asset_owner")
-											asset_owner=${asset_owner#*=}
-											###CHECK IF ASSET OWNER IS SET###############################
-											if [ -n "${asset_owner}" ]
+											test -f "${script_path}"/keys/"${asset_owner}"
+											rt_query=$?
+											if [ "$rt_query" -eq 0 ]
 											then
-												test -f "${script_path}"/keys/"${asset_owner}"
-												rt_query=$?
-												if [ "$rt_query" -eq 0 ]
-												then
-													asset_owner_ok=1
-												fi
+												asset_owner_ok=1
 											fi
 										fi
-									else
-										###IF FUNGIBLE ASSET#########################################
-										if [ "$asset_fungible" -eq 1 ]
-										then
-											check_value=$asset_price
-											asset_owner_ok=1
-										fi
 									fi
-									if [ "$asset_owner_ok" -eq 1 ]
+								else
+									###IF FUNGIBLE ASSET#########################################
+									if [ "$asset_fungible" -eq 1 ]
 									then
-										###CHECK ASSET PRICE###################################
-										rt_query=0
-										is_amount_ok=$(echo "$check_value >= 0.000000001"|bc) || rt_query=1
-										is_amount_mod=$(echo "$check_value % 0.000000001"|bc) || rt_query=1
-										is_amount_mod=$(echo "${is_amount_mod} > 0"|bc) || rt_query=1
-										if [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ] && [ "$rt_query" -eq 0 ]
-										then
-											asset_acknowledged=1
-										fi
+										check_value=$asset_price
+										asset_owner_ok=1
+									fi
+								fi
+								if [ "$asset_owner_ok" -eq 1 ]
+								then
+									###CHECK ASSET PRICE###################################
+									rt_query=0
+									is_amount_ok=$(echo "$check_value >= 0.000000001"|bc) || rt_query=1
+									is_amount_mod=$(echo "$check_value % 0.000000001"|bc) || rt_query=1
+									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc) || rt_query=1
+									if [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ] && [ "$rt_query" -eq 0 ]
+									then
+										asset_acknowledged=1
 									fi
 								fi
 							fi
@@ -1694,7 +1688,7 @@ check_trx(){
 			trx_size=$(wc -c <"${script_path}/trx/${line}")
 			if [ "$trx_size" -le "$trx_max_size_bytes" ]
 			then
-				###CHECK IF HEADER MATCHES OWNER########################
+				###CHECK IF HEADER MATCHES OWNER/FILENAME###############
 				file_to_check="${script_path}/trx/${line}"
 				user_to_check=${line%%.*}
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' "$file_to_check")
@@ -1756,35 +1750,40 @@ check_trx(){
 							purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
 							if [ "$purpose_key_contains_alnum" -eq 0 ] && [ "$purpose_contains_alnum" -eq 0 ]
 							then
-								###CHECK IF ASSET TYPE EXISTS###########################
+								###EXTRACT ASSET########################################
 								trx_asset=$(awk -F: '/:ASST:/{print $3}' "$file_to_check")
-								asset_already_exists=$(grep -c "${trx_asset}" "${user_path}"/all_assets.dat)
-								if [ "$asset_already_exists" -eq 1 ]
-								then
-									###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
-									trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$file_to_check")
-									is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
-									is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
-									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
 
-									###CHECK IF USER HAS CREATED A INDEX FILE###############
-									if [ -f "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ] && [ -s "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ]
+								###CHECK IF ASSET TYPE EXISTS###########################
+								if [ "$(grep -c "${trx_asset}" "${user_path}"/all_assets.dat)" -eq 1 ]
+								then
+									###EXTRACT AMOUNT#######################################
+									trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$file_to_check")
+									if [ "$(printf "%s" "${trx_amount}"|grep -c -v '[0-9.]')" -eq 0 ]
 									then
-										####CHECK IF USER HAS INDEXED THE TRANSACTION###########
-										is_trx_signed=$(grep -c "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt")
-										if [ "$is_trx_signed" -eq 1 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+										###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
+										is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
+										is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
+										is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
+
+										###CHECK IF USER HAS CREATED A INDEX FILE###############
+										if [ -f "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ] && [ -s "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ]
 										then
-											trx_acknowledged=1
+											####CHECK IF USER HAS INDEXED THE TRANSACTION###########
+											is_trx_signed=$(grep -c "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt")
+											if [ "$is_trx_signed" -eq 1 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+											then
+												trx_acknowledged=1
+											else
+												if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+												then
+													trx_acknowledged=1
+												fi
+											fi
 										else
 											if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
 											then
 												trx_acknowledged=1
 											fi
-										fi
-									else
-										if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
-										then
-											trx_acknowledged=1
 										fi
 									fi
 								fi
