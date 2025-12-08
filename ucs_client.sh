@@ -1120,7 +1120,7 @@ check_assets(){
 										asset_owner_ok=1
 									fi
 								fi
-								if [ "$asset_owner_ok" -eq 1 ]
+								if [ "$asset_owner_ok" -eq 1 ] && [ "$(printf "%s" "${check_value}"|grep -c -v '[0-9.]')" -eq 0 ]
 								then
 									###CHECK ASSET PRICE###################################
 									rt_query=0
