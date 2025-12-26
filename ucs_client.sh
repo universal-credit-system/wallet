@@ -1054,14 +1054,14 @@ check_assets(){
 
 			###CREATE LIST OF NEW ASSETS###################################
 			ls -1 "${script_path}"/assets|sort -t . -k2 - "${user_path}"/ack_assets.dat|uniq -u >"${user_path}"/all_assets.tmp
-			
+
 			###GO THROUGH ASSETS###########################################
 			while read line
 			do
 				###CHECK IF ASSET IS MAIN ASSET################################
 				if [ "${line}" = "${main_asset}" ]
 				then
-					###SET VARIABLE################################################
+					###ACKNOWLEDGED PER DEFAULT####################################
 					asset_acknowledged=1
 				else
 					###SET VARIABLES###############################################
@@ -1456,7 +1456,7 @@ check_tsa(){
 					account_verified=0
 					account=$line
 					account_key=$(head -"$counter" "${user_path}"/gpg_check.tmp|tail -1|cut -d ':' -f10)
-					
+
 					###CHECK IF KEY-FILENAME IS EQUAL TO NAME INSIDE KEY#####
 					if [ "${account}" = "${account_key}" ]
 					then
@@ -1827,12 +1827,16 @@ process_new_files(){
 				###CREATE TMP FILE##################################
 				touch "${user_path}"/remove_list.tmp
 				touch "${user_path}"/new_list.tmp
+
+				###CREATE VAR WITH LIST OF OWN ASSETS###############
+				assets_own=$(grep "assets/" "${script_path}/proofs/${handover_account}/${handover_account}.txt")
+
+				###GO THROUGH THE NEW INDEX FILES ONE BY ONE########
 				for new_index_file in $(grep ".txt" "${user_path}"/files_to_fetch.tmp)
 				do
 					###CHECK IF USER ALREADY EXISTS#####################
 					user_to_verify=$(basename -s ".txt" "$new_index_file")
-					user_already_there=$(grep -c "${user_to_verify}" "${user_path}"/all_accounts.dat)
-					if [ "$user_already_there" -eq 1 ]
+					if [ "$(grep -c "${user_to_verify}" "${user_path}"/all_accounts.dat)" -eq 1 ]
 					then
 						###VERIFY SIGNATURE OF USER#########################
 						verify_signature "${user_path}/temp/${new_index_file}" "$user_to_verify"
@@ -1841,13 +1845,12 @@ process_new_files(){
 						then
 							###GO THROUGH ALL ASSETS OF NEW INDEX FILE##########
 							grep "assets/" "${user_path}/temp/${new_index_file}" >"${user_path}"/asset_list.tmp
-							assets_own=$(grep "assets/" "${script_path}/proofs/${handover_account}/${handover_account}.txt")
 							while read line
 							do
 								###COMPARE INDEX ENTRIES############################
 								new_asset=${line%% *}
 								new_hash=${line#* }
-								own_assets=$(echo "$assets_own"|grep -w "${new_asset}")
+								own_assets=$(echo "${assets_own}"|grep -w "${new_asset}")
 								own_asset=${own_assets%% *}
 								own_hash=${own_assets#* }
 								if [ -n "$own_assets" ] && [ ! "$own_hash" = "$new_hash" ]
@@ -1871,7 +1874,7 @@ process_new_files(){
 					fi
 				done
 				rm "${user_path}"/asset_list.tmp 2>/dev/null
-				
+
 				###UPDATE LIST OF FILES TO FETCH##############
 				sort "${user_path}"/remove_list.tmp "${user_path}"/files_to_fetch.tmp|uniq -u >"${user_path}"/temp_filelist.tmp
 				mv "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
