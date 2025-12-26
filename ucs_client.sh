@@ -1855,7 +1855,7 @@ process_new_files(){
 									###REMOVE IF THERE IS A COLLISION###################
 									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 								fi
-							done<"${user_path}"/asset_list.tmp
+							done <"${user_path}"/asset_list.tmp
 						else
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 						fi
