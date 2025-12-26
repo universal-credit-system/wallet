@@ -1840,15 +1840,22 @@ process_new_files(){
 						if [ "$rt_query" -eq 0 ]
 						then
 							###GO THROUGH ALL ASSETS OF NEW INDEX FILE##########
-							for new_index_asset in $(grep "assets/" "${user_path}/temp/${new_index_file}")
+							grep "assets/" "${user_path}/temp/${new_index_file}" >"${user_path}"/asset_list.tmp
+							assets_own=$(grep "assets/" "${script_path}/proofs/${handover_account}/${handover_account}.txt")
+							while read line
 							do
-								###COMPARE HASHES###################################
-								is_asset_there=$(grep -c "${new_index_asset}" "${script_path}/proofs/${handover_account}/${handover_account}.txt")
-								if [ "$is_asset_there" -eq 0 ]
+								###COMPARE INDEX ENTRIES############################
+								new_asset=${line%% *}
+								new_hash=${line#* }
+								own_assets=$(echo "$assets_own"|grep -w "${new_asset}")
+								own_asset=${own_assets%% *}
+								own_hash=${own_assets#* }
+								if [ -n "$own_assets" ] && [ ! "$own_hash" = "$new_hash" ]
 								then
+									###REMOVE IF THERE IS A COLLISION###################
 									echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 								fi
-							done
+							done<"${user_path}"/asset_list.tmp
 						else
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 						fi
@@ -1863,6 +1870,8 @@ process_new_files(){
 						fi
 					fi
 				done
+				rm "${user_path}"/asset_list.tmp 2>/dev/null
+				
 				###UPDATE LIST OF FILES TO FETCH##############
 				sort "${user_path}"/remove_list.tmp "${user_path}"/files_to_fetch.tmp|uniq -u >"${user_path}"/temp_filelist.tmp
 				mv "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
