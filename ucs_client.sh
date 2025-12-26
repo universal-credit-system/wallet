@@ -687,6 +687,7 @@ build_ledger(){
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
 			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/depend_trx.dat) 
 			do
+				ignore=1
 				is_fungible=0
 
 				###EXRACT DATA FOR CHECK######################################
@@ -807,19 +808,15 @@ build_ledger(){
 											fi
 										fi
 									fi
-								else
-									echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
+									ignore=0
 								fi
-							else
-								echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
 							fi
-						else
-							echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
 						fi
-					else
-						echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
 					fi
-				else
+				fi
+				###IF IGNORED WRITE TRX TO FILE##############################
+				if [ "$ignore" -eq 1 ]
+				then
 					echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
 				fi
 			done
