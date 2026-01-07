@@ -3738,7 +3738,7 @@ do
 										if [ "$rt_query" -eq 0 ]
 										then
 											trx_now=$(date +%s.%3N)
-											make_signature "TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
+											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
 											rt_query=$?
 											if [ "$rt_query" -eq 0 ]
 											then
