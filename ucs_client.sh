@@ -684,137 +684,37 @@ build_ledger(){
 				fi
 			done
 
-			###GO TROUGH TRX OF THAT DAY LINE BY LINE#####################
+			###GO TROUGH TRX OF THAT DAY LINE BY LINE##################
 			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/depend_trx.dat) 
 			do
+				skip=0
 				ignore=1
 				is_fungible=0
-
-				###EXRACT DATA FOR CHECK######################################
-				trx_file="${script_path}/trx/${trx_filename}"
-				trx_stamp=$(awk -F: '/:TIME:/{print $3}' "$trx_file")
-				trx_sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file")
-				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file")
-				trx_hash=$(sha256sum "$trx_file")
-				trx_hash=${trx_hash%% *}
-				trx_path="trx/${trx_filename}"
-				##############################################################
-
-				###CHECK IF INDEX-FILE EXISTS#################################
-				if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] || [ "${trx_sender}" = "${handover_account}" ]
+				
+				###GET MSG TYPE OF TRX#####################################
+				trx_msg_type=$(awk -F: '/:TYPE:/{print $3}' "${script_path}/trx/${trx_filename}")
+				if [ -z "$trx_msg_type" ]
 				then
-					###CHECK IF TRX IS SIGNED BY USER#############################
-					is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
-					if [ "$is_signed" -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
+					###SET DEFAULT MSG TYPE TO 100#############################
+					trx_msg_type=100
+				else
+					###CHECK NAMING############################################
+					trx_msg_type_len=${#trx_msg_type}
+					if [ "$trx_msg_type_len" -ne 3 ] || [ -n "$(echo "$trx_msg_type"|grep '[^[:digit:]]')" ]
 					then
-						###EXTRACT TRX AMOUNT#########################################
-						trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$trx_file")
-						trx_asset=$(awk -F: '/:ASST:/{print $3}' "$trx_file")
-						sender_in_ledger=$(grep -c "${trx_asset}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-						if [ "$sender_in_ledger" -eq 1 ]
-						then
-							###GET ACCOUNT BALANCE########################################
-							account_balance=$(grep "${trx_asset}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-							account_balance=${account_balance#*=}
-
-							###CHECK IF ACCOUNT HAS ENOUGH BALANCE FOR THIS TRANSACTION###
-							account_check_balance=$(echo "${account_balance} - ${trx_amount}"|bc|sed 's/^\./0./g')
-							enough_balance=$(echo "${account_check_balance} >= 0"|bc)
-
-							###CHECK IF BALANCE IS OK#####################################
-							if [ "$enough_balance" -eq 1 ]
-							then
-								####WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)#############
-								echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
-								##############################################################
-
-								###SET BALANCE FOR SENDER#####################################
-								account_new_balance=$account_check_balance
-								sed -i."$my_pid".bak "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
-								##############################################################
-
-								###CHECK IF RECEIVER IS ASSET#################################
-								is_asset=$(grep -c "${trx_receiver}" "${user_path}"/all_assets.dat)
-								if [ "$is_asset" -eq 1 ]
-								then
-									is_fungible=$(grep -c "asset_fungible=1" "${script_path}/assets/${trx_receiver}")
-								fi
-								##############################################################
-
-								###CHECK IF RECEIVER IS IN LEDGER#############################
-								receiver_in_ledger=$(grep -c "${trx_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
-								if [ "$receiver_in_ledger" -eq 0 ]
-								then
-									###CHECK IF RECEIVER IS IN LEDGER WITH UCC BALANCE############
-									receiver_in_ledger=$(grep -c "${main_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
-									if [ "$receiver_in_ledger" -eq 1 ]
-									then
-										###CHECK IF RECEIVER IS ASSET#################################
-										if [ "$is_asset" -eq 1 ]
-										then
-											###CHECK IF ASSET IS FUNGIBLE################################
-											if [ "$is_fungible" -eq 1 ]
-											then
-												echo "${trx_asset}:${trx_receiver}=0" >>"${user_path}/${focus}_ledger.dat"
-											else
-												receiver_in_ledger=0
-											fi
-										else
-											###WRITE LEDGER ENTRY########################################
-											echo "${trx_asset}:${trx_receiver}=0" >>"${user_path}/${focus}_ledger.dat"
-										fi
-									fi
-								fi
-								if [ "$receiver_in_ledger" -eq 1 ]
-								then
-									###GET CONFIRMATIONS##########################################
-									total_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
-
-									###ADD 1 CONFIRMATION FOR OWN#################################
-									if [ ! "${trx_sender}" = "${handover_account}" ] && [ ! "${trx_receiver}" = "${handover_account}" ]
-									then
-										total_confirmations=$(( total_confirmations + 1 ))
-									fi
-
-									###CHECK CONFIRMATIONS########################################
-									if [ "$total_confirmations" -ge "$confirmations_from_users" ]
-									then
-										###SET BALANCE FOR RECEIVER###################################
-										receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
-										receiver_old_balance=${receiver_old_balance#*=}
-										receiver_new_balance=$(echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g')
-										sed -i."$my_pid".bak "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
-
-										###CHECK IF EXCHANGE REQUIRED#################################
-										if [ "$is_asset" -eq 1 ] && [ "$is_fungible" -eq 1 ]
-										then
-											###EXCHANGE###################################################
-											asset_type_price=$(grep "asset_price=" "${script_path}/assets/${trx_asset}")
-											asset_type_price=${asset_type_price#*=}
-											asset_price=$(grep "asset_price=" "${script_path}/assets/${trx_receiver}")
-											asset_price=${asset_price#*=}
-											asset_value=$(echo "scale=9; ${trx_amount} * ${asset_type_price} / ${asset_price}"|bc|sed 's/^\./0./g')
-
-											###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
-											receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-											if [ "$receiver_in_ledger" -eq 1 ]
-											then
-												sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-												sender_old_balance=${sender_old_balance#*=}
-												sender_new_balance=$(echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g')
-												sed -i."$my_pid".bak "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
-											else
-												echo "${trx_receiver}:${trx_sender}=${asset_value}" >>"${user_path}/${focus}_ledger.dat"
-											fi
-										fi
-									fi
-									ignore=0
-								fi
-							fi
-						fi
+						skip=1
 					fi
 				fi
-				###IF IGNORED WRITE TRX TO FILE##############################
+
+				###CHECK IF FUNCTION EXISTS FOR MESSAGE TYPE###############
+				type "MT${trx_msg_type}_process" || skip=1
+				if [ "$skip" -eq 0 ]
+				then
+					###SOURCE MESSAGE PROCESSING LOGIC#########################
+					"MT${trx_msg_type}_process"
+				fi
+
+				###IF IGNORED WRITE TRX TO FILE############################
 				if [ "$ignore" -eq 1 ]
 				then
 					echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
@@ -890,7 +790,7 @@ check_archive(){
 							case "$files_not_homedir" in
 								"assets")	if [ "$import_fungible_assets" -eq 1 ] || [ "$import_non_fungible_assets" -eq 1 ]
 										then
-											if [ ! -d "${script_path}/$line" ]
+											if [ ! -d "${script_path}/${line}" ]
 											then
 												file_full=${line#*/}
 												file_ext=${file_full#*.}
@@ -901,7 +801,7 @@ check_archive(){
 												else
 													if [ "$check_mode" -eq 0 ]
 													then
-														if [ ! -s "${script_path}/$line" ]
+														if [ ! -s "${script_path}/${line}" ]
 														then
 															echo "$line" >>"${user_path}"/files_to_fetch.tmp
 														fi
@@ -912,7 +812,7 @@ check_archive(){
 											fi
 										fi
 							      			;;
-								"keys")		if [ ! -d "${script_path}/$line" ]
+								"keys")		if [ ! -d "${script_path}/${line}" ]
 										then
 											file_full=${line#*/}
 											file_full_correct=$(echo "$file_full"|grep -c '[^[:alnum:]]')
@@ -922,7 +822,7 @@ check_archive(){
 											else
 												if [ "$check_mode" -eq 0 ]
 												then
-													if [ ! -s "${script_path}/$line" ]
+													if [ ! -s "${script_path}/${line}" ]
 													then
 														echo "$line" >>"${user_path}"/files_to_fetch.tmp
 													fi
@@ -945,7 +845,7 @@ check_archive(){
 												then
 													if [ "$check_mode" -eq 0 ]
 													then
-														if [ ! -s "${script_path}/$line" ]
+														if [ ! -s "${script_path}/${line}" ]
 														then
 															echo "$line" >>"${user_path}"/files_to_fetch.tmp
 														fi
@@ -1653,6 +1553,80 @@ check_keys(){
 		cp "${user_path}"/all_keys.dat "${user_path}"/all_accounts.dat
 		rm "${user_path}"/ack_keys.dat
 }
+check_mt(){
+		###PURGE BLACKLIST#####################################
+		rm "${user_path}"/blacklisted_mts.dat 2>/dev/null
+		touch "${user_path}"/blacklisted_mts.dat
+
+		###SETUP ALL LIST######################################
+		if [ -f "${user_path}"/all_mts.dat ] && [ -s "${user_path}"/all_mts.dat ]
+		then
+			###REMOVE DELETED MESSGE TYPES FROM ALL_TRX.DAT AND SAVE#########
+			ls -1 "${script_path}"/mt/|sort - "${user_path}"/all_mts.dat|uniq -d|grep -f "${user_path}"/all_mts.dat >"${user_path}"/ack_mts.dat
+		else
+			rm "${user_path}"/ack_mts.dat 2>/dev/null
+			touch "${user_path}"/ack_mts.dat
+		fi
+
+		###WRITE INITIAL LIST OF MESSAGE TYPES TO FILE##########
+		ls -1 "${script_path}"/mt/ >"${user_path}"/all_mts.dat
+
+		###REMOVE ACKNOWLEDGED##################################
+		sort "${user_path}"/all_mts.dat "${user_path}"/ack_mts.dat|uniq -u >"${user_path}"/all_mts.tmp
+
+		###GET LIST OF SYS FUNCTIONS############################
+		sys_functions=$(grep '[a-zA-Z0-9_](){' "${script_path}/${script_name}")
+
+		###GO THROUGH THROUGH MESSAGE TYPES LINE PER LINE#######
+		while read line
+		do
+			msg_type_ack=0
+			msg_type=${line%%.*}
+			
+			###CHECK NAMING CONVENTION##############################
+			if [ -z "$(echo "$msg_type"|grep '[^[:digit:]]')" ]
+			then
+				###CHECK AGAINST FUNCTIONS OF SYSTEM AND OTHER MTs######
+				if [ "$(echo "${sys_functions}"|grep -c -f - "${script_path}/mt/${line}")" -eq 0 ] && [ "$(grep '[a-zA-Z0-9_](){' "${script_path}/mt/${line}"|grep -c -f - /dev/null $(ls -1 "${script_path}"/mt/*|grep -f "${user_path}"/ack_mts.dat))" -eq 0 ]
+				then
+					###SOURCE MESSAGE TYPE LOGIC############################
+					. "${script_path}/mt/${line}"
+					rt_query=$?
+
+					###CHECK STANDARD FUNCTIONS#############################
+					type "MT${msg_type}_process" >>/dev/null && type "MT${msg_type}_verify" >>/dev/null || rt_query=1
+					if [ $rt_query = 0 ]
+					then
+						###ACKNOWLEDGE MESSAGE TYPE#############################
+						msg_type_ack=1
+					else
+						###IF NOT SUCCESSFULL UNSET FUNCTIONS OF MESSAGE TYPE###
+						for mt_function in $(grep "(){" "${script_path}/mt/${line}"|cut -d '(' -f1)
+						do
+							unset "$mt_function" 
+						done
+					fi
+				fi
+			fi
+			if [ "$msg_type_ack" -eq 0 ]
+			then
+				echo "${line}" >>"${user_path}"/blacklisted_mts.dat
+			fi
+		done <"${user_path}"/all_mts.tmp
+
+		###GO THROUGH BLACKLISTED MTS AND REMOVE THEM#########
+		if [ -f "${user_path}"/blacklisted_mts.dat ] && [ -s "${user_path}"/blacklisted_mts.dat ]
+		then
+			while read line
+			do
+				rm "${script_path}/mt/${line}" 2>/dev/null
+			done <"${user_path}"/blacklisted_mts.dat
+		fi
+
+		###REMOVE BLACKLISTED MTS FROM MT LIST#################
+		sort "${user_path}"/all_mts.tmp "${user_path}"/blacklisted_mts.dat|uniq -u >"${user_path}"/all_mts.dat
+		rm "${user_path}"/all_mts.tmp 2>/dev/null
+}
 check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST###################
 		rm "${user_path}"/blacklisted_trx.dat 2>/dev/null
@@ -1732,57 +1706,27 @@ check_trx(){
 						fi
 						if [ "$trx_date_filename" = "$trx_date_inside" ] && [ "$trx_date_formatted" -gt "$trx_receiver_date" ]
 						then
-							###CHECK IF PURPOSE CONTAINS ALNUM######################
-							purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' "$file_to_check")
-							purpose_key_start=$(( purpose_key_start + 1 ))
-							purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' "$file_to_check")
-							purpose_key_end=$(( purpose_key_end - 1 ))
-							purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" "$file_to_check")
-							purpose_key_contains_alnum=$(printf "%s" "${purpose_key}"|grep -c -v '[a-zA-Z0-9+/=]')
-							purpose_start=$(awk -F: '/:PRPS:/{print NR}' "$file_to_check")
-							purpose_start=$(( purpose_start + 1 ))
-							purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' "$file_to_check")
-							purpose_end=$(( purpose_end - 1 ))
-							purpose=$(sed -n "${purpose_start},${purpose_end}p" "$file_to_check")
-							purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c -v '[a-zA-Z0-9+/=]')
-							if [ "$purpose_key_contains_alnum" -eq 0 ] && [ "$purpose_contains_alnum" -eq 0 ]
+							###CHECK MESSAGE TYPE, IF EMPTY SET DEFAULT '100'#######
+							rt_query=0
+							trx_msg_type=$(awk -F: '/:TYPE:/{print $3}' "$file_to_check")
+							if [ -z "$trx_msg_type" ]
 							then
-								###EXTRACT ASSET########################################
-								trx_asset=$(awk -F: '/:ASST:/{print $3}' "$file_to_check")
-
-								###CHECK IF ASSET TYPE EXISTS###########################
-								if [ "$(grep -c "${trx_asset}" "${user_path}"/all_assets.dat)" -eq 1 ]
+								trx_msg_type=100
+							else
+								###CHECK FORMATTING OF MESSAGE TYPE#####################
+								trx_msg_type_len=${#trx_msg_type}
+								if [ "$trx_msg_type_len" -ne 3 ] || [ -n "$(echo "$trx_msg_type"|grep '[^[:digit:]]')" ]
 								then
-									###EXTRACT AMOUNT#######################################
-									trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$file_to_check")
-									if [ "$(printf "%s" "${trx_amount}"|grep -c -v '[0-9.]')" -eq 0 ]
-									then
-										###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
-										is_amount_ok=$(echo "${trx_amount} >= 0.000000001"|bc)
-										is_amount_mod=$(echo "${trx_amount} % 0.000000001"|bc)
-										is_amount_mod=$(echo "${is_amount_mod} > 0"|bc)
-
-										###CHECK IF USER HAS CREATED A INDEX FILE###############
-										if [ -f "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ] && [ -s "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ]
-										then
-											####CHECK IF USER HAS INDEXED THE TRANSACTION###########
-											is_trx_signed=$(grep -c "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt")
-											if [ "$is_trx_signed" -eq 1 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
-											then
-												trx_acknowledged=1
-											else
-												if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
-												then
-													trx_acknowledged=1
-												fi
-											fi
-										else
-											if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
-											then
-												trx_acknowledged=1
-											fi
-										fi
-									fi
+									rt_query=1
+								fi
+							fi
+							if [ "$rt_query" -eq 0 ]
+							then
+								###CHECK IF FUNCTION EXISTS FOR THIS MESSAGE TYPE#######
+								type "MT${msg_type}_verify" >>/dev/null || rt_query=1
+								if [ "$rt_query" -eq 0 ]
+								then
+									"MT${trx_msg_type}_verify"
 								fi
 							fi
 						fi
@@ -2582,9 +2526,11 @@ urlencode(){
 #Main Menu Screen#
 ##################
 ###SET INITIAL VARIABLES####
+import_fungible_assets=0
+import_non_fungible_assets=0
 initial_coinload=365250
 check_period_tsa=21600
-trx_max_size_bytes=3164
+trx_max_size_bytes=3204
 trx_max_size_purpose_bytes=1024
 asset_max_size_bytes=24734
 asset_max_size_description_bytes=8192
@@ -2609,6 +2555,7 @@ new_ledger=0
 no_ledger=0
 end_program=0
 small_trx=0
+script_name=$(basename "${0}")
 script_path=$(dirname "$(readlink -f "${0}")")
 my_pid=$$
 gui_mode=1
@@ -3195,7 +3142,7 @@ do
 							then
 								cd "${script_path}" || exit 13
 								now_stamp=$(date +%s)
-								tar -czf "${script_path}/backup/${now_stamp}.bcp" assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
+								tar -czf "${script_path}/backup/${now_stamp}.bcp" assets/ control/ keys/ mt/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ "$rt_query" -eq 0 ]
 								then
@@ -3385,6 +3332,7 @@ do
 			check_tsa
 			check_keys
 			check_assets
+			check_mt
 			check_trx
 			get_dependencies
 			ledger_mode=$?
@@ -3790,7 +3738,7 @@ do
 										if [ "$rt_query" -eq 0 ]
 										then
 											trx_now=$(date +%s.%3N)
-											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
+											make_signature "TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
 											rt_query=$?
 											if [ "$rt_query" -eq 0 ]
 											then
@@ -4070,6 +4018,7 @@ do
 														check_tsa
 														check_keys
 														check_assets
+														check_mt
 														check_trx
 														get_dependencies
 														ledger_mode=$?
@@ -4191,6 +4140,7 @@ do
 														check_tsa
 														check_keys
 														check_assets
+														check_mt
 														check_trx
 														get_dependencies
 														ledger_mode=$?
@@ -4260,7 +4210,6 @@ do
 										if [ -f "${script_path}/proofs/${user}/${user}.txt" ] && [ -s "${script_path}/proofs/${user}/${user}.txt" ]
 										then
 											echo "proofs/${user}/${user}.txt"
-
 										fi
 									done <"${accounts_list}"
 
@@ -4325,6 +4274,7 @@ do
 								check_tsa
 								check_keys
 								check_assets
+								check_mt
 								check_trx
 								get_dependencies
 								ledger_mode=$?
