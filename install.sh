@@ -238,7 +238,7 @@ then
 	then
 		### GET VARIABLES ###########
 		printf "%b" "[ INFO ] Get old configuration of config.bak..."
-		grep "\path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp || rt_query=1
+		grep "path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp || rt_query=1
 		print_message
 
 		### READ OLD CONFIG #########
@@ -254,7 +254,7 @@ then
 					conf_line=$(grep "${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line}" = "${conf_var}=${conf_var_val}" ]
 					then
-						sed -i."${my_pid}".bak "s/${conf_line}/${conf_var}=${conf_var_val}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
+						sed -i."${my_pid}".bak "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
 					fi
 					print_message
 				fi
