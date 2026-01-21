@@ -3495,7 +3495,7 @@ do
 								###OUTPUT TRANSACTIONS IF THERE ARE ANY##################################
 								if [ -n "${trx_list}" ]
 								then
-									printf "%b" "${trx_list}"|awk '{print "TRX:" $1}'
+									printf "%b" "${trx_list}"|sort -u|awk '{print "TRX:" $1}'
 								fi
 								exit 0
 							else
