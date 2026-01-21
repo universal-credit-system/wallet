@@ -16,8 +16,11 @@ OPTIONS:
 			sync_uca		to sync with UCAs*
 			show_addressbook	to display all addresses
 			show_balance		to show the users balance
+			show_msig_trx		to show signable multisig trx
 			show_stats		to display the statistics
 			show_trx		to display trx informations
+			sign			to sign a multisig trx*
+			decline			to decline a multisig trx
 			
 			*logon required either with username, pin and
 			 password or address and password only.
@@ -41,6 +44,12 @@ OPTIONS:
   -asset <ASSET>	asset to be used. when performing -action create_trx
   			and asset is not set UCC will be used as default asset
   			if it is the only existing asset
+  			
+  -message_type <MTNO>	message type to be used. per default '100' is set
+  
+  -msig <ADDRESS>	address of a user to authorize. can be used multiple times
+                        to specify the different multi-signature users for actions
+                        'create_trx' or 'create_user' (maximum users: 10)
 
   -purpose "<TEXT>"	purpose of transaction. used only for -action create_trx
 			

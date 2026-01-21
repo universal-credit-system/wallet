@@ -158,7 +158,6 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
-			mkdir "${script_path}"/proofs/"${create_name_hashed}"
 			mkdir -p "${script_path}"/userdata/"${create_name_hashed}"/temp/assets
 			mkdir "${script_path}"/userdata/"${create_name_hashed}"/temp/keys
 			mkdir "${script_path}"/userdata/"${create_name_hashed}"/temp/proofs
@@ -241,10 +240,105 @@ create_keys(){
 													stamp_diff=$(( file_stamp - key_stamp ))
 													if [ "$stamp_diff" -lt 120 ]
 													then
-														###COPY TSA FILES###################################################
-														cp "${user_path}/${tsa_service}.tsq" "${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsq"
-														cp "${user_path}/${tsa_service}.tsr" "${script_path}/proofs/${create_name_hashed}/${tsa_service}.tsr"
 														is_stamped=1
+
+														###MULTI SIGNATURE PART FOLLOWING########################
+														multi_sig_loop=0
+														while [ "$multi_sig_loop" -eq 0 ]
+														do
+															if [ "$gui_mode" -eq 1 ]
+															then
+																###ASK IF MULTI SIGNATURE OR NOT#########################
+																dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_main_create" --backtitle "$core_system_name $core_system_version" --yesno "MULTI-SIGNATURE?" 0 0
+																rt_query=$?
+															else
+																###CHECK PARAMETERS######################################
+																if [ -z "${cmd_msig}" ]
+																then
+																	exit 18
+																fi
+															fi
+															if [ "$rt_query" -eq 0 ]
+															then
+																add_multi_sig_user=0
+																###WRITE LISTS###########################################
+																ls -1 "${script_path}"/keys >"${user_path}"/msig_keys.tmp
+																if [ "$gui_mode" -eq 1 ]
+																then
+																	echo "0" >"${user_path}"/msig_users.tmp
+																else
+																	if [ "$(printf "%b" "${cmd_msig}"|sort -u||grep -v "^$"|grep -f "${user_path}"/msig_keys.tmp -)" = "$(printf "%b" "${cmd_msig}")" ]
+																	then
+																		if [ "$(printf "%b" "${cmd_msig}"|wc -l)" -le 10 ]
+																		then
+																			printf "%b" "${cmd_msig}" >"${user_path}"/msig_users.tmp
+																		else
+																			exit 16
+																		fi
+																	else
+																		exit 16
+																	fi
+																fi
+																
+																###LOOP TO ADD USERS FOR MULTI SIGNATURE#################
+																while [ "$add_multi_sig_user" -eq 0 ]
+																do
+																	user_to_add=""
+																	if [ "$gui_mode" -eq 1 ]
+																	then
+																		###ADDED USERS OVERVIEW########################################
+																		user_to_add=$(dialog --ok-label "$dialog_next" --help-button --help-label "$dialog_main_back" --cancel-label "$dialog_add" --title "$dialog_main_create : MULTI SIGNATURE : $dialog_add" --backtitle "$core_system_name $core_system_version" --default-item "${user}" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file "${user_path}"/msig_users.tmp)
+																		rt_query=$?
+																	fi
+																	if [ "$rt_query" -eq 1 ] && [ "$(wc -l <"${user_path}"/msig_users.tmp)" -lt 10 ] && [ "$(wc -l <"${user_path}"/msig_keys.tmp)" -gt 0 ]
+																	then
+																		###SHOW LIST OF USERS TO ADD FOR MULTI-SIGNATURE###############
+																		user_to_add=$(dialog --ok-label "$dialog_add" --cancel-label "$dialog_main_back" --title "$dialog_main_create : MULTI SIGNATURE : $dialog_add" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file "${user_path}"/msig_keys.tmp)
+																		rt_query=$?
+																		if [ "$rt_query" -eq 0 ]
+																		then
+																			###CHECK IF FILE NEEDS TO BE PURGED############################
+																			if [ "$(head -1 "${user_path}/msig_users.tmp")" = "0" ]
+																			then
+																				rm "${user_path}/msig_users.tmp"
+																				touch "${user_path}/msig_users.tmp"
+																			fi
+																			###CHECK IF USER HAS ALREADY BEEN ADDED########################
+																			if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
+																			then
+																				echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
+																				sed -i."${my_pid}".bak "/${user_to_add}/d" "${user_path}"/msig_keys.tmp && rm "${user_path}"/msig_keys.tmp."${my_pid}".bak 2>/dev/null
+																			fi
+																		fi
+																	else
+																		if [ "$rt_query" -eq 0 ] && [ ! "$user_to_add" = "0" ]
+																		then
+																			add_multi_sig_user=1
+																			multi_sig_loop=1
+
+																			###ASSIGN LIST OF KEYS TO VARIABLE#############################
+																			multi_sig_keys=$(awk '{print ":MSIG:" $1}' "${user_path}/msig_users.tmp")
+
+																			###WRITE FILE INDICATING A MULTI-SIGNATURE KEY#################
+																			login_password=$create_password
+																			handover_account=$create_name_hashed
+																			make_signature "$multi_sig_keys" "none" 2
+																			rt_query=$?
+																		else
+																			if [ "$rt_query" -eq 2 ]
+																			then
+																				add_multi_sig_user=1
+																			fi
+																		fi
+																	fi
+																done
+																rm "${user_path}"/msig_keys.tmp
+																rm "${user_path}"/msig_users.tmp
+															else
+																multi_sig_loop=1
+																rt_query=0
+															fi
+														done
 														break
 													else
 														rt_query=1
@@ -284,6 +378,31 @@ create_keys(){
 		fi
 		if [ "$rt_query" -eq 0 ]
 		then
+			###WRITE ENTRY INTO ACCOUNTS.DB#####################################
+			name_hash=$(echo "${create_name}"|sha224sum)
+			name_hash=${name_hash%% *}
+			echo "${name_hash}" >>"${script_path}"/control/accounts.db
+
+			###MAKE PROOFS DIRECTORY############################################
+			mkdir "${script_path}"/proofs/"${create_name_hashed}"
+
+			###COPY MULTI SIG FILE IF PRESENT###################################
+			if [ -s "${user_path}"/multi.sig ]
+			then
+				cp "${user_path}"/multi.sig "${script_path}"/proofs/"${create_name_hashed}"/multi.sig
+			fi
+
+			###COPY TSA FILES###################################################
+			for tsa_query in $(ls -1 "${user_path}/"|grep ".tsq")
+			do
+				file_base=$(basename "${tsa_query}")
+				if [ -f "${user_path}/${file_base}.tsq" ] && [ -s "${user_path}/${file_base}.tsq" ] && [ -f "${user_path}/${file_base}.tsr" ] && [ -s "${user_path}/${file_base}.tsr" ]
+				then
+					cp "${user_path}/${file_base}.tsq" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsq"
+					cp "${user_path}/${file_base}.tsr" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsr"
+				fi
+			done
+
 			###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
 			cp "${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc" "${script_path}/keys/${create_name_hashed}"
 
@@ -293,11 +412,6 @@ create_keys(){
 			###WRITE SECRETS####################################################
 			echo "${random_secret}" >"${user_path}/${create_name_hashed}.sct"
 			echo "${verify_secret}" >"${user_path}/${create_name_hashed}.scv"
-
-			###WRITE ENTRY INTO ACCOUNTS.DB#####################################
-			name_hash=$(echo "${create_name}"|sha224sum)
-			name_hash=${name_hash%% *}
-			echo "${name_hash}" >>"${script_path}"/control/accounts.db
 
 			###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
 			cp "${user_path}/${create_name_hashed}.sct" "${script_path}/control/keys/${create_name_hashed}.sct"
@@ -337,8 +451,8 @@ create_keys(){
 
 					###REMOVE KEYS FROM KEYRING##################################
 					key_fp=$(gpg --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-keys "${create_name_hashed}"|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
-					rt_query=$?
-					if [ "$rt_query" -eq 0 ]
+					rt_code=$?
+					if [ "$rt_code" -eq 0 ]
 					then
 						gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-secret-keys "${key_fp}" 2>/dev/null
 						gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-keys "${key_fp}" 2>/dev/null
@@ -353,72 +467,90 @@ create_keys(){
 		return $rt_query
 }
 make_signature(){
-			transaction_message=$1
+			write_message=$1
 			trx_now=$2
-			create_index_file=$3
+			signature_mode=$3
+
+			###SET DEFAULT VALUES############################################
+			rt_query=0
+			message_blank="${user_path}"/message_blank.dat
+			touch "${message_blank}"
 
 			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
-			if [ "$create_index_file" -eq 0 ]
-			then
-				###IF NOT WRITE TRX MESSAGE TO FILE##############################
-				message="${script_path}/trx/${handover_account}.${trx_now}"
-				message_blank="${user_path}"/message_blank.dat
-				touch "${message_blank}"
-				printf "%b" "${transaction_message}" >>"${message_blank}"
-			else
-				###IF YES WRITE INDEX############################################
-				message="${script_path}/proofs/${handover_account}/${handover_account}.txt"
-				message_blank="${user_path}"/message_blank.dat
-				touch "${message_blank}"
+			case "$signature_mode" in
+				0)	###WRITE TRX MESSAGE#############################################
+					message="${script_path}/trx/${handover_account}.${trx_now}"
+					printf "%b" "${write_message}" >>"${message_blank}"
+					;;
+				1)	###INDEX FILE####################################################
+					message="${script_path}/proofs/${handover_account}/${handover_account}.txt"
 
-				###WRITE ASSETS TO INDEX FILE####################################
-				for asset in $(cat "${user_path}"/all_assets.dat)
-				do
-					asset_hash=$(sha256sum "${script_path}/assets/${asset}")
-					asset_hash=${asset_hash%% *}
-					echo "assets/${asset} ${asset_hash}" >>"${message_blank}"
-				done
-
-				for key_file in $(cat "${user_path}"/all_accounts.dat)
-				do
-					###WRITE KEYFILE TO INDEX FILE###################################
-					key_hash=$(sha256sum "${script_path}/keys/${key_file}")
-					key_hash=${key_hash%% *}
-					echo "keys/${key_file} ${key_hash}" >>"${message_blank}"
-
-					###ADD TSA FILES#################################################
-					for tsa_file in $(ls -1 "${script_path}/proofs/${key_file}"/*.ts*)
+					###WRITE ASSETS TO INDEX FILE####################################
+					for asset in $(cat "${user_path}"/all_assets.dat)
 					do
-						file=$(basename "${tsa_file}")
-						file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${file}")
-						file_hash=${file_hash%% *}
-						echo "proofs/${key_file}/${file} ${file_hash}" >>"${message_blank}"
+						asset_hash=$(sha256sum "${script_path}/assets/${asset}")
+						asset_hash=${asset_hash%% *}
+						echo "assets/${asset} ${asset_hash}" >>"${message_blank}"
 					done
 
-					###ADD INDEX FILE IF EXISTING####################################
-					if [ -f "${script_path}/proofs/${key_file}/${key_file}.txt" ] && [ -s "${script_path}/proofs/${key_file}/${key_file}.txt" ]
-					then
-						file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${key_file}.txt")
-						file_hash=${file_hash%% *}
-						echo "proofs/${key_file}/${key_file}.txt ${file_hash}" >>"${message_blank}"
-					fi
-				done
+					for key_file in $(cat "${user_path}"/all_accounts.dat)
+					do
+						###WRITE KEYFILE TO INDEX FILE###################################
+						key_hash=$(sha256sum "${script_path}/keys/${key_file}")
+						key_hash=${key_hash%% *}
+						echo "keys/${key_file} ${key_hash}" >>"${message_blank}"
 
-				####WRITE TRX LIST TO INDEX FILE#################################
-				cat "${user_path}"/*_index_trx.dat >>"${message_blank}" 2>/dev/null
-			fi
+						###ADD TSA FILES#################################################
+						for tsa_file in $(ls -1 "${script_path}/proofs/${key_file}"/*.ts*)
+						do
+							file=$(basename "${tsa_file}")
+							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${file}")
+							file_hash=${file_hash%% *}
+							echo "proofs/${key_file}/${file} ${file_hash}" >>"${message_blank}"
+						done
 
-			###SIGN FILE#####################################################
-			echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user "${handover_account}" --clearsign "${message_blank}" 2>/dev/null
-			rt_query=$?
+						###ADD INDEX FILE IF EXISTING####################################
+						if [ -f "${script_path}/proofs/${key_file}/${key_file}.txt" ] && [ -s "${script_path}/proofs/${key_file}/${key_file}.txt" ]
+						then
+							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${key_file}.txt")
+							file_hash=${file_hash%% *}
+							echo "proofs/${key_file}/${key_file}.txt ${file_hash}" >>"${message_blank}"
+						fi
+
+						###ADD INDEX FILE IF EXISTING####################################
+						if [ -f "${script_path}/proofs/${key_file}/multi.sig" ] && [ -s "${script_path}/proofs/${key_file}/multi.sig" ]
+						then
+							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/multi.sig")
+							file_hash=${file_hash%% *}
+							echo "proofs/${key_file}/multi.sig ${file_hash}" >>"${message_blank}"
+						fi
+					done
+
+					####WRITE TRX LIST TO INDEX FILE#################################
+					cat "${user_path}"/*_index_trx.dat >>"${message_blank}" 2>/dev/null
+					;;
+				2)	###WRITE MULTI SIG USER##########################################
+					message="${user_path}/multi.sig"
+					printf "%b" "${write_message}" >>"${message_blank}"
+					;;
+				*)	rt_query=1
+					;;
+			esac
+
 			if [ "$rt_query" -eq 0 ]
 			then
-				mv "${message_blank}".asc "${message}"
-			fi
+				###SIGN FILE#####################################################
+				echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --digest-algo SHA512 --local-user "${handover_account}" --clearsign "${message_blank}" 2>/dev/null
+				rt_query=$?
+				if [ "$rt_query" -eq 0 ]
+				then
+					mv "${message_blank}".asc "${message}"
+				fi
 
-			###PURGE FILES###################################################
-			rm "${message_blank}" 2>/dev/null
-			rm "${message_blank}".asc 2>/dev/null
+				###PURGE FILES###################################################
+				rm "${message_blank}" 2>/dev/null
+				rm "${message_blank}".asc 2>/dev/null
+			fi
 
 			return $rt_query
 }
@@ -690,7 +822,7 @@ build_ledger(){
 				skip=0
 				ignore=1
 				is_fungible=0
-				
+
 				###GET MSG TYPE OF TRX#####################################
 				trx_msg_type=$(awk -F: '/:TYPE:/{print $3}' "${script_path}/trx/${trx_filename}")
 				if [ -z "$trx_msg_type" ]
@@ -866,6 +998,11 @@ check_archive(){
 												file_full=${line#*/*/}
 												file_ext=${file_full#*.}
 												case "$file_ext" in
+													"sig")	if [ "${file_full}" = "multi.sig" ]
+														then
+															echo "$line" >>"${user_path}"/files_to_fetch.tmp
+														fi
+														;;
 													"tsq")	tsa_name=${file_full%%.*}
 														for tsa_service in $(ls -1 "${script_path}"/certs)
 														do
@@ -981,7 +1118,7 @@ check_assets(){
 					if [ "$stamp_only_digits" -eq 0 ] && [ "$stamp_size" -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ "$(echo "${asset_description}"|grep -c -v '[a-zA-Z0-9%]')" -eq 0 ] && [ -n "${asset_fungible}" ]
+						if [ "$(echo "${asset_description}"|grep -c '[^a-zA-Z0-9%]')" -eq 0 ] && [ -n "${asset_fungible}" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo "$asset_symbol"|grep -c '[^[:alnum:]]')
@@ -1017,7 +1154,7 @@ check_assets(){
 										asset_owner_ok=1
 									fi
 								fi
-								if [ "$asset_owner_ok" -eq 1 ] && [ "$(printf "%s" "${check_value}"|grep -c -v '[0-9.]')" -eq 0 ]
+								if [ "$asset_owner_ok" -eq 1 ] && [ "$(printf "%s" "${check_value}"|grep -c '[^0-9.]')" -eq 0 ]
 								then
 									###CHECK ASSET PRICE###################################
 									rt_query=0
@@ -1536,13 +1673,23 @@ check_keys(){
 		for account in $(cat "${user_path}"/all_keys.dat)
 		do
 			index_file="${script_path}/proofs/${account}/${account}.txt"
-			if [ -f "$index_file" ] && [ -s "$index_file" ]
+			if [ -f "${index_file}" ] && [ -s "${index_file}" ]
 			then
-				verify_signature "$index_file" "$account"
+				verify_signature "${index_file}" "${account}"
 				rt_query=$?
 				if [ "$rt_query" -gt 0 ]
 				then
-					rm "${script_path}/proofs/${account}/${account}.txt" 2>/dev/null
+					rm "${index_file}" 2>/dev/null
+				fi
+			fi
+			msig_file="${script_path}/proofs/${account}/multi.sig"
+			if [ -f "${msig_file}" ] && [ -s "${msig_file}" ]
+			then
+				verify_signature "${msig_file}" "${account}"
+				rt_query=$?
+				if [ "$rt_query" -gt 0 ]
+				then
+					rm "${msig_file}" 2>/dev/null
 				fi
 			fi
 		done
@@ -1582,7 +1729,7 @@ check_mt(){
 		do
 			msg_type_ack=0
 			msg_type=${line%%.*}
-			
+
 			###CHECK NAMING CONVENTION##############################
 			if [ -z "$(echo "$msg_type"|grep '[^[:digit:]]')" ]
 			then
@@ -1815,6 +1962,23 @@ process_new_files(){
 					fi
 				done
 				rm "${user_path}"/asset_list.tmp 2>/dev/null
+
+				###GO THROUGH MULTI SIG FILES ONE BY ONE########
+				for multi_sig_file in $(grep "multi.sig" "${user_path}"/files_to_fetch.tmp)
+				do
+					if [ -f "${multi_sig_file}" ] && [ -s "${multi_sig_file}" ]
+					then
+						user_to_verify=$(dirname "${user_path}/temp/${multi_sig_file}")
+						user_to_verify=$(basename "${user_to_verify}")
+						###VERIFY SIGNATURE OF USER#########################
+						verify_signature "${user_path}/temp/${multi_sig_file}" "${user_to_verify}"
+						rt_query=$?
+						if [ "$rt_query" -gt 0 ]
+						then
+							echo "${multi_sig_file}" >>"${user_path}"/remove_list.tmp
+						fi
+					fi
+				done
 
 				###UPDATE LIST OF FILES TO FETCH##############
 				sort "${user_path}"/remove_list.tmp "${user_path}"/files_to_fetch.tmp|uniq -u >"${user_path}"/temp_filelist.tmp
@@ -2074,8 +2238,32 @@ get_dependencies(){
 			if [ "$only_process_depend" -eq 1 ]
 			then
 				counter=1
+
+				###ADD OWN USER###############################################################
 				echo "${handover_account}" >"${user_path}"/depend_accounts.dat
 				grep "${handover_account}" "${user_path}"/all_trx.dat >"${user_path}"/depend_trx.dat
+
+				###ADD MULTI SIGNATURE USERS OF USER##########################################
+				if [ -s "${script_path}/proofs/${handover_account}/multi.sig" ]
+				then
+					awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${handover_account}/multi.sig" >>"${user_path}"/depend_accounts.dat
+				fi
+
+				###ADD MULTI SIGNATURE USERS##################################################
+				grep -s -l "${handover_account}" "${script_path}"/proofs/*/multi.sig >"${user_path}"/msig_others.tmp
+				while read line
+				do
+					directory=$(dirname "${line}")
+					user=$(basename "${directory}")
+					echo "$user" >>"${user_path}"/depend_accounts.dat
+				done <"${user_path}"/msig_others.tmp
+				rm "${user_path}"/msig_others.tmp
+
+				###REMOVE DOUBLE ENTRIES######################################################
+				sort -u "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
+				mv "${user_path}"/depend_accounts.tmp "${user_path}"/depend_accounts.dat
+
+				###UNCOVER DEPENDENCIES BETWEEN USERS AND THEIR TRANSACTIONS##################
 				while [ "$counter" -le "$(wc -l <"${user_path}"/depend_accounts.dat)" ]
 				do
 					user=$(head -"$counter" "${user_path}"/depend_accounts.dat|tail -1)
@@ -2530,7 +2718,7 @@ import_fungible_assets=0
 import_non_fungible_assets=0
 initial_coinload=365250
 check_period_tsa=21600
-trx_max_size_bytes=3204
+trx_max_size_bytes=3771
 trx_max_size_purpose_bytes=1024
 asset_max_size_bytes=24734
 asset_max_size_description_bytes=8192
@@ -2560,6 +2748,25 @@ script_path=$(dirname "$(readlink -f "${0}")")
 my_pid=$$
 gui_mode=1
 observer=0
+extract_all=0
+debug=0
+
+###SET CMD VARIABLES########
+cmd_action=""
+cmd_user=""
+cmd_pin=""
+cmd_pw=""
+cmd_sender=""
+cmd_receiver=""
+cmd_amount=""
+cmd_asset=""
+cmd_message_type=100
+cmd_msig=""
+cmd_purpose=""
+cmd_type=""
+cmd_path=""
+cmd_file=""
+cmd_config=""
 
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
@@ -2587,19 +2794,6 @@ then
 	###IF ANY VARIABLES ARE HANDED OVER SET INITAL VALUES##########
 	main_menu=$dialog_main_logon
 	cmd_var=""
-	cmd_action=""
-	cmd_user=""
-	cmd_pin=""
-	cmd_pw=""
-	cmd_sender=""
-	cmd_receiver=""
-	cmd_amount=""
-	cmd_asset=""
-	cmd_purpose=""
-	cmd_type=""
-	cmd_path=""
-	cmd_file=""
-	cmd_config=""
 
 	###GO THROUGH PARAMETERS ONE BY ONE############################
 	while [ $# -gt 0 ]
@@ -2626,6 +2820,10 @@ then
 					;;
 			"-asset")	cmd_var=$1
 					;;
+			"-message_type")cmd_var=$1
+					;;
+			"-msig")	cmd_var=$1
+					;;
 			"-purpose")	cmd_var=$1
 					;;
 			"-type")	cmd_var=$1
@@ -2636,7 +2834,8 @@ then
 					;;
 			"-config")	cmd_var=$1
 					;;
-			"-debug")	set -x
+			"-debug")	debug=1
+					set -x
 					set -v
 					;;
 			"-version")	echo "version:${core_system_version}"
@@ -2662,6 +2861,10 @@ then
 												;;
 									"show_trx")		main_menu=$cmd_action
 												;;
+									"sign")			main_menu=$dialog_main_logon
+												;;
+									"decline")		main_menu=$dialog_main_logon
+												;;
 									"create_sync")		user_menu=$dialog_sync
 												;;
 									"read_sync")		user_menu=$dialog_sync
@@ -2669,6 +2872,8 @@ then
 									"sync_uca")		user_menu=$dialog_uca
 												;;
 									"show_addressbook")	main_menu=$cmd_action
+												;;
+									"show_msig_trx")	main_menu=$cmd_action
 												;;
 									"show_balance")		main_menu=$dialog_main_logon
 												observer=1
@@ -2695,6 +2900,10 @@ then
 						"-amount")	cmd_amount=$1
 								;;
 						"-asset")	cmd_asset=$1
+								;;
+						"-message_type")cmd_message_type=$1
+								;;
+						"-msig")	cmd_msig="${cmd_msig}$1\n"
 								;;
 						"-purpose")	cmd_purpose=$1
 								;;
@@ -3142,7 +3351,7 @@ do
 							then
 								cd "${script_path}" || exit 13
 								now_stamp=$(date +%s)
-								tar -czf "${script_path}/backup/${now_stamp}.bcp" assets/ control/ keys/ mt/ trx/ proofs/ userdata/ --dereference --hard-dereference
+								tar -czf "${script_path}/backup/${now_stamp}.bcp" assets/ control/ keys/ trx/ proofs/ userdata/ --dereference --hard-dereference
 								rt_query=$?
 								if [ "$rt_query" -eq 0 ]
 								then
@@ -3248,56 +3457,150 @@ do
 				"show_addressbook")	ls -1 "${script_path}"/keys/|awk '{ print "ADDRESS:" $1 }'
 							exit 0
 							;;
-				"show_trx")		rt_code=0
-							for trx in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1Xr "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
-							do
-								if [ -f "${trx}" ] && [ -s "${trx}" ]
-								then
-									sender=$(awk -F: '/:SNDR:/{print $3}' "${trx}")
-									receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx}")
-									if [ -n "${sender}" ] && [ -n "${receiver}" ]
-									then
-										signature="ERROR_VERIFY_SIGNATURE"
-										gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx}" >"${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
-										rt_query=$?
-										if [ "$rt_query" -eq 0 ]
+				"show_msig_trx")	if [ -n "${cmd_sender}" ]
+							then
+								trx_list=""
+
+								###GO THROUGH TRANSACTIONS WITH MULTI SIG ENTRIES########################
+								for trx in $(grep -s -l "MSIG:${cmd_sender}" "${script_path}"/trx/*)
+								do
+									trx_name=$(basename "${trx}")
+									trx_list="${trx_list}${trx_name}\n"
+								done
+
+								###GO THROUGH WALLETS WITH MULTI SIG ENTRIES#############################
+								for wallet in $(grep -s -l "MSIG:${cmd_sender}" "${script_path}"/proofs/*/multi.sig)
+								do
+									wallet_path=$(dirname "${wallet}")
+									wallet_user=$(basename "${wallet_path}")
+
+									###GO THROUGH THE TRANSACTIONS OF THE WALLET###########################
+									for trx in $(grep -s -l ":SNDR:${wallet_user}" "${script_path}/trx/${wallet_user}".*)
+									do
+										trx_name=$(basename "${trx}")
+
+										###CHECK IF SENDER HAS A INDEX FILE TO CHECK WHICH TRX ARE SIGNED######
+										if [ -f "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt" ] && [ -s "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt" ]
 										then
-											signed_correct=$(grep "GOODSIG" "${script_path}/gpg_${my_pid}_verify.tmp"|grep -c "${sender}")
-											if [ "$signed_correct" -ge 1 ]
+											if [ "$(grep -c "${trx_name}" "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt")" -eq 0 ]
 											then
-												trx_file=$(basename "${trx}")
-												if [ "${trx_file%%.*}" = "${sender}" ]
-												then
-													signature="OK"
-												fi
+												trx_list="${trx_list}${trx_name}\n"
 											fi
 										else
-											rt_code=1
+											trx_list="${trx_list}${trx_name}\n"
 										fi
-										trx_hash=$(sha256sum "${trx}")
-										trx_hash=${trx_hash%% *}
-										amount=$(awk -F: '/:AMNT:/{print $3}' "${trx}")
-										asset=$(awk -F: '/:ASST:/{print $3}' "${trx}")
-										trx=$(basename "${trx}")
-										trx_stamp=${trx#*.}
-										confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
-										index="ERROR_NOT_INDEXED"
-										is_indexed=$(grep -c "trx/${trx} ${trx_hash}" "${script_path}/proofs/${sender}/${sender}.txt")
-										if [ "$is_indexed" -gt 0 ]
+									done
+								done
+
+								###OUTPUT TRANSACTIONS IF THERE ARE ANY##################################
+								if [ -n "${trx_list}" ]
+								then
+									printf "%b" "${trx_list}"|awk '{print "TRX:" $1}'
+								fi
+								exit 0
+							else
+								exit 2
+							fi
+							;;
+				"show_trx")		rt_code=0
+							###FILTER TRANSACTIONS########################################
+							for trx_file in $(grep -l ":ASST:${cmd_asset}" /dev/null $(grep -l ":RCVR:${cmd_receiver}" /dev/null $(ls -1Xr "${script_path}"/trx/* 2>/dev/null|grep "${cmd_sender}"|grep "${cmd_file}")))
+							do
+								###ONLY CONTINUE IF FILE EXISTS###############################
+								if [ -f "${trx_file}" ] && [ -s "${trx_file}" ]
+								then
+									###GET MESSAGE TYPE MT########################################
+									trx=$(basename "${trx_file}")
+									trx_mt=$(grep ":TYPE:" "${trx_file}")
+									if [ -n "${trx_mt}" ]
+									then
+										trx_mt=${trx_mt#:*:*}
+									else
+										trx_mt=100
+									fi
+
+									###FILTER PER MESSAGE TYPE####################################
+									if [ "${trx_mt}" = "${cmd_message_type}" ]
+									then
+										###EXTRACT SENDER AND RECEIVER OF TRX#########################
+										trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${trx_file}")
+										trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx_file}")
+										if [ -n "${trx_sender}" ] && [ -n "${trx_receiver}" ]
 										then
-											index="OK"
+											###VERIFY TRANSACTION SIGNATURE###############################
+											trx_signature="ERROR_VERIFY_SIGNATURE"
+											gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx_file}" >"${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
+											rt_query=$?
+											if [ "$rt_query" -eq 0 ]
+											then
+												###CHECK IF SENDER MATCHES SIGNER#############################
+												signed_correct=$(grep "GOODSIG" "${script_path}/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
+												if [ "$signed_correct" -ge 1 ]
+												then
+													trx=$(basename "${trx_file}")
+													if [ "${trx%%.*}" = "${trx_sender}" ]
+													then
+														trx_signature="OK"
+													fi
+												fi
+											else
+												rt_code=1
+											fi
+
+											###GET TRX HASH###############################################
+											trx_hash=$(sha256sum "${trx_file}")
+											trx_hash=${trx_hash%% *}
+
+											###EXTRACT VALUES#############################################
+											trx_stamp=${trx_file#*.}
+											trx_amount=$(awk -F: '/:AMNT:/{print $3}' "${trx_file}")
+											trx_asset=$(awk -F: '/:ASST:/{print $3}' "${trx_file}")
+											trx_confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+
+											###CHECK IF INDEXED BY OWNER##################################
+											trx_index="ERROR_NOT_INDEXED"
+											if [ "$(grep -c "trx/${trx} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")" -gt 0 ]
+											then
+												trx_index="OK"
+											fi
+
+											###CHECK IF MULTI SIGNATURE WALLET AND CALCULATE SIGNERS######
+											trx_multi_sig=0
+											if [ -f "${script_path}/proofs/${trx_sender}/multi.sig" ] && [ -s "${script_path}/proofs/${trx_sender}/multi.sig" ]
+											then
+												gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}/proofs/${trx_sender}/multi.sig" >/dev/null 2>/dev/null
+												rt_query=$?
+												if [ "$rt_query" -eq 0 ]
+												then
+													signed_correct=$(grep "GOODSIG" "${script_path}/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
+													if [ "$signed_correct" -ge 1 ]
+													then
+														trx_multi_sig=$(grep -c ":MSIG:" "${script_path}/proofs/${trx_sender}/multi.sig")
+													fi
+												else
+													rt_code=1
+												fi
+											fi
+
+											###CHECK IF MULTI SIGNATURE TRX AND CALCULATE SIGNERS#########
+											number_signers=$(grep -c ":MSIG:" "${trx_file}")
+											trx_multi_sig=$(( trx_multi_sig + number_signers ))
+
+											###DISPLAY OUTPUT#############################################
+											echo "TRX_FILE    :trx/${trx}"
+											echo "TRX_SHA256  :${trx_hash}"
+											echo "TRX_MSG_TYPE:${trx_mt}"
+											echo "TRX_TIME    :${trx_stamp}"
+											echo "TRX_SENDER  :${trx_sender}"
+											echo "TRX_RECEIVER:${trx_receiver}"
+											echo "TRX_AMOUNT  :${trx_amount}"
+											echo "TRX_ASSET   :${trx_asset}"
+											echo "TRX_SIG     :${trx_signature}"
+											echo "TRX_INDEX   :${trx_index}"
+											echo "TRX_MSIG    :${trx_multi_sig}"
+											echo "TRX_CONFIRMS:${trx_confirmations}"
+											rm "${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
 										fi
-										echo "TRANSACTION  :trx/${trx}"
-										echo "SHA256_HASH  :${trx_hash}"
-										echo "TRX_STAMP    :${trx_stamp}"
-										echo "TRX_SENDER   :${sender}"
-										echo "TRX_RECEIVER :${receiver}"
-										echo "TRX_AMOUNT   :${amount}"
-										echo "TRX_ASSET    :${asset}"
-										echo "SIGNATURE    :${signature}"
-										echo "STATUS_INDEX :${index}"
-										echo "CONFIRMATIONS:${confirmations}"
-										rm "${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
 									fi
 								fi
 							done
@@ -3343,14 +3646,16 @@ do
 			if [ "$make_ledger" -eq 1 ]
 			then
 				build_ledger "$ledger_mode"
+				rt_query=0
 				if [ "$make_new_index" -eq 1 ] && [ "$observer" -eq 0 ]
 				then
 					now_stamp=$(date +%s)
 					make_signature "none" "$now_stamp" 1
+					rt_query=0
 				fi
-				if [ "${cmd_action}" = "show_balance" ]
+				if [ "${cmd_action}" = "show_balance" ] || [ "${cmd_action}" = "sign" ] || [ "${cmd_action}" = "decline" ]
 				then
-					exit 0
+					exit $rt_query
 				else
 					if [ "$observer" -eq 1 ]
 					then
@@ -3448,6 +3753,102 @@ do
 							fi
 							if [ "$rt_query" -eq 0 ]
 							then
+								###MULTI SIGNATURE PART FOLLOWING########################
+								multi_sig_loop=0
+								while [ "$multi_sig_loop" -eq 0 ]
+								do
+									if [ "$gui_mode" -eq 1 ]
+									then
+										###ASK IF MULTI SIGNATURE OR NOT#########################
+										dialog --yes-label "$dialog_yes" --no-label "$dialog_no" --title "$dialog_send" --backtitle "$core_system_name $core_system_version" --yesno "MULTI-SIGNATURE?" 0 0
+										rt_query=$?
+									else
+										###SKIP MULTI SIG IF MSIG PARAMETER HAS NOT BEEN SET#####
+										if [ -z "${cmd_msig}" ]
+										then
+											rt_query=1
+										fi
+									fi
+									if [ "$rt_query" -eq 0 ]
+									then
+										multi_sig_keys=""
+										###WRITE LISTS###########################################
+										ls -1 "${script_path}"/keys|grep -v "${handover_account}" >"${user_path}"/msig_keys.tmp
+										if [ "$gui_mode" -eq 1 ]
+										then
+											echo "0" >"${user_path}"/msig_users.tmp
+										else
+											if [ "$(printf "%b" "${cmd_msig}"|sort -u|grep -v "^$"|grep -f "${user_path}"/msig_keys.tmp -)" = "$(printf "%b" "${cmd_msig}"|sort -u)" ]
+											then
+												if [ "$(printf "%b" "${cmd_msig}"|wc -l)" -le 10 ]
+												then
+													printf "%b" "${cmd_msig}" >"${user_path}"/msig_users.tmp
+												else
+													exit 16
+												fi
+											else
+												exit 2
+											fi
+										fi
+										###LOOP TO ADD USERS FOR MULTI SIGNATURE#################
+										add_multi_sig_user=0
+										while [ "$add_multi_sig_user" -eq 0 ]
+										do
+											user_to_add=""
+											if [ "$gui_mode" -eq 1 ]
+											then
+												###ADDED USERS OVERVIEW########################################
+												user_to_add=$(dialog --ok-label "$dialog_next" --help-button --help-label "$dialog_main_back" --cancel-label "$dialog_add" --title "$dialog_send : MULTI SIGNATURE : $dialog_add" --backtitle "$core_system_name $core_system_version" --default-item "${user}" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file "${user_path}"/msig_users.tmp)
+												rt_query=$?
+											fi
+											if [ "$rt_query" -eq 1 ] && [ "$(wc -l <"${user_path}"/msig_users.tmp)" -lt 10 ]
+											then
+												###SHOW LIST OF USERS TO ADD FOR MULTI-SIGNATURE###############
+												user_to_add=$(dialog --ok-label "$dialog_add" --cancel-label "$dialog_main_back" --title "$dialog_send : MULTI SIGNATURE : $dialog_add" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --scrollbar --menu "$dialog_overview:" 0 0 0 --file "${user_path}"/msig_keys.tmp)
+												rt_query=$?
+												if [ "$rt_query" -eq 0 ]
+												then
+													###CHECK IF FILE NEEDS TO BE PURGED############################
+													if [ "$(head -1 "${user_path}/msig_users.tmp")" = "0" ]
+													then
+														rm "${user_path}/msig_users.tmp"
+														touch "${user_path}/msig_users.tmp"
+													fi
+													###CHECK IF USER HAS ALREADY BEEN ADDED########################
+													if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
+													then
+														echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
+														sed -i."${my_pid}".bak "/${user_to_add}/d" "${user_path}"/msig_keys.tmp && rm "${user_path}"/msig_keys.tmp."${my_pid}".bak 2>/dev/null
+													fi
+												fi
+											else
+												if [ "$rt_query" -eq 0 ] && [ ! "$user_to_add" = "0" ]
+												then
+													add_multi_sig_user=1
+													multi_sig_loop=1
+													is_multi_sig=1
+
+													###ASSIGN LIST OF KEYS TO VARIABLE#############################
+													multi_sig_keys=$(awk '{print ":MSIG:" $1}' "${user_path}/msig_users.tmp")
+													if [ -n "${multi_sig_keys}" ]
+													then
+														multi_sig_keys="${multi_sig_keys}\n"
+													fi
+												else
+													if [ "$rt_query" -eq 2 ]
+													then
+														add_multi_sig_user=1
+													fi
+												fi
+											fi
+										done
+										rm "${user_path}"/msig_keys.tmp
+										rm "${user_path}"/msig_users.tmp
+									else
+										multi_sig_loop=1
+										rt_query=0
+									fi
+								done				
 								currency_symbol=$order_asset
 								asset_found=1
 								receiver_found=0
@@ -3738,7 +4139,7 @@ do
 										if [ "$rt_query" -eq 0 ]
 										then
 											trx_now=$(date +%s.%3N)
-											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
+											make_signature ":TIME:${trx_now}\n:AMNT:${order_amount_formatted}\n:ASST:${order_asset}\n${multi_sig_keys}:SNDR:${handover_account}\n:RCVR:${order_receiver}\n:PRPK:\n${order_purpose_key}\n:PRPS:\n${order_purpose_encrypted}" "${trx_now}" 0
 											rt_query=$?
 											if [ "$rt_query" -eq 0 ]
 											then
@@ -3793,6 +4194,10 @@ do
 																	then
 																		echo "proofs/${line}/${line}.txt"
 																	fi
+																	if [ -f "${script_path}/proofs/${line}/multi.sig" ] && [ -s "${script_path}/proofs/${line}/multi.sig" ]
+																	then
+																		echo "proofs/${line}/multi.sig"
+																	fi
 																done <"${user_path}"/depend_accounts.dat
 
 																###GET TRX###################################################################
@@ -3820,6 +4225,10 @@ do
 																	if [ -f "${script_path}/proofs/${line}/${line}.txt" ] && [ -s "${script_path}/proofs/${line}/${line}.txt" ]
 																	then
 																		echo "proofs/${line}/${line}.txt"
+																	fi
+																	if [ -f "${script_path}/proofs/${line}/multi.sig" ] && [ -s "${script_path}/proofs/${line}/multi.sig" ]
+																	then
+																		echo "proofs/${line}/multi.sig"
 																	fi
 																done <"${user_path}"/depend_accounts.dat
 
@@ -3849,11 +4258,15 @@ do
 														fi
 														if [ "$rt_query" -eq 0 ]
 														then
-															###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
-															###SET BALANCE################################################################
-															account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
-															sed -i."$my_pid".bak "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" && rm "${user_path}/${now}_ledger.dat.${my_pid}.bak" 2>/dev/null
-															##############################################################################
+															###ONLY REDUCE BALANCE WHEN ITS NOT A MULTI SIG TRX OR WALLET#################
+															if [ "$is_multi_sig" -eq 0 ]
+															then
+																###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
+																###SET BALANCE################################################################
+																account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
+																sed -i."$my_pid".bak "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" && rm "${user_path}/${now}_ledger.dat.${my_pid}.bak" 2>/dev/null
+																##############################################################################
+															fi
 
 															###WRITE ENTRIES TO FILES#####################################################
 															echo "${handover_account}.${trx_now}" >>"${user_path}"/all_trx.dat
@@ -4097,14 +4510,7 @@ do
 				 			       				dialog --yes-label "$dialog_sync_add_yes" --no-label "$dialog_sync_add_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --yesno "$dialog_sync_add" 0 0
 											all_extract=$?
 										else
-											case "$cmd_type" in
-												"partial")	all_extract=0
-														;;
-												"full")		all_extract=1
-														;;
-												*)		exit 16
-														;;
-											esac
+											all_extract=$extract_all
 										fi
 										if [ "$all_extract" -ne 255 ]
 										then
@@ -4210,6 +4616,10 @@ do
 										if [ -f "${script_path}/proofs/${user}/${user}.txt" ] && [ -s "${script_path}/proofs/${user}/${user}.txt" ]
 										then
 											echo "proofs/${user}/${user}.txt"
+										fi
+										if [ -f "${script_path}/proofs/${user}/multi.sig" ] && [ -s "${script_path}/proofs/${user}/multi.sig" ]
+										then
+											echo "proofs/${user}/multi.sig"
 										fi
 									done <"${accounts_list}"
 
@@ -4579,11 +4989,22 @@ do
 
 															###SET DEFAULT-ITEM OF DIALOG MENU#######################
 															def_string_trx=$(head -1 "${user_path}"/dialog_browser_trx.tmp)
+															
+															###CHECK IF MULTI-SIGNATURE##############################
+															multi_sig_string=""
+															if [ -f "${script_path}/proofs/${user}/multi.sig" ] && [ -s "${script_path}/proofs/${user}/multi.sig" ]
+															then
+																multi_sig_string=$(grep ":MSIG:" "${script_path}/proofs/${user}/multi.sig"|cut -d ':' -f3)
+															fi
+															if [ -n "${multi_sig_string}" ]
+															then
+																multi_sig_string="MULTI-SIGNATURE:\n${multi_sig_string}"
+															fi
 
 															quit_trx_menu=0
 															while [ "$quit_trx_menu" -eq 0 ]
 															do
-																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "$user:" 0 0 0 --file "${user_path}"/dialog_browser_trx.tmp)
+																selected_trx=$(dialog --ok-label "$dialog_show" --cancel-label "$dialog_main_back" --default-item "$def_string_trx" --title "$dialog_browser : $dialog_trx" --backtitle "$core_system_name $core_system_version" --no-items --output-fd 1 --no-hot-list --scrollbar --menu "${user}\n${multi_sig_string}:" 0 0 0 --file "${user_path}"/dialog_browser_trx.tmp)
 																rt_query=$?
 																if [ "$rt_query" -eq 0 ] && [ ! "${selected_trx}" = "0" ]
 																then
