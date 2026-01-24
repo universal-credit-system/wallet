@@ -63,19 +63,18 @@ MT100_process(){
 						###CONTINUE WITH MULTI SIGN PROCESSING########################
 						if [ "${is_multi_sign}" -eq 1 ]
 						then
-							####CHECK IF USER NEEDS TO SIGN THE FILE######################
-							if [ "$(grep -c ":MSIG:${handover_account}" "${script_path}/proofs/${trx_sender}/multi.sig")" -gt 0 ] || [ "$(grep -c ":MSIG:${handover_account}" "${trx_file}")" -eq 1 ]
+							###CHECK FOR ACKNOWLEDGED AND DECLINED FILES##################
+							if [ ! -e "${user_path}"/messages_ack.sig ]
+ 							then
+								touch "${user_path}"/messages_ack.sig
+							fi
+							if [ ! -e "${user_path}"/messages_dec.sig ]
 							then
-								###CHECK FOR ACKNOWLEDGED AND DECLINED FILES##################
-								if [ ! -f "${user_path}"/messages_ack.sig ]
-								then
-									touch "${user_path}"/messages_ack.sig
-								fi
-								if [ ! -f "${user_path}"/messages_dec.sig ]
-								then
-									touch "${user_path}"/messages_dec.sig
-								fi
-								
+								touch "${user_path}"/messages_dec.sig
+							fi
+							####CHECK IF USER NEEDS TO SIGN THE FILE######################
+							if [ "$(grep -c ":MSIG:${handover_account}" "${script_path}/proofs/${trx_sender}/multi.sig")" -eq 1 ] || [ "$(grep -c ":MSIG:${handover_account}" "${trx_file}")" -eq 1 ]
+							then
 								###CHECK IF MESSAGE ALREADY HAS BEEN SIGNED###################
 								already_signed=$(cat "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig|grep -c "trx/${trx_filename} ${trx_hash}" )
 								if [ "${already_signed}" -eq 0 ] && [ "$gui_mode" -eq 1 ]
@@ -97,16 +96,14 @@ MT100_process(){
 										echo "${trx_path} ${trx_hash}" >>"${user_path}"/messages_dec.sig
 									fi
 								else
-									###CHECK IF PREVIOUSLY ACKNOWLEDGED OR DECLINED###############
-									already_signed=$(cat "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig|grep -c "trx/${trx_filename} ${trx_hash}")
 									if [ "${already_signed}" -eq 1 ]
 									then
 										if [ "$(grep -c "trx/${trx_filename} ${trx_hash}" "${user_path}"/messages_ack.sig)" -eq 1 ]
 										then
+											self_signed=1
 											###WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)##############
 											echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
 										fi
-										self_signed=1
 									else
 										if [ "$gui_mode" -eq 0 ] && [ -n "${cmd_path}" ] && [ "$(echo "${cmd_path}"|grep -c "${trx_filename}")" -eq 1 ]
 										then
@@ -250,8 +247,11 @@ MT100_process(){
 								###ACKNOWLEDGE TRANSACTION####################################
 								if [ "${is_multi_sign_okay}" -eq 0 ] || [ "${trx_sender}" = "${handover_account}" ]
 								then
-									###WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)##############
-									echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
+									if [ "${self_signed}" -eq 0 ]
+									then
+										###WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)##############
+										echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
+									fi
 								fi
 							fi
 							

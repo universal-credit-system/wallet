@@ -2257,6 +2257,15 @@ get_dependencies(){
 					user=$(basename "${directory}")
 					echo "$user" >>"${user_path}"/depend_accounts.dat
 				done <"${user_path}"/msig_others.tmp
+
+				###ADD MULTI SIGNATURE TRX####################################################
+				grep -s -l "MSIG:${handover_account}" "${script_path}"/trx/* >"${user_path}"/msig_others.tmp
+ 				while read line
+ 				do
+ 					user=$(basename "${line}")
+ 					user=${user%%.*}
+ 					echo "$user" >>"${user_path}"/depend_accounts.dat
+ 				done <"${user_path}"/msig_others.tmp
 				rm "${user_path}"/msig_others.tmp
 
 				###REMOVE DOUBLE ENTRIES######################################################
@@ -2304,14 +2313,104 @@ get_dependencies(){
 			touch "${user_path}"/depend_confirmations.dat
 			while read line
 			do
+				###RESET VARIABLES############################################
+				is_multi_sign=0
+				is_multi_sign_wallet=0
+				is_multi_sign_trx=0
+				is_multi_sign_okay=0
+
+				###EXTRACT DATA###############################################
 				trx_hash=$(sha256sum "${script_path}/trx/${line}")
 				trx_hash=${trx_hash%% *}
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${script_path}/trx/${line}")
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${script_path}/trx/${line}")
-				total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
-				if [ "$total_confirmations" -ge "$confirmations_from_users" ]
+
+				###CHECK IF MULTI SIG WALLET##################################
+				if [ -f "${script_path}/proofs/${trx_sender}/multi.sig" ] && [ -s "${script_path}/proofs/${trx_sender}/multi.sig" ]
 				then
-					echo "$line" >>"${user_path}"/depend_confirmations.dat
+					is_multi_sign=1
+					is_multi_sign_wallet=1
+				fi
+
+				###CHECK IF MULTI SIG TRANSACTION#############################
+				if [ "$(grep -c ":MSIG:" "${script_path}/trx/${line}")" -gt 0 ]
+				then
+					is_multi_sign=1
+					is_multi_sign_trx=1
+				fi
+				
+				###LOGIG TO CONSIDER MULTI-SIGNATURE FOR CONFIRATIONS#########
+				if [ "${is_multi_sign}" -eq 1 ]
+				then
+					if [ "${is_multi_sign_wallet}" -eq 1 ]
+					then
+						is_multi_sign_okay=1
+						number_multi_signed=0
+						total_number_signer=0
+						
+						###GO THROUGH LIST OF WALLET MULTI SIGN ENTRIES###############
+						for signer in $(awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${trx_sender}/multi.sig")
+						do
+							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
+							then
+								###GET CONFIRMATIONS##########################################
+								is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+								if [ "${is_multi_signed}" -eq 1 ]
+								then
+									number_multi_signed=$(( number_multi_signed + 1 ))
+								fi
+							fi
+							total_number_signer=$(( total_number_signer + 1 ))
+						done
+
+						###CALCULATE MAJORITY#########################################
+						majority=$(( total_number_signer / 2 ))
+						majority=$(( majority + 1 ))
+						if [ "${number_multi_signed}" -ge "${majority}" ]
+						then
+							is_multi_sign_okay=0
+						fi
+					fi
+				
+					###LOGIC FOR TRX MULTI SIGNATURE CONFIRMATIONS################
+					if [ "${is_multi_sign_trx}" -eq 1 ]
+					then
+						is_multi_sign_okay=1
+						number_multi_signed=0
+						total_number_signer=0
+
+						###GO THROUGH LIST OF TRX MULTI SIGN ENTRIES##################
+						for signer in $(awk -F: '/:MSIG:/{print $3}' "${trx_file}"|sort -u)
+						do
+							###CHECK IF SIGNER HAS INDEX FILE#############################
+							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
+							then
+								###GET CONFIRMATIONS##########################################
+								is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+								if [ "${is_multi_signed}" -eq 1 ]
+								then
+									number_multi_signed=$(( number_multi_signed + 1 ))
+								fi
+							fi
+							total_number_signer=$(( total_number_signer + 1 ))
+						done
+
+						###CALCULATE MAJORITY#########################################
+						majority=$(( total_number_signer / 2 ))
+						majority=$(( majority + 1 ))
+						if [ "${number_multi_signed}" -ge "${majority}" ]
+						then
+							is_multi_sign_okay=0
+						fi
+					fi
+				fi
+				if [ "${is_multi_sign_okay}" -eq 0 ]
+				then
+					total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+					if [ "$total_confirmations" -ge "$confirmations_from_users" ]
+					then
+						echo "$line" >>"${user_path}"/depend_confirmations.dat
+					fi
 				fi
 			done <"${user_path}"/depend_trx.dat
 
