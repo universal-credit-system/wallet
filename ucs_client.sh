@@ -44,20 +44,20 @@ login_account(){
 			if [ "$observer" -eq 0 ]
 			then
 				###TEST KEY BY ENCRYPTING A MESSAGE##########################
-				echo "$login_name" >"${script_path}"/account_"${my_pid}".tmp
-				echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --local-user "${key_file}" -r "${key_file}" --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign "${script_path}"/account_"${my_pid}".tmp 1>/dev/null 2>/dev/null
+				echo "$login_name" >"${script_path}"/tmp/account_"${my_pid}".tmp
+				echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --local-user "${key_file}" -r "${key_file}" --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign "${script_path}"/tmp/account_"${my_pid}".tmp 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ "$rt_query" -eq 0 ]
 				then
 					###REMOVE ENCRYPTION SOURCE FILE#############################
-					rm "${script_path}"/account_"${my_pid}".tmp
+					rm "${script_path}"/tmp/account_"${my_pid}".tmp
 
 					####TEST KEY BY DECRYPTING THE MESSAGE#######################
-					echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output "${script_path}"/account_"${my_pid}".tmp --decrypt "${script_path}"/account_"${my_pid}".tmp.gpg 1>/dev/null 2>/dev/null
+					echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output "${script_path}"/tmp/account_"${my_pid}".tmp --decrypt "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 1>/dev/null 2>/dev/null
 					rt_query=$?
 				fi
-				rm "${script_path}"/account_"${my_pid}".tmp 2>/dev/null
-				rm "${script_path}"/account_"${my_pid}".tmp.gpg 2>/dev/null
+				rm "${script_path}"/tmp/account_"${my_pid}".tmp 2>/dev/null
+				rm "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null
 			fi
 			if [ "$rt_query" -eq 0 ]
 			then
@@ -3351,13 +3351,14 @@ do
 									if [ "$rt_query" -eq 0 ]
 									then
 										case "$settings_menu" in
-											"$dialog_main_lang")	for language_file in $(ls -1 "${script_path}"/lang/)
+											"$dialog_main_lang")	rm "${script_path}"/tmp/lang_list.tmp 2>/dev/null
+														for language_file in $(ls -1 "${script_path}"/lang/)
 														do
 															lang_ex_short=$(echo "$language_file"|cut -d '_' -f2)
 															lang_ex_full=$(echo "$language_file"|cut -d '_' -f3|cut -d '.' -f1)
-															printf "%s" "$lang_ex_short $lang_ex_full " >>"${script_path}"/lang_list.tmp
+															printf "%s" "$lang_ex_short $lang_ex_full " >>"${script_path}"/tmp/lang_list.tmp
 														done
-														lang_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file "${script_path}"/lang_list.tmp)
+														lang_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_lang" --backtitle "$core_system_name $core_system_version" --output-fd 1 --menu "$dialog_lang" 0 0 0 --file "${script_path}"/tmp/lang_list.tmp)
 														rt_query=$?
 														if [ "$rt_query" -eq 0 ]
 														then
@@ -3369,14 +3370,15 @@ do
 																. "${script_path}/lang/${lang_file}"
 															fi
 														fi
-														rm "${script_path}"/lang_list.tmp
+														rm "${script_path}"/tmp/lang_list.tmp
 														;;
-											"$dialog_main_theme")	for theme_file in $(ls -1 "${script_path}"/theme/)
+											"$dialog_main_theme")	rm "${script_path}"/tmp/theme_list.tmp 2>/dev/null
+														for theme_file in $(ls -1 "${script_path}"/theme/)
 														do
 															theme_name=${theme_file%%.*}
-															printf "%s" "$theme_name theme " >>"${script_path}"/theme_list.tmp
+															printf "%s" "$theme_name theme " >>"${script_path}"/tmp/theme_list.tmp
 														done
-														theme_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --menu "$dialog_theme" 0 0 0 --file "${script_path}"/theme_list.tmp)
+														theme_selection=$(dialog --ok-label "$dialog_main_choose" --cancel-label "$dialog_cancel" --title "$dialog_main_theme" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --menu "$dialog_theme" 0 0 0 --file "${script_path}"/tmp/theme_list.tmp)
 														rt_query=$?
 														if [ "$rt_query" -eq 0 ]
 														then
@@ -3391,42 +3393,42 @@ do
 																sleep 1
 															fi
 														fi
-														rm "${script_path}"/theme_list.tmp
+														rm "${script_path}"/tmp/theme_list.tmp
 														;;
-											"config.conf")		rm "${script_path}"/config_*.tmp 2>/dev/null
+											"config.conf")		rm "${script_path}/tmp/config_list.tmp" 2>/dev/null
 														config_changed=0
 														while [ "$config_changed" -eq 0 ]
 														do
 															### CREATE COPY OF CONFIG.CONF ##################
-															grep -v "###" "${script_path}"/control/config.conf|sed 's/=/= /g' >"${script_path}/config_${my_pid}.tmp"
+															grep -v "###" "${script_path}"/control/config.conf|sed 's/=/= /g' >"${script_path}/tmp/config_list.tmp"
 
 															### DISPLAY INPUTMENU DIALOG ####################
-															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --no-hot-list --inputmenu "CONFIG.CONF" 30 70 10 --file "${script_path}/config_${my_pid}.tmp")
+															changed=$(dialog --extra-label "$dialog_main_choose" --cancel-label "$dialog_add" --output-fd 1 --no-hot-list --inputmenu "CONFIG.CONF" 30 70 10 --file "${script_path}/tmp/config_list.tmp")
 															rt_query=$?
 															if [ "$rt_query" -eq 3 ]
 															then
 																entry=$(echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}')
-																old_value=$(grep "${entry}" "${script_path}/config_${my_pid}.tmp"|awk -F= '{print $2}'|sed 's/ //g')
+																old_value=$(grep "${entry}" "${script_path}/tmp/config_list.tmp"|awk -F= '{print $2}'|sed 's/ //g')
 																new_value=$(echo "${changed}"|awk '{print $3}')
 																sed -i."$my_pid".bak "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."$my_pid".bak
 															else
 																if [ "$rt_query" -eq 1 ]
 																then
-																	touch "${script_path}/config_${my_pid}_add.tmp"
-																	dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "CONFIG.CONF+" --backtitle "$core_system_name $core_system_version" --editbox "${script_path}/config_${my_pid}_add.tmp" 20 80 2>"${script_path}/config_${my_pid}_added.tmp"
+																	touch "${script_path}/tmp/config_list_add.tmp"
+																	dialog --ok-label "$dialog_add" --cancel-label "$dialog_cancel" --title "CONFIG.CONF+" --backtitle "$core_system_name $core_system_version" --editbox "${script_path}/tmp/config_list_add.tmp" 20 80 2>"${script_path}/tmp/config_list_added.tmp"
 																	rt_query=$?
 																	if [ "$rt_query" -eq 0 ]
 																	then
-																		cat "${script_path}/config_${my_pid}_added.tmp" >>"${script_path}"/control/config.conf
+																		cat "${script_path}/tmp/config_list_added.tmp" >>"${script_path}"/control/config.conf
 																	fi
-																	rm "${script_path}/config_${my_pid}_add.tmp"
-																	rm "${script_path}/config_${my_pid}_added.tmp"
+																	rm "${script_path}/tmp/config_list_add.tmp"
+																	rm "${script_path}/tmp/config_list_added.tmp"
 																else
 																	config_changed=1
 																fi
 															fi
 														done
-														rm "${script_path}/config_${my_pid}.tmp"
+														rm "${script_path}/tmp/config_list.tmp"
 														;;
 										esac
 									else
@@ -3477,20 +3479,20 @@ do
 								then
 									if [ "$gui_mode" -eq 1 ]
 									then
-										find "${script_path}"/backup/ -maxdepth 1 -type f -name "*.bcp"|sort -r -t . -k1 >"${script_path}"/backups_list.tmp
-										if [ "$(wc -l <"${script_path}"/backups_list.tmp)" -gt 0 ]
+										find "${script_path}"/backup/ -maxdepth 1 -type f -name "*.bcp"|sort -r -t . -k1 >"${script_path}"/tmp/backups_list.tmp
+										if [ "$(wc -l <"${script_path}"/tmp/backups_list.tmp)" -gt 0 ]
 										then
 											while read line
 											do
 												backup_file=$(basename "${line}")
 												backup_stamp=${backup_file%%.*}
 												backup_date=$(date +'%F|%H:%M:%S' --date=@"${backup_stamp}")
-												printf "%s" "${backup_date} Backup " >>"${script_path}"/backup_list.tmp
-											done <"${script_path}"/backups_list.tmp
+												printf "%s" "${backup_date} Backup " >>"${script_path}"/tmp/backup_list.tmp
+											done <"${script_path}"/tmp/backups_list.tmp
 										else
-											printf "%s" "${dialog_history_noresult}" >"${script_path}"/backup_list.tmp
+											printf "%s" "${dialog_history_noresult}" >"${script_path}"/tmp/backup_list.tmp
 										fi
-										backup_decision=$(dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --scrollbar --menu "$dialog_backup_menu" 0 0 0 --file "${script_path}"/backup_list.tmp)
+										backup_decision=$(dialog --ok-label "$dialog_backup_restore" --cancel-label "$dialog_main_back" --title "$dialog_main_backup" --backtitle "$core_system_name $core_system_version" --output-fd 1 --no-hot-list --scrollbar --menu "$dialog_backup_menu" 0 0 0 --file "${script_path}"/tmp/backup_list.tmp)
 										rt_query=$?
 										if [ "$rt_query" -eq 0 ]
 										then
@@ -3500,7 +3502,7 @@ do
 												bcp_date_extracted=${backup_decision%%|*}
 												bcp_time_extracted=${backup_decision#*|}
 												bcp_stamp=$(date +%s --date="${bcp_date_extracted} ${bcp_time_extracted}")
-												file_path=$(grep "${bcp_stamp}" "${script_path}"/backups_list.tmp)
+												file_path=$(grep "${bcp_stamp}" "${script_path}"/tmp/backups_list.tmp)
 												cd "${script_path}" || exit 13
 												purge_files
 												tar -xzf "$file_path" --no-overwrite-dir --no-same-owner --no-same-permissions --keep-directory-symlink --dereference --hard-dereference
@@ -3516,7 +3518,7 @@ do
 												dialog --title "$dialog_type_title_error" --backtitle "$core_system_name $core_system_version" --msgbox "$dialog_backup_fail" 0 0
 											fi
 										else
-											rm "${script_path}"/backups_list.tmp 2>/dev/null
+											rm "${script_path}"/tmp/backups_list.tmp 2>/dev/null
 										fi
 									else
 										if [ -z "${cmd_path}" ]
@@ -3548,7 +3550,7 @@ do
 									fi
 								fi
 							fi
-							rm "${script_path}"/backup_list.tmp 2>/dev/null
+							rm "${script_path}"/tmp/backup_list.tmp 2>/dev/null
 							;;
 				"$dialog_main_end")     clear
 							end_program=1
@@ -3628,12 +3630,12 @@ do
 										then
 											###VERIFY TRANSACTION SIGNATURE###############################
 											trx_signature="ERROR_VERIFY_SIGNATURE"
-											gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx_file}" >"${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
+											gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx_file}" >"${script_path}/tmp/gpg_${my_pid}_verify.tmp" 2>/dev/null
 											rt_query=$?
 											if [ "$rt_query" -eq 0 ]
 											then
 												###CHECK IF SENDER MATCHES SIGNER#############################
-												signed_correct=$(grep "GOODSIG" "${script_path}/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
+												signed_correct=$(grep "GOODSIG" "${script_path}/tmp/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
 												if [ "$signed_correct" -ge 1 ]
 												then
 													trx=$(basename "${trx_file}")
@@ -3671,7 +3673,7 @@ do
 												rt_query=$?
 												if [ "$rt_query" -eq 0 ]
 												then
-													signed_correct=$(grep "GOODSIG" "${script_path}/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
+													signed_correct=$(grep "GOODSIG" "${script_path}/tmp/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
 													if [ "$signed_correct" -ge 1 ]
 													then
 														trx_multi_sig=$(grep -c ":MSIG:" "${script_path}/proofs/${trx_sender}/multi.sig")
@@ -3698,7 +3700,7 @@ do
 											echo "TRX_INDEX   :${trx_index}"
 											echo "TRX_MSIG    :${trx_multi_sig}"
 											echo "TRX_CONFIRMS:${trx_confirmations}"
-											rm "${script_path}/gpg_${my_pid}_verify.tmp" 2>/dev/null
+											rm "${script_path}/tmp/gpg_${my_pid}_verify.tmp" 2>/dev/null
 										fi
 									fi
 								fi
@@ -4351,7 +4353,7 @@ do
 														if [ "$receiver_is_asset" -eq 0 ] && [ "$small_trx" -ne 255 ]
 														then
 															cd "${script_path}" || exit 13
-															tar -czf "${handover_account}_${trx_now_form}.trx.tmp" -T "${user_path}"/files_list.tmp --dereference --hard-dereference
+															tar -czf "tmp/${handover_account}_${trx_now_form}.trx.tmp" -T "${user_path}"/files_list.tmp --dereference --hard-dereference
 															rt_query=$?
 															rm "${user_path}"/files_list.tmp 2>/dev/null
 														fi
@@ -4397,18 +4399,18 @@ do
 																if [ "$receiver_is_asset" -eq 0 ] && [ "$small_trx" -ne 255 ]
 																then
 																	###REMOVE GPG TMP FILE#######################################################
-																	rm "${script_path}/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
+																	rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
 
 																	###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
-																	#cp "${script_path}/${handover_account}_${trx_now_form}.trx" "${user_path}/${handover_account}_${trx_now_form}.trx"
+																	#cp "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${user_path}/${handover_account}_${trx_now_form}.trx"
 																	#############################################################################
 																	if [ ! "$trx_path_output" = "$script_path" ] && [ -d "$trx_path_output" ]
 																	then
-																		mv "${script_path}/${handover_account}_${trx_now_form}.trx" "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
+																		mv "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
 																	else
 																		if [ -z "${trx_path_output}" ]
 																		then
-																			rm "${script_path}/${handover_account}_${trx_now_form}.trx"
+																			rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx"
 																		fi
 																	fi
 																fi
@@ -4440,7 +4442,7 @@ do
 																rm "${last_trx}" 2>/dev/null
 															fi
 														else
-															rm "${script_path}/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
+															rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
 															rm "${last_trx}" 2>/dev/null
 														fi
 													fi

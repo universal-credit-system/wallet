@@ -188,6 +188,7 @@ then
 	mkdir -p "${script_path}"/control/keys || rt_query=1
 	mkdir -p "${script_path}"/keys || rt_query=1
 	mkdir -p "${script_path}"/proofs || rt_query=1
+	mkdir -p "${script_path}"/tmp || rt_query=1
 	mkdir -p "${script_path}"/trx || rt_query=1
 	mkdir -p "${script_path}"/userdata || rt_query=1
 	print_message
