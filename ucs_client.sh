@@ -5052,7 +5052,7 @@ do
 							done
 							;;
 				"$dialog_history")	###CREATE A LIST WITH ALL TRX CONCERNING USER##########
-							grep -s -l ":${handover_account}" "${script_path}"/trx/*|sort -r -t . -k2 >"${user_path}"/my_trx.tmp
+							grep -s -l ":SNDR:${handover_account}\|:RCVR:${handover_account}" "${script_path}"/trx/*|sort -r -t . -k2 >"${user_path}"/my_trx.tmp
 							no_trx=$(wc -l <"${user_path}"/my_trx.tmp)
 							if [ "$no_trx" -gt 0 ]
 							then
