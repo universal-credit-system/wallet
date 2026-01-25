@@ -190,7 +190,7 @@ MT100_process(){
 											if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
 											then
 												###GET CONFIRMATIONS##########################################
-												is_multi_signed=$(grep -c "trx/${trx_file} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+												is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
 												if [ "${is_multi_signed}" -eq 1 ]
 												then
 													number_multi_signed=$(( number_multi_signed + 1 ))
@@ -228,7 +228,7 @@ MT100_process(){
 											if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
 											then
 												###GET CONFIRMATIONS##########################################
-												is_multi_signed=$(grep -c "trx/${trx_file} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+												is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
 												if [ "${is_multi_signed}" -eq 1 ]
 												then
 													number_multi_signed=$(( number_multi_signed + 1 ))
