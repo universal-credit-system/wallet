@@ -2354,7 +2354,7 @@ get_dependencies(){
 							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
 							then
 								###GET CONFIRMATIONS##########################################
-								is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+								is_multi_signed=$(grep -c "trx/${line} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
 								if [ "${is_multi_signed}" -eq 1 ]
 								then
 									number_multi_signed=$(( number_multi_signed + 1 ))
@@ -2386,7 +2386,7 @@ get_dependencies(){
 							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
 							then
 								###GET CONFIRMATIONS##########################################
-								is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
+								is_multi_signed=$(grep -c "trx/${line} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
 								if [ "${is_multi_signed}" -eq 1 ]
 								then
 									number_multi_signed=$(( number_multi_signed + 1 ))
@@ -4227,9 +4227,27 @@ do
 										########################################################
 										if [ "$gui_mode" -eq 1 ]
 										then
+											###GET MULTI SIG USERS IF THERE ARE ANY################
+											trx_msig_users=""
+											for msig_user_trx in $(echo "${multi_sig_keys}"|cut -d ':' -f3)
+											do
+												is_msig=1
+												trx_msig_users="${trx_msig_users}${msig_user_trx}\n"
+											done
+											for msig_user_wallet in $(grep -s ":MSIG:" "${script_path}/proofs/${handover_account}/multi.sig"|cut -d ':' -f3)
+											do
+												is_msig=1
+												trx_msig_users="${trx_msig_users}${msig_user_wallet}\n"
+											done
+											if [ -z "${trx_msig_users}" ]
+											then
+												trx_msig_users="-\n"
+											fi
+											trx_msig_users=$(printf "%b" "${trx_msig_users}"|sort -u|awk '{printf "%s\\n", $0}')
+											
 											###ASK FOR FINAL CONFIRMATION############################
 											currency_symbol=$order_asset
-											dialog_send_overview_display=$(echo "$dialog_send_overview"|sed -e "s#<order_receiver>#${order_receiver}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g")
+											dialog_send_overview_display=$(echo "$dialog_send_overview"|sed -e "s#<order_receiver>#${order_receiver}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g" -e "s#<msig_users>#${trx_msig_users}#g")
 											printf "%b" "${dialog_send_overview_display}\n${order_purpose}" >"${user_path}"/order_confirm.tmp
 											dialog --exit-label "$dialog_yes" --help-button --help-label "$dialog_no" --title "$dialog_type_title_notification" --backtitle "$core_system_name $core_system_version" --textbox "${user_path}/order_confirm.tmp" 0 0
 											rt_query=$?
@@ -5153,27 +5171,46 @@ do
 							done
 							;;
 				"$dialog_history")	###CREATE A LIST WITH ALL TRX CONCERNING USER##########
-							grep -s -l ":SNDR:${handover_account}\|:RCVR:${handover_account}" "${script_path}"/trx/*|sort -r -t . -k2 >"${user_path}"/my_trx.tmp
-							no_trx=$(wc -l <"${user_path}"/my_trx.tmp)
-							if [ "$no_trx" -gt 0 ]
+							grep -s -l ":${handover_account}" "${script_path}"/trx/* >"${user_path}"/my_trx.tmp
+							
+							###INCLUDING TRX OF MULTI SIGNATURE WALLETS############
+							rm "${user_path}"/my_multi_sig_trx.tmp 2>/dev/null
+							touch "${user_path}"/my_multi_sig_trx.tmp
+							for msig_file in $(grep -s -l "MSIG:${handover_account}" "${script_path}"/proofs/*/multi.sig)
+							do
+								user=$(dirname "${msig_file}")
+								user=$(basename "${user}")
+								for trx_file in $(ls -1 "${script_path}"/trx/"${user}".*)
+								do
+									if [ -e "${trx_file}" ]
+									then
+										echo "${trx_file}" >>"${user_path}"/my_multi_sig_trx.tmp
+									fi
+								done
+							done
+							
+							###CONCATENATE########################################
+							sort -r -t . -k2 "${user_path}"/my_trx.tmp "${user_path}"/my_multi_sig_trx.tmp >>"${user_path}"/my_trx_all.tmp
+
+							if [ "$(wc -l <"${user_path}"/my_trx_all.tmp)" -gt 0 ]
 							then
 								rm "${user_path}"/history_list.tmp 2>/dev/null
 								while read trx_file
 								do
 									###EXTRACT TRANSACTION DATA############################
 									trx_filename=$(basename "${trx_file}")
-									sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file")
-									receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file")
+									trx_sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file")
+									trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file")
 									trx_date_tmp=${trx_filename#*.}
 									trx_date=$(date +'%F|%H:%M:%S.%3N' --date=@"${trx_date_tmp}")
 			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$trx_file")
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' "$trx_file")
 									trx_hash=$(sha256sum "$trx_file")
 									trx_hash=${trx_hash%% *}
-									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
-									if [ -f "${script_path}/proofs/${sender}/${sender}.txt" ] && [ -s "${script_path}/proofs/${sender}/${sender}.txt" ]
+									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+									if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 									then
-										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" "${script_path}/proofs/${sender}/${sender}.txt")
+										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
 									else
 										trx_signed=0
 									fi
@@ -5183,7 +5220,7 @@ do
 										if [ "$trx_confirmations" -ge "$confirmations_from_users" ]
 										then
 											trx_blacklisted=$(grep -c "${trx_filename}" "${user_path}"/blacklisted_trx.dat)
-											user_blacklisted=$(grep -c "${sender}\|${receiver}" "${user_path}"/blacklisted_accounts.dat)
+											user_blacklisted=$(grep -c "${trx_sender}\|${trx_receiver}" "${user_path}"/blacklisted_accounts.dat)
 											if [ "$trx_blacklisted" -eq 0 ] && [ "$user_blacklisted" -eq 0 ]
 											then
 												trx_color="\Z2"
@@ -5196,15 +5233,24 @@ do
 									else
 										trx_color="\Z1"
 									fi
-									if [ "$sender" = "$handover_account" ]
+									list_entry=""
+									if [ "$trx_sender" = "$handover_account" ]
 									then
-										echo "${trx_date}|-${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_snd\ZB" >>"${user_path}"/history_list.tmp
+										trx_sign="-"
+										dialog_history_msg=$dialog_history_ack_snd
+									else
+										if [ "$trx_receiver" = "$handover_account" ]
+										then
+											trx_sign="+"
+											dialog_history_msg=$dialog_history_ack_rcv
+										else
+											trx_sign="-"
+											dialog_history_msg="MULTI_SIGNATURE"
+										fi
 									fi
-									if [ "$receiver" = "$handover_account" ]
-									then
-										echo "${trx_date}|+${trx_amount}|${trx_asset} \Zb${trx_color}$dialog_history_ack_rcv\ZB" >>"${user_path}"/history_list.tmp
-									fi
-								done <"${user_path}"/my_trx.tmp
+									list_entry="${trx_date}|${trx_sign}${trx_amount}|${trx_asset} \Zb${trx_color}${dialog_history_msg}\ZB"
+									echo "${list_entry}" >>"${user_path}"/history_list.tmp
+								done <"${user_path}"/my_trx_all.tmp
 							else
 								printf "%s" "${dialog_history_noresult}" >"${user_path}"/history_list.tmp
 							fi
@@ -5222,28 +5268,36 @@ do
 									dialog_history_noresults=${dialog_history_noresult%% *}
 									if [ ! "${decision}" = "${dialog_history_noresults}" ]
 									then
-										###GET DETAILS if SELECTED TRANSACTION DETAILS#########
+										###GET DETAILS OF SELECTED TRANSACTION#############
 										trx_date_extracted=${decision%%|*}
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
-										if [ "$(grep -c "${trx_date}" "${user_path}"/my_trx.tmp)" -eq 0 ]
+										if [ "$(grep -c "${trx_date}" "${user_path}"/my_trx_all.tmp)" -eq 0 ]
 										then
 											trx_date=${trx_date%%.*}
 										fi
-										trx_file=$(basename "$(grep "${trx_date}" "${user_path}"/my_trx.tmp)")
+										trx_file=$(basename "$(grep "${trx_date}" "${user_path}"/my_trx_all.tmp)")
+										trx_file_path="${script_path}/trx/${trx_file}"
 										trx_amount_raw=$(echo "${decision}"|cut -d '|' -f3)
 										trx_amount=$(echo "${trx_amount_raw}"|sed -e 's/+//g' -e 's/-//g')
-										val_sign=$(echo "${decision}"|grep -c "+")
-										trx_hash=$(sha256sum "${script_path}/trx/${trx_file}")
+										trx_mt=$(grep ":TYPE:" "${trx_file_path}")
+										if [ -n "${trx_mt}" ]
+										then
+											trx_mt=${trx_mt#:*:*}
+										else
+											trx_mt=100
+										fi
+										trx_hash=$(sha256sum "$trx_file_path")
 										trx_hash=${trx_hash%% *}
-										trx_file_path="${script_path}/trx/${trx_file}"
-										sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file_path")
-										receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file_path")
+										trx_sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file_path")
+										trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file_path")
+										val_sign=$(echo "${decision}"|grep -c "+")
+										
 										###EXTRACT PURPOSE#####################################
 										purpose_there=0
 										purpose_dialog_string="-"
-										if [ "${receiver}" = "${handover_account}" ]
+										if [ "${trx_receiver}" = "${handover_account}" ]
 										then
 											purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' "$trx_file_path")
 											purpose_key_start=$(( purpose_key_start + 1 ))
@@ -5284,11 +5338,12 @@ do
 											rm "${user_path}"/history_purpose_key_*.tmp 2>/dev/null
 											rm "${user_path}"/history_purpose_encrypted.tmp 2>/dev/null
 										fi
+
 										###CHECK STATUS OF TRANSACTION#########################
 										trx_status=""
-										if [ -f "${script_path}/proofs/${sender}/${sender}.txt" ] && [ -s "${script_path}/proofs/${sender}/${sender}.txt" ]
+										if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 										then
-											trx_signed=$(grep -c "trx/${trx_file} ${trx_hash}" "${script_path}/proofs/${sender}/${sender}.txt")
+											trx_signed=$(grep -c "trx/${trx_file} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
 										else
 											trx_signed=0
 										fi
@@ -5301,33 +5356,66 @@ do
 										then
 											trx_status="${trx_status}TRX_BLACKLISTED "
 										fi
-										sender_blacklisted=$(grep -c "${sender}" "${user_path}"/blacklisted_accounts.dat)
-										if [ "$sender_blacklisted" -eq 1 ]
+										trx_sender_blacklisted=$(grep -c "${trx_sender}" "${user_path}"/blacklisted_accounts.dat)
+										if [ "$trx_sender_blacklisted" -eq 1 ]
 										then
 										trx_status="${trx_status}SDR_BLACKLISTED "
 										fi
-										receiver_blacklisted=$(grep -c "${receiver}" "${user_path}"/blacklisted_accounts.dat)
-										if [ "$receiver_blacklisted" -eq 1 ]
+										trx_receiver_blacklisted=$(grep -c "${trx_receiver}" "${user_path}"/blacklisted_accounts.dat)
+										if [ "$trx_receiver_blacklisted" -eq 1 ]
 										then
 											trx_status="${trx_status}RCV_BLACKLISTED "
 										fi
-										if [ "$trx_signed" -eq 1 ] && [ "$trx_blacklisted" -eq 0 ] && [ "$sender_blacklisted" -eq 0 ] && [ "$receiver_blacklisted" -eq 0 ]
+										if [ "$trx_signed" -eq 1 ] && [ "$trx_blacklisted" -eq 0 ] && [ "$trx_sender_blacklisted" -eq 0 ] && [ "$trx_receiver_blacklisted" -eq 0 ]
 										then
 											trx_status="OK"
 										fi
+
 										###GET CONFIRMATIONS AND DEPENDING USERS###############
-										user_total_depend=$(grep -c -v "${sender}\|${receiver}" "${user_path}"/depend_accounts.dat)
-										user_total_all=$(grep -c -v "${sender}\|${receiver}" "${user_path}"/all_accounts.dat)
-										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -f "${user_path}"/depend_accounts.dat|grep -c -v "${sender}\|${receiver}")
-										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${sender}\|${receiver}")
+										user_total_depend=$(grep -c -v "${trx_sender}\|${trx_receiver}" "${user_path}"/depend_accounts.dat)
+										user_total_all=$(grep -c -v "${trx_sender}\|${trx_receiver}" "${user_path}"/all_accounts.dat)
+										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -f "${user_path}"/depend_accounts.dat|grep -c -v "${trx_sender}\|${trx_receiver}")
+										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=${decision#*|*|*|*}
-										if [ "$val_sign" -eq 0 ]
+
+										###GET HISTORY FORM TO DISPLAY#################
+										dialog_history_show_trx_string=""
+										if [ "$val_sign" -eq 1 ]
 										then
-											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_out"|sed -e "s/<receiver>/${receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
+											###DIALOG FOR INCOMING TRX#####################
+											dialog_history_show_trx_string=$dialog_history_show_trx_in
 										else
-											dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_in"|sed -e "s/<sender>/${sender}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
+											if [ "${trx_sender}" = "${handover_account}" ] || [ "${trx_receiver}" = "${handover_account}" ]
+											then
+												###DIALOG FOR OUTCOING TRX#####################
+												dialog_history_show_trx_string=$dialog_history_show_trx_out
+											else
+												###DIALOG FOR MULTI-SIG TRX####################
+												dialog_history_show_trx_string=$dialog_history_show_trx_multi
+											fi
 										fi
+		
+										###GET MULTI SIG USERS IF THERE ARE ANY################
+										trx_msig_users=""
+										for msig_user_trx in $(grep -s ":MSIG:" "$trx_file_path"|cut -d ':' -f3)
+										do
+											is_msig=1
+											trx_msig_users="${trx_msig_users}${msig_user_trx}\n"
+										done
+										for msig_user_wallet in $(grep -s ":MSIG:" "${script_path}/proofs/${trx_sender}/multi.sig"|cut -d ':' -f3)
+										do
+											is_msig=1
+											trx_msig_users="${trx_msig_users}${msig_user_wallet}\n"
+										done
+										if [ -z "${trx_msig_users}" ]
+										then
+											trx_msig_users="-\n"
+										fi
+										trx_msig_users=$(printf "%b" "${trx_msig_users}"|sort -u|awk '{printf "%s\\\\n", $0}')
+			
+										###WRITE OUTPUT###################################################
+										dialog_history_show_trx=$(printf "%s" "$dialog_history_show_trx_string"|sed -e "s/<message_type>/${trx_mt}/g" -e "s#<msig_users>#${trx_msig_users}#g" -e "s/<sender>/${trx_sender}/g" -e "s/<receiver>/${trx_receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										if [ "$purpose_there" -eq 1 ] || [ "$purpose_there" -eq 2 ]
 										then
 											dialog --help-button --help-label "$purpose_dialog_string" --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
@@ -5393,7 +5481,25 @@ do
 												fi
 											fi
 										else
-											dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
+											if [ "${is_msig}" -eq 1 ] && [ ! "${trx_sender}" = "${handover_account}" ] && [ -z "$(grep "trx/${trx_file} ${trx_hash}" "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig)" ]
+											then
+												dialog --extra-button --extra-label "SIGN" --help-button --help-label "DECLINE" --title "$dialog_history_show : MULTI-SIGNATURE" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
+												rt_query=$?
+												if [ "$rt_query" -eq 2 ]
+												then
+													last_ledger=$(basename -a "${user_path}"/*_ledger.dat|tail -1)
+													last_ledger="${last_ledger%%_*}"
+													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
+													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
+												else
+													if [ "$rt_query" -eq 3 ]
+													then
+														echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_dec.sig
+													fi
+												fi
+											else
+												dialog --title "$dialog_history_show" --backtitle "$core_system_name $core_system_version" --msgbox "${dialog_history_show_trx}" 0 0
+											fi
 										fi
 										rm "${user_path}"/history_purpose_decrypted.tmp 2>/dev/null
 									else
@@ -5404,6 +5510,8 @@ do
 								fi
 							done
 							rm "${user_path}"/my_trx.tmp 2>/dev/null
+							rm "${user_path}"/my_trx_all.tmp 2>/dev/null
+							rm "${user_path}"/my_multi_sig_trx.tmp 2>/dev/null
 							rm "${user_path}"/history_list.tmp 2>/dev/null
 							;;
 				"$dialog_stats")	###IF CMD_ASSET NOT SET USE UCC################
