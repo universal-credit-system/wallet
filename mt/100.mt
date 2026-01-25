@@ -73,7 +73,7 @@ MT100_process(){
 								touch "${user_path}"/messages_dec.sig
 							fi
 							####CHECK IF USER NEEDS TO SIGN THE FILE######################
-							if [ "$(grep -c ":MSIG:${handover_account}" "${script_path}/proofs/${trx_sender}/multi.sig")" -eq 1 ] || [ "$(grep -c ":MSIG:${handover_account}" "${trx_file}")" -eq 1 ]
+							if [ -n "$(grep -s ":MSIG:${handover_account}" "${script_path}/proofs/${trx_sender}/multi.sig")" ] || [ "$(grep -c ":MSIG:${handover_account}" "${trx_file}")" -eq 1 ]
 							then
 								###CHECK IF MESSAGE ALREADY HAS BEEN SIGNED###################
 								already_signed=$(cat "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig|grep -c "trx/${trx_filename} ${trx_hash}" )
