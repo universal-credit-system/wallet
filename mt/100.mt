@@ -1,6 +1,6 @@
 MT100_process(){
 		###ALLOW DEBUGGING############################################
-		if [ "$debug" -eq 1 ]
+		if [ "${debug}" -eq 1 ]
 		then
 			set -x
 			set -v
@@ -8,10 +8,10 @@ MT100_process(){
 
 		###EXRACT DATA FOR CHECK######################################
 		trx_file="${script_path}/trx/${trx_filename}"
-		trx_stamp=$(awk -F: '/:TIME:/{print $3}' "$trx_file")
-		trx_sender=$(awk -F: '/:SNDR:/{print $3}' "$trx_file")
-		trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "$trx_file")
-		trx_hash=$(sha256sum "$trx_file")
+		trx_stamp=$(awk -F: '/:TIME:/{print $3}' "${trx_file}")
+		trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${trx_file}")
+		trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx_file}")
+		trx_hash=$(sha256sum "${trx_file}")
 		trx_hash=${trx_hash%% *}
 		trx_path="trx/${trx_filename}"
 
@@ -20,15 +20,15 @@ MT100_process(){
 		then
 			###CHECK IF TRX IS SIGNED BY USER#############################
 			is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
-			if [ "$is_signed" -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
+			if [ "${is_signed}" -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
 			then
 				###EXTRACT TRX AMOUNT#########################################
-				trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$trx_file")
-				trx_asset=$(awk -F: '/:ASST:/{print $3}' "$trx_file")
+				trx_amount=$(awk -F: '/:AMNT:/{print $3}' "${trx_file}")
+				trx_asset=$(awk -F: '/:ASST:/{print $3}' "${trx_file}")
 				
 				###CHECK IF SENDER IS IN LEDGER###############################
 				sender_in_ledger=$(grep -c "${trx_asset}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-				if [ "$sender_in_ledger" -eq 1 ]
+				if [ "${sender_in_ledger}" -eq 1 ]
 				then
 					###GET ACCOUNT BALANCE########################################
 					account_balance=$(grep "${trx_asset}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
@@ -39,7 +39,7 @@ MT100_process(){
 					enough_balance=$(echo "${account_check_balance} >= 0"|bc)
 
 					###CHECK IF BALANCE IS OK#####################################
-					if [ "$enough_balance" -eq 1 ]
+					if [ "${enough_balance}" -eq 1 ]
 					then
 						self_signed=0
 						is_multi_sign=0
@@ -77,10 +77,10 @@ MT100_process(){
 							then
 								###CHECK IF MESSAGE ALREADY HAS BEEN SIGNED###################
 								already_signed=$(cat "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig|grep -c "trx/${trx_filename} ${trx_hash}" )
-								if [ "${already_signed}" -eq 0 ] && [ "$gui_mode" -eq 1 ]
+								if [ "${already_signed}" -eq 0 ] && [ "${gui_mode}" -eq 1 ]
 								then
 									###SHOW GUI AND ASK IF TO SIGN################################
-									dialog --exit-label "SIGN" --help-button --help-label "DECLINE" --title "MULTI SIGNATURE" --backtitle "$core_system_name $core_system_version" --output-fd 1 --textbox "${trx_file}" 0 0
+									dialog --exit-label "SIGN" --help-button --help-label "DECLINE" --title "MULTI SIGNATURE" --backtitle "${core_system_name} ${core_system_version}" --output-fd 1 --textbox "${trx_file}" 0 0
 									rt_query=$?
 									if [ "${rt_query}" -eq 0 ]
 									then
@@ -108,7 +108,7 @@ MT100_process(){
 											echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
 										fi
 									else
-										if [ "$gui_mode" -eq 0 ] && [ -n "${cmd_path}" ] && [ "$(echo "${cmd_path}"|grep -c "${trx_filename}")" -eq 1 ]
+										if [ "${gui_mode}" -eq 0 ] && [ -n "${cmd_path}" ] && [ "$(echo "${cmd_path}"|grep -c "${trx_filename}")" -eq 1 ]
 										then
 											if [ "${cmd_action}" = "sign" ]
 											then
@@ -136,24 +136,24 @@ MT100_process(){
 
 						###CHECK IF RECEIVER IS ASSET#################################
 						is_asset=$(grep -c "${trx_receiver}" "${user_path}"/all_assets.dat)
-						if [ "$is_asset" -eq 1 ]
+						if [ "${is_asset}" -eq 1 ]
 						then
 							is_fungible=$(grep -c "asset_fungible=1" "${script_path}/assets/${trx_receiver}")
 						fi
 
 						###CHECK IF RECEIVER IS IN LEDGER#############################
 						receiver_in_ledger=$(grep -c "${trx_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
-						if [ "$receiver_in_ledger" -eq 0 ]
+						if [ "${receiver_in_ledger}" -eq 0 ]
 						then
 							###CHECK IF RECEIVER IS IN LEDGER WITH UCC BALANCE############
 							receiver_in_ledger=$(grep -c "${main_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
-							if [ "$receiver_in_ledger" -eq 1 ]
+							if [ "${receiver_in_ledger}" -eq 1 ]
 							then
 								###CHECK IF RECEIVER IS ASSET#################################
-								if [ "$is_asset" -eq 1 ]
+								if [ "${is_asset}" -eq 1 ]
 								then
 									###CHECK IF ASSET IS FUNGIBLE################################
-									if [ "$is_fungible" -eq 1 ]
+									if [ "${is_fungible}" -eq 1 ]
 									then
 										echo "${trx_asset}:${trx_receiver}=0" >>"${user_path}/${focus}_ledger.dat"
 									else
@@ -165,7 +165,7 @@ MT100_process(){
 								fi
 							fi
 						fi
-						if [ "$receiver_in_ledger" -eq 1 ]
+						if [ "${receiver_in_ledger}" -eq 1 ]
 						then
 							is_multi_sign_okay=0
 
@@ -271,20 +271,20 @@ MT100_process(){
 								fi
 
 								###CHECK CONFIRMATIONS########################################
-								if [ "$total_confirmations" -ge "$confirmations_from_users" ]
+								if [ "${total_confirmations}" -ge "${confirmations_from_users}" ]
 								then
 									###SET BALANCE FOR SENDER#####################################
-									account_new_balance=$account_check_balance
-									sed -i."$my_pid".bak "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
+									account_new_balance=${account_check_balance}
+									sed -i."${my_pid}".bak "s/${trx_asset}:${trx_sender}=${account_balance}/${trx_asset}:${trx_sender}=${account_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 							
 									###SET BALANCE FOR RECEIVER###################################
 									receiver_old_balance=$(grep "${trx_asset}:${trx_receiver}" "${user_path}/${focus}_ledger.dat")
 									receiver_old_balance=${receiver_old_balance#*=}
 									receiver_new_balance=$(echo "${receiver_old_balance} + ${trx_amount}"|bc|sed 's/^\./0./g')
-									sed -i."$my_pid".bak "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
+									sed -i."${my_pid}".bak "s/${trx_asset}:${trx_receiver}=${receiver_old_balance}/${trx_asset}:${trx_receiver}=${receiver_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 
 									###CHECK IF EXCHANGE REQUIRED#################################
-									if [ "$is_asset" -eq 1 ] && [ "$is_fungible" -eq 1 ]
+									if [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 1 ]
 									then
 										###EXCHANGE###################################################
 										asset_type_price=$(grep "asset_price=" "${script_path}/assets/${trx_asset}")
@@ -295,12 +295,12 @@ MT100_process(){
 
 										###WRITE ENTRY TO LEDGER FOR EXCHANGE#########################
 										receiver_in_ledger=$(grep -c "${trx_receiver}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
-										if [ "$receiver_in_ledger" -eq 1 ]
+										if [ "${receiver_in_ledger}" -eq 1 ]
 										then
 											sender_old_balance=$(grep "${trx_receiver}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
 											sender_old_balance=${sender_old_balance#*=}
 											sender_new_balance=$(echo "${sender_old_balance} + ${asset_value}"|bc|sed 's/^\./0./g')
-											sed -i."$my_pid".bak "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
+											sed -i."${my_pid}".bak "s/${trx_receiver}:${trx_sender}=${sender_old_balance}/${trx_receiver}:${trx_sender}=${sender_new_balance}/g" "${user_path}/${focus}_ledger.dat" && rm "${user_path}/${focus}_ledger.dat.${my_pid}.bak" 2>/dev/null
 										else
 											echo "${trx_receiver}:${trx_sender}=${asset_value}" >>"${user_path}/${focus}_ledger.dat"
 										fi
@@ -316,49 +316,49 @@ MT100_process(){
 }
 MT100_verify(){
 		###ALLOW DEBUGGING############################################
-		if [ "$debug" -eq 1 ]
+		if [ "${debug}" -eq 1 ]
 		then
 			set -x
 			set -v
 		fi
 		###CHECK IF PURPOSE CONTAINS ALNUM######################
-		purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' "$file_to_check")
+		purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' "${file_to_check}")
 		purpose_key_start=$(( purpose_key_start + 1 ))
-		purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' "$file_to_check")
+		purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' "${file_to_check}")
 		purpose_key_end=$(( purpose_key_end - 1 ))
-		purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" "$file_to_check")
+		purpose_key=$(sed -n "${purpose_key_start},${purpose_key_end}p" "${file_to_check}")
 		purpose_key_contains_alnum=$(printf "%s" "${purpose_key}"|grep -c '[^a-zA-Z0-9+/=]')
-		purpose_start=$(awk -F: '/:PRPS:/{print NR}' "$file_to_check")
+		purpose_start=$(awk -F: '/:PRPS:/{print NR}' "${file_to_check}")
 		purpose_start=$(( purpose_start + 1 ))
-		purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' "$file_to_check")
+		purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' "${file_to_check}")
 		purpose_end=$(( purpose_end - 1 ))
-		purpose=$(sed -n "${purpose_start},${purpose_end}p" "$file_to_check")
+		purpose=$(sed -n "${purpose_start},${purpose_end}p" "${file_to_check}")
 		purpose_contains_alnum=$(printf "%s" "${purpose}"|grep -c '[^a-zA-Z0-9+/=]')
-		if [ "$purpose_key_contains_alnum" -eq 0 ] && [ "$purpose_contains_alnum" -eq 0 ]
+		if [ "${purpose_key_contains_alnum}" -eq 0 ] && [ "${purpose_contains_alnum}" -eq 0 ]
 		then
 			###CHECK FOR MULTI SIGNATURE ENTRIES####################
 			multi_sig_okay=0
-			multi_sig_number=$(grep -c ":MSIG:" "$file_to_check")
+			multi_sig_number=$(grep -c ":MSIG:" "${file_to_check}")
 			if [ "${multi_sig_number}" -gt 0 ]
 			then
 				###CHECK FOR DOUBLE ENTRIES#############################
-				if [ "${multi_sig_number}" -ne "$(grep ":MSIG:" "$file_to_check"|sort -u|wc -l)" ] || [ "${multi_sig_number}" -gt 10 ]
+				if [ "${multi_sig_number}" -ne "$(grep ":MSIG:" "${file_to_check}"|sort -u|wc -l)" ] || [ "${multi_sig_number}" -gt 10 ]
 				then
 					multi_sig_okay=1
 				else
 					###CHECK FOR NON COMPLIANT CHARACTERS###################
-					multi_sig_okay=$(awk -F: '/:MSIG:/{print $3}' "$file_to_check"|grep -c '[^a-zA-Z0-9]')
+					multi_sig_okay=$(awk -F: '/:MSIG:/{print $3}' "${file_to_check}"|grep -c '[^a-zA-Z0-9]')
 				fi
 			fi
 
 			###EXTRACT ASSET########################################
-			trx_asset=$(awk -F: '/:ASST:/{print $3}' "$file_to_check")
+			trx_asset=$(awk -F: '/:ASST:/{print $3}' "${file_to_check}")
 
 			###CHECK IF ASSET TYPE EXISTS###########################
 			if [ "$(grep -c "${trx_asset}" "${user_path}"/all_assets.dat)" -eq 1 ] && [ "${multi_sig_okay}" -eq 0 ]
 			then
 				###EXTRACT AMOUNT#######################################
-				trx_amount=$(awk -F: '/:AMNT:/{print $3}' "$file_to_check")
+				trx_amount=$(awk -F: '/:AMNT:/{print $3}' "${file_to_check}")
 				if [ "$(printf "%s" "${trx_amount}"|grep -c '[^0-9.]')" -eq 0 ]
 				then
 					###CHECK IF AMOUNT IS MINIMUM 0.000000001###############
@@ -371,17 +371,17 @@ MT100_verify(){
 					then
 						####CHECK IF USER HAS INDEXED THE TRANSACTION###########
 						is_trx_signed=$(grep -c "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt")
-						if [ "$is_trx_signed" -eq 1 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+						if [ "${is_trx_signed}" -eq 1 ] && [ "${is_amount_ok}" -eq 1 ] && [ "${is_amount_mod}" -eq 0 ]
 						then
 							trx_acknowledged=1
 						else
-							if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+							if [ "${delete_trx_not_indexed}" -eq 0 ] && [ "${is_amount_ok}" -eq 1 ] && [ "${is_amount_mod}" -eq 0 ]
 							then
 								trx_acknowledged=1
 							fi
 						fi
 					else
-						if [ "$delete_trx_not_indexed" -eq 0 ] && [ "$is_amount_ok" -eq 1 ] && [ "$is_amount_mod" -eq 0 ]
+						if [ "${delete_trx_not_indexed}" -eq 0 ] && [ "${is_amount_ok}" -eq 1 ] && [ "${is_amount_mod}" -eq 0 ]
 						then
 							trx_acknowledged=1
 						fi

@@ -1,6 +1,6 @@
 #!/bin/sh
 print_message(){
-		if [ "$rt_query" -eq 0 ]
+		if [ "${rt_query}" -eq 0 ]
 		then
 			printf "%b" "DONE\n"
 		else
@@ -45,13 +45,13 @@ then
 					exit 0
 					;;
 			*)		### SET TARGET VARIABLES #######
-					case $cmd_var in
+					case "${cmd_var}" in
 						"-env")		cmd_env=$(echo "${1}"|tr 'A-Z' 'a-z')
 								;;
 						"-user")	cmd_user=$1
 								;;
 						*)		cmd_var=$1
-								echo "Wrong Syntax -> $cmd_var !"
+								echo "Wrong Syntax -> ${cmd_var} !"
 								echo ""
 								echo "To display the HELP run:"
 								echo "./install.sh -help"
@@ -70,12 +70,12 @@ fi
 while read program
 do
 	### CHECK IF PROGRAMM IS UNKNOWN ####
-        type "$program" >/dev/null 2>/dev/null
+        type "${program}" >/dev/null 2>/dev/null
         rt_query=$?
-        if [ "$rt_query" -gt 0 ]
+        if [ "${rt_query}" -gt 0 ]
         then
         	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
-        	case "$program" in
+        	case "${program}" in
         		"netcat")	echo "netcat-openbsd" >>"${script_path}"/install_dep.tmp
         				;;
         		"gpg")		echo "gnupg"  >>"${script_path}"/install_dep.tmp
@@ -97,7 +97,7 @@ then
 	############################
 	###IF APPS ARE TO INSTALL###
 	###GET PACKAGE MANAGER######
-	case "$cmd_env" in
+	case "${cmd_env}" in
 		"termux")	pkg_mngr="pkg"
 				;;
 		*)		pkg_mngr=""
@@ -147,23 +147,23 @@ then
 				;;
 	esac
 
-	if [ -n "${pkg_mngr}" ] && [ "$error_counter" -eq 0 ]
+	if [ -n "${pkg_mngr}" ] && [ "${error_counter}" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
 		while read program
 		do
 			printf "%b" "[ INFO ] Trying to install ${program} using ${pkg_mngr}...\n"
-			case "$pkg_mngr" in
-				"apk")		apk add "$program" ;;
-				"apt-get")	apt-get -y install "$program" ;;
-				"dnf")		dnf -y install "$program" ;;
-				"pacman")	pacman --noconfirm -S "$program" ;;
-				"pkg")		pkg install -y "$program" ;;
-				"yum")		yum -y install "$program" ;;
-				"zypper")	zypper -n install "$program" ;;
+			case "${pkg_mngr}" in
+				"apk")		apk add "${program}" ;;
+				"apt-get")	apt-get -y install "${program}" ;;
+				"dnf")		dnf -y install "${program}" ;;
+				"pacman")	pacman --noconfirm -S "${program}" ;;
+				"pkg")		pkg install -y "${program}" ;;
+				"yum")		yum -y install "${program}" ;;
+				"zypper")	zypper -n install "${program}" ;;
 			esac
 			rt_query=$?
-			if [ "$rt_query" -gt 0 ]
+			if [ "${rt_query}" -gt 0 ]
 			then
 				echo "[ ERROR ] Error during installation of ${program} using ${pkg_mngr}"
 				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
@@ -175,7 +175,7 @@ then
 fi
 ###REMOVE TMP FILE##########
 rm "${script_path}"/install_dep.tmp 2>/dev/null
-if [ "$error_counter" -eq 0 ]
+if [ "${error_counter}" -eq 0 ]
 then
 	rt_query=0
 	if [ -n "${cmd_user}" ]
@@ -300,5 +300,5 @@ then
 	fi
 fi
 ### DISPLAY OUTPUT #######################
-printf "%b" "[ INFO ] $script_name finished (errors:$error_counter)\n"
+printf "%b" "[ INFO ] ${script_name} finished (errors:${error_counter})\n"
 
