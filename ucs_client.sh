@@ -3856,6 +3856,7 @@ do
 								if [ "${rt_query}" -eq 0 ]
 								then
 									###MULTI SIGNATURE PART FOLLOWING########################
+									is_multi_sig=0
 									multi_sig_loop=0
 									while [ "${multi_sig_loop}" -eq 0 ]
 									do
@@ -4232,12 +4233,12 @@ do
 												trx_msig_users=""
 												for msig_user_trx in $(echo "${multi_sig_keys}"|cut -d ':' -f3)
 												do
-													is_msig=1
+													is_multi_sig=1
 													trx_msig_users="${trx_msig_users}${msig_user_trx}\n"
 												done
 												for msig_user_wallet in $(grep -s ":MSIG:" "${script_path}/proofs/${handover_account}/multi.sig"|cut -d ':' -f3)
 												do
-													is_msig=1
+													is_multi_sig=1
 													trx_msig_users="${trx_msig_users}${msig_user_wallet}\n"
 												done
 												if [ -z "${trx_msig_users}" ]
