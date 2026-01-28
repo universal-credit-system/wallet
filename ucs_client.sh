@@ -1281,7 +1281,7 @@ update_tsa(){
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 							###CHECK IF CERT IS VALID#########################
-							if [ "${now_stamp}" -gt "${old_cert_valid_from}" ] && [ "${now_stamp}" -lt "${old_cert_valid_till}" ]
+							if [ "${now_stamp}" -gt "${new_cert_valid_from}" ] && [ "${now_stamp}" -lt "${new_cert_valid_till}" ]
 							then
 								if [ -f "${script_path}/certs/${tsa_service}/${tsa_cert_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_cert_file}" ]
 								then
@@ -1328,7 +1328,7 @@ update_tsa(){
 							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cacert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
 
 							###CHECK IF CERT IS VALID#########################
-							if [ "${now_stamp}" -gt "${old_cert_valid_from}" ] && [ "${now_stamp}" -lt "${old_cert_valid_till}" ]
+							if [ "${now_stamp}" -gt "${new_cert_valid_from}" ] && [ "${now_stamp}" -lt "${new_cert_valid_till}" ]
 							then
 								if [ -f "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" ]
 								then
