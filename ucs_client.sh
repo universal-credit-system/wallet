@@ -5180,7 +5180,7 @@ do
 							do
 								user=$(dirname "${msig_file}")
 								user=$(basename "${user}")
-								for trx_file in $(ls -1 "${script_path}"/trx/"${user}".*)
+								for trx_file in $(ls -1 "${script_path}"/trx/"${user}".* 2>/dev/null)
 								do
 									if [ -e "${trx_file}" ]
 									then
