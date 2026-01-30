@@ -2850,6 +2850,7 @@ gui_mode=1
 observer=0
 extract_all=0
 debug=0
+trace=0
 
 ###SET CMD VARIABLES########
 cmd_action=""
@@ -2935,8 +2936,10 @@ then
 			"-config")	cmd_var=$1
 					;;
 			"-debug")	debug=1
-					set -x
 					set -v
+					;;
+			"-trace")	trace=1
+					set -x
 					;;
 			"-version")	echo "version:${core_system_version}"
 					exit 0

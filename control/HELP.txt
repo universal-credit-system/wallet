@@ -86,7 +86,9 @@ OPTIONS:
   -config <FILE>	handover a config file to be used instead of the default
 			config file control/config.conf
 
-  -debug		enable debug mode
+  -debug		enable debug mode (can be combined with -trace )
+  
+  -trace		enable trace mode (can be combined with -debug )
 
   -version		display wallet version info
 
