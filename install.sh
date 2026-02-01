@@ -1,28 +1,38 @@
 #!/bin/sh
-print_message(){
-		if [ "${rt_query}" -eq 0 ]
-		then
-			printf "%b" "DONE\n"
-		else
-			printf "%b" "FAILED\n"
-			error_counter=$(( error_counter + 1 ))
-		fi
-		rt_query=0
+add_trap_command(){
+		    	command_to_add="$1"
+			if [ -n "${command_to_add:-}" ]
+			then
+				if [ -z "${current_trap:-}" ]
+			    	then
+			    		### IF EMPTY SET TRAP #########################
+			    		current_trap=${command_to_add}
+			    		trap "${command_to_add}" EXIT
+			    	else
+			    		### IF NOT EMPTY APPEND #######################
+					trap "${current_trap}; ${command_to_add}" EXIT
+					current_trap="${current_trap}; ${command_to_add}"
+				fi
+			fi
 }
-
+print_message(){
+			if [ "${rt_query}" -eq 0 ]
+			then
+				printf "%b" "DONE\n"
+			else
+				printf "%b" "FAILED\n"
+				error_counter=$(( error_counter + 1 ))
+			fi
+			rt_query=0
+}
 ### SET VARIABLES ##############
-script_path=$(dirname "$(readlink -f "${0}")")
-script_name=$(basename "${0}")
+script_path=$(cd "$(dirname "$0")" && pwd)
+script_name=$(basename "$0")
+current_trap=""
 my_pid=$$
 error_counter=0
 cmd_env=""
 cmd_user=""
-
-### CHECK FOR STDIN INPUT ######
-if [ ! -t 0 ]
-then
-	set -- $(cat) "$@"
-fi
 
 ### ASSIGN VARIABLES ###########
 if [ $# -gt 0 ]
@@ -38,23 +48,21 @@ then
 					;;
 			"-user")	cmd_var=$1
 					;;
-			"-debug")	set -x
-					set -v
+			"-debug")	set -v
+					;;
+			"-trace")	set -x
 					;;
 			"-help")	more "${script_path}"/control/install_HELP.txt
 					exit 0
 					;;
 			*)		### SET TARGET VARIABLES #######
 					case "${cmd_var}" in
-						"-env")		cmd_env=$(echo "${1}"|tr 'A-Z' 'a-z')
+						"-env")		cmd_env=$(printf "%b" "${1}"|tr 'A-Z' 'a-z')
 								;;
 						"-user")	cmd_user=$1
 								;;
-						*)		cmd_var=$1
-								echo "Wrong Syntax -> ${cmd_var} !"
-								echo ""
-								echo "To display the HELP run:"
-								echo "./install.sh -help"
+						*)		printf "%b" "[ERROR][parser] Unexpected argument $1\n"
+								printf "%b" "[INFO] To display the HELP run:\n./install.sh -help\n"
 								exit 1
 								;;
 					esac
@@ -66,6 +74,10 @@ then
 
 fi
 
+### CREATE TMP ##############
+add_trap_command '[ -n "${install_dep:-}" ] && rm -f -- "${install_dep}"'
+install_dep=$(mktemp "${script_path}/install_dep.XXXXXX") || exit 1
+
 ### CHECK DEPENDENCIES #######
 while read program
 do
@@ -76,23 +88,23 @@ do
         then
         	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
         	case "${program}" in
-        		"netcat")	echo "netcat-openbsd" >>"${script_path}"/install_dep.tmp
+        		"netcat")	printf "%b" "netcat-openbsd\n" >>"${install_dep}"
         				;;
-        		"gpg")		echo "gnupg"  >>"${script_path}"/install_dep.tmp
+        		"gpg")		printf "%b" "gnupg\n"  >>"${install_dep}"
         				;;
         		"openssl")	if [ "${cmd_env}" = "termux" ]
         				then
-        					echo "openssl-tool"  >>"${script_path}"/install_dep.tmp
+        					printf "%b" "openssl-tool\n"  >>"${install_dep}"
         				else
-        					echo "${program}"  >>"${script_path}"/install_dep.tmp
+        					printf "%b" "${program}\n"  >>"${install_dep}"
         				fi
         				;;
-        		*)		echo "${program}"  >>"${script_path}"/install_dep.tmp
+        		*)		printf "%b" "${program}\n"  >>"${install_dep}"
         				;;
         	esac
         fi
 done <"${script_path}"/control/install.dep
-if [ -f "${script_path}"/install_dep.tmp ] && [ -s "${script_path}"/install_dep.tmp ]
+if [ -f "${install_dep}" ] && [ -s "${install_dep}" ]
 then
 	############################
 	###IF APPS ARE TO INSTALL###
@@ -101,48 +113,23 @@ then
 		"termux")	pkg_mngr="pkg"
 				;;
 		*)		pkg_mngr=""
-				if [ -x "$(command -v apk)" ]
-				then
-					pkg_mngr="apk";
-				else
-					if [ -x "$(command -v apt-get)" ]
+				for pmgr in apk apt-get dnf pacman pkg yum zipper
+				do
+					if [ -x "$(command -v "${pmgr}")" ]
 					then
-						pkg_mngr="apt-get";
-					else
-						if [ -x "$(command -v dnf)" ]
-						then
-							pkg_mngr="dnf";
-						else
-							if [ -x "$(command -v pacman)" ]
-							then
-								pkg_mngr="pacman";
-							else
-								if [ -x "$(command -v pkg)" ]
-								then
-									pkg_mngr="pkg";
-								else
-									if [ -x "$(command -v yum)" ]
-									then
-										pkg_mngr="yum";
-									else
-										if [ -x "$(command -v zypper)" ]
-										then
-											pkg_mngr="zypper";
-										else
-											###IF PACKAGING MANAGER DETECTION FAILED####
-											error_counter=1
-											no_of_programs=$(wc -l <"${script_path}"/install_dep.tmp)
-											echo "[ ERROR ] Couldn't detect the package management system used on this machine!"
-											echo "[ ERROR ] Found ${no_of_programs} programs that need to be installed:"
-											cat "${script_path}"/install_dep.tmp
-											echo "[ ERROR ] Install these programms first using your package management system and then run install.sh again."
-											############################################
-										fi
-									fi
-								fi
-							fi
-						fi
+						pkg_mngr="${pmgr}";
 					fi
+				done
+				if [ -z "${pkg_mngr}" ]
+				then
+					###IF PACKAGING MANAGER DETECTION FAILED####
+					error_counter=1
+					no_of_programs=$(wc -l <"${install_dep}")
+					printf "%b" "[ ERROR ][package] Couldn't detect the package management system used on this machine!\n"
+					printf "%b" "[ ERROR ][package] Found ${no_of_programs} programs that need to be installed:\n"
+					awk '{print "[ ERROR ][package] -> " $1}' "${install_dep}"
+					printf "%b" "[ ERROR ][package] Install these programms first using your package management system and then run install.sh again.\n"
+					############################################
 				fi
 				;;
 	esac
@@ -150,7 +137,7 @@ then
 	if [ -n "${pkg_mngr}" ] && [ "${error_counter}" -eq 0 ]
 	then
 		### INSTALL MISSING PKGS #####
-		while read program
+		while IFS= read -r program
 		do
 			printf "%b" "[ INFO ] Trying to install ${program} using ${pkg_mngr}...\n"
 			case "${pkg_mngr}" in
@@ -165,41 +152,38 @@ then
 			rt_query=$?
 			if [ "${rt_query}" -gt 0 ]
 			then
-				echo "[ ERROR ] Error during installation of ${program} using ${pkg_mngr}"
-				echo "[ ERROR ] Maybe the program ${program} is available in a package with different name."
+				printf "%b" "[ ERROR ][packages] Error during installation of ${program} using ${pkg_mngr}\n"
+				printf "%b" "[ ERROR ][packages] Maybe the program ${program} is available in a package with different name.\n"
 				error_counter=$(( error_counter + 1 ))
 			fi
-		done <"${script_path}"/install_dep.tmp
+		done <"${install_dep}"
 		############################
 	fi
 fi
-###REMOVE TMP FILE##########
-rm "${script_path}"/install_dep.tmp 2>/dev/null
 if [ "${error_counter}" -eq 0 ]
 then
 	rt_query=0
 	if [ -n "${cmd_user}" ]
 	then
+		### DOCUMENT SU COMMAND ######
+		printf "%b" "[INFO] Switch to user ${cmd_user}\n"
 		su - "${cmd_user}" || exit 1
 	fi
 	### CREATE DIRECTORIES #######
 	printf "%b" "[ INFO ] Creating directories..."
-	mkdir -p "${script_path}"/backup || rt_query=1
-	mkdir -p "${script_path}"/control/keys || rt_query=1
-	mkdir -p "${script_path}"/keys || rt_query=1
-	mkdir -p "${script_path}"/proofs || rt_query=1
-	mkdir -p "${script_path}"/tmp || rt_query=1
-	mkdir -p "${script_path}"/trx || rt_query=1
-	mkdir -p "${script_path}"/userdata || rt_query=1
+	mkdir -p "${script_path}"/backup \
+		"${script_path}"/control/keys \
+		"${script_path}"/keys \
+		"${script_path}"/proofs \
+		"${script_path}"/tmp \
+		"${script_path}"/trx \
+		"${script_path}"/userdata || rt_query=1
 	print_message
 
 	### SAVE UMASK SETTINGS ######
 	printf "%b" "[ INFO ] Getting umask..."
-	user_umask=$(umask) || rt_query=1
-	permissions_directories=$(echo "777 - ${user_umask}"|bc) || rt_query=1
-	touch "${script_path}"/test.tmp || rt_query=1
-	permissions_files=$(stat -c '%a' "${script_path}"/test.tmp) || rt_query=1
-	rm "${script_path}"/test.tmp || rt_query=1
+	permissions_directories=$(printf "%03o" $(( 0777 & ~$(umask) ))) || rt_query=1
+	permissions_files=$(printf "%03o" $(( 0666 & ~$(umask) ))) || rt_query=1
 	print_message
 
 	### IF OLD CONFIG THERE ######
@@ -237,31 +221,37 @@ then
 	### REWRITE CONFIG ###########
 	if [ -s "${script_path}"/control/config.bak ]
 	then
-		### GET VARIABLES ###########
-		printf "%b" "[ INFO ] Get old configuration of config.bak..."
-		grep "path_input\|path_output\|theme_file" "${script_path}"/control/config.bak >"${script_path}"/control/config.tmp || rt_query=1
-		print_message
-
+		### CREATE TMP FILE ##########
+		add_trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
+		config_tmp=$(mktemp "${script_path}/control/config_tmp.XXXXXX") || exit 1
+		
 		### READ OLD CONFIG #########
-		while read config_line
+		grep "path_input\|path_output\|theme_file\|small_trx\|cmd_" "${script_path}"/control/config.bak | while IFS= read -r config_line
 		do
-			if [ -n "${config_line}" ]
+			if [ -n "${config_line:-}" ]
 			then
-				conf_var=$(echo "${config_line}"|cut -d '=' -f1)
-				conf_var_val=$(echo "${config_line}"|cut -d '=' -f2)
-				if [ "$(grep -c "${conf_var}" "${script_path}"/control/config.conf)" -gt 0 ]
+				conf_var="${config_line%%=*}"
+				conf_var_val="${config_line#*=}"
+				if grep -q "^$(printf '%s\n' "${conf_var}"|sed 's/[.[\*^$]/\\&/g')=" "${script_path}"/control/config.conf
 				then
 					printf "%b" "[ INFO ] Configure var \$${conf_var} in config.conf..."
-					conf_line=$(grep "${conf_var}" "${script_path}"/control/config.conf)
-					if [ ! "${conf_line}" = "${conf_var}=${conf_var_val}" ]
+					conf_line=$(grep "^${conf_var}" "${script_path}"/control/config.conf)
+					if [ ! "${conf_line:-}" = "${conf_var}=${conf_var_val}" ]
 					then
-						sed -i."${my_pid}".bak "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
+						sed -i."${my_pid}".bak "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf && rm -f -- "${script_path}"/control/config.conf."${my_pid}".bak || rt_query=1
 					fi
 					print_message
 				fi
 			fi
-		done <"${script_path}"/control/config.tmp
-		rm "${script_path}"/control/config.tmp
+		done
+	fi
+	
+	### CHECK FOR ERRORS #####################
+	if [ "${error_counter}" -gt 0 ] && [ -s "${script_path}"/control/config.bak ]
+	then
+		printf "%b" "[ INFO ] Restoring old config ( ->rename control/config.bak back to control/config.conf )..."
+		mv "${script_path}"/control/config.bak "${script_path}"/control/config.conf || rt_query=1
+		print_message
 	fi
 
 	### IF USER NEVER RAN GPG UNTIL NOW ######
