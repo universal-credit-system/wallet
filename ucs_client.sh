@@ -43,17 +43,14 @@ login_account(){
 			rt_query=0
 			if [ "${observer}" -eq 0 ]
 			then
-				###TEST KEY BY ENCRYPTING A MESSAGE##########################
-				echo "${login_name}" >"${script_path}"/tmp/account_"${my_pid}".tmp
-				echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --local-user "${key_file}" -r "${key_file}" --passphrase-fd 0 --pinentry-mode loopback --encrypt --sign "${script_path}"/tmp/account_"${my_pid}".tmp 1>/dev/null 2>/dev/null
+				###SIGN A MESSAGE TESTMESSAGE###############################
+				echo "1" >"${script_path}"/tmp/account_"${my_pid}".tmp
+				echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --local-user "${key_file}" -r "${key_file}" --passphrase-fd 0 --pinentry-mode loopback --sign "${script_path}"/tmp/account_"${my_pid}".tmp 1>/dev/null 2>/dev/null
 				rt_query=$?
 				if [ "${rt_query}" -eq 0 ]
 				then
-					###REMOVE ENCRYPTION SOURCE FILE#############################
-					rm "${script_path}"/tmp/account_"${my_pid}".tmp
-
-					####TEST KEY BY DECRYPTING THE MESSAGE#######################
-					echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output "${script_path}"/tmp/account_"${my_pid}".tmp --decrypt "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 1>/dev/null 2>/dev/null
+					####VERIFYING THE MESSAGE###################################
+					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep "GOODSIG"|grep -c "${key_file}" >/dev/null
 					rt_query=$?
 				fi
 				rm "${script_path}"/tmp/account_"${my_pid}".tmp 2>/dev/null
