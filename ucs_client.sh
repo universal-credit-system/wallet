@@ -1707,7 +1707,7 @@ check_mt(){
 		if [ -f "${user_path}"/all_mts.dat ] && [ -s "${user_path}"/all_mts.dat ]
 		then
 			###REMOVE DELETED MESSGE TYPES FROM ALL_TRX.DAT AND SAVE#########
-			ls -1 "${script_path}"/mt/|sort - "${user_path}"/all_mts.dat|uniq -d|grep -f "${user_path}"/all_mts.dat >"${user_path}"/ack_mts.dat
+			ls -1 "${script_path}"/mt/|sort - "${user_path}"/all_mts.dat|uniq -d >"${user_path}"/ack_mts.dat
 		else
 			rm "${user_path}"/ack_mts.dat 2>/dev/null
 			touch "${user_path}"/ack_mts.dat
@@ -1737,19 +1737,15 @@ check_mt(){
 					###SOURCE MESSAGE TYPE LOGIC############################
 					. "${script_path}/mt/${line}"
 					rt_query=$?
-
-					###CHECK STANDARD FUNCTIONS#############################
-					type "MT${msg_type}_process" >>/dev/null && type "MT${msg_type}_verify" >>/dev/null || rt_query=1
 					if [ "${rt_query}" -eq 0 ]
 					then
-						###ACKNOWLEDGE MESSAGE TYPE#############################
-						msg_type_ack=1
-					else
-						###IF NOT SUCCESSFULL UNSET FUNCTIONS OF MESSAGE TYPE###
-						for mt_function in $(grep "(){" "${script_path}/mt/${line}"|cut -d '(' -f1)
-						do
-							unset "${mt_function}" 
-						done
+						###CHECK STANDARD FUNCTIONS#############################
+						type "MT${msg_type}_process" >>/dev/null && type "MT${msg_type}_verify" >>/dev/null || rt_query=1
+						if [ "${rt_query}" -eq 0 ]
+						then
+							###ACKNOWLEDGE MESSAGE TYPE#############################
+							msg_type_ack=1
+						fi
 					fi
 				fi
 			fi
@@ -1771,6 +1767,13 @@ check_mt(){
 		###REMOVE BLACKLISTED MTS FROM MT LIST#################
 		sort "${user_path}"/all_mts.tmp "${user_path}"/blacklisted_mts.dat|uniq -u >"${user_path}"/all_mts.dat
 		rm "${user_path}"/all_mts.tmp 2>/dev/null
+		
+		###SOURCE FUNCTIONS OF ACKNOWLEDGED MTS################
+		while read line
+		do
+			###SOURCE MESSAGE TYPE LOGIC############################
+			. "${script_path}/mt/${line}"
+		done <"${user_path}"/ack_mts.dat
 }
 check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST###################
