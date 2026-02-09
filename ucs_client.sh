@@ -92,10 +92,10 @@ login_account(){
 			###CHECK IF USERPATH EXISTS IF NOT SET UP####################
 			if [ ! -d "${script_path}/userdata/${handover_account}" ]
 			then
-				mkdir -p "${script_path}"/userdata/"${handover_account}"/temp/assets
-				mkdir "${script_path}"/userdata/"${handover_account}"/temp/keys
-				mkdir "${script_path}"/userdata/"${handover_account}"/temp/proofs
-				mkdir "${script_path}"/userdata/"${handover_account}"/temp/trx
+				mkdir -p "${script_path}"/userdata/"${handover_account}"/temp/assets \
+					"${script_path}"/userdata/"${handover_account}"/temp/keys \
+					"${script_path}"/userdata/"${handover_account}"/temp/proofs \
+					"${script_path}"/userdata/"${handover_account}"/temp/trx
 			fi
 
 			####DISPLAY WELCOME MESSAGE##################################
@@ -158,10 +158,10 @@ create_keys(){
 			fi
 
 			###CREATE USER DIRECTORY AND SET USER_PATH###########
-			mkdir -p "${script_path}"/userdata/"${create_name_hashed}"/temp/assets
-			mkdir "${script_path}"/userdata/"${create_name_hashed}"/temp/keys
-			mkdir "${script_path}"/userdata/"${create_name_hashed}"/temp/proofs
-			mkdir "${script_path}"/userdata/"${create_name_hashed}"/temp/trx
+			mkdir -p "${script_path}"/userdata/"${create_name_hashed}"/temp/assets \
+				"${script_path}"/userdata/"${create_name_hashed}"/temp/keys \
+				"${script_path}"/userdata/"${create_name_hashed}"/temp/proofs \
+				"${script_path}"/userdata/"${create_name_hashed}"/temp/trx
 			user_path="${script_path}/userdata/${create_name_hashed}"
 
 			###EXPORT PUBLIC KEY#########################################
