@@ -4,6 +4,7 @@ basename
 bc
 cat
 chmod
+cmp
 cp
 curl
 cut
