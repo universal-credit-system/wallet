@@ -5419,14 +5419,14 @@ do
 											then
 												dialog --extra-button --extra-label "SIGN" --help-button --help-label "DECLINE" --title "${dialog_history_show} : MULTI-SIGNATURE" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_history_show_trx}" 0 0
 												rt_query=$?
-												if [ "${rt_query}" -eq 2 ]
+												if [ "${rt_query}" -eq 3 ]
 												then
 													last_ledger=$(basename -a "${user_path}"/*_ledger.dat|tail -1)
 													last_ledger="${last_ledger%%_*}"
 													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
 													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
 												else
-													if [ "${rt_query}" -eq 3 ]
+													if [ "${rt_query}" -eq 2 ]
 													then
 														echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_dec.sig
 													fi
