@@ -176,8 +176,6 @@ MT100_process(){
 								if [ "${is_multi_sign_wallet}" -eq 1 ]
 								then
 									is_multi_sign_okay=1
-									number_multi_signed=0
-									total_number_signer=0
 									
 									###CHECK CONFIRMATIONS#######################################
 									if awk \
@@ -195,8 +193,6 @@ MT100_process(){
 								if [ "${is_multi_sign_trx}" -eq 1 ]
 								then
 									is_multi_sign_okay=1
-									number_multi_signed=0
-									total_number_signer=0
 
 									###CHECK CONFIRMATIONS#######################################
 									if awk \
