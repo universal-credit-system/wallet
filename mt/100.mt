@@ -19,7 +19,7 @@ MT100_process(){
 		if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] || [ "${trx_sender}" = "${handover_account}" ]
 		then
 			###CHECK IF TRX IS SIGNED BY USER#############################
-			is_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
+			is_signed=$(grep -c "${trx_path} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
 			if [ "${is_signed}" -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
 			then
 				###EXTRACT TRX AMOUNT#########################################
@@ -179,31 +179,13 @@ MT100_process(){
 									number_multi_signed=0
 									total_number_signer=0
 									
-									###GO THROUGH LIST OF WALLET MULTI SIGN ENTRIES###############
-									for signer in $(awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${trx_sender}/multi.sig")
-									do
-										###ADD CONFIRMATION FOR OWN###################################
-										if [ "${signer}" = "${handover_account}" ] && [ "${self_signed}" -eq 1 ]
-										then
-											number_multi_signed=$(( number_multi_signed + 1 ))
-										else
-											if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
-											then
-												###GET CONFIRMATIONS##########################################
-												is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
-												if [ "${is_multi_signed}" -eq 1 ]
-												then
-													number_multi_signed=$(( number_multi_signed + 1 ))
-												fi
-											fi
-										fi
-										total_number_signer=$(( total_number_signer + 1 ))
-									done
-
-									###CALCULATE MAJORITY#########################################
-									majority=$(( total_number_signer / 2 ))
-									majority=$(( majority + 1 ))
-									if [ "${number_multi_signed}" -ge "${majority}" ]
+									###CHECK CONFIRMATIONS#######################################
+									if awk \
+									    -v DEBUG_MODE="${debug}" \
+									    -v PROOF_PATH="${script_path}/proofs" \
+									    -v TRX_REF="${trx_path} ${trx_hash}" \
+									    -f "${script_path}"/control/functions/check_multisig.awk \
+									    "${script_path}/proofs/${trx_sender}/multi.sig"
 									then
 										is_multi_sign_okay=0
 									fi
@@ -216,32 +198,13 @@ MT100_process(){
 									number_multi_signed=0
 									total_number_signer=0
 
-									###GO THROUGH LIST OF TRX MULTI SIGN ENTRIES##################
-									for signer in $(awk -F: '/:MSIG:/{print $3}' "${trx_file}"|sort -u)
-									do
-										###ADD CONFIRMATION FOR OWN###################################
-										if [ "${signer}" = "${handover_account}" ] && [ "${self_signed}" -eq 1 ]
-										then
-											number_multi_signed=$(( number_multi_signed + 1 ))
-										else
-											###CHECK IF SIGNER HAS INDEX FILE#############################
-											if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
-											then
-												###GET CONFIRMATIONS##########################################
-												is_multi_signed=$(grep -c "trx/${trx_filename} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
-												if [ "${is_multi_signed}" -eq 1 ]
-												then
-													number_multi_signed=$(( number_multi_signed + 1 ))
-												fi
-											fi
-										fi
-										total_number_signer=$(( total_number_signer + 1 ))
-									done
-		
-									###CALCULATE MAJORITY#########################################
-									majority=$(( total_number_signer / 2 ))
-									majority=$(( majority + 1 ))
-									if [ "${number_multi_signed}" -ge "${majority}" ]
+									###CHECK CONFIRMATIONS#######################################
+									if awk \
+									    -v DEBUG_MODE="${debug}" \
+									    -v PROOF_PATH="${script_path}/proofs" \
+									    -v TRX_REF="${trx_path} ${trx_hash}" \
+									    -f "${script_path}"/control/functions/check_multisig.awk \
+									    "${script_path}/trx/${line}"
 									then
 										is_multi_sign_okay=0
 									fi

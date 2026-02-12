@@ -276,7 +276,7 @@ create_keys(){
 																		exit 16
 																	fi
 																fi
-																
+
 																###LOOP TO ADD USERS FOR MULTI SIGNATURE#################
 																while [ "${add_multi_sig_user}" -eq 0 ]
 																do
@@ -1767,7 +1767,7 @@ check_mt(){
 		###REMOVE BLACKLISTED MTS FROM MT LIST#################
 		sort "${user_path}"/all_mts.tmp "${user_path}"/blacklisted_mts.dat|uniq -u >"${user_path}"/all_mts.dat
 		rm "${user_path}"/all_mts.tmp 2>/dev/null
-		
+
 		###SOURCE FUNCTIONS OF ACKNOWLEDGED MTS################
 		while read line
 		do
@@ -2205,16 +2205,10 @@ get_dependencies(){
 			then
 				own_index_there=1
 			fi
-			##############################################################################
 
 			###CHECK IF ANYTHING HAS CHANGED##############################################
-			depend_accounts_old_hash="X"
-			depend_trx_old_hash="X"
-			depend_confirmations_old_hash="X"
 			if [ -e "${user_path}"/depend_accounts.dat ]
 			then
-				depend_accounts_old_hash=$(sha256sum "${user_path}"/depend_accounts.dat)
-				depend_accounts_old_hash=${depend_accounts_old_hash%% *}
 				cp "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
 			else
 				first_start=1
@@ -2223,14 +2217,10 @@ get_dependencies(){
 			then
 				if [ -e "${user_path}"/depend_trx.dat ]
 				then
-					depend_trx_old_hash=$(sha256sum "${user_path}"/depend_trx.dat)
-					depend_trx_old_hash=${depend_trx_old_hash%% *}
 					cp "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
 				fi
 				if [ -e "${user_path}"/depend_confirmations.dat ]
 				then
-					depend_confirmations_old_hash=$(sha256sum "${user_path}"/depend_confirmations.dat)
-					depend_confirmations_old_hash=${depend_confirmations_old_hash%% *}
 					cp "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
 				fi
 			fi
@@ -2244,59 +2234,14 @@ get_dependencies(){
 				echo "${handover_account}" >"${user_path}"/depend_accounts.dat
 				grep "${handover_account}" "${user_path}"/all_trx.dat >"${user_path}"/depend_trx.dat
 
-				###ADD MULTI SIGNATURE USERS OF USER##########################################
-				if [ -s "${script_path}/proofs/${handover_account}/multi.sig" ]
-				then
-					awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${handover_account}/multi.sig" >>"${user_path}"/depend_accounts.dat
-				fi
-
-				###ADD MULTI SIGNATURE USERS##################################################
-				grep -s -l "${handover_account}" "${script_path}"/proofs/*/multi.sig >"${user_path}"/msig_others.tmp
-				while read line
-				do
-					directory=$(dirname "${line}")
-					user=$(basename "${directory}")
-					echo "${user}" >>"${user_path}"/depend_accounts.dat
-				done <"${user_path}"/msig_others.tmp
-
-				###ADD MULTI SIGNATURE TRX####################################################
-				grep -s -l "MSIG:${handover_account}" "${script_path}"/trx/* >"${user_path}"/msig_others.tmp
- 				while read line
- 				do
- 					user=$(basename "${line}")
- 					user=${user%%.*}
- 					echo "${user}" >>"${user_path}"/depend_accounts.dat
- 				done <"${user_path}"/msig_others.tmp
-				rm "${user_path}"/msig_others.tmp
-
-				###REMOVE DOUBLE ENTRIES######################################################
-				sort -u "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
-				mv "${user_path}"/depend_accounts.tmp "${user_path}"/depend_accounts.dat
-
-				###UNCOVER DEPENDENCIES BETWEEN USERS AND THEIR TRANSACTIONS##################
-				while [ "${counter}" -le "$(wc -l <"${user_path}"/depend_accounts.dat)" ]
-				do
-					user=$(head -"${counter}" "${user_path}"/depend_accounts.dat|tail -1)
-					grep -l "RCVR:${user}" /dev/null $(cat "${user_path}"/all_trx.dat)|cut -d '.' -f1 >"${user_path}"/depend_user_list.tmp
-					for trx in $(grep "${user}" "${user_path}"/all_trx.dat)
-					do
-						echo "${trx}" >>"${user_path}"/depend_trx.dat
-						receiver=$(awk -F: '/:RCVR:/{print $3}' "${script_path}/trx/${trx}")
-						if [ "$(grep -c "${receiver}" "${user_path}"/all_assets.dat)" -eq 0 ] && [ "$(grep -c "${receiver}" "${user_path}"/all_accounts.dat)" -eq 1 ]
-						then
-							echo "${receiver}" >>"${user_path}"/depend_user_list.tmp
-						fi
-					done
-					for user in $(sort -u "${user_path}"/depend_user_list.tmp)
-					do
-						if [ "$(grep -c "${user}" "${user_path}"/depend_accounts.dat)" -eq 0 ]
-						then
-							echo "${user}" >>"${user_path}"/depend_accounts.dat
-						fi
-					done
-					counter=$(( counter + 1 ))
-				done
-				rm "${user_path}"/depend_user_list.tmp
+				###BUILD DEPENDENCIES WITH AWK################################################
+				msig_files=$(ls -1 "${script_path}"/proofs/*/multi.sig 2>/dev/null)
+				awk -F: \
+				  -v DEBUG_MODE="${debug}" \
+				  -v USER_PATH="${user_path}" \
+				  -v SCRIPT_PATH="${script_path}" \
+				  -v MSIG_FILES="${msig_files}" \
+				  -f "${script_path}"/control/functions/build_dependencies.awk
 
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
@@ -2309,9 +2254,14 @@ get_dependencies(){
 				cp "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
 			fi
 
-			###GET DEPEND TRX THAT HAVE ENOUGH CONFIRMATIONS##############################
+			###CREATE CONFIRMATIONS INDEX#########################################
+			grep -s "trx/" "${script_path}"/proofs/*/*.txt|sed "s#${script_path}##g" >"${user_path}"/index_conf_trx.dat
+
+			###RESET DEPEND_CONFIRMATIONS FILE####################################
 			rm "${user_path}"/depend_confirmations.dat 2>/dev/null
 			touch "${user_path}"/depend_confirmations.dat
+
+			###GET DEPEND TRX THAT HAVE ENOUGH CONFIRMATIONS##############################
 			while read line
 			do
 				###RESET VARIABLES############################################
@@ -2339,40 +2289,29 @@ get_dependencies(){
 					is_multi_sign=1
 					is_multi_sign_trx=1
 				fi
-				
+
 				###LOGIG TO CONSIDER MULTI-SIGNATURE FOR CONFIRATIONS#########
 				if [ "${is_multi_sign}" -eq 1 ]
 				then
+					###LOGIC FOR WALLET MULTI SIGNATURE CONFIRMATIONS############
 					if [ "${is_multi_sign_wallet}" -eq 1 ]
 					then
 						is_multi_sign_okay=1
 						number_multi_signed=0
 						total_number_signer=0
-						
-						###GO THROUGH LIST OF WALLET MULTI SIGN ENTRIES###############
-						for signer in $(awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${trx_sender}/multi.sig")
-						do
-							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
-							then
-								###GET CONFIRMATIONS##########################################
-								is_multi_signed=$(grep -c "trx/${line} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
-								if [ "${is_multi_signed}" -eq 1 ]
-								then
-									number_multi_signed=$(( number_multi_signed + 1 ))
-								fi
-							fi
-							total_number_signer=$(( total_number_signer + 1 ))
-						done
 
-						###CALCULATE MAJORITY#########################################
-						majority=$(( total_number_signer / 2 ))
-						majority=$(( majority + 1 ))
-						if [ "${number_multi_signed}" -ge "${majority}" ]
+						###CHECK CONFIRMATIONS#######################################
+						if awk \
+						    -v DEBUG_MODE="${debug}" \
+						    -v PROOF_PATH="${script_path}/proofs" \
+						    -v TRX_REF="trx/${line} ${trx_hash}" \
+						    -f "${script_path}"/control/functions/check_multisig.awk \
+						    "${script_path}/proofs/${trx_sender}/multi.sig"
 						then
 							is_multi_sign_okay=0
 						fi
 					fi
-				
+
 					###LOGIC FOR TRX MULTI SIGNATURE CONFIRMATIONS################
 					if [ "${is_multi_sign_trx}" -eq 1 ]
 					then
@@ -2380,26 +2319,13 @@ get_dependencies(){
 						number_multi_signed=0
 						total_number_signer=0
 
-						###GO THROUGH LIST OF TRX MULTI SIGN ENTRIES##################
-						for signer in $(awk -F: '/:MSIG:/{print $3}' "${trx_file}"|sort -u)
-						do
-							###CHECK IF SIGNER HAS INDEX FILE#############################
-							if [ -f "${script_path}/proofs/${signer}/${signer}.txt" ] && [ -s "${script_path}/proofs/${signer}/${signer}.txt" ]
-							then
-								###GET CONFIRMATIONS##########################################
-								is_multi_signed=$(grep -c "trx/${line} ${trx_hash}" "${script_path}/proofs/${signer}/${signer}.txt")
-								if [ "${is_multi_signed}" -eq 1 ]
-								then
-									number_multi_signed=$(( number_multi_signed + 1 ))
-								fi
-							fi
-							total_number_signer=$(( total_number_signer + 1 ))
-						done
-
-						###CALCULATE MAJORITY#########################################
-						majority=$(( total_number_signer / 2 ))
-						majority=$(( majority + 1 ))
-						if [ "${number_multi_signed}" -ge "${majority}" ]
+						###CHECK CONFIRMATIONS#######################################
+						if awk \
+						    -v DEBUG_MODE="${debug}" \
+						    -v PROOF_PATH="${script_path}/proofs" \
+						    -v TRX_REF="trx/${line} ${trx_hash}" \
+						    -f "${script_path}"/control/functions/check_multisig.awk \
+						    "${script_path}/trx/${line}"
 						then
 							is_multi_sign_okay=0
 						fi
@@ -2407,7 +2333,7 @@ get_dependencies(){
 				fi
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
-					total_confirmations=$(grep -s -l "trx/${line} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+					total_confirmations=$(grep -s "trx/${line} ${trx_hash}" "${user_path}"/index_conf_trx.dat|grep -c -v "${trx_sender}\|${trx_receiver}")
 					if [ "${total_confirmations}" -ge "${confirmations_from_users}" ]
 					then
 						echo "${line}" >>"${user_path}"/depend_confirmations.dat
@@ -2415,14 +2341,23 @@ get_dependencies(){
 				fi
 			done <"${user_path}"/depend_trx.dat
 
-			###GET HASH AND COMPARE#######################################################
-			depend_accounts_new_hash=$(sha256sum "${user_path}"/depend_accounts.dat)
-			depend_accounts_new_hash=${depend_accounts_new_hash%% *}
-			depend_trx_new_hash=$(sha256sum "${user_path}"/depend_trx.dat)
-			depend_trx_new_hash=${depend_trx_new_hash%% *}
-			depend_confirmations_new_hash=$(sha256sum "${user_path}"/depend_confirmations.dat)
-			depend_confirmations_new_hash=${depend_confirmations_new_hash%% *}
-			if [ "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ] && [ "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ] && [ "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ] && [ "${own_index_there}" -eq 1 ]
+			###COMPARE OLD AND NEW################################################
+			depend_accounts_changed=0
+			if ! cmp -s "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts.tmp
+			then
+				depend_accounts_changed=1
+			fi
+			depend_trx_changed=0
+			if ! cmp -s "${user_path}"/depend_trx.dat "${user_path}"/depend_trx.tmp
+			then
+				depend_trx_changed=1
+			fi
+			depend_confirmations_changed=0
+			if ! cmp -s "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations.tmp
+			then
+				depend_confirmations_changed=1
+			fi
+			if [ "${depend_accounts_changed}" -eq 0 ] && [ "${depend_trx_changed}" -eq 0 ] && [ "${depend_confirmations_changed}" -eq 0 ] && [ "${own_index_there}" -eq 1 ]
 			then
 				make_new_index=0
 				ledger_mode=0
@@ -2434,35 +2369,29 @@ get_dependencies(){
 					touch "${user_path}"/dates.tmp
 
 					###CREATE LISTS WITH DATE OF LEDGER CHANGES###################################
-					if [ ! "${depend_accounts_new_hash}" = "${depend_accounts_old_hash}" ]
+					if [ "${depend_accounts_changed}" -eq 1 ]
 					then
-						depend_accounts_new_date=$(grep "$(sort "${user_path}"/depend_accounts_old.tmp "${user_path}"/depend_accounts.dat|uniq -u)" "${user_path}"/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
-						depend_accounts_new_date=${depend_accounts_new_date#* }
-						if [ -n "${depend_accounts_new_date}" ]
+						earliest_date=$(sort "${user_path}"/depend_accounts_old.tmp "${user_path}"/depend_accounts.dat|uniq -u|grep -f - "${user_path}"/all_accounts_dates.dat|sort -t ' ' -k2|head -1)
+						earliest_date=${earliest_date#* }
+						if [ -n "${earliest_date}" ]
 						then
-							echo "${depend_accounts_new_date}" >>"${user_path}"/dates.tmp
+							echo "${earliest_date}" >>"${user_path}"/dates.tmp
 						fi
 					fi
-					if [ ! "${depend_trx_new_hash}" = "${depend_trx_old_hash}" ]
+					if [ "${depend_trx_changed}" -eq 1 ]
 					then
-						if [ -e "${user_path}"/depend_trx.dat ] && [ ! "${depend_trx_old_hash}" = "X" ]
+						earliest_date=$(sort -t . -k2 "${user_path}"/depend_trx_old.tmp "${user_path}"/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
+						if [ -n "${earliest_date}" ]
 						then
-							depend_trx_new_date=$(sort -t . -k2 "${user_path}"/depend_trx_old.tmp "${user_path}"/depend_trx.dat|uniq -u|head -1|cut -d '.' -f2)
-							if [ -n "${depend_trx_new_date}" ]
-							then
-								echo "${depend_trx_new_date}" >>"${user_path}"/dates.tmp
-							fi
+							echo "${earliest_date}" >>"${user_path}"/dates.tmp
 						fi
 					fi
-					if  [ ! "${depend_confirmations_new_hash}" = "${depend_confirmations_old_hash}" ]
+					if  [ "${depend_confirmations_changed}" -eq 1 ]
 					then
-						if [ -e "${user_path}"/depend_confirmations.dat ] && [ ! "${depend_confirmations_new_hash}" = "X" ]
+						earliest_date=$(sort -t . -k2 "${user_path}"/depend_confirmations_old.tmp "${user_path}"/depend_confirmations.dat|uniq -u|head -1|cut -d '.' -f2)
+						if [ -n "${earliest_date}" ]
 						then
-							depend_confirmations_new_date=$(sort -t . -k2 "${user_path}"/depend_confirmations_old.tmp "${user_path}"/depend_confirmations.dat|head -1|cut -d '.' -f2)
-							if [ -n "${depend_confirmations_new_date}" ]
-							then
-								echo "${depend_confirmations_new_date}" >>"${user_path}"/dates.tmp
-							fi
+							echo "${earliest_date}" >>"${user_path}"/dates.tmp
 						fi
 					fi
 
@@ -3954,7 +3883,7 @@ do
 											multi_sig_loop=1
 											rt_query=0
 										fi
-									done				
+									done
 									currency_symbol=${order_asset}
 									asset_found=1
 									receiver_found=0
@@ -4249,7 +4178,7 @@ do
 													trx_msig_users="-\n"
 												fi
 												trx_msig_users=$(printf "%b" "${trx_msig_users}"|sort -u|awk '{printf "%s\\n", $0}')
-												
+
 												###ASK FOR FINAL CONFIRMATION############################
 												currency_symbol=${order_asset}
 												dialog_send_overview_display=$(echo "${dialog_send_overview}"|sed -e "s#<order_receiver>#${order_receiver}#g" -e "s#<account_my_balance>#${account_my_balance}#g" -e "s#<currency_symbol>#${currency_symbol}#g" -e "s#<order_amount_formatted>#${order_amount_formatted}#g" -e "s#<order_purpose>##g" -e "s#<msig_users>#${trx_msig_users}#g")
@@ -5113,7 +5042,7 @@ do
 
 															###SET DEFAULT-ITEM OF DIALOG MENU#######################
 															def_string_trx=$(head -1 "${user_path}"/dialog_browser_trx.tmp)
-															
+
 															###CHECK IF MULTI-SIGNATURE##############################
 															multi_sig_string=""
 															if [ -f "${script_path}/proofs/${user}/multi.sig" ] && [ -s "${script_path}/proofs/${user}/multi.sig" ]
@@ -5177,7 +5106,7 @@ do
 							;;
 				"${dialog_history}")	###CREATE A LIST WITH ALL TRX CONCERNING USER##########
 							grep -s -l ":${handover_account}" "${script_path}"/trx/* >"${user_path}"/my_trx.tmp
-							
+
 							###INCLUDING TRX OF MULTI SIGNATURE WALLETS############
 							rm "${user_path}"/my_multi_sig_trx.tmp 2>/dev/null
 							touch "${user_path}"/my_multi_sig_trx.tmp
@@ -5193,7 +5122,7 @@ do
 									fi
 								done
 							done
-							
+
 							###CONCATENATE########################################
 							sort -r -t . -k2 "${user_path}"/my_trx.tmp "${user_path}"/my_multi_sig_trx.tmp >>"${user_path}"/my_trx_all.tmp
 
@@ -5298,7 +5227,7 @@ do
 										trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${trx_file_path}")
 										trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx_file_path}")
 										val_sign=$(echo "${decision}"|grep -c "+")
-										
+
 										###EXTRACT PURPOSE#####################################
 										purpose_there=0
 										purpose_dialog_string="-"
@@ -5400,7 +5329,7 @@ do
 												dialog_history_show_trx_string=${dialog_history_show_trx_multi}
 											fi
 										fi
-		
+
 										###GET MULTI SIG USERS IF THERE ARE ANY################
 										trx_msig_users=""
 										for msig_user_trx in $(grep -s ":MSIG:" "${trx_file_path}"|cut -d ':' -f3)
@@ -5418,7 +5347,7 @@ do
 											trx_msig_users="-\n"
 										fi
 										trx_msig_users=$(printf "%b" "${trx_msig_users}"|sort -u|awk '{printf "%s\\\\n", $0}')
-			
+
 										###WRITE OUTPUT###################################################
 										dialog_history_show_trx=$(printf "%s" "${dialog_history_show_trx_string}"|sed -e "s/<message_type>/${trx_mt}/g" -e "s#<msig_users>#${trx_msig_users}#g" -e "s/<sender>/${trx_sender}/g" -e "s/<receiver>/${trx_receiver}/g" -e "s/<trx_amount>/${trx_amount}/g" -e "s/<currency_symbol>/${currency_symbol}/g" -e "s/<trx_date>/${trx_date_extracted} ${trx_time_extracted}/g" -e "s/<order_purpose>/${purpose_dialog_string}/g" -e "s/<trx_file>/${trx_file}/g" -e "s/<trx_status>/${trx_status}/g" -e "s/<trx_confirmations>/${trx_confirmations}/g")
 										if [ "${purpose_there}" -eq 1 ] || [ "${purpose_there}" -eq 2 ]
