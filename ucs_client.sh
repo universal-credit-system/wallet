@@ -5445,69 +5445,43 @@ do
 							rm "${user_path}"/history_list.tmp 2>/dev/null
 							;;
 				"${dialog_stats}")	###IF CMD_ASSET NOT SET USE UCC################
-							if [ -z "${cmd_asset}" ]
-							then
-								order_asset=${main_asset}
-							else
-								order_asset=${cmd_asset}
-							fi
+							order_asset=${cmd_asset:-$main_asset}
 
 							###CALCULATE TOTAL NUMBER OF COINS#############
-							counter=1
-							total_users=0
-							total_number_coins=0
-							daily_payout=365250
-							today=$(date +%s)
-							focus=$(date -u +%s --date="${start_date}")
+							start_day=$(date -u +%s --date="${start_date}")
 							user_dates_list=$(gpg --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-keys|grep "uid"|grep "$(ls -1 "${script_path}"/keys/)" -|cut -d ':' -f6)
-							while [ "${focus}" -le "${today}" ]
-							do
-								total_payout=$(echo "${total_users} * ${daily_payout}"|bc)
-								total_number_coins=$(echo "${total_number_coins} + ${total_payout}"|bc)
-								focus_next_day=$(( focus + 86400 ))
-								total_users_today=$(echo "${user_dates_list}"|awk -F. -v focus="${focus}" -v focus_next_day="${focus_next_day}" '$1 > focus && $1 < focus_next_day'|wc -l)
-								total_users=$(( total_users + total_users_today ))
-								if [ "${counter}" -ge 2 ]
-								then
-									daily_payout=1
-								fi
-								counter=$(( counter + 1 ))
-								focus=$(( focus + 86400 ))
-							done
+
+							###EXTRACT VOLUMETRIX##########################
+							total_number_coins=$(echo "${user_dates_list}"|awk -v DEBUG_MODE="${debug}" -v start_day="${start_day}" -f "${script_path}"/control/functions/get_payouts.awk)
 
 							###TOTAL NUMBER OF ASSETS######################
-							total_number_assets=$(ls -1 "${script_path}"/assets|wc -l)
+							set -- "$script_path/assets/"*
+							[ -e "$1" ] && total_number_assets=$# || total_number_assets=0
 
 							###TOTAL NUMBER OF PUBLIC KEYS#################
-							total_number_users=$(ls -1 "${script_path}"/keys|wc -l)
+							set -- "$script_path/keys/"*
+							[ -e "$1" ] && total_number_users=$# || total_number_users=0
 
 							###TOTAL NUMBER OF PRIVATE KEYS################
-							total_number_users_local=$(ls -1 "${script_path}"/control/keys/*.sct 2>/dev/null|wc -l)
+							set -- "$script_path/control/keys/"*.sct
+							[ -e "$1" ] && total_number_users_local=$# || total_number_users_local=0
 
-							###TOTAL NUMBER OF TRANSACTIONS################
-							total_number_trx=$(grep -s -l "ASST:${cmd_asset}" "${script_path}"/trx/*|wc -l)
+							###GET STAMPS OF TODAY AND TOMORROW############
+							today_start=$(date -u +%s --date="$(date +%Y%m%d)")
+							tomorrow_start=$(( today_start + 86400 ))
 
-							###TOTAL NUMBER OF TRANSACTIONS TODAY##########
-							total_number_trx_today=$(grep -s -l "ASST:${cmd_asset}" "${script_path}"/trx/*|awk -F. -v date_stamp="$(date -u +%s --date="$(date +%Y%m%d)")" -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow'|wc -l)
+							###EXTRACT VOLUMETRIX##########################
+							trx_volumetrix=$(awk -v asset="${order_asset}" \
+							                     -v today_start="${today_start}" \
+							                     -v tomorrow_start="${tomorrow_start}" \
+							                     -f "${script_path}"/control/functions/get_volumetrics.awk "$script_path"/trx/*)
 
-							###TRANSACTION VOLUME TOTAL####################
-							total_volume_trx=0
-							for amount in $(grep "AMNT:" /dev/null $(grep -s -l "ASST:${cmd_asset}" "${script_path}"/trx/*))
-							do
-								amount=${amount#*:*:*:}
-								total_volume_trx=$(echo "scale=9;${total_volume_trx} + ${amount}"|bc)
-							done
-							total_volume_trx=$(echo "${total_volume_trx}"|sed 's/^\./0./g')
-
-							###TRANSACTION VOLUME TODAY####################
-							total_volume_trx_today=0
-							for trx in $(grep -s -l "ASST:${cmd_asset}" "${script_path}"/trx/*|awk -F. -v date_stamp="$(date -u +%s --date="$(date +%Y%m%d)")" -v date_stamp_tomorrow="$(( $(date -u +%s --date="$(date +%Y%m%d)") + 86400 ))" '$2 > date_stamp && $2 < date_stamp_tomorrow')
-							do
-								amount=$(grep "AMNT:" "${trx}")
-								amount=${amount#*:*:}
-								total_volume_trx_today=$(echo "scale=9;${total_volume_trx_today} + ${amount}"|bc)
-							done
-							total_volume_trx_today=$(echo "${total_volume_trx_today}"|sed 's/^\./0./g')
+							###ASSIGN VOLUMETRIX TO VARIABLES##############
+							set -- ${trx_volumetrix}
+							total_number_trx=$1
+							total_number_trx_today=$2
+							total_volume_trx=$3
+							total_volume_trx_today=$4
 
 							if [ "${gui_mode}" -eq 1 ]
 							then
