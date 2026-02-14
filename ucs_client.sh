@@ -2265,9 +2265,6 @@ get_dependencies(){
 			while read line
 			do
 				###RESET VARIABLES############################################
-				is_multi_sign=0
-				is_multi_sign_wallet=0
-				is_multi_sign_trx=0
 				is_multi_sign_okay=0
 
 				###EXTRACT DATA###############################################
@@ -2276,57 +2273,41 @@ get_dependencies(){
 				trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${script_path}/trx/${line}")
 				trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${script_path}/trx/${line}")
 
-				###CHECK IF MULTI SIG WALLET##################################
+				###LOGIC FOR WALLET MULTI SIGNATURE CONFIRMATIONS############
 				if [ -f "${script_path}/proofs/${trx_sender}/multi.sig" ] && [ -s "${script_path}/proofs/${trx_sender}/multi.sig" ]
 				then
-					is_multi_sign=1
-					is_multi_sign_wallet=1
+					is_multi_sign_okay=1
+
+					###CHECK CONFIRMATIONS#######################################
+					if awk \
+					    -v DEBUG_MODE="${debug}" \
+					    -v PROOF_PATH="${script_path}/proofs" \
+					    -v TRX_REF="trx/${line} ${trx_hash}" \
+					    -f "${script_path}"/control/functions/check_multisig.awk \
+					    "${script_path}/proofs/${trx_sender}/multi.sig"
+					then
+						is_multi_sign_okay=0
+					fi
 				fi
 
-				###CHECK IF MULTI SIG TRANSACTION#############################
+				###LOGIC FOR TRX MULTI SIGNATURE CONFIRMATIONS################
 				if [ "$(grep -c ":MSIG:" "${script_path}/trx/${line}")" -gt 0 ]
 				then
-					is_multi_sign=1
-					is_multi_sign_trx=1
-				fi
+					is_multi_sign_okay=1
 
-				###LOGIG TO CONSIDER MULTI-SIGNATURE FOR CONFIRATIONS#########
-				if [ "${is_multi_sign}" -eq 1 ]
-				then
-					###LOGIC FOR WALLET MULTI SIGNATURE CONFIRMATIONS############
-					if [ "${is_multi_sign_wallet}" -eq 1 ]
+					###CHECK CONFIRMATIONS#######################################
+					if awk \
+					    -v DEBUG_MODE="${debug}" \
+					    -v PROOF_PATH="${script_path}/proofs" \
+					    -v TRX_REF="trx/${line} ${trx_hash}" \
+					    -f "${script_path}"/control/functions/check_multisig.awk \
+					    "${script_path}/trx/${line}"
 					then
-						is_multi_sign_okay=1
-
-						###CHECK CONFIRMATIONS#######################################
-						if awk \
-						    -v DEBUG_MODE="${debug}" \
-						    -v PROOF_PATH="${script_path}/proofs" \
-						    -v TRX_REF="trx/${line} ${trx_hash}" \
-						    -f "${script_path}"/control/functions/check_multisig.awk \
-						    "${script_path}/proofs/${trx_sender}/multi.sig"
-						then
-							is_multi_sign_okay=0
-						fi
-					fi
-
-					###LOGIC FOR TRX MULTI SIGNATURE CONFIRMATIONS################
-					if [ "${is_multi_sign_trx}" -eq 1 ]
-					then
-						is_multi_sign_okay=1
-
-						###CHECK CONFIRMATIONS#######################################
-						if awk \
-						    -v DEBUG_MODE="${debug}" \
-						    -v PROOF_PATH="${script_path}/proofs" \
-						    -v TRX_REF="trx/${line} ${trx_hash}" \
-						    -f "${script_path}"/control/functions/check_multisig.awk \
-						    "${script_path}/trx/${line}"
-						then
-							is_multi_sign_okay=0
-						fi
+						is_multi_sign_okay=0
 					fi
 				fi
+				
+				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
 					total_confirmations=$(grep -s "trx/${line} ${trx_hash}" "${user_path}"/index_conf_trx.dat|grep -c -v "${trx_sender}\|${trx_receiver}")
