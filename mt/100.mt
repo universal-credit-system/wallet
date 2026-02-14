@@ -200,7 +200,7 @@ MT100_process(){
 									    -v PROOF_PATH="${script_path}/proofs" \
 									    -v TRX_REF="${trx_path} ${trx_hash}" \
 									    -f "${script_path}"/control/functions/check_multisig.awk \
-									    "${script_path}/trx/${line}"
+									    "${trx_file}"
 									then
 										is_multi_sign_okay=0
 									fi
