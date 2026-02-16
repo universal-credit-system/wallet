@@ -201,21 +201,21 @@ then
 
 	### WRITE PERMISSIONS ########
 	printf "%b" "[ INFO ] Write umask to config.conf..."
-	sed -i."${my_pid}".bak "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
-	sed -i."${my_pid}".bak "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
+	sed "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET DEFAULT THEME ########
 	printf "%b" "[ INFO ] Set default theme 'debian.rc' in config.conf..."
-	sed -i."${my_pid}".bak "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
+	sed "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET PATHS ################
 	printf "%b" "[ INFO ] Define paths in config.conf..."
-	sed -i."${my_pid}".bak "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
-	sed -i."${my_pid}".bak "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
-	sed -i."${my_pid}".bak "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
-	sed -i."${my_pid}".bak "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak 2>/dev/null || rt_query=1
+	sed "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### REWRITE CONFIG ###########
@@ -238,7 +238,7 @@ then
 					conf_line=$(grep "^${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line:-}" = "${conf_var}=${conf_var_val}" ]
 					then
-						sed -i."${my_pid}".bak "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf && rm -f -- "${script_path}"/control/config.conf."${my_pid}".bak || rt_query=1
+						sed "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 					fi
 					print_message
 				fi
@@ -285,7 +285,7 @@ then
 	if [ -s ~/.gnupg/common.conf ]
 	then
 		printf "%b" "[ INFO ] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
-		sed -i."${my_pid}".bak 's/use-keyboxd//g' ~/.gnupg/common.conf && rm ~/.gnupg/common.conf."${my_pid}".bak || rt_query=1
+		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >~/.gnupg/common.conf."${my_pid}".bak && mv ~/.gnupg/common.conf."${my_pid}".bak ~/.gnupg/common.conf|| rt_query=1
 		print_message
 	fi
 fi

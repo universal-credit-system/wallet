@@ -304,7 +304,7 @@ create_keys(){
 																			if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
 																			then
 																				echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
-																				sed -i."${my_pid}".bak "/${user_to_add}/d" "${user_path}"/msig_keys.tmp && rm "${user_path}"/msig_keys.tmp."${my_pid}".bak 2>/dev/null
+																				sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
 																			fi
 																		fi
 																	else
@@ -2447,7 +2447,8 @@ request_uca(){
 			### STATUS BAR FOR GUI ##############################
 			if [ "${gui_mode}" -eq 1 ]
 			then
-				sed -i.bak "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+				status="IN_PROGRESS"
+				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_request}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2552,10 +2553,11 @@ request_uca(){
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
 				if [ "${rt_query}" -eq 0 ]
 				then
-					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+					status="SUCCESSFULL"
 				else
-					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+					status="FAILED"
 				fi
+				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_request}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			else
 				if [ "${rt_query}" -ne 0 ]
@@ -2610,7 +2612,8 @@ send_uca(){
 			### STATUS BAR FOR GUI ##############################
 			if [ "${gui_mode}" -eq 1 ]
 			then
-				sed -i.bak "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"IN_PROGRESS\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+				status="IN_PROGRESS"
+				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_send}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2674,10 +2677,11 @@ send_uca(){
 				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
 				if [ "${rt_query}" -eq 0 ]
 				then
-					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"SUCCESSFULL\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+					status="SUCCESSFULL"
 				else
-					sed -i.bak "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"FAILED\"/g" "${user_path}"/uca_list.tmp && rm "${user_path}"/uca_list.tmp.bak 2>/dev/null
+					status="FAILED"
 				fi
+				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_send}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			else
 				if [ "${rt_query}" -ne 0 ]
@@ -3275,7 +3279,7 @@ do
 															new_lang_file=$(ls -1 "${script_path}"/lang/|grep "lang_${lang_selection}_")
 															if [ ! "${lang_file}" = "${new_lang_file}" ]
 															then
-																sed -i."${my_pid}".bak "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak
+																sed "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 																. "${script_path}"/control/config.conf
 																. "${script_path}/lang/${lang_file}"
 															fi
@@ -3295,7 +3299,7 @@ do
 															new_theme_file=$(ls -1 "${script_path}"/theme/|grep -w "${theme_selection}")
 															if [ ! "${dialogrc_set}" = "${new_theme_file}" ]
 															then
-																sed -i."${my_pid}".bak "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak
+																sed "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 																. "${script_path}"/control/config.conf
 																export DIALOGRC="${script_path}/theme/${theme_file}"
 																dialogrc_set="${theme_file}"
@@ -3320,7 +3324,7 @@ do
 																entry=$(echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}')
 																old_value=$(grep "${entry}" "${script_path}/tmp/config_list.tmp"|awk -F= '{print $2}'|sed 's/ //g')
 																new_value=$(echo "${changed}"|awk '{print $3}')
-																sed -i."${my_pid}".bak "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf && rm "${script_path}"/control/config.conf."${my_pid}".bak
+																sed "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 															else
 																if [ "${rt_query}" -eq 1 ]
 																then
@@ -3830,7 +3834,7 @@ do
 														if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
 														then
 															echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
-															sed -i."${my_pid}".bak "/${user_to_add}/d" "${user_path}"/msig_keys.tmp && rm "${user_path}"/msig_keys.tmp."${my_pid}".bak 2>/dev/null
+															sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
 														fi
 													fi
 												else
@@ -4294,7 +4298,7 @@ do
 																	###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
 																	###SET BALANCE################################################################
 																	account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
-																	sed -i."${my_pid}".bak "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" && rm "${user_path}/${now}_ledger.dat.${my_pid}.bak" 2>/dev/null
+																	sed "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" >"${user_path}/${now}_ledger.dat.${my_pid}.bak" && mv "${user_path}/${now}_ledger.dat.${my_pid}.bak" "${user_path}/${now}_ledger.dat"
 																	##############################################################################
 																fi
 
