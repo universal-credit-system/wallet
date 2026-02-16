@@ -2234,14 +2234,60 @@ get_dependencies(){
 				echo "${handover_account}" >"${user_path}"/depend_accounts.dat
 				grep "${handover_account}" "${user_path}"/all_trx.dat >"${user_path}"/depend_trx.dat
 
-				###BUILD DEPENDENCIES WITH AWK################################################
-				msig_files=$(ls -1 "${script_path}"/proofs/*/multi.sig 2>/dev/null)
-				awk -F: \
-				  -v DEBUG_MODE="${debug}" \
-				  -v USER_PATH="${user_path}" \
-				  -v SCRIPT_PATH="${script_path}" \
-				  -v MSIG_FILES="${msig_files}" \
-				  -f "${script_path}"/control/functions/build_dependencies.awk
+				###ADD MULTI SIGNATURE USERS OF USER##########################################
+				if [ -s "${script_path}/proofs/${handover_account}/multi.sig" ]
+				then
+					awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${handover_account}/multi.sig" >>"${user_path}"/depend_accounts.dat
+				fi
+
+				###ADD MULTI SIGNATURE USERS##################################################
+				grep -s -l "${handover_account}" "${script_path}"/proofs/*/multi.sig >"${user_path}"/msig_others.tmp
+				while read line
+				do
+					directory=$(dirname "${line}")
+					user=$(basename "${directory}")
+					echo "${user}" >>"${user_path}"/depend_accounts.dat
+				done <"${user_path}"/msig_others.tmp
+
+				###ADD MULTI SIGNATURE TRX####################################################
+				grep -s -l "MSIG:${handover_account}" "${script_path}"/trx/* >"${user_path}"/msig_others.tmp
+				while read line
+				do
+					user=$(basename "${line}")
+					user=${user%%.*}
+					echo "${user}" >>"${user_path}"/depend_accounts.dat
+				done <"${user_path}"/msig_others.tmp
+				rm "${user_path}"/msig_others.tmp
+
+				###REMOVE DOUBLE ENTRIES######################################################
+				sort -u "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
+				mv "${user_path}"/depend_accounts.tmp "${user_path}"/depend_accounts.dat
+
+				###UNCOVER DEPENDENCIES BETWEEN USERS AND THEIR TRANSACTIONS##################
+				while [ "${counter}" -le "$(wc -l <"${user_path}"/depend_accounts.dat)" ]
+				do
+					user=$(awk -v counter="${counter}" 'FNR==counter' "${user_path}"/depend_accounts.dat)
+					grep -l "RCVR:${user}" /dev/null $(cat "${user_path}"/all_trx.dat)|cut -d '.' -f1 >"${user_path}"/depend_user_list.tmp
+					for trx in $(grep "${user}" "${user_path}"/all_trx.dat)
+					do
+						echo "${trx}" >>"${user_path}"/depend_trx.dat
+						receiver=$(awk -F: '/:RCVR:/{print $3}' "${script_path}/trx/${trx}")
+						if [ "$(grep -c "${receiver}" "${user_path}"/all_assets.dat)" -eq 0 ] && [ "$(grep -c "${receiver}" "${user_path}"/all_accounts.dat)" -eq 1 ]
+						then
+							echo "${receiver}" >>"${user_path}"/depend_user_list.tmp
+						fi
+					done
+
+					for user in $(sort -u "${user_path}"/depend_user_list.tmp)
+					do
+						if [ "$(grep -c "${user}" "${user_path}"/depend_accounts.dat)" -eq 0 ]
+						then
+							echo "${user}" >>"${user_path}"/depend_accounts.dat
+						fi
+					done
+					counter=$(( counter + 1 ))
+				done
+				rm "${user_path}"/depend_user_list.tmp
 
 				###SORT DEPENDENCIE LISTS#####################################################
 				sort "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
