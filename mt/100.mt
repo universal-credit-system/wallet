@@ -304,13 +304,13 @@ MT100_verify(){
 
 		###CHECK IF PURPOSE CONTAINS ALNUM############################
 		set -- $(awk '
-			    BEGIN {
+			BEGIN {
 				in_prpk=0; in_prps=0
 				prpk=""; prps=""
 				msig_cnt=0; msig_dup=0
-			    }
+			}
 
-			    {
+			{
 				if ($0 ~ /^:PRPK:/) { in_prpk=1; next }
 				if ($0 ~ /^:PRPS:/) { in_prpk=0; in_prps=1; next }
 				if ($0 ~ /BEGIN PGP SIGNATURE/) { in_prps=0 }
@@ -319,14 +319,20 @@ MT100_verify(){
 				if (in_prps) prps = prps $0
 
 				if ($0 ~ /^:MSIG:/) {
-				    msig_cnt++
-				    if (seen[$0]++) msig_dup=1
-				    if ($3 ~ /[^a-zA-Z0-9]/) msig_bad=1
+					msig_cnt++
+					if (seen[$0]++) msig_dup=1
+					if ($3 ~ /[^a-zA-Z0-9]/) msig_bad=1
 				}
 
-				if ($0 ~ /^:ASST:/) asst=$3
-				if ($0 ~ /^:AMNT:/) amnt=$3
-			    }
+				if ($0 ~ /^:ASST:/) {
+					split($0, a, ":")
+    					asst = a[3]
+				}
+				if ($0 ~ /^:AMNT:/) {
+					split($0, a, ":")
+    					amnt = a[3]
+			    	}
+			}
 
 			    END {
 				prpk_bad = (prpk ~ /[^a-zA-Z0-9+/=]/)
@@ -343,12 +349,12 @@ MT100_verify(){
 				amount_ok = (amnt >= min && scale_ok)
 
 				printf "%d %d %d %d %s %s\n",
-				    prpk_bad,
-				    prps_bad,
-				    (msig_bad ? 1 : 0),
-				    amount_ok,
-				    asst,
-				    amnt
+					prpk_bad,
+					prps_bad,
+					(msig_bad ? 1 : 0),
+					amount_ok,
+					asst,
+					amnt
 			    }
 			    ' "${file_to_check}")
 		purpose_key_bad=$1
