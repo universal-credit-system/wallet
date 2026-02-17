@@ -321,7 +321,11 @@ MT100_verify(){
 				if ($0 ~ /^:MSIG:/) {
 					msig_cnt++
 					if (seen[$0]++) msig_dup=1
-					if ($3 ~ /[^a-zA-Z0-9]/) msig_bad=1
+
+					split($0, a, ":")
+    					msig_value = a[3]
+
+					if (msig_value ~ /[^a-zA-Z0-9]/) msig_bad = 1
 				}
 
 				if ($0 ~ /^:ASST:/) {
@@ -334,7 +338,7 @@ MT100_verify(){
 			    	}
 			}
 
-			    END {
+			END {
 				prpk_bad = (prpk ~ /[^a-zA-Z0-9+/=]/)
 				prps_bad = (prps ~ /[^a-zA-Z0-9+/=]/)
 
@@ -355,8 +359,7 @@ MT100_verify(){
 					amount_ok,
 					asst,
 					amnt
-			    }
-			    ' "${file_to_check}")
+			}' "${file_to_check}")
 		purpose_key_bad=$1
 		purpose_bad=$2
 		multi_sig_bad=$3
