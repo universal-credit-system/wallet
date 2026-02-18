@@ -56,6 +56,16 @@ function add_trx(t) {
 }
 
 ##############################################################################
+### BEGIN
+##############################################################################
+BEGIN {
+	for (u in account) {
+		if (!(u in msig)) delete msig[u]
+		if (!(u in trx_owner)) delete trx_owner[u]
+	}
+}
+
+##############################################################################
 ### PASS 1: READ
 ##############################################################################
 
@@ -78,6 +88,7 @@ FILENAME ~ /\/trx\/[^/]+$/ {
 		### TRIM TIMESTAMP AWAY SO ONLY OWNER REMAINS
 		sub(/^.*\//, "", trx)
 		owner = trx_owner_name(FILENAME)
+		
 		trx_owner[owner][trx] = 1
 		trx_sndr[trx] = owner
 	}
