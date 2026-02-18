@@ -2352,7 +2352,7 @@ get_dependencies(){
 						is_multi_sign_okay=0
 					fi
 				fi
-				
+
 				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
@@ -3616,7 +3616,12 @@ do
 											trx_stamp=${trx_file#*.}
 											trx_amount=$(awk -F: '/:AMNT:/{print $3}' "${trx_file}")
 											trx_asset=$(awk -F: '/:ASST:/{print $3}' "${trx_file}")
-											trx_confirmations=$(grep -s -l "trx/${trx} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+											trx_confirmations=$(awk \
+												-v trx_ref="trx/${trx} ${trx_hash}" \
+												-v sndr="${trx_sender}" \
+												-v rcvr="${trx_receiver}" \
+												-f "${script_path}"/control/functions/get_confirmations.awk \
+												"${script_path}"/proofs/*/*.txt)
 
 											###CHECK IF INDEXED BY OWNER##################################
 											trx_index="ERROR_NOT_INDEXED"
@@ -5168,7 +5173,12 @@ do
 									trx_asset=$(awk -F: '/:ASST:/{print $3}' "${trx_file}")
 									trx_hash=$(sha256sum "${trx_file}")
 									trx_hash=${trx_hash%% *}
-									trx_confirmations=$(grep -s -l "trx/${trx_filename} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+									trx_confirmations=$(awk \
+										-v trx_ref="trx/${trx_filename} ${trx_hash}" \
+										-v sndr="${trx_sender}" \
+										-v rcvr="${trx_receiver}" \
+										-f "${script_path}"/control/functions/get_confirmations.awk \
+										"${script_path}"/proofs/*/*.txt)
 									if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 									then
 										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
@@ -5335,8 +5345,20 @@ do
 										###GET CONFIRMATIONS AND DEPENDING USERS###############
 										user_total_depend=$(grep -c -v "${trx_sender}\|${trx_receiver}" "${user_path}"/depend_accounts.dat)
 										user_total_all=$(grep -c -v "${trx_sender}\|${trx_receiver}" "${user_path}"/all_accounts.dat)
-										trx_confirmations_depend=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -f "${user_path}"/depend_accounts.dat|grep -c -v "${trx_sender}\|${trx_receiver}")
-										trx_confirmations_all=$(grep -s -l "trx/${trx_file} ${trx_hash}" "${script_path}"/proofs/*/*.txt|grep -c -v "${trx_sender}\|${trx_receiver}")
+										trx_confirmations_depend=$(awk \
+											-v trx_ref="trx/${trx_file} ${trx_hash}" \
+											-v check_file="${user_path}/depend_accounts.dat" \
+											-v sndr="${trx_sender}" \
+											-v rcvr="${trx_receiver}" \
+											-f "${script_path}"/control/functions/get_confirmations.awk \
+											"${script_path}"/proofs/*/*.txt)
+										trx_confirmations_all=$(awk \
+											-v trx_ref="trx/${trx_file} ${trx_hash}" \
+											-v check_file="${user_path}/all_accounts.dat" \
+											-v sndr="${trx_sender}" \
+											-v rcvr="${trx_receiver}" \
+											-f "${script_path}"/control/functions/get_confirmations.awk \
+											"${script_path}"/proofs/*/*.txt)
 										trx_confirmations="${trx_confirmations_all}  (${trx_confirmations_depend}\/${user_total_depend}\/${trx_confirmations_all}\/${user_total_all})"
 										currency_symbol=${decision#*|*|*|*}
 
