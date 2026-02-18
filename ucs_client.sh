@@ -665,7 +665,7 @@ build_ledger(){
 		else
 			###SET DATESTAMP####################################
 			date_stamp=$(date -u +%s --date="$(date -u +%Y%m%d --date=@"$(grep -f "${user_path}"/depend_accounts.dat "${user_path}"/all_accounts_dates.dat|sort -t ' ' -k2|head -1|cut -d ' ' -f2)")")
-			date_stamp_yesterday=$(date +%Y%m%d --date="$(date -u +%Y%m%d --date=@"${date_stamp}") - 1 day")
+			date_stamp_yesterday=$(date -u +%Y%m%d --date=@"$(( date_stamp - 86400 ))")
 
 			###EMPTY LEDGER#####################################
 			rm "${user_path}"/*_ledger.dat 2>/dev/null
@@ -735,8 +735,8 @@ build_ledger(){
 			percent_per_day=$(echo "scale=10; 100 / ${no_days_total}"|bc)
 			current_percent=0
 			current_percent_display=0
-			current_percent=$(echo "scale=10;${current_percent} + ${percent_per_day}"|bc)
-			current_percent_display=$(echo "${current_percent} / 1"|bc)
+			current_percent=$(awk -v current_percent="${current_percent}" -v percent_per_day="${percent_per_day}" 'BEGIN { printf "%.10f\n", current_percent + percent_per_day }')
+			current_percent_display=${current_percent%%.*}
 		else
 			progress_bar_redir="2"
 		fi
@@ -749,8 +749,8 @@ build_ledger(){
 			if [ "${gui_mode}" -eq 1 ]
 			then
 				echo "${current_percent_display}"
-				current_percent=$(echo "scale=10;${current_percent} + ${percent_per_day}"|bc)
-				current_percent_display=$(echo "${current_percent} / 1"|bc)
+				current_percent=$(awk -v current_percent="${current_percent}" -v percent_per_day="${percent_per_day}" 'BEGIN { printf "%.10f\n", current_percent + percent_per_day }')
+				current_percent_display=${current_percent%%.*}
 			fi
 			#################################################
 
@@ -806,11 +806,10 @@ build_ledger(){
 
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				match=$(grep -s -c "asset_fungible=1" "${asset_full_path}") || rt_query=1
-				if [ "${rt_query}" -eq 0 ] && [ "${asset_fungible}" -eq 1 ]
+				if [ "${rt_query}" -eq 0 ] && [ "${match}" -eq 1 ] && [ ! "${asset}" = "${main_asset}" ]
 				then
-					###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
-					echo "${asset}"|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print main_asset":"$1"."$2"=0"}' >>"${user_path}/${focus}_ledger.dat"
-					echo "${asset}"|awk -F. -v main_asset="${main_asset}" '{if ($1 != main_asset) print $1"."$2":"main_asset"=0"}' >>"${user_path}/${focus}_ledger.dat"
+					echo "${main_asset}:${asset}=0" >>"${user_path}/${focus}_ledger.dat"
+					echo "${asset}:${main_asset}=0" >>"${user_path}/${focus}_ledger.dat"
 				fi
 			done
 
