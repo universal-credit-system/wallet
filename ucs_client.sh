@@ -2323,7 +2323,7 @@ get_dependencies(){
 				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
-					trx_confirmations=$(awk \
+					total_confirmations=$(awk \
 						-v trx_ref="trx/${trx_file} ${trx_hash}" \
 						-v check_file="${user_path}/depend_accounts.dat" \
 						-v sndr="${trx_sender}" \
