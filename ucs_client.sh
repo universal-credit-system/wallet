@@ -2227,7 +2227,7 @@ get_dependencies(){
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
 			if [ "${only_process_depend}" -eq 1 ]
 			then
-				# Multi-sig Dateien prüfen
+				###CHECK MULTI-SIG FILES######################################################
 				multi_sig_files=""
 				for file in ${script_path}/proofs/*/multi.sig
 				do
@@ -2237,7 +2237,7 @@ get_dependencies(){
 					fi
 				done
 
-				# trx Dateien prüfen
+				###CHECK TRX##################################################################
 				trx_files=""
 				for file in ${script_path}/trx/*
 				do
