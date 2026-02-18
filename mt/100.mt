@@ -303,7 +303,7 @@ MT100_verify(){
 		fi
 
 		###CHECK IF PURPOSE CONTAINS ALNUM############################
-		set -- $(awk '
+		set -- $(awk -F: '
 			BEGIN {
 				in_prpk=0; in_prps=0
 				prpk=""; prps=""
@@ -322,20 +322,13 @@ MT100_verify(){
 					msig_cnt++
 					if (seen[$0]++) msig_dup=1
 
-					split($0, a, ":")
-    					msig_value = a[3]
+					msig_value = $3
 
 					if (msig_value ~ /[^a-zA-Z0-9]/) msig_bad = 1
 				}
 
-				if ($0 ~ /^:ASST:/) {
-					split($0, a, ":")
-    					asst = a[3]
-				}
-				if ($0 ~ /^:AMNT:/) {
-					split($0, a, ":")
-    					amnt = a[3]
-			    	}
+				if ($0 ~ /^:ASST:/) { asst = $3 }
+    				if ($0 ~ /^:AMNT:/) { amnt = $3 }
 			}
 
 			END {
