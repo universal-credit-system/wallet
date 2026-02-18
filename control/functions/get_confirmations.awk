@@ -1,8 +1,12 @@
 #!/usr/bin/awk -f
-# EXPECTS :	-v trx_ref="trx/${trx_filename} ${trx_hash}"	[REQUIRED]
-#		-v check_file="${file_path}"			[OPTIONAL]
-#		-v sndr="${trx_sender}"				[OPTIONAL]
-#		-v rcvr="${trx_receiver}"			[OPTIONAL]
+##############################################################################
+### EXPECTS :	-v trx_ref="trx/${trx_filename} ${trx_hash}"	[REQUIRED]
+###		-v check_file="${file_path}"			[OPTIONAL]
+###		-v sndr="${trx_sender}"				[OPTIONAL]
+###		-v rcvr="${trx_receiver}"			[OPTIONAL]
+###
+### INPUT :	"${script_path}"/proofs/*/*.txt			[REQUIRED]
+##############################################################################
 
 ### BEGIN
 BEGIN {
