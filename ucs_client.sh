@@ -2227,15 +2227,35 @@ get_dependencies(){
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
 			if [ "${only_process_depend}" -eq 1 ]
 			then
+				# Multi-sig Dateien prüfen
+				multi_sig_files=""
+				for file in ${script_path}/proofs/*/multi.sig
+				do
+					if [ -e "${file}" ]
+					then
+						multi_sig_files="${multi_sig_files} ${file}"
+					fi
+				done
+
+				# trx Dateien prüfen
+				trx_files=""
+				for file in ${script_path}/trx/*
+				do
+					if [ -e "${file}" ]
+					then
+						trx_files="${trx_files} ${file}"
+					fi
+				done
+
 				###BUILD DEPEND_ACCOUNTS.DAT AND DEPEND_TRX.DAT###############################
+				touch "${user_path}"/depend_accounts.dat
+				touch "${user_path}"/depend_trx.dat
 				awk -F: \
 					-v DEBUG_MODE="${debug}" \
 					-v BASE="${script_path}" \
 					-v UPATH="${user_path}" \
 					-v START="${handover_account}" \
-					-f "${script_path}"/control/functions/get_dependencies.awk \
-					"${script_path}"/proofs/*/multi.sig \
-					"${script_path}"/trx/* \
+					-f "${script_path}"/control/functions/get_dependencies.awk ${multi_sig_files} ${trx_files}\
 					"${user_path}/all_assets.dat" \
 					"${user_path}/all_accounts.dat" \
 					"${user_path}/all_trx.dat"
