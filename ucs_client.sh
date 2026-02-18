@@ -596,7 +596,7 @@ check_input(){
 		fi
 
 		case "${check_mode}" in
-			 0 )	###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
+			 0)	###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
 				string_check=$(echo "${input_string}"|grep -c '[^[:alnum:]]')
 
 				###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
@@ -611,7 +611,7 @@ check_input(){
 					fi
 				fi
 				;;
-			1 )	###CHECK IF ONLY DIGITS ARE IN INPUT STRING############################
+			1)	###CHECK IF ONLY DIGITS ARE IN INPUT STRING############################
 				string_check=$(echo "${input_string}"|grep -c '[^[:digit:]]')
 
 				###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
@@ -2209,7 +2209,7 @@ get_dependencies(){
 			###CHECK IF ANYTHING HAS CHANGED##############################################
 			if [ -e "${user_path}"/depend_accounts.dat ]
 			then
-				cp "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
+				mv "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
 			else
 				first_start=1
 			fi
@@ -2217,94 +2217,42 @@ get_dependencies(){
 			then
 				if [ -e "${user_path}"/depend_trx.dat ]
 				then
-					cp "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
+					mv "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
 				fi
 				if [ -e "${user_path}"/depend_confirmations.dat ]
 				then
-					cp "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
+					mv "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
 				fi
 			fi
 
 			###GET DEPENDENT TRX AND ACCOUNTS#############################################
 			if [ "${only_process_depend}" -eq 1 ]
 			then
-				counter=1
+				###BUILD DEPEND_ACCOUNTS.DAT AND DEPEND_TRX.DAT###############################
+				awk -F: \
+					-v DEBUG_MODE="${debug}" \
+					-v BASE="${script_path}" \
+					-v UPATH="${user_path}" \
+					-v START="${handover_account}" \
+					-f "${script_path}"/control/functions/get_dependencies.awk \
+					"${script_path}"/proofs/*/multi.sig \
+					"${script_path}"/trx/* \
+					"${user_path}/all_assets.dat" \
+					"${user_path}/all_accounts.dat" \
+					"${user_path}/all_trx.dat"
 
-				###ADD OWN USER###############################################################
-				echo "${handover_account}" >"${user_path}"/depend_accounts.dat
-				grep "${handover_account}" "${user_path}"/all_trx.dat >"${user_path}"/depend_trx.dat
-
-				###ADD MULTI SIGNATURE USERS OF USER##########################################
-				if [ -s "${script_path}/proofs/${handover_account}/multi.sig" ]
-				then
-					awk -F: '/:MSIG:/{print $3}' "${script_path}/proofs/${handover_account}/multi.sig" >>"${user_path}"/depend_accounts.dat
-				fi
-
-				###ADD MULTI SIGNATURE USERS##################################################
-				grep -s -l "${handover_account}" "${script_path}"/proofs/*/multi.sig >"${user_path}"/msig_others.tmp
-				while read line
-				do
-					directory=$(dirname "${line}")
-					user=$(basename "${directory}")
-					echo "${user}" >>"${user_path}"/depend_accounts.dat
-				done <"${user_path}"/msig_others.tmp
-
-				###ADD MULTI SIGNATURE TRX####################################################
-				grep -s -l "MSIG:${handover_account}" "${script_path}"/trx/* >"${user_path}"/msig_others.tmp
-				while read line
-				do
-					user=$(basename "${line}")
-					user=${user%%.*}
-					echo "${user}" >>"${user_path}"/depend_accounts.dat
-				done <"${user_path}"/msig_others.tmp
-				rm "${user_path}"/msig_others.tmp
-
-				###REMOVE DOUBLE ENTRIES######################################################
-				sort -u "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
-				mv "${user_path}"/depend_accounts.tmp "${user_path}"/depend_accounts.dat
-
-				###UNCOVER DEPENDENCIES BETWEEN USERS AND THEIR TRANSACTIONS##################
-				while [ "${counter}" -le "$(wc -l <"${user_path}"/depend_accounts.dat)" ]
-				do
-					user=$(awk -v counter="${counter}" 'FNR==counter' "${user_path}"/depend_accounts.dat)
-					grep -l "RCVR:${user}" /dev/null $(cat "${user_path}"/all_trx.dat)|cut -d '.' -f1 >"${user_path}"/depend_user_list.tmp
-					for trx in $(grep "${user}" "${user_path}"/all_trx.dat)
-					do
-						echo "${trx}" >>"${user_path}"/depend_trx.dat
-						receiver=$(awk -F: '/:RCVR:/{print $3}' "${script_path}/trx/${trx}")
-						if [ "$(grep -c "${receiver}" "${user_path}"/all_assets.dat)" -eq 0 ] && [ "$(grep -c "${receiver}" "${user_path}"/all_accounts.dat)" -eq 1 ]
-						then
-							echo "${receiver}" >>"${user_path}"/depend_user_list.tmp
-						fi
-					done
-
-					for user in $(sort -u "${user_path}"/depend_user_list.tmp)
-					do
-						if [ "$(grep -c "${user}" "${user_path}"/depend_accounts.dat)" -eq 0 ]
-						then
-							echo "${user}" >>"${user_path}"/depend_accounts.dat
-						fi
-					done
-					counter=$(( counter + 1 ))
-				done
-				rm "${user_path}"/depend_user_list.tmp
-
-				###SORT DEPENDENCIE LISTS#####################################################
-				sort "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts.tmp
-				mv "${user_path}"/depend_accounts.tmp "${user_path}"/depend_accounts.dat
-				sort -u -t . -k2 "${user_path}"/depend_trx.dat >"${user_path}"/depend_trx.tmp
-				mv "${user_path}"/depend_trx.tmp "${user_path}"/depend_trx.dat
+				###SORT LISTS#################################################################
+				sort "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts_sort.tmp
+				mv "${user_path}"/depend_accounts_sort.tmp "${user_path}"/depend_accounts.dat
+				sort -t . -k2 "${user_path}"/depend_trx.dat >"${user_path}"/depend_trx_sort.tmp
+				mv "${user_path}"/depend_trx_sort.tmp "${user_path}"/depend_trx.dat
 			else
 				###COPY FILES#################################################################
 				cp "${user_path}"/all_accounts.dat "${user_path}"/depend_accounts.dat
 				cp "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
 			fi
 
-			###CREATE CONFIRMATIONS INDEX#########################################
-			grep -s "trx/" "${script_path}"/proofs/*/*.txt|sed "s#${script_path}##g" >"${user_path}"/index_conf_trx.dat
-
 			###RESET DEPEND_CONFIRMATIONS FILE####################################
-			rm "${user_path}"/depend_confirmations.dat 2>/dev/null
 			touch "${user_path}"/depend_confirmations.dat
 
 			###GET DEPEND TRX THAT HAVE ENOUGH CONFIRMATIONS##############################
@@ -2352,11 +2300,17 @@ get_dependencies(){
 						is_multi_sign_okay=0
 					fi
 				fi
-
+				
 				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
-					total_confirmations=$(grep -s "trx/${line} ${trx_hash}" "${user_path}"/index_conf_trx.dat|grep -c -v "${trx_sender}\|${trx_receiver}")
+					trx_confirmations=$(awk \
+						-v trx_ref="trx/${trx_file} ${trx_hash}" \
+						-v check_file="${user_path}/depend_accounts.dat" \
+						-v sndr="${trx_sender}" \
+						-v rcvr="${trx_receiver}" \
+						-f "${script_path}"/control/functions/get_confirmations.awk \
+						"${script_path}"/proofs/*/*.txt)
 					if [ "${total_confirmations}" -ge "${confirmations_from_users}" ]
 					then
 						echo "${line}" >>"${user_path}"/depend_confirmations.dat
@@ -2365,22 +2319,26 @@ get_dependencies(){
 			done <"${user_path}"/depend_trx.dat
 
 			###COMPARE OLD AND NEW################################################
+			changed=0
 			depend_accounts_changed=0
 			if ! cmp -s "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts.tmp
 			then
+				changed=1
 				depend_accounts_changed=1
 			fi
 			depend_trx_changed=0
 			if ! cmp -s "${user_path}"/depend_trx.dat "${user_path}"/depend_trx.tmp
 			then
+				changed=1
 				depend_trx_changed=1
 			fi
 			depend_confirmations_changed=0
 			if ! cmp -s "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations.tmp
 			then
+				changed=1
 				depend_confirmations_changed=1
 			fi
-			if [ "${depend_accounts_changed}" -eq 0 ] && [ "${depend_trx_changed}" -eq 0 ] && [ "${depend_confirmations_changed}" -eq 0 ] && [ "${own_index_there}" -eq 1 ]
+			if [ "${changed}" -eq 0 ] && [ "${own_index_there}" -eq 1 ]
 			then
 				make_new_index=0
 				ledger_mode=0
