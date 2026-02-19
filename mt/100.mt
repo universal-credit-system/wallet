@@ -11,19 +11,16 @@ MT100_process(){
 		trx_hash=$(sha256sum "${trx_file}")
 		trx_hash=${trx_hash%% *}
 		trx_path="trx/${trx_filename}"
-		set -- $(awk -F: '
+		IFS='|' read -r trx_stamp trx_sender trx_receiver trx_amount trx_asset <<-EOF
+		$(awk -F: '
 		    /:TIME:/ {time=$3}
 		    /:SNDR:/ {sndr=$3}
 		    /:RCVR:/ {rcvr=$3}
 		    /:AMNT:/ {amnt=$3}
 		    /:ASST:/ {asst=$3}
-		    END { print time, sndr, rcvr, amnt, asst }
+		    END { printf "%s|%s|%s|%s|%s\n", time, sndr, rcvr, amnt, asst }
 		' "${trx_file}")
-		trx_stamp=$1
-		trx_sender=$2
-		trx_receiver=$3
-		trx_amount=$4
-		trx_asset=$5
+		EOF
 
 		###CHECK IF INDEX-FILE EXISTS#################################
 		if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] || [ "${trx_sender}" = "${handover_account}" ]
@@ -303,7 +300,8 @@ MT100_verify(){
 		fi
 
 		###CHECK IF PURPOSE CONTAINS ALNUM############################
-		set -- $(awk -F: '
+		IFS='|' read -r  purpose_key_bad purpose_bad multi_sig_bad amount_ok trx_asset trx_amount <<-EOF
+		$(awk -F: '
 			BEGIN {
 				in_prpk=0; in_prps=0
 				prpk=""; prps=""
@@ -345,45 +343,36 @@ MT100_verify(){
 				scale_ok = (length(p[2]) == 9)
 				amount_ok = (amnt >= min && scale_ok)
 
-				printf "%d %d %d %d %s %s\n",
+				printf "%d|%d|%d|%d|%s|%s\n",
 					prpk_bad,
 					prps_bad,
 					(msig_bad ? 1 : 0),
 					amount_ok,
 					asst,
 					amnt
-			}' "${file_to_check}")
-		purpose_key_bad=$1
-		purpose_bad=$2
-		multi_sig_bad=$3
-		amount_ok=$4
-		trx_asset=$5
-		trx_amount=$6
+			}' "${trx_file_path}")
+		EOF
 		
 		###CHECK RESULTS##############################################
 		trx_acknowledged=0
-		if [ "${purpose_key_bad}" -ne 0 ] || [ "${purpose_bad}" -ne 0 ] || [ "${multi_sig_bad}" -ne 0 ] || [ "${amount_ok}" -ne 1 ]
+		if [ "${purpose_key_bad}" -eq 0 ] && [ "${purpose_bad}" -eq 0 ] && [ "${multi_sig_bad}" -eq 0 ] && [ "${amount_ok}" -eq 1 ]
 		then
-			return
-		fi
-
-		###CHECK IF ASSET EXISTS######################################
-		if ! grep -q "^${trx_asset}$" "${user_path}/all_assets.dat"
-		then
-			return
-		fi
-		
-		###CHECK IF INDEXED###########################################
-		if [ -f "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ] && [ -s "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ]
-		then
-			if grep -q "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt"
-       			then
-				trx_acknowledged=1
+			###CHECK IF ASSET EXISTS######################################
+			if grep -q "^${trx_asset}$" "${user_path}/all_assets.dat"
+			then
+				###CHECK IF INDEXED###########################################
+				if [ -f "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ] && [ -s "${script_path}/proofs/${user_to_check}/${user_to_check}.txt" ]
+				then
+					if grep -q "trx/${line}" "${script_path}/proofs/${user_to_check}/${user_to_check}.txt"
+		       			then
+						trx_acknowledged=1
+					fi
+				else
+			    		if [ "${delete_trx_not_indexed}" -eq 0 ]
+			    		then
+			    			trx_acknowledged=1
+					fi
+				fi
 			fi
-        	else
-            		if [ "${delete_trx_not_indexed}" -eq 0 ]
-            		then
-            			trx_acknowledged=1
-        		fi
-        	fi
+		fi
 }

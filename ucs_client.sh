@@ -1799,37 +1799,48 @@ check_trx(){
 		###GO THROUGH TRANSACTIONS LINE PER LINE################
 		while read line
 		do
-			###SET ACKNOWLEDGED VARIABLE############################
+			###INITIALIZE VARIABLES################################
+			trx_file_path="${script_path}/trx/${line}"
 			trx_acknowledged=0
 
 			###CHECK SIZE###########################################
-			trx_size=$(wc -c <"${script_path}/trx/${line}")
+			trx_size=$(wc -c <"${trx_file_path}")
 			if [ "${trx_size}" -le "${trx_max_size_bytes}" ]
 			then
 				###CHECK IF HEADER MATCHES OWNER/FILENAME###############
-				file_to_check="${script_path}/trx/${line}"
 				user_to_check=${line%%.*}
-				trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${file_to_check}")
+
+				###EXTRACT TRANSACTION DATA############################
+				IFS='|' read -r trx_stamp trx_msg_type trx_sender trx_receiver  <<-EOF
+				$(awk -F: '
+				    /^:TIME:/ {time=$3}
+				    /^:TYPE:/ {type=$3}
+				    /^:SNDR:/ {sndr=$3}
+				    /^:RCVR:/ {rcvr=$3}
+				    END { printf "%s|%s|%s|%s\n", time, type, sndr, rcvr }
+				' "${trx_file_path}")
+				EOF
+
+				###CHECK IF HEADER MATCHES OWNER/FILENAME###############
 				if [ "${user_to_check}" = "${trx_sender}" ]
 				then
 					###VERIFY SIGNATURE OF TRANSACTION######################
-					verify_signature "${file_to_check}" "${user_to_check}"
+					verify_signature "${trx_file_path}" "${user_to_check}"
 					rt_query=$?
 					if [ "${rt_query}" -eq 0 ]
 					then
 						###GET DATES############################################
-						trx_date_filename=${line#*.}
-						trx_date_inside=$(awk -F: '/:TIME:/{print $3}' "${file_to_check}")
-						trx_date_formatted=${trx_date_inside%%.*}
-						trx_receiver_date=$(awk -F: '/:RCVR:/{print $3}' "${file_to_check}")
+						trx_file_stamp=${line#*.}
+						trx_date_formatted=${trx_stamp%%.*}
+
 						###IF RECEIVER NOT A USER###############################
-						if [ "$(grep -c "${trx_receiver_date}" "${user_path}"/all_accounts_dates.dat)" -eq 0 ]
+						if [ "$(grep -c "${trx_receiver}" "${user_path}"/all_accounts_dates.dat)" -eq 0 ]
 						then
 							###IF RECEIVER NOT A ASSET##############################
-							if [ "$(grep -c "${trx_receiver_date}" "${user_path}"/all_assets.dat)" -eq 0 ]
+							if [ "$(grep -c "${trx_receiver}" "${user_path}"/all_assets.dat)" -eq 0 ]
 							then
 								###GET DATE#############################################
-								trx_receiver_date=${trx_receiver_date#*.}
+								trx_receiver_date=${trx_receiver#*.}
 								if [ -z "${trx_receiver_date}" ]
 								then
 									###IF RECEIVER IS UNDETECTABLE##########################
@@ -1848,14 +1859,13 @@ check_trx(){
 							fi
 						else
 							###IF RECEIVER IS USER##################################
-							trx_receiver_date=$(grep "${trx_receiver_date}" "${user_path}"/all_accounts_dates.dat)
+							trx_receiver_date=$(grep "${trx_receiver}" "${user_path}"/all_accounts_dates.dat)
 							trx_receiver_date=${trx_receiver_date#* }
 						fi
-						if [ "${trx_date_filename}" = "${trx_date_inside}" ] && [ "${trx_date_formatted}" -gt "${trx_receiver_date}" ]
+						if [ "${trx_file_stamp}" = "${trx_stamp}" ] && [ "${trx_date_formatted}" -gt "${trx_receiver_date}" ]
 						then
 							###CHECK MESSAGE TYPE, IF EMPTY SET DEFAULT '100'#######
 							rt_query=0
-							trx_msg_type=$(awk -F: '/:TYPE:/{print $3}' "${file_to_check}")
 							if [ -z "${trx_msg_type}" ]
 							then
 								trx_msg_type=100
@@ -5141,17 +5151,15 @@ do
 								while read trx_file
 								do
 									###EXTRACT TRANSACTION DATA############################
-									set -- $(awk -F: '
+									IFS='|' read -r trx_sender trx_receiver trx_amount trx_asset <<-EOF 
+									$(awk -F: '
 									    /^:SNDR:/ {sndr=$3}
 									    /^:RCVR:/ {rcvr=$3}
 									    /^:AMNT:/ {amnt=$3}
 									    /^:ASST:/ {asst=$3}
-									    END { print sndr, rcvr, amnt, asst }
+									    END { printf "%s|%s|%s|%s\n", sndr, rcvr, amnt, asst }
 									' "${trx_file}")
-									trx_sender=$1
-									trx_receiver=$2
-			      						trx_amount=$3
-									trx_asset=$4
+									EOF
 
 									###GET STAMP FROM FILENAME#############################
 									trx_filename=$(basename "${trx_file}")
@@ -5257,19 +5265,16 @@ do
 										trx_hash=${trx_hash%% *}
 										
 										###EXTRACT TRANSACTION DATA############################
-										set -- $(awk -F: '
+										IFS='|' read -r trx_sender trx_receiver purpose_key_start purpose_start purpose_end <<-EOF 
+										$(awk -F: '
 										    /^:SNDR:/ {sndr=$3}
 										    /^:RCVR:/ {rcvr=$3}
 										    /^:PRPK:/ {prpk=NR}
 										    /^:PRPS:/ {prps=NR}
 										    /BEGIN PGP SIGNATURE/ {prpe=NR}
-										    END { print sndr, rcvr, prpk, prps, prpe }
+										    END { printf "%s|%s|%s|%s|%s\n", sndr, rcvr, prpk, prps, prpe }
 										' "${trx_file_path}")
-										trx_sender=$1
-										trx_receiver=$2
-				      						purpose_key_start=$3
-										purpose_start=$4
-										purpose_end=$5
+										EOF
 										val_sign=$(echo "${decision}"|grep -c "+")
 
 										###EXTRACT PURPOSE#####################################
