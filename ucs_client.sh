@@ -5533,17 +5533,12 @@ do
 							tomorrow_start=$(( today_start + 86400 ))
 
 							###EXTRACT VOLUMETRIX##########################
-							trx_volumetrix=$(awk -v asset="${order_asset}" \
-							                     -v today_start="${today_start}" \
-							                     -v tomorrow_start="${tomorrow_start}" \
-							                     -f "${script_path}"/control/functions/get_volumetrics.awk "$script_path"/trx/*)
-
-							###ASSIGN VOLUMETRIX TO VARIABLES##############
-							set -- ${trx_volumetrix}
-							total_number_trx=$1
-							total_number_trx_today=$2
-							total_volume_trx=$3
-							total_volume_trx_today=$4
+							IFS='|' read -r total_number_trx total_number_trx_today total_volume_trx total_volume_trx_today <<-EOF
+							$(awk -F: -v asset="${order_asset}" \
+					                     -v today_start="${today_start}" \
+					                     -v tomorrow_start="${tomorrow_start}" \
+					                     -f "${script_path}"/control/functions/get_volumetrics.awk "$script_path"/trx/*)
+							EOF
 
 							if [ "${gui_mode}" -eq 1 ]
 							then

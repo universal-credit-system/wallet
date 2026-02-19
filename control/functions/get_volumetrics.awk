@@ -29,5 +29,5 @@ $0 == ":ASST:"asset {
 
 END {
 	# PRINT OUT VARIABLES
-	printf "%d %d %.9f %.9f\n", total_number_trx, total_number_trx_today, total_volume_trx, total_volume_trx_today
+	printf "%d|%d|%.9f|%.9f\n", total_number_trx, total_number_trx_today, total_volume_trx, total_volume_trx_today
 }
