@@ -5141,30 +5141,47 @@ do
 								while read trx_file
 								do
 									###EXTRACT TRANSACTION DATA############################
+									set -- $(awk -F: '
+									    /^:SNDR:/ {sndr=$3}
+									    /^:RCVR:/ {rcvr=$3}
+									    /^:AMNT:/ {amnt=$3}
+									    /^:ASST:/ {asst=$3}
+									    END { print sndr, rcvr, amnt, asst }
+									' "${trx_file}")
+									trx_sender=$1
+									trx_receiver=$2
+			      						trx_amount=$3
+									trx_asset=$4
+
+									###GET STAMP FROM FILENAME#############################
 									trx_filename=$(basename "${trx_file}")
-									trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${trx_file}")
-									trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx_file}")
 									trx_date_tmp=${trx_filename#*.}
 									trx_date=$(date +'%F|%H:%M:%S.%3N' --date=@"${trx_date_tmp}")
-			      						trx_amount=$(awk -F: '/:AMNT:/{print $3}' "${trx_file}")
-									trx_asset=$(awk -F: '/:ASST:/{print $3}' "${trx_file}")
+
+									###GET HASH############################################
 									trx_hash=$(sha256sum "${trx_file}")
 									trx_hash=${trx_hash%% *}
-									trx_confirmations=$(awk \
-										-v trx_ref="trx/${trx_filename} ${trx_hash}" \
-										-v sndr="${trx_sender}" \
-										-v rcvr="${trx_receiver}" \
-										-f "${script_path}"/control/functions/get_confirmations.awk \
-										"${script_path}"/proofs/*/*.txt)
+
+									###CHECK IF INDEXED####################################
 									if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 									then
 										trx_signed=$(grep -c "${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
 									else
 										trx_signed=0
 									fi
-									###BUILD LIST OF TRANSACTIONS##########################
+
+									###BUILD DIALOG LIST FOR TRANSACTIONS##################
 									if [ "${trx_signed}" -gt 0 ]
 									then
+										###GET CONFIRMATIONS###################################
+										trx_confirmations=$(awk \
+											-v trx_ref="trx/${trx_filename} ${trx_hash}" \
+											-v sndr="${trx_sender}" \
+											-v rcvr="${trx_receiver}" \
+											-f "${script_path}"/control/functions/get_confirmations.awk \
+											"${script_path}"/proofs/*/*.txt)
+
+										###CHECK CONFIRMATIONS#################################
 										if [ "${trx_confirmations}" -ge "${confirmations_from_users}" ]
 										then
 											trx_blacklisted=$(grep -c "${trx_filename}" "${user_path}"/blacklisted_trx.dat)
@@ -5238,8 +5255,21 @@ do
 										fi
 										trx_hash=$(sha256sum "${trx_file_path}")
 										trx_hash=${trx_hash%% *}
-										trx_sender=$(awk -F: '/:SNDR:/{print $3}' "${trx_file_path}")
-										trx_receiver=$(awk -F: '/:RCVR:/{print $3}' "${trx_file_path}")
+										
+										###EXTRACT TRANSACTION DATA############################
+										set -- $(awk -F: '
+										    /^:SNDR:/ {sndr=$3}
+										    /^:RCVR:/ {rcvr=$3}
+										    /^:PRPK:/ {prpk=NR}
+										    /^:PRPS:/ {prps=NR}
+										    /BEGIN PGP SIGNATURE/ {prpe=NR}
+										    END { print sndr, rcvr, prpk, prps, prpe }
+										' "${trx_file_path}")
+										trx_sender=$1
+										trx_receiver=$2
+				      						purpose_key_start=$3
+										purpose_start=$4
+										purpose_end=$5
 										val_sign=$(echo "${decision}"|grep -c "+")
 
 										###EXTRACT PURPOSE#####################################
@@ -5247,9 +5277,8 @@ do
 										purpose_dialog_string="-"
 										if [ "${trx_receiver}" = "${handover_account}" ]
 										then
-											purpose_key_start=$(awk -F: '/:PRPK:/{print NR}' "${trx_file_path}")
 											purpose_key_start=$(( purpose_key_start + 1 ))
-											purpose_key_end=$(awk -F: '/:PRPS:/{print NR}' "${trx_file_path}")
+											purpose_key_end=${purpose_start}
 											purpose_key_end=$(( purpose_key_end - 1 ))
 											purpose_key_encrypted=$(sed -n "${purpose_key_start},${purpose_key_end}p" "${trx_file_path}")
 											printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_key_encrypted}\n-----END PGP MESSAGE-----\n" >"${user_path}"/history_purpose_key_encrypted.tmp
@@ -5258,9 +5287,7 @@ do
 											if [ "${rt_query}" -eq 0 ]
 											then
 												purpose_key=$(cat "${user_path}"/history_purpose_key_decrypted.tmp)
-												purpose_start=$(awk -F: '/:PRPS:/{print NR}' "${trx_file_path}")
 												purpose_start=$(( purpose_start + 1 ))
-												purpose_end=$(awk -F: '/BEGIN PGP SIGNATURE/{print NR}' "${trx_file_path}")
 												purpose_end=$(( purpose_end - 1 ))
 												purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" "${trx_file_path}")
 												printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_encrypted}\n-----END PGP MESSAGE-----\n" >"${user_path}"/history_purpose_encrypted.tmp
