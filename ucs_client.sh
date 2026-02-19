@@ -2340,19 +2340,19 @@ get_dependencies(){
 			###COMPARE OLD AND NEW################################################
 			changed=0
 			depend_accounts_changed=0
-			if ! cmp -s "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts.tmp
+			depend_trx_changed=0
+			depend_confirmations_changed=0
+			if [ -e "${user_path}"/depend_accounts_old.tmp ] && ! cmp -s "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
 			then
 				changed=1
 				depend_accounts_changed=1
 			fi
-			depend_trx_changed=0
-			if ! cmp -s "${user_path}"/depend_trx.dat "${user_path}"/depend_trx.tmp
+			if [ -e "${user_path}"/depend_trx_old.tmp ] && ! cmp -s "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
 			then
 				changed=1
 				depend_trx_changed=1
 			fi
-			depend_confirmations_changed=0
-			if ! cmp -s "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations.tmp
+			if [ -e "${user_path}"/depend_confirmations_old.tmp ] && ! cmp -s "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
 			then
 				changed=1
 				depend_confirmations_changed=1
