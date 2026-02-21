@@ -13,12 +13,12 @@ MT100_process(){
 		trx_path="trx/${trx_filename}"
 		IFS='|' read -r trx_stamp trx_sender trx_receiver trx_amount trx_asset <<-EOF
 		$(awk -F: '
-		    /:TIME:/ {time=$3}
-		    /:SNDR:/ {sndr=$3}
-		    /:RCVR:/ {rcvr=$3}
-		    /:AMNT:/ {amnt=$3}
-		    /:ASST:/ {asst=$3}
-		    END { printf "%s|%s|%s|%s|%s\n", time, sndr, rcvr, amnt, asst }
+			/:TIME:/ {time=$3}
+			/:SNDR:/ {sndr=$3}
+			/:RCVR:/ {rcvr=$3}
+			/:AMNT:/ {amnt=$3}
+			/:ASST:/ {asst=$3}
+			END { printf "%s|%s|%s|%s|%s\n", time, sndr, rcvr, amnt, asst }
 		' "${trx_file}")
 		EOF
 
