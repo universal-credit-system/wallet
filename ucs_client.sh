@@ -5517,15 +5517,15 @@ do
 							total_number_coins=$(echo "${user_dates_list}"|awk -v DEBUG_MODE="${debug}" -v start_day="${start_day}" -f "${script_path}"/control/functions/get_payouts.awk)
 
 							###TOTAL NUMBER OF ASSETS######################
-							set -- "$script_path/assets/"*
+							set -- "${script_path}"/assets/*
 							[ -e "$1" ] && total_number_assets=$# || total_number_assets=0
 
 							###TOTAL NUMBER OF PUBLIC KEYS#################
-							set -- "$script_path/keys/"*
+							set -- "${script_path}"/keys/*
 							[ -e "$1" ] && total_number_users=$# || total_number_users=0
 
 							###TOTAL NUMBER OF PRIVATE KEYS################
-							set -- "$script_path/control/keys/"*.sct
+							set -- "${script_path}"/control/keys/*.sct
 							[ -e "$1" ] && total_number_users_local=$# || total_number_users_local=0
 
 							###GET STAMPS OF TODAY AND TOMORROW############
@@ -5537,7 +5537,7 @@ do
 							$(awk -F: -v asset="${order_asset}" \
 					                     -v today_start="${today_start}" \
 					                     -v tomorrow_start="${tomorrow_start}" \
-					                     -f "${script_path}"/control/functions/get_volumetrics.awk "$script_path"/trx/*)
+					                     -f "${script_path}"/control/functions/get_volumetrics.awk "${script_path}"/trx/*)
 							EOF
 
 							if [ "${gui_mode}" -eq 1 ]
