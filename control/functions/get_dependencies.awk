@@ -1,14 +1,18 @@
 ##############################################################################
-### EXPECTS:	-v DEBUG_MODE="${debug}"		[OPTIONAL]
+###
+### EXPECTS :	-v DEBUG_MODE="${debug}"		[OPTIONAL]
 ###		-v BASE="${script_path}"		[REQUIRED]
 ###		-v UPATH="${user_path}"			[REQUIRED]
 ###		-v START="${handover_account}"		[REQUIRED]
 ###
-### INPUT:	"${script_path}"/proofs/*/multi.sig	[REQUIRED]
+### INPUT :	"${script_path}"/proofs/*/multi.sig	[REQUIRED]
 ###		"${script_path}"/trx/*			[REQUIRED]
 ###		"${user_path}/all_assets.dat"		[REQUIRED]
 ###		"${user_path}/all_accounts.dat"		[REQUIRED]
 ###		"${user_path}/all_trx.dat"		[REQUIRED]
+###
+### OUTPUT :	"${user_path}/depend_accounts.dat
+###		"${user_path}/depend_trx.dat
 ###
 ##############################################################################
 

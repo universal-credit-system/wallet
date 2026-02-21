@@ -1,11 +1,22 @@
-#!/usr/bin/awk -f
+##############################################################################
+###
+### EXPECTS :	-v DEBUG_MODE="${debug}"		[OPTIONAL]
+###		-v PROOF_PATH="${script_path}/proofs"	[REQUIRED]
+###		-v TRX_REF="trx/${trx_file} ${trx_hash}"[REQUIRED]
+###
+### INPUT :	"${script_path}/proofs/${trx_sender}/multi.sig"
+###
+### OUTPUT :	-returns true for authorized
+###		-returns false for not authorized
+###
+##############################################################################
 BEGIN {
 	FS=":"
 	signed = 0
 	total  = 0
 }
 
-# READ :MSIG: ENTRIES OF FILE
+### READ :MSIG: ENTRIES OF FILE
 /:MSIG:/ {
 	signer = $3
 	if (!(signer in seen)) {
@@ -19,7 +30,7 @@ END {
 		print "trx:", TRX_REF > "/dev/stderr"
 	}
 
-	# GET CONFIRMATIONS 
+	### GET CONFIRMATIONS 
 	for (i = 1; i <= total; i++) {
 		signer = signers[i]
 		proof  = PROOF_PATH "/" signer "/" signer ".txt"
@@ -38,19 +49,19 @@ END {
 		}
 	}
 
-	# CALCULATE MAJORITY
+	### CALCULATE MAJORITY
 	majority = int(total / 2) + 1
 
-	# RETURN RESULT
+	### RETURN RESULT
 	if (signed >= majority) {
-		# IF OKAY
+		### IF OKAY
 		if (DEBUG_MODE) {
 			print "authorized:", signed > "/dev/stderr"
 		}
 		exit 0
 	}
 	else {
-		# IF NOT OKAY
+		### IF NOT OKAY
 		if (DEBUG_MODE) {
 			print "not authorized:", signed > "/dev/stderr"
 		}

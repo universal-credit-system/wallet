@@ -1,10 +1,23 @@
-#!/usr/bin/awk -f
-# READ USERDATES INTO ARRAY
+##############################################################################
+###
+### EXPECTS :	-v DEBUG_MODE="${debug}"		[OPTIONAL]
+###		-v start_day="${start_day}"		[REQUIRED]
+###		-v tomorrow_start="${tomorrow_start}"	[REQUIRED]
+###
+### INPUT :	-LIST OF USER CREATION TIMESTAMPS
+###
+### OUTPUT :	-total_number_trx
+###		-total_number_trx_today
+###		-total_volume_trx
+###		-total_volume_trx_today
+###
+##############################################################################
+### READ USERDATES INTO ARRAY
 FNR==NR && NR>0 { users[NR]=$1; next }
 
-# AT THE END CALCULATE COINS
+### AT THE END CALCULATE COINS
 END {
-	# SET DEFAULT VARIABLES
+	### SET DEFAULT VARIABLES
 	current_day=start_day
 	daily_payout=365250
 	counter=1
@@ -14,19 +27,19 @@ END {
 			print "user_dates :", length(users) > "/dev/stderr"
 	}
 
-    	# READ USER TIMESTAMPS INTO ARRAY
+    	### READ USER TIMESTAMPS INTO ARRAY
     	for(i=1;i<=length(users);i++) join[users[i]]=1
 
-	# START WITH DAY ONE DAY BY DAY
+	### START WITH DAY ONE DAY BY DAY
 	while(current_day <= systime()) {
 		total_users=0
 		
-		# COUNT USERS OF THIS DAY
+		### COUNT USERS OF THIS DAY
 		for(u in join) if(u <= current_day) {
 			total_users++
 		}
 
-		# CALCULATE TOTAL COINS
+		### CALCULATE TOTAL COINS
 		coins_today=total_users * daily_payout
 		coins_per_day[current_day]=coins_today
 
@@ -36,20 +49,20 @@ END {
 			print "payout :", coins_today > "/dev/stderr"
 		}
 
-		# ADJUST COINLOAD
+		### ADJUST COINLOAD
 		if(counter>=2) daily_payout=1
 		counter++
 		current_day+=86400
 	}
 
-	# CALCULATE TOTAL NUMBER OF COINS
+	### CALCULATE TOTAL NUMBER OF COINS
 	total_number_coins=0
 
-	# COINS PER DATE
+	### COINS PER DATE
 	for(d in coins_per_day) {
 		total_number_coins += coins_per_day[d]
 	}
 
-	# PRINT NUMBER OF COINS
+	### PRINT NUMBER OF COINS
 	printf "%d\n", total_number_coins
 }
