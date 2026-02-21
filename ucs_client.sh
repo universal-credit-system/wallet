@@ -2329,7 +2329,7 @@ get_dependencies(){
 						is_multi_sign_okay=0
 					fi
 				fi
-				
+
 				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
 				if [ "${is_multi_sign_okay}" -eq 0 ]
 				then
@@ -5241,7 +5241,8 @@ do
 									dialog_history_noresults=${dialog_history_noresult%% *}
 									if [ ! "${decision}" = "${dialog_history_noresults}" ]
 									then
-										###GET DETAILS OF SELECTED TRANSACTION#############
+										###GET DETAILS OF SELECTION############################
+										val_sign=$(echo "${decision}"|grep -c "+")
 										trx_date_extracted=${decision%%|*}
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
@@ -5250,51 +5251,59 @@ do
 										then
 											trx_date=${trx_date%%.*}
 										fi
-										trx_file=$(basename "$(grep "${trx_date}" "${user_path}"/my_trx_all.tmp)")
-										trx_file_path="${script_path}/trx/${trx_file}"
 										trx_amount_raw=$(echo "${decision}"|cut -d '|' -f3)
 										trx_amount=$(echo "${trx_amount_raw}"|sed -e 's/+//g' -e 's/-//g')
-										trx_mt=$(grep ":TYPE:" "${trx_file_path}")
+
+										###SET FILEPATH AND GET HASH###########################
+										trx_file=$(basename "$(grep "${trx_date}" "${user_path}"/my_trx_all.tmp)")
+										trx_file_path="${script_path}/trx/${trx_file}"
+										trx_hash=$(sha256sum "${trx_file_path}")
+										trx_hash=${trx_hash%% *}
+
+										###EXTRACT TRANSACTION DATA############################
+										IFS='|' read -r trx_mt trx_sender trx_receiver purpose_key_start purpose_start purpose_end <<-EOF
+										$(awk -F: '
+											/^:TYPE:/ {mt=$3}
+											/^:SNDR:/ {sndr=$3}
+											/^:RCVR:/ {rcvr=$3}
+											/^:PRPK:/ {prpk=NR}
+											/^:PRPS:/ {prps=NR}
+											/BEGIN PGP SIGNATURE/ {prpe=NR}
+											END { printf "%s|%s|%s|%s|%s|%s\n", mt, sndr, rcvr, prpk, prps, prpe }
+										' "${trx_file_path}")
+										EOF
+										###SET MESSAGE TYPE IF NOT SET IN TRX##################
 										if [ -n "${trx_mt}" ]
 										then
 											trx_mt=${trx_mt#:*:*}
 										else
 											trx_mt=100
 										fi
-										trx_hash=$(sha256sum "${trx_file_path}")
-										trx_hash=${trx_hash%% *}
-										
-										###EXTRACT TRANSACTION DATA############################
-										IFS='|' read -r trx_sender trx_receiver purpose_key_start purpose_start purpose_end <<-EOF 
-										$(awk -F: '
-										    /^:SNDR:/ {sndr=$3}
-										    /^:RCVR:/ {rcvr=$3}
-										    /^:PRPK:/ {prpk=NR}
-										    /^:PRPS:/ {prps=NR}
-										    /BEGIN PGP SIGNATURE/ {prpe=NR}
-										    END { printf "%s|%s|%s|%s|%s\n", sndr, rcvr, prpk, prps, prpe }
-										' "${trx_file_path}")
-										EOF
-										val_sign=$(echo "${decision}"|grep -c "+")
 
 										###EXTRACT PURPOSE#####################################
 										purpose_there=0
 										purpose_dialog_string="-"
 										if [ "${trx_receiver}" = "${handover_account}" ]
 										then
+											###EXTRACT PURPOSE KEY#################################
 											purpose_key_start=$(( purpose_key_start + 1 ))
 											purpose_key_end=${purpose_start}
 											purpose_key_end=$(( purpose_key_end - 1 ))
 											purpose_key_encrypted=$(sed -n "${purpose_key_start},${purpose_key_end}p" "${trx_file_path}")
+
+											###REBUILD PGP MESSAGE#################################
 											printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_key_encrypted}\n-----END PGP MESSAGE-----\n" >"${user_path}"/history_purpose_key_encrypted.tmp
 											echo "${login_password}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output "${user_path}"/history_purpose_key_decrypted.tmp --decrypt "${user_path}"/history_purpose_key_encrypted.tmp 2>/dev/null
 											rt_query=$?
 											if [ "${rt_query}" -eq 0 ]
 											then
+												###EXTRACT PURPOSE#####################################
 												purpose_key=$(cat "${user_path}"/history_purpose_key_decrypted.tmp)
 												purpose_start=$(( purpose_start + 1 ))
 												purpose_end=$(( purpose_end - 1 ))
 												purpose_encrypted=$(sed -n "${purpose_start},${purpose_end}p" "${trx_file_path}")
+
+												###REBUILD PGP MESSAGE#################################
 												printf "%b" "-----BEGIN PGP MESSAGE-----\n\n${purpose_encrypted}\n-----END PGP MESSAGE-----\n" >"${user_path}"/history_purpose_encrypted.tmp
 												echo "${purpose_key}"|gpg --batch --no-tty --pinentry-mode loopback --output "${user_path}"/history_purpose_decrypted.tmp --passphrase-fd 0 --decrypt "${user_path}"/history_purpose_encrypted.tmp 2>/dev/null
 												rt_query=$?
