@@ -50,7 +50,7 @@ login_account(){
 				if [ "${rt_query}" -eq 0 ]
 				then
 					####VERIFYING THE MESSAGE###################################
-					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep "GOODSIG"|grep -c "${key_file}" >/dev/null
+					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep "GOODSIG"|grep -q "${key_file}"
 					rt_query=$?
 				fi
 				rm "${script_path}"/tmp/account_"${my_pid}".tmp 2>/dev/null
