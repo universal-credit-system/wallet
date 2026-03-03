@@ -3702,8 +3702,7 @@ do
 				rt_query=0
 				if [ "${make_new_index}" -eq 1 ] && [ "${observer}" -eq 0 ]
 				then
-					now_stamp=$(date +%s)
-					make_signature "none" "${now_stamp}" 1
+					make_signature "none" "none" 1
 					rt_query=0
 				fi
 				if [ "${cmd_action}" = "show_balance" ] || [ "${cmd_action}" = "sign" ] || [ "${cmd_action}" = "decline" ]
@@ -4316,7 +4315,7 @@ do
 														trx_hash=$(sha256sum "${script_path}/trx/${handover_account}.${trx_now}")
 														trx_hash=${trx_hash%% *}
 														echo "trx/${handover_account}.${trx_now} ${trx_hash}" >>"${user_path}/${now}_index_trx.dat"
-														make_signature "none" "${trx_now}" 1
+														make_signature "none" "none" 1
 														rt_query=$?
 														if [ "${rt_query}" -eq 0 ]
 														then
@@ -4510,8 +4509,7 @@ do
 														build_ledger "${ledger_mode}"
 														if [ "${make_new_index}" -eq 1 ]
 														then
-															now_stamp=$(date +%s)
-															make_signature "none" "${now_stamp}" 1
+															make_signature "none" "none" 1
 															rt_query=$?
 															if [ "${rt_query}" -gt 0 ]
 															then
@@ -4625,8 +4623,7 @@ do
 															build_ledger "${ledger_mode}"
 															if [ "${make_new_index}" -eq 1 ]
 															then
-																now_stamp=$(date +%s)
-																make_signature "none" "${now_stamp}" 1
+																make_signature "none" "none" 1
 																rt_query=$?
 																if [ "${rt_query}" -gt 0 ]
 																then
@@ -4763,8 +4760,7 @@ do
 									build_ledger "${ledger_mode}"
 									if [ "${make_new_index}" -eq 1 ]
 									then
-										now_stamp=$(date +%s)
-										make_signature "none" "${now_stamp}" 1
+										make_signature "none" "none" 1
 									fi
 									send_uca
 									exit 0
@@ -5492,6 +5488,7 @@ do
 													last_ledger="${last_ledger%%_*}"
 													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
 													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
+													make_signature "none" "none" 1
 												else
 													if [ "${rt_query}" -eq 2 ]
 													then
