@@ -213,9 +213,9 @@ then
 	### SET PATHS ################
 	printf "%b" "[ INFO ] Define paths in config.conf..."
 	sed "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	sed "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s#sync_path_output=sync_path_output#sync_path_output=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#sync_path_output=sync_path_output#sync_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### REWRITE CONFIG ###########
