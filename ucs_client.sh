@@ -1392,7 +1392,7 @@ update_tsa(){
 												mv "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
 											fi
 										else
-											###UNCOMMENT TO ENABLE SAVESTORE OF CRL###################
+											###MOVE CERTS INTO PLACE##################################
 											file_name=${tsa_cacert_file%%.*}
 											file_ext=${tsa_cacert_file#*.}
 											mv "${script_path}/certs/${tsa_service}/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${file_name}.${crl_old_valid_from}-${crl_old_valid_till}.${file_ext}"
@@ -4374,14 +4374,11 @@ do
 																		###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
 																		#cp "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${user_path}/${handover_account}_${trx_now_form}.trx"
 																		#############################################################################
-																		if [ ! "${trx_path_output}" = "${script_path}" ] && [ -d "${trx_path_output}" ]
+																		if [ ! "${trx_path_output}" = "${script_path}/tmp" ] && [ -d "${trx_path_output}" ]
 																		then
 																			mv "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
 																		else
-																			if [ -z "${trx_path_output}" ]
-																			then
-																				rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx"
-																			fi
+																			trx_path_output="${script_path}/tmp"
 																		fi
 																	fi
 																	if [ "${gui_mode}" -eq 1 ]
@@ -4397,7 +4394,7 @@ do
 																		echo "TRX:trx/${handover_account}.${trx_now}"
 																		if [ "${receiver_is_asset}" -eq 0 ] && [ "${small_trx}" -ne 255 ]
 																		then
-																			if [ -n "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
+																			if [ -n "${cmd_path}" ] && [ -d "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
 																				mv "${trx_path_output}/${handover_account}_${trx_now_form}.trx" "${cmd_path}/${handover_account}_${trx_now_form}.trx"
 																				echo "FILE:${cmd_path}/${handover_account}_${trx_now_form}.trx"
@@ -4701,24 +4698,26 @@ do
 
 									###SWITCH TO SCRIPT PATH AND CREATE TAR-BALL#############
 									cd "${script_path}" || exit 13
-									tar -czf "${handover_account}_${now_stamp}.sync" -T "${user_path}"/files_list.tmp --dereference --hard-dereference
+									tar -czf "tmp/${handover_account}_${now_stamp}.sync" -T "${user_path}"/files_list.tmp --dereference --hard-dereference
 									rt_query=$?
 									if [ "${rt_query}" -eq 0 ]
 									then
 										rm "${user_path}"/files_list.tmp 2>/dev/null
 										###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
-										#cp "${script_path}/${handover_account}_${now_stamp}.sync" "${user_path}/${handover_account}_${now_stamp}.sync"
+										#cp "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${user_path}/${handover_account}_${now_stamp}.sync"
 										###################################################################################
-										if [ ! "${sync_path_output}" = "${script_path}" ] && [ -d "${sync_path_output}" ]
+										if [ ! "${sync_path_output}" = "${script_path}/tmp" ] && [ -d "${sync_path_output}" ]
 										then
-											mv "${script_path}/${handover_account}_${now_stamp}.sync" "${sync_path_output}/${handover_account}_${now_stamp}.sync"
+											mv "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${sync_path_output}/${handover_account}_${now_stamp}.sync"
+										else
+											sync_path_output="${script_path}/tmp"
 										fi
 										if [ "${gui_mode}" -eq 1 ]
 										then
 											dialog_sync_create_success_display=$(echo "${dialog_sync_create_success}"|sed "s#<file>#${sync_path_output}/${handover_account}_${now_stamp}.sync#g")
 											dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_sync_create_success_display}" 0 0
 										else
-											if [ -n "${cmd_path}" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
+											if [ -n "${cmd_path}" ] && [ -d "${cmd_path}" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
 											then
 												mv "${sync_path_output}/${handover_account}_${now_stamp}.sync" "${cmd_path}/${handover_account}_${now_stamp}.sync"
 												echo "FILE:${cmd_path}/${handover_account}_${now_stamp}.sync"
