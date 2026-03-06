@@ -2412,7 +2412,7 @@ get_dependencies(){
 				then
 					make_new_index=1
 					trx_file=$(basename "${cmd_path}")
-					grep -w "${trx_file}" "${user_path}"/depend_trx.dat >>"${user_path}"/dates.tmp
+					grep -w "${trx_file}" "${user_path}"/depend_trx.dat|cut -d '.' -f2 >>"${user_path}"/dates.tmp
 				fi
 
 				###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
