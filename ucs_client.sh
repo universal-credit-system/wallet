@@ -3016,9 +3016,16 @@ then
     						exit 35
     					fi
         				;;
-        	sign|decline)		if [ ! -e "${script_path}/trx/${cmd_path}" ] || [ ! -e "${script_path}/${cmd_path}" ]
+        	sign|decline)		if [ -e "${script_path}/trx/${cmd_path}" ]
     					then
-    						exit 35
+    						cmd_path="${script_path}/trx/${cmd_path}"
+    					else
+    						if [ -e "${script_path}/${cmd_path}" ]
+    						then
+    							cmd_path="${script_path}/trx/${cmd_path}"
+    						else
+    							exit 35
+    						fi
     					fi
         				;;
 	esac
