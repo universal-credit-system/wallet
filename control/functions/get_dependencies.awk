@@ -37,24 +37,32 @@ function proof_owner(file, tmp) {
 }
 
 ### WRITE ACCOUNT TO DEPEND_ACCOUNTS.DAT
-function add_account(u) {
-	if (!(u in seen) && (u in account)) {
-		seen[u] = 1
-		queue[++q_end] = u
-		print u >> UPATH "/depend_accounts.dat"
-		if (DEBUG_MODE) {
-			print "USER:", u  > "/dev/stderr"
-		}
-	}
+function add_account(u, from_user, color) {
+    if (!(u in seen) && (u in account)) {
+        seen[u] = 1
+        queue[++q_end] = u
+        print u >> UPATH "/depend_accounts.dat"
+        
+        if (DEBUG_MODE) {
+            print "USER:", u > "/dev/stderr"
+            if (dotfile && from_user && color) {
+                print "    \"" from_user "\" -> \"" u "\" [color=" color "];" >> dotfile
+            }
+        }
+    }
 }
 
 ### WRITE TRX TO DEPEND_TRX.DAT
-function add_trx(t) {
+function add_trx(t, color, from_user) {
 	if (!(t in seen_trx)) {
 		seen_trx[t] = 1
 		print t >> UPATH "/depend_trx.dat"
+
 		if (DEBUG_MODE) {
 			print "TRX:", t  > "/dev/stderr"
+			if (dotfile && from_user) {
+				print "    \"" from_user "\" -> \"" t "\" [color=" color "];" >> dotfile
+			}
 		}
 	}
 }
@@ -63,10 +71,13 @@ function add_trx(t) {
 ### BEGIN
 ##############################################################################
 BEGIN {
+	###INITIALIZE ARAYS
 	for (u in account) {
 		if (!(u in msig)) delete msig[u]
 		if (!(u in trx_owner)) delete trx_owner[u]
 	}
+	### MAKE DOT FILE GLOBAL
+	dotfile = DEBUG_MODE ? UPATH "/dependencies.dot" : ""
 }
 
 ##############################################################################
@@ -79,7 +90,9 @@ FILENAME ~ /\/proofs\/.*\/multi\.sig$/ {
 		current_owner = proof_owner(FILENAME)
 	}
 	if ($0 ~ /^:MSIG:/) {
+		signer=$3
 		msig[current_owner][$3] = 1
+		msig_reverse[signer][current_owner] = 1
 	}
 	next
 }
@@ -154,23 +167,17 @@ END {
 
 		### OWN TRANSACTIONS
 		for (trx in trx_owner[user]) {
-			add_trx(trx)
+			add_trx(trx, user, "green")
 
 			### RECEIVER
 			receiver = trx_receiver[trx]
 			if (receiver && !(receiver in asset) && (receiver in account)) {
-				add_account(receiver)
-				if (DEBUG_MODE) {
-					print "    \"" user "\" -> \"" receiver "\" [color=red];" >> dotfile ### DOT
-				}
+				add_account(receiver, user, "red")
 			}
 
 			### MSIG USERS OF TRANSACTION
 			for (signer in trx_msig[trx]) {
-				add_account(signer)
-				if (DEBUG_MODE) {
-					print "    \"" user "\" -> \"" signer "\" [color=green];" >> dotfile ### DOT
-				}
+				add_account(signer, user, "green")
 			}
 		}
 
@@ -180,20 +187,18 @@ END {
 				sndr = trx_sndr[trx]
 				add_trx(trx)
 				if (sndr && !(sndr in asset) && (sndr in account)) {
-					add_account(sndr)
-					if (DEBUG_MODE) {
-						print "    \"" user "\" -> \"" sndr "\" [color=red];" >> dotfile ### DOT
-					}
+					add_account(sndr, user, "red")
 				}
 			}
 		}
 
-		### MSIG USERS OF proofs/multi.sig
+		### MSIG USERS OF OWN proofs/multi.sig
 		for (signer in msig[user]) {
-			add_account(signer)
-			if (DEBUG_MODE) {
-				print "    \"" user "\" -> \"" signer "\" [color=blue];" >> dotfile ### DOT
-			}
+			add_account(signer, user, "blue")
+		}
+		### OWNERS OF proofs/multi.sig WHERE USER IS SIGNER
+		for (owner in msig_reverse[user]) {
+			add_account(owner, user, "purple")
 		}
 	}
 
