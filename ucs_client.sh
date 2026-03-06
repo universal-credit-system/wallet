@@ -2367,7 +2367,7 @@ get_dependencies(){
 				changed=1
 				depend_confirmations_changed=1
 			fi
-			if [ "${changed}" -eq 0 ] && [ "${own_index_there}" -eq 1 ]
+			if [ "${changed}" -eq 0 ] && [ "${own_index_there}" -eq 1 ] && [ ! "${first_start}" -eq 1 ]
 			then
 				make_new_index=0
 				ledger_mode=0
@@ -2376,7 +2376,6 @@ get_dependencies(){
 				if [ "${first_start}" -eq 0 ]
 				then
 					ledger_mode=0
-					touch "${user_path}"/dates.tmp
 
 					###CREATE LISTS WITH DATE OF LEDGER CHANGES###################################
 					if [ "${depend_accounts_changed}" -eq 1 ]
@@ -2404,12 +2403,25 @@ get_dependencies(){
 							echo "${earliest_date}" >>"${user_path}"/dates.tmp
 						fi
 					fi
+				fi
+			fi
+			if [ "${ledger_mode}" -eq 0 ]
+			then
+				###CONSIDER MULTI-SIGNATURE COMMANDS##########################################
+				if [ "${cmd_action}" = "sign" ] || [ "${cmd_action}" = "decline" ]
+				then
+					make_new_index=1
+					trx_file=$(basename "${cmd_path}")
+					grep -w "${trx_file}" "${user_path}"/depend_trx.dat >>"${user_path}"/dates.tmp
+				fi
 
-					###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
-					cd "${user_path}" || exit 3
+				###GET EARLIEST DATE AND REMOVE ALL FILES AFTER THIS DATE#####################
+				if [ -e "${user_path}"/dates.tmp ]
+				then
 					earliest_date=$(sort "${user_path}"/dates.tmp|head -1)
 					if [ -n "${earliest_date}" ]
 					then
+						cd "${user_path}" || exit 3
 						last_date=$(date +%Y%m%d --date=@"${earliest_date}")
 						for ledger in $(basename -a "${user_path}"/*_ledger.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						do
@@ -2990,13 +3002,21 @@ then
 		esac
 		shift
 	done
+	###ALWAYS CREATE A LEDGER FOR THE FOLLOWING ACTIONS############
 	if [ "${no_ledger}" -eq 1 ]
 	then
-		if [ "${cmd_action}" = "create_trx" ]
-		then
-			no_ledger=0
-		fi
+		case "${cmd_action}" in
+			create_trx|sign|decline)	no_ledger=0 ;;
+		esac
 	fi
+	###CHECK IF CMD_PATH IS SET FOR READ ACTIONS###################
+	case "${cmd_action}" in
+    		read_trx|read_sync|sign|decline)	if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
+    							then
+    								exit 35
+    							fi
+        						;;
+	esac
 fi
 while [ "${end_program}" -eq 0 ]
 do
@@ -4530,7 +4550,7 @@ do
 											dialog_sync_import_fail_display=$(echo "${dialog_sync_import_fail}"|sed "s#<file>#${file_path}#g")
 											dialog --title "${dialog_type_title_error}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_sync_import_fail_display}" 0 0
 										else
-											exit 35
+											exit 36
 										fi
 									fi
 								else
@@ -4645,7 +4665,7 @@ do
 												dialog_sync_import_fail_display=$(echo "${dialog_sync_import_fail}"|sed "s#<file>#${file_path}#g")
 				       								dialog --title "${dialog_type_title_error}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_sync_import_fail_display}" 0 0
 											else
-												exit 35
+												exit 36
 											fi
 										fi
 				       					else
