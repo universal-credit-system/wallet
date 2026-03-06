@@ -3011,11 +3011,16 @@ then
 	fi
 	###CHECK IF CMD_PATH IS SET FOR READ ACTIONS###################
 	case "${cmd_action}" in
-    		read_trx|read_sync|sign|decline)	if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
-    							then
-    								exit 35
-    							fi
-        						;;
+    		read_trx|read_sync)	if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
+    					then
+    						exit 35
+    					fi
+        				;;
+        	sign|decline)		if [ ! -e "${script_path}/trx/${cmd_path}" ] || [ ! -e "${script_path}/${cmd_path}" ]
+    					then
+    						exit 35
+    					fi
+        				;;
 	esac
 fi
 while [ "${end_program}" -eq 0 ]
