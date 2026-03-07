@@ -836,7 +836,7 @@ build_ledger(){
 				fi
 
 				###CHECK IF FUNCTION EXISTS FOR MESSAGE TYPE###############
-				type "MT${trx_msg_type}_process" || skip=1
+				command -v "MT${trx_msg_type}_process" >/dev/null 2>&1 || skip=1
 				if [ "${skip}" -eq 0 ]
 				then
 					###SOURCE MESSAGE PROCESSING LOGIC#########################
@@ -1739,7 +1739,7 @@ check_mt(){
 					if [ "${rt_query}" -eq 0 ]
 					then
 						###CHECK STANDARD FUNCTIONS#############################
-						type "MT${msg_type}_process" >>/dev/null && type "MT${msg_type}_verify" >>/dev/null || rt_query=1
+						command -v "MT${msg_type}_process" >/dev/null 2>&1 && command -v "MT${msg_type}_verify" >/dev/null 2>&1 || rt_query=1
 						if [ "${rt_query}" -eq 0 ]
 						then
 							###ACKNOWLEDGE MESSAGE TYPE#############################
@@ -1880,7 +1880,7 @@ check_trx(){
 							if [ "${rt_query}" -eq 0 ]
 							then
 								###CHECK IF FUNCTION EXISTS FOR THIS MESSAGE TYPE#######
-								type "MT${msg_type}_verify" >>/dev/null || rt_query=1
+								command -v "MT${msg_type}_verify" >/dev/null 2>&1 || rt_query=1
 								if [ "${rt_query}" -eq 0 ]
 								then
 									"MT${trx_msg_type}_verify"
@@ -2842,6 +2842,7 @@ dialogrc_set="${theme_file}"
 if [ ! -t 0 ]
 then
 	set -- $(cat) "$@"
+	exec </dev/null
 fi
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
