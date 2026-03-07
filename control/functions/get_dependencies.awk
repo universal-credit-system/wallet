@@ -91,8 +91,8 @@ FILENAME ~ /\/proofs\/.*\/multi\.sig$/ {
 	}
 	if ($0 ~ /^:MSIG:/) {
 		signer=$3
-		msig[current_owner][$3] = 1
-		msig_reverse[signer][current_owner] = 1
+		msig[current_owner SUBSEP signer] = 1
+		msig_reverse[signer SUBSEP current_owner] = 1
 	}
 	next
 }
@@ -106,8 +106,8 @@ FILENAME ~ /\/trx\/[^/]+$/ {
 		sub(/^.*\//, "", trx)
 		owner = trx_owner_name(FILENAME)
 		
-		trx_owner[owner][trx] = 1
-		trx_sndr[trx] = owner
+		trx_owner[owner SUBSEP trx] = 1
+		trx_msig[trx SUBSEP $3] = 1
 	}
 
 	### GET RECEIVER OF TRX
@@ -117,7 +117,7 @@ FILENAME ~ /\/trx\/[^/]+$/ {
 	
 	### GET MSIG USERS OF TRX
 	if ($0 ~ /^:MSIG:/) {
-		trx_msig[trx][$3] = 1
+		trx_msig[trx SUBSEP $3] = 1
 	}
 	next
 }
@@ -141,7 +141,6 @@ FILENAME ~ /all_accounts\.dat$/ {
 END {
 	if (DEBUG_MODE) {
 		### DOT
-		dotfile = UPATH "/dependencies.dot"
 		print "digraph dependencies {" > dotfile
 		print "    rankdir=LR;" >> dotfile
 		print "    node [shape=ellipse];" >> dotfile
@@ -166,18 +165,28 @@ END {
 		user = queue[++q_start]
 
 		### OWN TRANSACTIONS
-		for (trx in trx_owner[user]) {
-			add_trx(trx, user, "green")
+		for (key in trx_owner) {
+			split(key, arr, SUBSEP)
+			owner = arr[1]
+			trx = arr[2]
+			if (owner == user) {
+				add_trx(trx, user, "red")
 
-			### RECEIVER
-			receiver = trx_receiver[trx]
-			if (receiver && !(receiver in asset) && (receiver in account)) {
-				add_account(receiver, user, "red")
-			}
+				### RECEIVER
+				receiver = trx_receiver[trx]
+				if (receiver && !(receiver in asset) && (receiver in account)) {
+					add_account(receiver, user, "red")
+				}
 
-			### MSIG USERS OF TRANSACTION
-			for (signer in trx_msig[trx]) {
-				add_account(signer, user, "green")
+				### MSIG USERS OF TRANSACTION
+				for (msig_key in trx_msig) {
+					split(msig_key, m_arr, SUBSEP)
+					t = m_arr[1]
+					signer = m_arr[2]
+					if (t == trx) {
+						add_account(signer, user, "green")
+					}
+				}
 			}
 		}
 
@@ -185,7 +194,7 @@ END {
 		for (trx in trx_receiver) {
 			if (trx_receiver[trx] == user) {
 				sndr = trx_sndr[trx]
-				add_trx(trx)
+				add_trx(trx, user, "red")
 				if (sndr && !(sndr in asset) && (sndr in account)) {
 					add_account(sndr, user, "red")
 				}
@@ -193,12 +202,22 @@ END {
 		}
 
 		### MSIG USERS OF OWN proofs/multi.sig
-		for (signer in msig[user]) {
-			add_account(signer, user, "blue")
+		for (key in msig) {
+			split(key, arr, SUBSEP)
+			owner = arr[1]
+			signer = arr[2]
+			if (owner == user) {
+				add_account(signer, user, "blue")
+			}
 		}
 		### OWNERS OF proofs/multi.sig WHERE USER IS SIGNER
-		for (owner in msig_reverse[user]) {
-			add_account(owner, user, "purple")
+		for (key in msig_reverse) {
+			split(key, arr, SUBSEP)
+			signer = arr[1]
+			owner = arr[2]
+			if (signer == user) {
+				add_account(owner, user, "purple")
+			}
 		}
 	}
 
