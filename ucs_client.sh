@@ -2842,7 +2842,6 @@ dialogrc_set="${theme_file}"
 if [ ! -t 0 ]
 then
 	set -- $(cat) "$@"
-	exec </dev/null
 fi
 
 ###CHECK IF GUI MODE OR CMD MODE AND ASSIGN VARIABLES###
