@@ -53,8 +53,8 @@ login_account(){
 					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep "GOODSIG"|grep -q "${key_file}"
 					rt_query=$?
 				fi
-				rm "${script_path}"/tmp/account_"${my_pid}".tmp 2>/dev/null
-				rm "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null
+				rm -f -- "${script_path}"/tmp/account_"${my_pid}".tmp
+				rm -f -- "${script_path}"/tmp/account_"${my_pid}".tmp.gpg
 			fi
 			if [ "${rt_query}" -eq 0 ]
 			then
@@ -202,7 +202,7 @@ create_keys(){
 								for tsa_service in $(echo "${tsa_pattern}"|sort - "${user_path}"/tsa_list.tmp|uniq -d)
 								do
 									###COPY QUERYFILE############################################
-									cp "${user_path}/${create_name_hashed}.tsq" "${user_path}/${tsa_service}.tsq"
+									cp -- "${user_path}/${create_name_hashed}.tsq" "${user_path}/${tsa_service}.tsq"
 
 									###GET TSA CONNECTION STRING#################################
 									tsa_config=$(grep "${tsa_service}" "${script_path}"/control/tsa.conf)
@@ -264,7 +264,7 @@ create_keys(){
 																then
 																	echo "0" >"${user_path}"/msig_users.tmp
 																else
-																	if [ "$(printf "%b" "${cmd_msig}"|sort -u||grep -v "^$"|grep -f "${user_path}"/msig_keys.tmp -)" = "$(printf "%b" "${cmd_msig}")" ]
+																	if [ "$(printf "%b" "${cmd_msig}"|sort -u|grep -v "^$"|grep -f "${user_path}"/msig_keys.tmp -)" = "$(printf "%b" "${cmd_msig}")" ]
 																	then
 																		if [ "$(printf "%b" "${cmd_msig}"|wc -l)" -le 10 ]
 																		then
@@ -297,14 +297,14 @@ create_keys(){
 																			###CHECK IF FILE NEEDS TO BE PURGED############################
 																			if [ "$(head -1 "${user_path}/msig_users.tmp")" = "0" ]
 																			then
-																				rm "${user_path}/msig_users.tmp"
+																				rm -f -- "${user_path}/msig_users.tmp"
 																				touch "${user_path}/msig_users.tmp"
 																			fi
 																			###CHECK IF USER HAS ALREADY BEEN ADDED########################
 																			if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
 																			then
 																				echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
-																				sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
+																				sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv -- "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
 																			fi
 																		fi
 																	else
@@ -329,8 +329,8 @@ create_keys(){
 																		fi
 																	fi
 																done
-																rm "${user_path}"/msig_keys.tmp
-																rm "${user_path}"/msig_users.tmp
+																rm -f -- "${user_path}"/msig_keys.tmp
+																rm -f -- "${user_path}"/msig_users.tmp
 															else
 																multi_sig_loop=1
 																rt_query=0
@@ -365,9 +365,9 @@ create_keys(){
 									break
 								fi
 							done
-							rm "${user_path}"/tsa_check.tmp
-							rm "${user_path}"/tsa_list.tmp
-							rm "${user_path}/${create_name_hashed}.tsq"
+							rm -f -- "${user_path}"/tsa_check.tmp
+							rm -f -- "${user_path}"/tsa_list.tmp
+							rm -f -- "${user_path}/${create_name_hashed}.tsq"
 						fi
 					fi
 				fi
@@ -386,7 +386,7 @@ create_keys(){
 			###COPY MULTI SIG FILE IF PRESENT###################################
 			if [ -s "${user_path}"/multi.sig ]
 			then
-				cp "${user_path}"/multi.sig "${script_path}"/proofs/"${create_name_hashed}"/multi.sig
+				cp -- "${user_path}"/multi.sig "${script_path}"/proofs/"${create_name_hashed}"/multi.sig
 			fi
 
 			###COPY TSA FILES###################################################
@@ -395,23 +395,23 @@ create_keys(){
 				file_base=$(basename "${tsa_query}")
 				if [ -f "${user_path}/${file_base}.tsq" ] && [ -s "${user_path}/${file_base}.tsq" ] && [ -f "${user_path}/${file_base}.tsr" ] && [ -s "${user_path}/${file_base}.tsr" ]
 				then
-					cp "${user_path}/${file_base}.tsq" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsq"
-					cp "${user_path}/${file_base}.tsr" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsr"
+					cp -- "${user_path}/${file_base}.tsq" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsq"
+					cp -- "${user_path}/${file_base}.tsr" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsr"
 				fi
 			done
 
 			###COPY EXPORTED PUB-KEY INTO KEYS-FOLDER###########################
-			cp "${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc" "${script_path}/keys/${create_name_hashed}"
+			cp -- "${user_path}/${create_name_hashed}_${create_name}_${create_pin}_pub.asc" "${script_path}/keys/${create_name_hashed}"
 
 			###COPY EXPORTED PRIV-KEY INTO CONTROL-FOLDER#######################
-			cp "${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc" "${script_path}/control/keys/${create_name_hashed}"
+			cp -- "${user_path}/${create_name_hashed}_${create_name}_${create_pin}_priv.asc" "${script_path}/control/keys/${create_name_hashed}"
 
 			###WRITE SECRETS####################################################
 			echo "${random_secret}" >"${user_path}/${create_name_hashed}.sct"
 			echo "${verify_secret}" >"${user_path}/${create_name_hashed}.scv"
 
 			###ONLY COPY RANDOM SECRET (VERIFY CAN BE RECALCULATED)#############
-			cp "${user_path}/${create_name_hashed}.sct" "${script_path}/control/keys/${create_name_hashed}.sct"
+			cp -- "${user_path}/${create_name_hashed}.sct" "${script_path}/control/keys/${create_name_hashed}.sct"
 
 			if [ "${gui_mode}" -eq 1 ]
 			then
@@ -441,10 +441,10 @@ create_keys(){
 				if [ -n "${create_name_hashed}" ]
 				then
 					###REMOVE PROOFS DIRECTORY OF USER###########################
-					rm -r "${script_path}/proofs/${create_name_hashed}" 2>/dev/null
+					rm -rf -- "${script_path}/proofs/${create_name_hashed}"
 
 					###REMOVE USERDATA DIRECTORY OF USER#########################
-					rm -r "${script_path}/userdata/${create_name_hashed}" 2>/dev/null
+					rm -rf -- "${script_path}/userdata/${create_name_hashed}"
 
 					###REMOVE KEYS FROM KEYRING##################################
 					key_fp=$(gpg --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-keys "${create_name_hashed}"|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
@@ -541,12 +541,12 @@ make_signature(){
 				rt_query=$?
 				if [ "${rt_query}" -eq 0 ]
 				then
-					mv "${message_blank}".asc "${message}"
+					mv -- "${message_blank}".asc "${message}"
 				fi
 
 				###PURGE FILES###################################################
-				rm "${message_blank}" 2>/dev/null
-				rm "${message_blank}".asc 2>/dev/null
+				rm -f -- "${message_blank}"
+				rm -f -- "${message_blank}".asc
 			fi
 
 			return ${rt_query}
@@ -567,11 +567,11 @@ verify_signature(){
 					rt_query=1
 				fi
 			else
-				rm "${file_to_verify}" 2>/dev/null
+				rm -f -- "${file_to_verify}"
 			fi
 			###############################################################
 
-			rm "${user_path}"/gpg_verify.tmp 2>/dev/null
+			rm -f -- "${user_path}"/gpg_verify.tmp
 			return ${rt_query}
 }
 check_input(){
@@ -668,14 +668,14 @@ build_ledger(){
 			date_stamp_yesterday=$(date -u +%Y%m%d --date=@"$(( date_stamp - 86400 ))")
 
 			###EMPTY LEDGER#####################################
-			rm "${user_path}"/*_ledger.dat 2>/dev/null
+			rm -f -- "${user_path}"/*_ledger.dat
 			touch "${user_path}"/"${date_stamp_yesterday}"_ledger.dat
 
 			###EMPTY INDEX FILE#################################
-			rm "${user_path}"/*_index_trx.dat 2>/dev/null
+			rm -f -- "${user_path}"/*_index_trx.dat
 
 			###EMPTY IGNORE TRX#################################
-			rm "${user_path}"/ignored_trx.dat 2>/dev/null
+			rm -f -- "${user_path}"/ignored_trx.dat
 
 			###CALCULATE DAY COUNTER############################
 			date_stamp_last=$(date -u +%s --date="${start_date}")
@@ -764,7 +764,7 @@ build_ledger(){
 
 			###MOVE FILENAMES TO NEXT DAY####################
 			previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
-			cp "${user_path}/${previous_day}_ledger.dat" "${user_path}/${focus}_ledger.dat"
+			cp -- "${user_path}/${previous_day}_ledger.dat" "${user_path}/${focus}_ledger.dat"
 
 			###GRANT COINLOAD OF THAT DAY####################
 			grep -v "${main_asset}" "${user_path}"/all_assets.dat|grep -v -f - "${user_path}/${focus}_ledger.dat"|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >"${user_path}/${focus}_ledger.tmp"
@@ -772,9 +772,9 @@ build_ledger(){
 			then
 				grep -v "${main_asset}" "${user_path}"/all_assets.dat|grep -f - "${user_path}/${focus}_ledger.dat" >"${user_path}/${focus}_ledger_others.tmp"
 				cat "${user_path}/${focus}_ledger.tmp" "${user_path}/${focus}_ledger_others.tmp" >"${user_path}/${focus}_ledger.dat"
-				rm "${user_path}/${focus}_ledger_others.tmp"
+				rm -f -- "${user_path}/${focus}_ledger_others.tmp"
 			fi
-			rm "${user_path}/${focus}_ledger.tmp" 2>/dev/null
+			rm -f -- "${user_path}/${focus}_ledger.tmp"
 
 			###GET DATESTAMP OF TOMORROW#####################
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
@@ -784,7 +784,7 @@ build_ledger(){
 
 			###CREATE LEDGER ENTRY FOR THESE USERS###########
 			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' "${user_path}"/accounts.tmp >>"${user_path}/${focus}_ledger.dat"
-			rm "${user_path}"/accounts.tmp 2>/dev/null
+			rm -f -- "${user_path}"/accounts.tmp
 
 			###FOR EACH ASSET CREATED THAT DAY###############
 			for asset in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/all_assets.dat)
@@ -1064,22 +1064,22 @@ check_archive(){
 			fi
 
 			###REMOVE THE LISTS THAT CONTAINS THE CONTENT##################
-			rm "${user_path}"/tar_check_temp.tmp 2>/dev/null
-			rm "${user_path}"/tar_check_full.tmp 2>/dev/null
-			rm "${user_path}"/tar_check.tmp 2>/dev/null
+			rm -f -- "${user_path}"/tar_check_temp.tmp
+			rm -f -- "${user_path}"/tar_check_full.tmp
+			rm -f -- "${user_path}"/tar_check.tmp
 
 			return ${rt_query}
 }
 check_assets(){
 			###MAKE CLEAN START############################################
-			rm "${user_path}"/blacklisted_assets.dat 2>/dev/null
+			rm -f -- "${user_path}"/blacklisted_assets.dat
 			touch "${user_path}"/blacklisted_assets.dat
 			if [ -f "${user_path}"/all_assets.dat ] && [ -s "${user_path}"/all_assets.dat ]
 			then
 				###REMOVE DELETED ASSETS FROM ALL_ASSETS.DAT AND SAVE##########
 				ls -1 "${script_path}"/assets|sort - "${user_path}"/all_assets.dat|uniq -d >"${user_path}"/ack_assets.dat
 			else
-				rm "${user_path}"/ack_assets.dat 2>/dev/null
+				rm -f -- "${user_path}"/ack_assets.dat
 				touch "${user_path}"/ack_assets.dat
 			fi
 
@@ -1179,7 +1179,7 @@ check_assets(){
 			then
 				while read line
 				do
-					rm "${script_path}/assets/${line}" 2>/dev/null
+					rm -f -- "${script_path}/assets/${line}"
 				done <"${user_path}"/blacklisted_assets.dat
 			fi
 
@@ -1188,8 +1188,8 @@ check_assets(){
 
 			###ADD ACKNOWLEDGED ASSETS TO FINAL LIST###########################
 			sort -t . -k2 "${user_path}"/all_assets.dat "${user_path}"/ack_assets.dat >"${user_path}"/all_assets.tmp
-			mv "${user_path}"/all_assets.tmp "${user_path}"/all_assets.dat
-			rm "${user_path}"/ack_assets.dat
+			mv -- "${user_path}"/all_assets.tmp "${user_path}"/all_assets.dat
+			rm -f -- "${user_path}"/ack_assets.dat
 }
 check_blacklist(){
 			###CHECK IF USER HAS BEEN BLACKLISTED AND IF SO WARN HIM##
@@ -1213,7 +1213,7 @@ update_tsa(){
 			now_stamp=$(date +%s)
 
 			###PURGE OLD TMP FILES###########################
-			rm "${script_path}"/certs/*.* 2>/dev/null
+			rm -f -- "${script_path}"/certs/*.*
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
 			for tsa_service in $(ls -1 "${script_path}"/certs/)
@@ -1283,15 +1283,15 @@ update_tsa(){
 								then
 									file_name=${tsa_cert_file%%.*}
 									file_ext=${tsa_cert_file#*.}
-									mv "${script_path}/certs/${tsa_service}/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}"
+									mv -- "${script_path}/certs/${tsa_service}/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}"
 								fi
-								mv "${script_path}/certs/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${tsa_cert_file}"
+								mv -- "${script_path}/certs/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${tsa_cert_file}"
 								tsa_cert_available=1
 							else
-								rm "${script_path}/certs/${tsa_cert_file}" 2>/dev/null
+								rm -f -- "${script_path}/certs/${tsa_cert_file}"
 							fi
 						fi
-						rm "${script_path}/certs/${tsa_cert_file}" 2>/dev/null
+						rm -f -- "${script_path}/certs/${tsa_cert_file}"
 						tsa_update_required=0
 					fi
 
@@ -1330,15 +1330,15 @@ update_tsa(){
 								then
 									file_name=${tsa_cacert_file%%.*}
 									file_ext=${tsa_cacert_file#*.}
-									mv "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}"
+									mv -- "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${old_cert_valid_from}-${old_cert_valid_till}.${file_ext}"
 								fi
-								mv "${script_path}/certs/${tsa_cacert_file}" "${script_path}/certs/${tsa_service}/${tsa_cacert_file}"
+								mv -- "${script_path}/certs/${tsa_cacert_file}" "${script_path}/certs/${tsa_service}/${tsa_cacert_file}"
 								tsa_rootcert_available=1
 							else
-								rm "${script_path}"/certs/"${tsa_cacert_file}"
+								rm -f -- "${script_path}"/certs/"${tsa_cacert_file}"
 							fi
 						fi
-						rm "${script_path}/certs/${tsa_cacert_file}" 2>/dev/null
+						rm -f -- "${script_path}/certs/${tsa_cacert_file}"
 						tsa_update_required=0
 					fi
 
@@ -1389,20 +1389,20 @@ update_tsa(){
 											old_crl_hash=${old_crl_hash%% *}
 											if [ ! "${new_crl_hash}" = "${old_crl_hash}" ]
 											then
-												mv "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
+												mv -- "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
 											fi
 										else
 											###MOVE CERTS INTO PLACE##################################
 											file_name=${tsa_cacert_file%%.*}
 											file_ext=${tsa_cacert_file#*.}
-											mv "${script_path}/certs/${tsa_service}/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${file_name}.${crl_old_valid_from}-${crl_old_valid_till}.${file_ext}"
-											mv "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
+											mv -- "${script_path}/certs/${tsa_service}/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${file_name}.${crl_old_valid_from}-${crl_old_valid_till}.${file_ext}"
+											mv -- "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
 										fi
 									else
-										mv "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
+										mv -- "${script_path}/certs/${tsa_crl_file}" "${script_path}/certs/${tsa_service}/${tsa_crl_file}"
 									fi
 								fi
-								rm "${script_path}/certs/${tsa_crl_file}" 2>/dev/null
+								rm -f -- "${script_path}/certs/${tsa_crl_file}"
 								if [ -f "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ]
 								then
 									###GET CRL DATES########################
@@ -1424,7 +1424,7 @@ update_tsa(){
 												file_name=${tsa_cert_file%%.*}
 												file_ext=${tsa_cert_file#*.}
 												cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)")
-												mv "${script_path}/certs/${tsa_service}/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${cert_valid_from}-${crl_valid_from}.${file_ext}"
+												mv -- "${script_path}/certs/${tsa_service}/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${cert_valid_from}-${crl_valid_from}.${file_ext}"
 												tsa_checked=1
 											fi
 											crl_retry_counter=$(( crl_retry_counter + 1 ))
@@ -1464,14 +1464,14 @@ update_tsa(){
 }
 check_tsa(){
 			###PURGE BLACKLIST AND SETUP ALL LIST#########
-			rm "${user_path}"/blacklisted_accounts.dat 2>/dev/null
+			rm -f -- "${user_path}"/blacklisted_accounts.dat
 			touch "${user_path}"/blacklisted_accounts.dat
 			if [ -f "${user_path}"/all_accounts.dat ] && [ -s "${user_path}"/all_accounts.dat ]
 			then
 				###REMOVE DELETED KEYS FROM ALL_ACCOUNTS.DAT AND SAVE#######
 				ls -1 "${script_path}"/keys|sort - "${user_path}"/all_accounts.dat|uniq -d >"${user_path}"/ack_accounts.dat
 			else
-				rm "${user_path}"/ack_accounts.dat 2>/dev/null
+				rm -f -- "${user_path}"/ack_accounts.dat
 				touch "${user_path}"/ack_accounts.dat
 			fi
 
@@ -1570,7 +1570,7 @@ check_tsa(){
 					fi
 					counter=$(( counter + 1 ))
 				done <"${user_path}"/all_accounts.tmp
-				rm "${user_path}"/*_check.tmp 2>/dev/null
+				rm -f -- "${user_path}"/*_check.tmp
 			fi
 
 			#####################################################################################
@@ -1588,9 +1588,9 @@ check_tsa(){
 				do
 					if [ ! "${line}" = "${handover_account}" ]
 					then
-						rm "${script_path}/keys/${line}" 2>/dev/null
-						rm -R "${script_path}/proofs/${line}/" 2>/dev/null
-						rm "${script_path}/trx/${line}".* 2>/dev/null
+						rm -f -- "${script_path}/keys/${line}"
+						rm -rf -- "${script_path}/proofs/${line}/"
+						rm -f -- "${script_path}/trx/${line}".*
 					fi
 				done <"${user_path}"/blacklisted_accounts.dat
 				'
@@ -1602,23 +1602,23 @@ check_tsa(){
 
 			###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST#########################
 			sort "${user_path}"/all_accounts.dat "${user_path}"/ack_accounts.dat >"${user_path}"/all_accounts.tmp
-			mv "${user_path}"/all_accounts.tmp "${user_path}"/all_accounts.dat
-			rm "${user_path}"/ack_accounts.dat
+			mv -- "${user_path}"/all_accounts.tmp "${user_path}"/all_accounts.dat
+			rm -f -- "${user_path}"/ack_accounts.dat
 
 			###SORT DATES LIST#################################################
 			sort -u -t ' ' -k2 "${user_path}"/all_accounts_dates.dat >"${user_path}"/all_accounts_dates.tmp
-			mv "${user_path}"/all_accounts_dates.tmp "${user_path}"/all_accounts_dates.dat
+			mv -- "${user_path}"/all_accounts_dates.tmp "${user_path}"/all_accounts_dates.dat
 }
 check_keys(){
 		###SETUP ALL LIST######################################
 		if [ -f "${user_path}"/all_keys.dat ] && [ -s "${user_path}"/all_keys.dat ]
 		then
-			mv "${user_path}"/all_keys.dat "${user_path}"/ack_keys.dat
+			mv -- "${user_path}"/all_keys.dat "${user_path}"/ack_keys.dat
 		else
-			rm "${user_path}"/ack_keys.dat 2>/dev/null
+			rm -f -- "${user_path}"/ack_keys.dat
 			touch "${user_path}"/ack_keys.dat
 		fi
-		cp "${user_path}"/all_accounts.dat "${user_path}"/all_keys.dat
+		cp -- "${user_path}"/all_accounts.dat "${user_path}"/all_keys.dat
 		sort "${user_path}"/all_keys.dat "${user_path}"/ack_keys.dat|uniq -u >"${user_path}"/all_keys.tmp
 
 		###CHECK IF KEYS IN KEYRING IMPORT THEM IF NOT#########
@@ -1638,7 +1638,7 @@ check_keys(){
 			       	fi
 		       	done
 		fi
-		rm "${user_path}"/keylist_gpg.tmp
+		rm -f -- "${user_path}"/keylist_gpg.tmp
 
 		###GO THROUGH BLACKLISTED ACCOUNTS LINE BY LINE AND REMOVE KEYS AND PROOFS###########
 		###############################WITH FLOCK############################################
@@ -1654,9 +1654,9 @@ check_keys(){
 			do
 				if [ ! "${line}" = "${handover_account}" ]
 				then
-					rm "${script_path}/keys/${line}" 2>/dev/null
-					rm -R "${script_path}/proofs/${line}/" 2>/dev/null
-					rm "${script_path}/trx/${line}".* 2>/dev/null
+					rm -f -- "${script_path}/keys/${line}"
+					rm -rf -- "${script_path}/proofs/${line}/"
+					rm -f -- "${script_path}/trx/${line}".*
 				fi
 			done <"${user_path}"/blacklisted_accounts.dat
 			'
@@ -1676,7 +1676,7 @@ check_keys(){
 				rt_query=$?
 				if [ "${rt_query}" -gt 0 ]
 				then
-					rm "${index_file}" 2>/dev/null
+					rm -f -- "${index_file}"
 				fi
 			fi
 			msig_file="${script_path}/proofs/${account}/multi.sig"
@@ -1686,20 +1686,20 @@ check_keys(){
 				rt_query=$?
 				if [ "${rt_query}" -gt 0 ]
 				then
-					rm "${msig_file}" 2>/dev/null
+					rm -f -- "${msig_file}"
 				fi
 			fi
 		done
 
 		###ADD ACKNOWLEDGED ACCOUNTS TO FINAL LIST##############
 		sort "${user_path}"/all_keys.dat "${user_path}"/ack_keys.dat >"${user_path}"/all_keys.tmp
-		mv "${user_path}"/all_keys.tmp "${user_path}"/all_keys.dat
-		cp "${user_path}"/all_keys.dat "${user_path}"/all_accounts.dat
-		rm "${user_path}"/ack_keys.dat
+		mv -- "${user_path}"/all_keys.tmp "${user_path}"/all_keys.dat
+		cp -- "${user_path}"/all_keys.dat "${user_path}"/all_accounts.dat
+		rm -f -- "${user_path}"/ack_keys.dat
 }
 check_mt(){
 		###PURGE BLACKLIST#####################################
-		rm "${user_path}"/blacklisted_mts.dat 2>/dev/null
+		rm -f -- "${user_path}"/blacklisted_mts.dat
 		touch "${user_path}"/blacklisted_mts.dat
 
 		###SETUP ALL LIST######################################
@@ -1708,7 +1708,7 @@ check_mt(){
 			###REMOVE DELETED MESSGE TYPES FROM ALL_TRX.DAT AND SAVE#########
 			ls -1 "${script_path}"/mt/|sort - "${user_path}"/all_mts.dat|uniq -d >"${user_path}"/ack_mts.dat
 		else
-			rm "${user_path}"/ack_mts.dat 2>/dev/null
+			rm -f -- "${user_path}"/ack_mts.dat
 			touch "${user_path}"/ack_mts.dat
 		fi
 
@@ -1759,13 +1759,13 @@ check_mt(){
 		then
 			while read line
 			do
-				rm "${script_path}/mt/${line}" 2>/dev/null
+				rm -f -- "${script_path}/mt/${line}"
 			done <"${user_path}"/blacklisted_mts.dat
 		fi
 
 		###REMOVE BLACKLISTED MTS FROM MT LIST#################
 		sort "${user_path}"/all_mts.tmp "${user_path}"/blacklisted_mts.dat|uniq -u >"${user_path}"/all_mts.dat
-		rm "${user_path}"/all_mts.tmp 2>/dev/null
+		rm -f -- "${user_path}"/all_mts.tmp
 
 		###SOURCE FUNCTIONS OF ACKNOWLEDGED MTS################
 		while read line
@@ -1776,14 +1776,14 @@ check_mt(){
 }
 check_trx(){
 		###PURGE BLACKLIST AND SETUP ALL LIST###################
-		rm "${user_path}"/blacklisted_trx.dat 2>/dev/null
+		rm -f -- "${user_path}"/blacklisted_trx.dat
 		touch "${user_path}"/blacklisted_trx.dat
 		if [ -f "${user_path}"/all_trx.dat ] && [ -s "${user_path}"/all_trx.dat ]
 		then
 			###REMOVE DELETED TRX FROM ALL_TRX.DAT AND SAVE#########
 			ls -1 "${script_path}"/trx|sort - "${user_path}"/all_trx.dat|uniq -d|grep -f "${user_path}"/all_accounts.dat >"${user_path}"/ack_trx.dat
 		else
-			rm "${user_path}"/ack_trx.dat 2>/dev/null
+			rm -f -- "${user_path}"/ack_trx.dat
 			touch "${user_path}"/ack_trx.dat
 		fi
 		touch "${user_path}"/all_trx.dat
@@ -1791,7 +1791,7 @@ check_trx(){
 		###WRITE INITIAL LIST OF TRANSACTIONS TO FILE###########
 		ls -1 "${script_path}"/trx >"${user_path}"/trx_list_all.tmp
 		grep -f "${user_path}"/all_accounts.dat "${user_path}"/trx_list_all.tmp >"${user_path}"/all_trx.dat
-		rm "${user_path}"/trx_list_all.tmp 2>/dev/null
+		rm -f -- "${user_path}"/trx_list_all.tmp
 
 		###SORT LIST OF TRANSACTION PER DATE####################
 		sort -t . -k2 "${user_path}"/all_trx.dat "${user_path}"/ack_trx.dat|uniq -u >"${user_path}"/all_trx.tmp
@@ -1904,7 +1904,7 @@ check_trx(){
 		then
 			while read line
 			do
-				rm "${script_path}/trx/${line}" 2>/dev/null
+				rm -f -- "${script_path}/trx/${line}"
 			done <"${user_path}"/blacklisted_trx.dat
 		fi
 
@@ -1913,8 +1913,8 @@ check_trx(){
 
 		###ADD ACKNOWLEDGED TRX TO FINAL LIST#################
 		sort -t . -k2 "${user_path}"/all_trx.dat "${user_path}"/ack_trx.dat >"${user_path}"/all_trx.tmp
-		mv "${user_path}"/all_trx.tmp "${user_path}"/all_trx.dat
-		rm "${user_path}"/ack_trx.dat
+		mv -- "${user_path}"/all_trx.tmp "${user_path}"/all_trx.dat
+		rm -f -- "${user_path}"/ack_trx.dat
 
 		cd "${script_path}" || exit 13
 }
@@ -1971,7 +1971,7 @@ process_new_files(){
 						fi
 					fi
 				done
-				rm "${user_path}"/asset_list.tmp 2>/dev/null
+				rm -f -- "${user_path}"/asset_list.tmp
 
 				###GO THROUGH MULTI SIG FILES ONE BY ONE########
 				for multi_sig_file in $(grep "multi.sig" "${user_path}"/files_to_fetch.tmp)
@@ -1992,14 +1992,14 @@ process_new_files(){
 
 				###UPDATE LIST OF FILES TO FETCH##############
 				sort "${user_path}"/remove_list.tmp "${user_path}"/files_to_fetch.tmp|uniq -u >"${user_path}"/temp_filelist.tmp
-				mv "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
+				mv -- "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
 
 				###REMOVE FILES OF REMOVE LIST################
 				while read line
 				do
-					rm "${user_path}"/temp/"${line}"
+					rm -f -- "${user_path}"/temp/"${line}"
 				done <"${user_path}"/remove_list.tmp
-				rm "${user_path}"/remove_list.tmp 2>/dev/null
+				rm -f -- "${user_path}"/remove_list.tmp
 				touch "${user_path}"/remove_list.tmp
 
 				###AFTER INDEX FILES HAVE BEEN VERIFIED#######
@@ -2088,15 +2088,15 @@ process_new_files(){
 				done
 				###UPDATE LIST OF FILES TO FETCH##############
 				sort "${user_path}"/remove_list.tmp "${user_path}"/files_to_fetch.tmp|uniq -u >"${user_path}"/temp_filelist.tmp
-				mv "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
+				mv -- "${user_path}"/temp_filelist.tmp "${user_path}"/files_to_fetch.tmp
 
 				###REMOVE FILES OF REMOVE LIST################
 				while read line
 				do
-					rm "${user_path}/temp/${line}"
+					rm -f -- "${user_path}/temp/${line}"
 				done <"${user_path}"/remove_list.tmp
-				rm "${user_path}"/remove_list.tmp 2>/dev/null
-				rm "${user_path}"/new_list.tmp
+				rm -f -- "${user_path}"/remove_list.tmp
+				rm -f -- "${user_path}"/new_list.tmp
 			else
 				###CHECK IF EXISTING FILES ARE OVERWRITTEN####
 				files_replaced=0
@@ -2111,7 +2111,7 @@ process_new_files(){
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ "${files_replaced}" -eq 1 ]
 				then
-					rm "${script_path}/userdata/${handover_account}"/*.dat
+					rm -f -- "${script_path}/userdata/${handover_account}"/*.dat
 				fi
 			fi
 			while read line
@@ -2120,7 +2120,7 @@ process_new_files(){
 				is_fungible=$(grep -c "asset_fungible=1" "${user_path}/temp/${line}")
 				if [ -h "${user_path}/temp/${line}" ] || [ -x "${user_path}/temp/${line}" ] || [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 1 ] && [ "${import_fungible_assets}" -eq 0 ] || [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 0 ] && [ "${import_non_fungible_assets}" -eq 0 ]
 				then
-					rm "${user_path}/temp/${line}"
+					rm -f -- "${user_path}/temp/${line}"
 				fi
 			done <"${user_path}"/files_to_fetch.tmp
 			files_to_copy=$(find "${user_path}"/temp/ -maxdepth 3 -type f|wc -l)
@@ -2134,21 +2134,21 @@ process_new_files(){
 				user_path=$(pwd)
 				base_dir=$(dirname "${user_path}")
 				script_path=$(dirname "${base_dir}")
-				cp "${user_path}"/temp/assets/* "${script_path}"/assets/ 2>/dev/null
-				cp "${user_path}"/temp/keys/* "${script_path}"/keys/ 2>/dev/null
-				cp -r "${user_path}"/temp/proofs/* "${script_path}"/proofs/ 2>/dev/null
-				cp "${user_path}"/temp/trx/* "${script_path}"/trx/ 2>/dev/null
+				cp -- "${user_path}"/temp/assets/* "${script_path}"/assets/ 2>/dev/null
+				cp -- "${user_path}"/temp/keys/* "${script_path}"/keys/ 2>/dev/null
+				cp -r -- "${user_path}"/temp/proofs/* "${script_path}"/proofs/ 2>/dev/null
+				cp -- "${user_path}"/temp/trx/* "${script_path}"/trx/ 2>/dev/null
 				'
 				cd "${script_path}" || exit 13
 				#############################################
 
 				###PURGE TEMP FILES##########################
-				rm -r "${user_path}"/temp/assets/* 2>/dev/null
-				rm -r "${user_path}"/temp/keys/* 2>/dev/null
-				rm -r "${user_path}"/temp/trx/* 2>/dev/null
+				rm -rf -- "${user_path}"/temp/assets/*
+				rm -rf -- "${user_path}"/temp/keys/*
+				rm -rf -- "${user_path}"/temp/trx/*
 			fi
 			###CLEANUP TEMP PROOFS#######################
-			rm -r "${user_path}"/temp/proofs/* 2>/dev/null
+			rm -rf -- "${user_path}"/temp/proofs/*
 }
 set_permissions(){
 			###AVOID EXECUTABLES BY SETTING PERMISSIONS###############
@@ -2174,7 +2174,7 @@ set_permissions(){
 			done <"${user_path}"/files_to_fetch.tmp
 
 			###REMOVE FILE LIST#######################################
-			rm "${user_path}"/files_to_fetch.tmp 2>/dev/null
+			rm -f -- "${user_path}"/files_to_fetch.tmp
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
@@ -2185,13 +2185,13 @@ purge_files(){
 		done
 
 		###REMOVE KEYRING AND FILES########################################
-		rm "${script_path}"/control/keyring.file 2>/dev/null
-		rm "${script_path}"/control/keyring.file~ 2>/dev/null
-		rm "${script_path}"/assets/* 2>/dev/null
-		rm "${script_path}"/keys/* 2>/dev/null
-		rm "${script_path}"/trx/* 2>/dev/null
-		rm -r "${script_path}"/proofs/* 2>/dev/null
-		rm -r "${script_path}"/userdata/* 2>/dev/null
+		rm -f -- "${script_path}"/control/keyring.file
+		rm -f -- "${script_path}"/control/keyring.file~
+		rm -f -- "${script_path}"/assets/*
+		rm -f -- "${script_path}"/keys/*
+		rm -f -- "${script_path}"/trx/*
+		rm -rf -- "${script_path}"/proofs/*
+		rm -rf -- "${script_path}"/userdata/*
 }
 import_keys(){
 		for private_key in $(ls -1 "${script_path}"/control/keys|grep -v ".sct")
@@ -2218,7 +2218,7 @@ get_dependencies(){
 			###CHECK IF ANYTHING HAS CHANGED##############################################
 			if [ -e "${user_path}"/depend_accounts.dat ]
 			then
-				mv "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
+				mv -- "${user_path}"/depend_accounts.dat "${user_path}"/depend_accounts_old.tmp
 			else
 				first_start=1
 			fi
@@ -2226,11 +2226,11 @@ get_dependencies(){
 			then
 				if [ -e "${user_path}"/depend_trx.dat ]
 				then
-					mv "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
+					mv -- "${user_path}"/depend_trx.dat "${user_path}"/depend_trx_old.tmp
 				fi
 				if [ -e "${user_path}"/depend_confirmations.dat ]
 				then
-					mv "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
+					mv -- "${user_path}"/depend_confirmations.dat "${user_path}"/depend_confirmations_old.tmp
 				fi
 			fi
 
@@ -2272,13 +2272,13 @@ get_dependencies(){
 
 				###SORT LISTS#################################################################
 				sort "${user_path}"/depend_accounts.dat >"${user_path}"/depend_accounts_sort.tmp
-				mv "${user_path}"/depend_accounts_sort.tmp "${user_path}"/depend_accounts.dat
+				mv -- "${user_path}"/depend_accounts_sort.tmp "${user_path}"/depend_accounts.dat
 				sort -t . -k2 "${user_path}"/depend_trx.dat >"${user_path}"/depend_trx_sort.tmp
-				mv "${user_path}"/depend_trx_sort.tmp "${user_path}"/depend_trx.dat
+				mv -- "${user_path}"/depend_trx_sort.tmp "${user_path}"/depend_trx.dat
 			else
 				###COPY FILES#################################################################
-				cp "${user_path}"/all_accounts.dat "${user_path}"/depend_accounts.dat
-				cp "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
+				cp -- "${user_path}"/all_accounts.dat "${user_path}"/depend_accounts.dat
+				cp -- "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
 			fi
 
 			###RESET DEPEND_CONFIRMATIONS FILE####################################
@@ -2425,28 +2425,28 @@ get_dependencies(){
 						last_date=$(date +%Y%m%d --date=@"${earliest_date}")
 						for ledger in $(basename -a "${user_path}"/*_ledger.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						do
-							rm "${ledger}"
+							rm -f -- "${ledger}"
 						done
 						for index in $(basename -a "${user_path}"/*_index_trx.dat|awk -F_ -v last_date="${last_date}" '$1 >= last_date')
 						do
-							rm "${index}"
+							rm -f -- "${index}"
 						done
 					fi
 				fi
 			fi
-			rm "${user_path}"/*.tmp 2>/dev/null
+			rm -f -- "${user_path}"/*.tmp
 			cd "${script_path}" || exit 13
 			return ${ledger_mode}
 }
 request_uca(){
 		### MAKE CLEAN START ##############################
-		rm "${user_path}"/dhuser_*.* 2>/dev/null
-		rm "${user_path}"/dhsecret_*.* 2>/dev/null
+		rm -f -- "${user_path}"/dhuser_*.*
+		rm -f -- "${user_path}"/dhsecret_*.*
 
 		### GET TOTAL NUMBER OF UCAs FOR PROGRESSBAR ######
 		if [ "${gui_mode}" -eq 1 ]
 		then
-			rm "${user_path}"/uca_list.tmp 2>/dev/null
+			rm -f -- "${user_path}"/uca_list.tmp
 			total_number_uca=$(wc -l <"${script_path}"/control/uca.conf)
 			percent_per_uca=$(echo "scale=10; 100 / ${total_number_uca}"|bc)
 			current_percent=0
@@ -2471,7 +2471,7 @@ request_uca(){
 
 		### MERGE ID AND PLAIN INDEX ######################
 		cat "${user_path}"/dhuser_id.dat "${user_path}"/dhuser_data.tmp >"${user_path}"/dhuser.dat
-		rm "${user_path}"/dhuser_data.tmp 2>/dev/null
+		rm -f -- "${user_path}"/dhuser_data.tmp
 
 		### READ UCA.CONF LINE BY LINE ####################
 		while read line
@@ -2493,7 +2493,7 @@ request_uca(){
 			if [ "${gui_mode}" -eq 1 ]
 			then
 				status="IN_PROGRESS"
-				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
+				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv -- "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_request}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2554,7 +2554,7 @@ request_uca(){
 									then
 										### CUT OUT BODY AND MOVE FILE ####################
 										dd skip="${total_bytes_header}" count="${total_bytes_count}" if="${out_file}" of="${out_file}".tmp bs=1 2>/dev/null
-										mv "${out_file}".tmp "${out_file}"
+										mv -- "${out_file}".tmp "${out_file}"
 
 										### DECRYPT RECEIVED DATA #########################
 										echo "${shared_secret}"|gpg --batch --no-tty --pinentry-mode loopback --output "${sync_file}" --passphrase-fd 0 --decrypt "${out_file}" 2>/dev/null
@@ -2588,8 +2588,8 @@ request_uca(){
 			fi
 
 			### PURGE TEMP FILES ################################
-			rm "${out_file}" 2>/dev/null
-			rm "${sync_file}" 2>/dev/null
+			rm -f -- "${out_file}"
+			rm -f -- "${sync_file}"
 
 			### PROGRESSBAR FOR GUI #############################
 			if [ "${gui_mode}" -eq 1 ]
@@ -2602,7 +2602,7 @@ request_uca(){
 				else
 					status="FAILED"
 				fi
-				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
+				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv -- "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_request}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			else
 				if [ "${rt_query}" -ne 0 ]
@@ -2613,12 +2613,12 @@ request_uca(){
 		done <"${script_path}"/control/uca.conf
 
 		### CLEAN UP FILES ##################################
-		rm "${user_path}"/dhuser.* 2>/dev/null
-		rm "${user_path}"/dhparams.pem 2>/dev/null
-		rm "${user_path}"/dhkey_send.pem 2>/dev/null
-		rm "${user_path}"/dhpub_send.pem 2>/dev/null
-		rm "${user_path}"/dhpub_receive.pem 2>/dev/null
-		rm "${user_path}"/uca_list.tmp 2>/dev/null
+		rm -f -- "${user_path}"/dhuser.*
+		rm -f -- "${user_path}"/dhparams.pem
+		rm -f -- "${user_path}"/dhkey_send.pem
+		rm -f -- "${user_path}"/dhpub_send.pem
+		rm -f -- "${user_path}"/dhpub_receive.pem
+		rm -f -- "${user_path}"/uca_list.tmp
 }
 send_uca(){
 		### SET VARIABLES ###################################
@@ -2629,7 +2629,7 @@ send_uca(){
 		### GET TOTAL NUMBER FOR PROGRESSBAR ################
 		if [ "${gui_mode}" -eq 1 ]
 		then
-			rm "${user_path}"/uca_list.tmp 2>/dev/null
+			rm -f -- "${user_path}"/uca_list.tmp
 			total_number_uca=$(wc -l <"${script_path}"/control/uca.conf)
 			percent_per_uca=$(echo "scale=10; 100 / ${total_number_uca}"|bc)
 			current_percent=0
@@ -2658,7 +2658,7 @@ send_uca(){
 			if [ "${gui_mode}" -eq 1 ]
 			then
 				status="IN_PROGRESS"
-				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
+				sed "s/\"${uca_info}\" \"WAITING\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv -- "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_send}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			fi
 
@@ -2707,13 +2707,13 @@ send_uca(){
 				rt_query=1
 			fi
 			###PURGE TEMP FILES###############################
-			rm "${out_file}" 2>/dev/null
-			rm "${sync_file}" 2>/dev/null
-			rm "${user_path}"/dhuser_id.dat 2>/dev/null
-			rm "${user_path}"/dhuser_"${uca_info_hashed}".dat 2>/dev/null
-			rm "${user_path}"/dhuser.tmp 2>/dev/null
-			rm "${user_path}"/dhsecret_"${uca_info_hashed}".dat 2>/dev/null
-			rm "${user_path}"/files_list.tmp 2>/dev/null
+			rm -f -- "${out_file}"
+			rm -f -- "${sync_file}"
+			rm -f -- "${user_path}"/dhuser_id.dat
+			rm -f -- "${user_path}"/dhuser_"${uca_info_hashed}".dat
+			rm -f -- "${user_path}"/dhuser.tmp
+			rm -f -- "${user_path}"/dhsecret_"${uca_info_hashed}".dat
+			rm -f -- "${user_path}"/files_list.tmp
 
 			### PROGRESS BAR ###################################
 			if [ "${gui_mode}" -eq 1 ]
@@ -2726,7 +2726,7 @@ send_uca(){
 				else
 					status="FAILED"
 				fi
-				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
+				sed "s/\"${uca_info}\" \"IN_PROGRESS\"/\"${uca_info}\" \"${status}\"/g" "${user_path}"/uca_list.tmp >"${user_path}"/uca_list.tmp.bak && mv -- "${user_path}"/uca_list.tmp.bak "${user_path}"/uca_list.tmp
 				dialog --title "${dialog_uca_full}" --backtitle "${core_system_name} ${core_system_version}" --mixedgauge "${dialog_uca_send}" 0 0 "${percent_display}" --file "${user_path}"/uca_list.tmp
 			else
 				if [ "${rt_query}" -ne 0 ]
@@ -2735,7 +2735,7 @@ send_uca(){
 				fi
 			fi
 		done <"${script_path}"/control/uca.conf
-		rm "${user_path}"/uca_list.tmp 2>/dev/null
+		rm -f -- "${user_path}"/uca_list.tmp
 		sleep 1
 }
 urlencode(){
@@ -3153,8 +3153,8 @@ do
 							###CHECK IF PARAMETER IS SET TO REBUILD LEDGER###############
 							if [ "${user_logged_in}" -eq 1 ] && [ "${new_ledger}" -eq 1 ] && [ "${no_ledger}" -eq 0 ]
 							then
-								rm "${user_path}"/*_ledger.dat 2>/dev/null
-								rm "${user_path}"/depend_*.dat 2>/dev/null
+								rm -f -- "${user_path}"/*_ledger.dat
+								rm -f -- "${user_path}"/depend_*.dat
 							fi
 							;;
 				"${dialog_main_create}")set -f
@@ -3330,7 +3330,7 @@ do
 									if [ "${rt_query}" -eq 0 ]
 									then
 										case "${settings_menu}" in
-											"${dialog_main_lang}")	rm "${script_path}"/tmp/lang_list.tmp 2>/dev/null
+											"${dialog_main_lang}")	rm -f -- "${script_path}"/tmp/lang_list.tmp
 														for language_file in $(ls -1 "${script_path}"/lang/)
 														do
 															lang_ex_short=$(echo "${language_file}"|cut -d '_' -f2)
@@ -3344,14 +3344,14 @@ do
 															new_lang_file=$(ls -1 "${script_path}"/lang/|grep "lang_${lang_selection}_")
 															if [ ! "${lang_file}" = "${new_lang_file}" ]
 															then
-																sed "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
+																sed "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 																. "${script_path}"/control/config.conf
 																. "${script_path}/lang/${lang_file}"
 															fi
 														fi
-														rm "${script_path}"/tmp/lang_list.tmp
+														rm -f -- "${script_path}"/tmp/lang_list.tmp
 														;;
-											"${dialog_main_theme}")	rm "${script_path}"/tmp/theme_list.tmp 2>/dev/null
+											"${dialog_main_theme}")	rm -f -- "${script_path}"/tmp/theme_list.tmp
 														for theme_file in $(ls -1 "${script_path}"/theme/)
 														do
 															theme_name=${theme_file%%.*}
@@ -3364,7 +3364,7 @@ do
 															new_theme_file=$(ls -1 "${script_path}"/theme/|grep -w "${theme_selection}")
 															if [ ! "${dialogrc_set}" = "${new_theme_file}" ]
 															then
-																sed "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
+																sed "s/theme_file=${dialogrc_set}/theme_file=${new_theme_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 																. "${script_path}"/control/config.conf
 																export DIALOGRC="${script_path}/theme/${theme_file}"
 																dialogrc_set="${theme_file}"
@@ -3372,9 +3372,9 @@ do
 																sleep 1
 															fi
 														fi
-														rm "${script_path}"/tmp/theme_list.tmp
+														rm -f -- "${script_path}"/tmp/theme_list.tmp
 														;;
-											"config.conf")		rm "${script_path}/tmp/config_list.tmp" 2>/dev/null
+											"config.conf")		rm -f -- "${script_path}"/tmp/config_list.tmp
 														config_changed=0
 														while [ "${config_changed}" -eq 0 ]
 														do
@@ -3389,7 +3389,7 @@ do
 																entry=$(echo "${changed}"|awk '{print $2}'|awk -F= '{print $1}')
 																old_value=$(grep "${entry}" "${script_path}/tmp/config_list.tmp"|awk -F= '{print $2}'|sed 's/ //g')
 																new_value=$(echo "${changed}"|awk '{print $3}')
-																sed "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
+																sed "s#${entry}=${old_value}#${entry}=${new_value}#" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 															else
 																if [ "${rt_query}" -eq 1 ]
 																then
@@ -3400,14 +3400,14 @@ do
 																	then
 																		cat "${script_path}/tmp/config_list_added.tmp" >>"${script_path}"/control/config.conf
 																	fi
-																	rm "${script_path}/tmp/config_list_add.tmp"
-																	rm "${script_path}/tmp/config_list_added.tmp"
+																	rm -f -- "${script_path}/tmp/config_list_add.tmp"
+																	rm -f -- "${script_path}/tmp/config_list_added.tmp"
 																else
 																	config_changed=1
 																fi
 															fi
 														done
-														rm "${script_path}/tmp/config_list.tmp"
+														rm -f -- "${script_path}/tmp/config_list.tmp"
 														;;
 										esac
 									else
@@ -3445,7 +3445,7 @@ do
 										exit 0
 									fi
 								else
-									rm "${script_path}/backup/${now_stamp}.bcp" 2>/dev/null
+									rm -f -- "${script_path}/backup/${now_stamp}.bcp"
 									if [ "${gui_mode}" -eq 1 ]
 									then
 										dialog --title "${dialog_type_title_error}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_backup_create_fail}" 0 0
@@ -3497,7 +3497,7 @@ do
 												dialog --title "${dialog_type_title_error}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_backup_fail}" 0 0
 											fi
 										else
-											rm "${script_path}"/tmp/backups_list.tmp 2>/dev/null
+											rm -f -- "${script_path}"/tmp/backups_list.tmp
 										fi
 									else
 										if [ -z "${cmd_path}" ]
@@ -3529,7 +3529,7 @@ do
 									fi
 								fi
 							fi
-							rm "${script_path}"/tmp/backup_list.tmp 2>/dev/null
+							rm -f -- "${script_path}"/tmp/backup_list.tmp
 							;;
 				"${dialog_main_end}")	clear
 							end_program=1
@@ -3684,7 +3684,7 @@ do
 											echo "TRX_INDEX   :${trx_index}"
 											echo "TRX_MSIG    :${trx_multi_sig}"
 											echo "TRX_CONFIRMS:${trx_confirmations}"
-											rm "${script_path}/tmp/gpg_${my_pid}_verify.tmp" 2>/dev/null
+											rm -f -- "${script_path}/tmp/gpg_${my_pid}_verify.tmp"
 										fi
 									fi
 								fi
@@ -3896,14 +3896,14 @@ do
 														###CHECK IF FILE NEEDS TO BE PURGED############################
 														if [ "$(head -1 "${user_path}/msig_users.tmp")" = "0" ]
 														then
-															rm "${user_path}/msig_users.tmp"
+															rm -f -- "${user_path}/msig_users.tmp"
 															touch "${user_path}/msig_users.tmp"
 														fi
 														###CHECK IF USER HAS ALREADY BEEN ADDED########################
 														if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
 														then
 															echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
-															sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
+															sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv -- "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
 														fi
 													fi
 												else
@@ -3927,8 +3927,8 @@ do
 													fi
 												fi
 											done
-											rm "${user_path}"/msig_keys.tmp
-											rm "${user_path}"/msig_users.tmp
+											rm -f -- "${user_path}"/msig_keys.tmp
+											rm -f -- "${user_path}"/msig_users.tmp
 										else
 											multi_sig_loop=1
 											rt_query=0
@@ -4059,7 +4059,7 @@ do
 										else
 											if [ "${rt_query}" -eq 1 ]
 											then
-												rm "${user_path}"/menu_addresses_fungible.tmp 2>/dev/null
+												rm -f -- "${user_path}"/menu_addresses_fungible.tmp
 												touch "${user_path}"/menu_addresses_fungible.tmp
 												if [ "$(grep -c "asset_fungible=1" "${script_path}/assets/${order_asset}")" -eq 1 ]
 												then
@@ -4072,8 +4072,8 @@ do
 												fi
 												sort -t. -k2 "${user_path}"/menu_addresses_fungible.tmp|grep -v -h -w "${order_asset}" - "${user_path}"/all_accounts.dat >"${user_path}"/menu_addresses.tmp
 												order_receiver=$(dialog --cancel-label "${dialog_main_back}" --title "${dialog_send}" --backtitle "${core_system_name} ${core_system_version}" --no-items --output-fd 1 --scrollbar --menu "..." 0 0 0 --file "${user_path}"/menu_addresses.tmp)
-												rm "${user_path}"/menu_addresses_fungible.tmp 2>/dev/null
-												rm "${user_path}"/menu_addresses.tmp 2>/dev/null
+												rm -f -- "${user_path}"/menu_addresses_fungible.tmp
+												rm -f -- "${user_path}"/menu_addresses.tmp
 											else
 												receiver_found=1
 												order_aborted=1
@@ -4110,7 +4110,7 @@ do
 																quit_purpose_loop=1
 															else
 																dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_send_size} ${trx_max_size_purpose_bytes} Bytes!" 0 0		
-																cp "${user_path}"/trx_purpose_edited.tmp "${user_path}"/trx_purpose_blank.tmp
+																cp -- "${user_path}"/trx_purpose_edited.tmp "${user_path}"/trx_purpose_blank.tmp
 															fi
 														else
 															if [ "${rt_query}" -eq 1 ]
@@ -4190,7 +4190,7 @@ do
 												order_purpose="[data:${order_purpose_path}]"
 
 												###COPY FILE TO SEND AS PURPOSE#########################
-												cp "${order_purpose_path}" "${user_path}"/trx_purpose_edited.tmp
+												cp -- "${order_purpose_path}" "${user_path}"/trx_purpose_edited.tmp
 											fi
 											if [ "${receiver_is_asset}" -eq 0 ]
 											then
@@ -4205,9 +4205,9 @@ do
 											order_purpose_key=$(gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always -r "${receiver}" --pinentry-mode loopback --armor --output - --encrypt "${user_path}"/trx_purpose_key.tmp 2>/dev/null|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
 											###ENCRYPT PURPOSE######################################
 											order_purpose_encrypted=$(echo "${random_key}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --armor --cipher-algo AES256 --output - --passphrase-fd 0 "${user_path}"/trx_purpose_edited.tmp|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
-											rm "${user_path}"/trx_purpose_key.tmp
-											rm "${user_path}"/trx_purpose_blank.tmp
-											rm "${user_path}"/trx_purpose_edited.tmp 2>/dev/null
+											rm -f -- "${user_path}"/trx_purpose_key.tmp
+											rm -f -- "${user_path}"/trx_purpose_blank.tmp
+											rm -f -- "${user_path}"/trx_purpose_edited.tmp
 											########################################################
 											if [ "${gui_mode}" -eq 1 ]
 											then
@@ -4235,7 +4235,7 @@ do
 												printf "%b" "${dialog_send_overview_display}\n${order_purpose}" >"${user_path}"/order_confirm.tmp
 												dialog --exit-label "${dialog_yes}" --help-button --help-label "${dialog_no}" --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --textbox "${user_path}/order_confirm.tmp" 0 0
 												rt_query=$?
-												rm "${user_path}"/order_confirm.tmp
+												rm -f -- "${user_path}"/order_confirm.tmp
 											else
 												rt_query=0
 											fi
@@ -4357,7 +4357,7 @@ do
 																cd "${script_path}" || exit 13
 																tar -czf "tmp/${handover_account}_${trx_now_form}.trx.tmp" -T "${user_path}"/files_list.tmp --dereference --hard-dereference
 																rt_query=$?
-																rm "${user_path}"/files_list.tmp 2>/dev/null
+																rm -f -- "${user_path}"/files_list.tmp
 															fi
 															if [ "${rt_query}" -eq 0 ]
 															then
@@ -4367,7 +4367,7 @@ do
 																	###COMMANDS TO REPLACE BUILD LEDGER CALL######################################
 																	###SET BALANCE################################################################
 																	account_new_balance=$(echo "${account_my_balance} - ${order_amount_formatted}"|bc|sed 's/^\./0./g')
-																	sed "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" >"${user_path}/${now}_ledger.dat.${my_pid}.bak" && mv "${user_path}/${now}_ledger.dat.${my_pid}.bak" "${user_path}/${now}_ledger.dat"
+																	sed "s/${order_asset}:${handover_account}=${account_my_balance}/${order_asset}:${handover_account}=${account_new_balance}/g" "${user_path}/${now}_ledger.dat" >"${user_path}/${now}_ledger.dat.${my_pid}.bak" && mv -- "${user_path}/${now}_ledger.dat.${my_pid}.bak" "${user_path}/${now}_ledger.dat"
 																	##############################################################################
 																fi
 
@@ -4401,14 +4401,14 @@ do
 																	if [ "${receiver_is_asset}" -eq 0 ] && [ "${small_trx}" -ne 255 ]
 																	then
 																		###REMOVE GPG TMP FILE#######################################################
-																		rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
+																		rm -f -- "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp"
 
 																		###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER##########################
-																		#cp "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${user_path}/${handover_account}_${trx_now_form}.trx"
+																		#cp -- "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${user_path}/${handover_account}_${trx_now_form}.trx"
 																		#############################################################################
 																		if [ ! "${trx_path_output}" = "${script_path}/tmp" ] && [ -d "${trx_path_output}" ]
 																		then
-																			mv "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
+																			mv -- "${script_path}/tmp/${handover_account}_${trx_now_form}.trx" "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
 																		else
 																			trx_path_output="${script_path}/tmp"
 																		fi
@@ -4428,7 +4428,7 @@ do
 																		then
 																			if [ -n "${cmd_path}" ] && [ -d "${cmd_path}" ] && [ ! "${trx_path_output}" = "${cmd_path}" ]
 																			then
-																				mv "${trx_path_output}/${handover_account}_${trx_now_form}.trx" "${cmd_path}/${handover_account}_${trx_now_form}.trx"
+																				mv -- "${trx_path_output}/${handover_account}_${trx_now_form}.trx" "${cmd_path}/${handover_account}_${trx_now_form}.trx"
 																				echo "FILE:${cmd_path}/${handover_account}_${trx_now_form}.trx"
 																			else
 																				echo "FILE:${trx_path_output}/${handover_account}_${trx_now_form}.trx"
@@ -4437,12 +4437,12 @@ do
 																		exit 0
 																	fi
 																else
-																	rm "${trx_path_output}/${handover_account}_${trx_now_form}.trx" 2>/dev/null
-																	rm "${last_trx}" 2>/dev/null
+																	rm -f -- "${trx_path_output}/${handover_account}_${trx_now_form}.trx"
+																	rm -f -- "${last_trx}"
 																fi
 															else
-																rm "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp" 2>/dev/null
-																rm "${last_trx}" 2>/dev/null
+																rm -f -- "${script_path}/tmp/${handover_account}_${trx_now_form}.trx.tmp"
+																rm -f -- "${last_trx}"
 															fi
 														fi
 													fi
@@ -4463,7 +4463,7 @@ do
 									asset_found=1
 								fi
 							done
-							rm "${user_path}"/menu_assets.tmp 2>/dev/null
+							rm -f -- "${user_path}"/menu_assets.tmp
 							;;
 				"${dialog_receive}")	file_found=0
 							path_to_search=${trx_path_input}
@@ -4491,7 +4491,7 @@ do
 										fi
 
 										###DECRYPT TRANSACTION FILE################################
-										rm "${user_path}"/trx_decr.tmp 2>/dev/null
+										rm -f -- "${user_path}"/trx_decr.tmp
 										echo "${handover_account}"|gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --passphrase-fd 0 --pinentry-mode loopback --output "${user_path}"/trx_decr.tmp --decrypt "${file_path}" 1>/dev/null 2>/dev/null
 										rt_query=$?
 										if [ "${rt_query}" -eq 0 ]
@@ -4553,7 +4553,7 @@ do
 												fi
 											fi
 										fi
-										rm "${user_path}"/trx_decr.tmp 2>/dev/null
+										rm -f -- "${user_path}"/trx_decr.tmp
 									fi
 									if [ "${rt_query}" -ne 0 ]
 									then
@@ -4734,13 +4734,13 @@ do
 									rt_query=$?
 									if [ "${rt_query}" -eq 0 ]
 									then
-										rm "${user_path}"/files_list.tmp 2>/dev/null
+										rm -f -- "${user_path}"/files_list.tmp
 										###UNCOMMENT TO ENABLE SAVESTORE IN USERDATA FOLDER################################
-										#cp "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${user_path}/${handover_account}_${now_stamp}.sync"
+										#cp -- "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${user_path}/${handover_account}_${now_stamp}.sync"
 										###################################################################################
 										if [ ! "${sync_path_output}" = "${script_path}/tmp" ] && [ -d "${sync_path_output}" ]
 										then
-											mv "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${sync_path_output}/${handover_account}_${now_stamp}.sync"
+											mv -- "${script_path}/tmp/${handover_account}_${now_stamp}.sync" "${sync_path_output}/${handover_account}_${now_stamp}.sync"
 										else
 											sync_path_output="${script_path}/tmp"
 										fi
@@ -4751,7 +4751,7 @@ do
 										else
 											if [ -n "${cmd_path}" ] && [ -d "${cmd_path}" ] && [ ! "${sync_path_output}" = "${cmd_path}" ]
 											then
-												mv "${sync_path_output}/${handover_account}_${now_stamp}.sync" "${cmd_path}/${handover_account}_${now_stamp}.sync"
+												mv -- "${sync_path_output}/${handover_account}_${now_stamp}.sync" "${cmd_path}/${handover_account}_${now_stamp}.sync"
 												echo "FILE:${cmd_path}/${handover_account}_${now_stamp}.sync"
 											else
 												echo "FILE:${sync_path_output}/${handover_account}_${now_stamp}.sync"
@@ -4759,7 +4759,7 @@ do
 											exit 0
 										fi
 			       						else
-										rm "${handover_account}_${now_stamp}.sync" 2>/dev/null
+										rm -f -- "${handover_account}_${now_stamp}.sync"
 										dialog_sync_create_fail_display=$(echo "${dialog_sync_create_fail}"|sed "s#<file>#${script_path}/${handover_account}_${now_stamp}.sync#g")
 										dialog --title "${dialog_type_title_error}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_sync_create_fail_display}" 0 0
 									fi
@@ -4867,7 +4867,7 @@ do
 																					fi
 																					if [ "${rt_query}" -eq 0 ]
 																					then
-																						mv "${user_path}"/asset_description.tmp "${file_path}" || rt_query=1
+																						mv -- "${user_path}"/asset_description.tmp "${file_path}" || rt_query=1
 																						if [ "${rt_query}" -eq 0 ]
 																						then
 																							dialog --title "[...]" --backtitle "${core_system_name} ${core_system_version}" --msgbox "->${file_path}" 0 0
@@ -4883,7 +4883,7 @@ do
 																				fi
 																			done
 																		fi
-																		rm "${user_path}"/asset_description.tmp 2>/dev/null
+																		rm -f -- "${user_path}"/asset_description.tmp
 																	else
 																		quit_asset_overview=1
 																	fi
@@ -4921,7 +4921,7 @@ do
 																						touch "${user_path}"/asset_description_blank.tmp
 																						dialog --ok-label "${dialog_next}" --cancel-label "[...]" --help-button --help-label "${dialog_cancel}" --title "${dialog_asset_description}" --backtitle "${core_system_name} ${core_system_version}" --editbox "${user_path}"/asset_description_blank.tmp 20 80 2>"${user_path}"/asset_description.tmp
 																						rt_query=$?
-																						rm "${user_path}"/asset_description_blank.tmp
+																						rm -f -- "${user_path}"/asset_description_blank.tmp
 																						if [ "${rt_query}" -eq 1 ]
 																						then
 																							path_to_search="${script_path}/"
@@ -4941,7 +4941,7 @@ do
 																											is_text=$(file "${file_path}"|grep -c "text")
 																											if [ "${is_text}" -eq 1 ]
 																											then
-																												cp "${file_path}" "${user_path}"/asset_description.tmp
+																												cp -- "${file_path}" "${user_path}"/asset_description.tmp
 																											else
 																												base64 -w 0 "${file_path}" >"${user_path}"/asset_description.tmp
 																											fi
@@ -4967,7 +4967,7 @@ do
 																							###ENCODE DESCRIPTION############################
 																							enc_string=""
 																							urlencode "${user_path}/asset_description.tmp"
-																							rm "${user_path}"/asset_description.tmp
+																							rm -f -- "${user_path}"/asset_description.tmp
 
 																							###ASSIGN ENCODED RESULT#########################
 																							asset_description=${enc_string}
@@ -5012,7 +5012,7 @@ do
 																												if [ "${rt_query}" -eq 0 ]
 																												then
 																													###COPY INTO ASSETS FOLDER###############
-																													mv "${user_path}/${asset_name}.${asset_stamp}" "${script_path}/assets/${asset_name}.${asset_stamp}"
+																													mv -- "${user_path}/${asset_name}.${asset_stamp}" "${script_path}/assets/${asset_name}.${asset_stamp}"
 
 																													###DISPLAY SUCCESS MESSAGE###############
 																													dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_asset_add_successfull}" 0 0
@@ -5113,7 +5113,7 @@ do
 																	quit_trx_menu=1	
 																fi
 															done
-															rm "${user_path}"/dialog_browser_trx.tmp
+															rm -f -- "${user_path}"/dialog_browser_trx.tmp
 														else
 															quit_user_menu=1
 														fi
@@ -5140,7 +5140,7 @@ do
 															quit_trx_loop=1
 														fi
 													done
-													rm "${user_path}"/dialog_browser_trx.tmp
+													rm -f -- "${user_path}"/dialog_browser_trx.tmp
 													;;
 										*)	quit_menu=1
 											;;
@@ -5154,7 +5154,7 @@ do
 							grep -s -l ":${handover_account}" "${script_path}"/trx/* >"${user_path}"/my_trx.tmp
 
 							###INCLUDING TRX OF MULTI SIGNATURE WALLETS############
-							rm "${user_path}"/my_multi_sig_trx.tmp 2>/dev/null
+							rm -f -- "${user_path}"/my_multi_sig_trx.tmp
 							touch "${user_path}"/my_multi_sig_trx.tmp
 							for msig_file in $(grep -s -l "MSIG:${handover_account}" "${script_path}"/proofs/*/multi.sig)
 							do
@@ -5174,7 +5174,7 @@ do
 
 							if [ "$(wc -l <"${user_path}"/my_trx_all.tmp)" -gt 0 ]
 							then
-								rm "${user_path}"/history_list.tmp 2>/dev/null
+								rm -f -- "${user_path}"/history_list.tmp
 								while read trx_file
 								do
 									###EXTRACT TRANSACTION DATA############################
@@ -5351,8 +5351,8 @@ do
 													fi
 												fi
 											fi
-											rm "${user_path}"/history_purpose_key_*.tmp 2>/dev/null
-											rm "${user_path}"/history_purpose_encrypted.tmp 2>/dev/null
+											rm -f -- "${user_path}"/history_purpose_key_*.tmp
+											rm -f -- "${user_path}"/history_purpose_encrypted.tmp
 										fi
 
 										###CHECK STATUS OF TRANSACTION#########################
@@ -5491,7 +5491,7 @@ do
 															fi
 															if [ "${rt_query}" -eq 0 ]
 															then
-																mv "${user_path}"/history_purpose_decrypted.tmp "${file_path}" || rt_query=1
+																mv -- "${user_path}"/history_purpose_decrypted.tmp "${file_path}" || rt_query=1
 																if [ "${rt_query}" -eq 0 ]
 																then
 																	dialog --title "[...]" --backtitle "${core_system_name} ${core_system_version}" --msgbox "->${file_path}" 0 0
@@ -5530,7 +5530,7 @@ do
 												dialog --title "${dialog_history_show}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_history_show_trx}" 0 0
 											fi
 										fi
-										rm "${user_path}"/history_purpose_decrypted.tmp 2>/dev/null
+										rm -f -- "${user_path}"/history_purpose_decrypted.tmp
 									else
 										dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_history_fail}" 0 0
 									fi
@@ -5538,10 +5538,10 @@ do
 									overview_quit=1
 								fi
 							done
-							rm "${user_path}"/my_trx.tmp 2>/dev/null
-							rm "${user_path}"/my_trx_all.tmp 2>/dev/null
-							rm "${user_path}"/my_multi_sig_trx.tmp 2>/dev/null
-							rm "${user_path}"/history_list.tmp 2>/dev/null
+							rm -f -- "${user_path}"/my_trx.tmp
+							rm -f -- "${user_path}"/my_trx_all.tmp
+							rm -f -- "${user_path}"/my_multi_sig_trx.tmp
+							rm -f -- "${user_path}"/history_list.tmp
 							;;
 				"${dialog_stats}")	###IF CMD_ASSET NOT SET USE UCC################
 							order_asset=${cmd_asset:-$main_asset}
