@@ -465,7 +465,7 @@ create_keys(){
 }
 make_signature(){
 			write_message=$1
-			trx_now=$2
+			timestamp=$2
 			signature_mode=$3
 
 			###SET DEFAULT VALUES############################################
@@ -476,7 +476,7 @@ make_signature(){
 			###CHECK IF INDEX FILE NEEDS TO BE CREATED#######################
 			case "${signature_mode}" in
 				0)	###WRITE TRX MESSAGE#############################################
-					message="${script_path}/trx/${handover_account}.${trx_now}"
+					message="${script_path}/trx/${handover_account}.${timestamp}"
 					printf "%b" "${write_message}" >>"${message_blank}"
 					;;
 				1)	###INDEX FILE####################################################
