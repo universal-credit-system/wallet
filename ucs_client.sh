@@ -1151,17 +1151,18 @@ check_assets(){
 										asset_owner_ok=1
 									fi
 								fi
-								if [ "${asset_owner_ok}" -eq 1 ] && [ "$(printf "%s" "${check_value}"|grep -c '[^0-9.]')" -eq 0 ]
+								if [ "${asset_owner_ok}" -eq 1 ]
 								then
 									###CHECK ASSET PRICE###################################
 									rt_query=0
-									is_amount_ok=$(echo "${check_value} >= 0.000000001"|bc) || rt_query=1
-									is_amount_mod=$(echo "${check_value} % 0.000000001"|bc) || rt_query=1
-									is_amount_mod=$(echo "${is_amount_mod} > 0"|bc) || rt_query=1
-									if [ "${is_amount_ok}" -eq 1 ] && [ "${is_amount_mod}" -eq 0 ] && [ "${rt_query}" -eq 0 ]
-									then
-										asset_acknowledged=1
-									fi
+									case "${check_value}" in
+										*[!0-9.]*|*.*.*|.*|*.) 	asset_acknowledged=0 ;;
+										*)			int=${check_value%%.*}
+													frac=${check_value#*.}
+													[ "${frac}" = "${check_value}" ] && frac=""
+													[ ${#frac} -eq 9 ] && asset_acknowledged=1
+													;;
+									esac
 								fi
 							fi
 						fi
@@ -3993,15 +3994,22 @@ do
 													fi
 													if [ "${rt_query}" -eq 0 ]
 													then
-														order_amount_alnum=$(echo "${order_amount}"|grep -c '[^0-9.,]')
+														case "${order_amount}" in
+															*[!0-9.]*|*.*.*|.*|*.)	order_amount_alnum=1 ;;
+															*)			int=${check_value%%.*}
+																		frac=${check_value#*.}
+																		[ "${frac}" = "${order_amount}" ] && frac=""
+																		[ ${#frac} -eq 9 ] && order_amount_alnum=0
+																		;;
+														esac
 														if [ "${order_amount_alnum}" -eq 0 ]
 														then
-															order_amount_formatted=$(echo "${order_amount}"|sed -e 's/,/./g' -e 's/ //g')
-															amount_mod=$(echo "${order_amount_formatted} % 0.000000001"|bc)
-															amount_big_enough=$(echo "${amount_mod} > 0"|bc)
+															amount_big_enough=$(echo "${order_amount} > 0"|bc)
 															if [ "${amount_big_enough}" -eq 0 ]
 															then
-																order_amount_formatted=$(echo "scale=9; ${order_amount_formatted} / 1"|bc|sed 's/^\./0./g')
+																frac="${frac}00000000"
+																frac=$(expr "${frac}" : '\(..........\)')
+																order_amount_formatted="${int}.${frac}"
 																if [ "${receiver_is_asset}" -eq 1 ]
 																then
 																	asset=${order_receiver}
@@ -4012,7 +4020,6 @@ do
 																asset_price=${asset_price#*=}
 																asset_value=$(echo "scale=9; 0.000000001 * ${asset_price}"|bc|sed 's/^\./0./g')
 																amount_big_enough=$(echo "${order_amount_formatted} < ${asset_value}"|bc)
-																dialog_send_amount_not_big_enough=$(echo "${dialog_send_amount_not_big_enough}"|sed "s/0.000000001/${asset_value}/g")
 															fi
 															if [ "${amount_big_enough}" -eq 0 ]
 															then
@@ -4031,6 +4038,7 @@ do
 															else
 																if [ "${gui_mode}" -eq 1 ]
 																then
+																	dialog_send_amount_not_big_enough=$(echo "${dialog_send_amount_not_big_enough}"|sed "s/0.000000001/${asset_value}/g")
 																	dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_send_amount_not_big_enough}" 0 0
 																else
 																	exit 30
