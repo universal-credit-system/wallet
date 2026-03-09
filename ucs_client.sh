@@ -1836,11 +1836,11 @@ check_trx(){
 				###EXTRACT TRANSACTION DATA############################
 				IFS='|' read -r trx_stamp trx_msg_type trx_sender trx_receiver  <<-EOF
 				$(awk -F: '
-				    /^:TIME:/ {time=$3}
-				    /^:TYPE:/ {type=$3}
-				    /^:SNDR:/ {sndr=$3}
-				    /^:RCVR:/ {rcvr=$3}
-				    END { printf "%s|%s|%s|%s\n", time, type, sndr, rcvr }
+					/^:TIME:/ {time=$3}
+					/^:TYPE:/ {type=$3}
+					/^:SNDR:/ {sndr=$3}
+					/^:RCVR:/ {rcvr=$3}
+					END { printf "%s|%s|%s|%s\n", time, type, sndr, rcvr }
 				' "${trx_file_path}")
 				EOF
 
@@ -5216,11 +5216,11 @@ do
 									###EXTRACT TRANSACTION DATA############################
 									IFS='|' read -r trx_sender trx_receiver trx_amount trx_asset <<-EOF 
 									$(awk -F: '
-									    /^:SNDR:/ {sndr=$3}
-									    /^:RCVR:/ {rcvr=$3}
-									    /^:AMNT:/ {amnt=$3}
-									    /^:ASST:/ {asst=$3}
-									    END { printf "%s|%s|%s|%s\n", sndr, rcvr, amnt, asst }
+										/^:SNDR:/ {sndr=$3}
+										/^:RCVR:/ {rcvr=$3}
+										/^:AMNT:/ {amnt=$3}
+										/^:ASST:/ {asst=$3}
+										END { printf "%s|%s|%s|%s\n", sndr, rcvr, amnt, asst }
 									' "${trx_file}")
 									EOF
 
@@ -5608,9 +5608,9 @@ do
 							###EXTRACT VOLUMETRIX##########################
 							IFS='|' read -r total_number_trx total_number_trx_today total_volume_trx total_volume_trx_today <<-EOF
 							$(awk -F: -v asset="${order_asset}" \
-					                     -v today_start="${today_start}" \
-					                     -v tomorrow_start="${tomorrow_start}" \
-					                     -f "${script_path}"/control/functions/get_volumetrics.awk "${script_path}"/trx/*)
+								-v today_start="${today_start}" \
+								-v tomorrow_start="${tomorrow_start}" \
+								-f "${script_path}"/control/functions/get_volumetrics.awk "${script_path}"/trx/*)
 							EOF
 
 							if [ "${gui_mode}" -eq 1 ]
