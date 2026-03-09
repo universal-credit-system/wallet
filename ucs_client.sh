@@ -1253,8 +1253,11 @@ update_tsa(){
 					if [ -f "${script_path}/certs/${tsa_service}/${tsa_cert_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_cert_file}" ]
 					then
 						###GET DATES######################################
-						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+						cert_data=$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -noout -dates)
+						old_cert_valid_from=$(echo "${cert_data}"|grep "notBefore")
+						old_cert_valid_from=$(date +%s --date="${old_cert_valid_from#*=}")
+						old_cert_valid_till=$(echo "${cert_data}"|grep "notAfter")
+						old_cert_valid_till=$(date +%s --date="${old_cert_valid_till#*=}")
 
 						###CHECK IF CERT IS VALID#########################
 						if [ "${now_stamp}" -gt "${old_cert_valid_from}" ] && [ "${now_stamp}" -lt "${old_cert_valid_till}" ]
@@ -1274,8 +1277,11 @@ update_tsa(){
 						if [ "${rt_query}" -eq 0 ]
 						then
 							###GET DATES######################################
-							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cert_file}" -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+							cert_data=$(openssl x509 -in "${script_path}/certs/${tsa_cert_file}" -noout -dates)
+							new_cert_valid_from=$(echo "${cert_data}"|grep "notBefore")
+							new_cert_valid_from=$(date +%s --date="${new_cert_valid_from#*=}")
+							new_cert_valid_till=$(echo "${cert_data}"|grep "notAfter")
+							new_cert_valid_till=$(date +%s --date="${new_cert_valid_till#*=}")
 
 							###CHECK IF CERT IS VALID#########################
 							if [ "${now_stamp}" -gt "${new_cert_valid_from}" ] && [ "${now_stamp}" -lt "${new_cert_valid_till}" ]
@@ -1300,8 +1306,11 @@ update_tsa(){
 					if [ -f "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" ]
 					then
 						###GET DATES######################################
-						old_cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-						old_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+						cert_data=$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cacert_file}" -noout -dates)
+						old_cert_valid_from=$(echo "${cert_data}"|grep "notBefore")
+						old_cert_valid_from=$(date +%s --date="${old_cert_valid_from#*=}")
+						old_cert_valid_till=$(echo "${cert_data}"|grep "notAfter")
+						old_cert_valid_till=$(date +%s --date="${old_cert_valid_till#*=}")
 
 						###CHECK IF CERT IS VALID#########################
 						if [ "${now_stamp}" -gt "${old_cert_valid_from}" ] && [ "${now_stamp}" -lt "${old_cert_valid_till}" ]
@@ -1321,8 +1330,11 @@ update_tsa(){
 						if [ "${rt_query}" -eq 0 ]
 						then
 							###GET DATES######################################
-							new_cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cacert_file}" -noout -dates|grep "notBefore"|cut -d '=' -f2)")
-							new_cert_valid_till=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_cacert_file}" -noout -dates|grep "notAfter"|cut -d '=' -f2)")
+							cert_data=$(openssl x509 -in "${script_path}/certs/${tsa_cacert_file}" -noout -dates)
+							new_cert_valid_from=$(echo "${cert_data}"|grep "notBefore")
+							new_cert_valid_from=$(date +%s --date="${new_cert_valid_from#*=}")
+							new_cert_valid_till=$(echo "${cert_data}"|grep "notAfter")
+							new_cert_valid_till=$(date +%s --date="${new_cert_valid_till#*=}")
 
 							###CHECK IF CERT IS VALID#########################
 							if [ "${now_stamp}" -gt "${new_cert_valid_from}" ] && [ "${now_stamp}" -lt "${new_cert_valid_till}" ]
@@ -1375,10 +1387,18 @@ update_tsa(){
 									if [ -f "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ]
 									then
 										###GET CRL DATES##########################################
-										crl_old_valid_from=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text|grep "Last Update:"|cut -c 22-45)")
-										crl_old_valid_till=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text|grep "Next Update:"|cut -c 22-45)")
-										crl_new_valid_from=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_crl_file}" -text|grep "Last Update:"|cut -c 22-45)")
-										crl_new_valid_till=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_crl_file}" -text|grep "Next Update:"|cut -c 22-45)")
+										date +%s.%3N >>${script_path}/times.dat
+										crl_data=$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text)
+										crl_old_valid_from=$(echo "${crl_data}"|grep "Last Update:")
+										crl_old_valid_from=$(date +%s --date="${crl_old_valid_from#*:}")
+										crt_old_valid_till=$(echo "${crl_data}"|grep "Next Update:")
+										crl_old_valid_till=$(date +%s --date="${crt_old_valid_till#*:}")
+										crl_data=$(openssl crl -in "${script_path}/certs/${tsa_crl_file}" -text)
+										crl_new_valid_from=$(echo "${crl_data}"|grep "Last Update:")
+										crl_new_valid_from=$(date +%s --date="${crl_new_valid_from#*:}")
+										crl_new_valid_till=$(echo "${crl_data}"|grep "Next Update:")
+										crl_new_valid_till=$(date +%s --date="${crl_new_valid_till#*:}")
+										date +%s.%3N >>${script_path}/times.dat
 
 										###COMPARE VALID FROM AND VALID TILL######################
 										if [ "${crl_old_valid_from}" -eq "${crl_new_valid_from}" ] && [ "${crl_old_valid_till}" -eq "${crl_new_valid_till}" ]
@@ -1407,8 +1427,11 @@ update_tsa(){
 								if [ -f "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ]
 								then
 									###GET CRL DATES########################
-									crl_valid_from=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text|grep "Last Update:"|cut -c 22-45)")
-									crl_valid_till=$(date +%s --date="$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text|grep "Next Update:"|cut -c 22-45)")
+									crl_data=$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text)
+									crl_valid_from=$(echo "${crl_data}"|grep "Last Update:")
+									crl_valid_from=$(date +%s --date="${crl_valid_from#*:}")
+									crl_valid_till=$(echo "${crl_data}"|grep "Next Update:")
+									crl_valid_till=$(date +%s --date="${crl_valid_till#*:}")
 									if [ "${crl_valid_from}" -lt "${now_stamp}" ] && [ "${crl_valid_till}" -gt "${now_stamp}" ]
 									then
 										###CHECK CERTIFICATE AGAINST CRL########
@@ -1424,7 +1447,8 @@ update_tsa(){
 											then
 												file_name=${tsa_cert_file%%.*}
 												file_ext=${tsa_cert_file#*.}
-												cert_valid_from=$(date +%s --date="$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -text -noout|grep -A2 "Validity"|grep "Not Before"|cut -c 25-48)")
+												cert_valid_from=$(openssl x509 -in "${script_path}/certs/${tsa_service}/${tsa_cert_file}" -noout -dates|grep "notBefore")
+												cert_valid_from=$(date +%s --date="${cert_valid_from#*=}")
 												mv -- "${script_path}/certs/${tsa_service}/${tsa_cert_file}" "${script_path}/certs/${tsa_service}/${file_name}.${cert_valid_from}-${crl_valid_from}.${file_ext}"
 												tsa_checked=1
 											fi
