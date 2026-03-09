@@ -13,6 +13,7 @@ dd
 dialog
 dirname
 echo
+expr
 file
 find
 flock
