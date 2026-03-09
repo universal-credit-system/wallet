@@ -336,12 +336,8 @@ MT100_verify(){
 				if (msig_cnt > 10) msig_bad=1
 				if (msig_dup) msig_bad=1
 
-				amnt_bad = (amnt ~ /[^0-9.]/)
-
 				min = 0.000000001
-				split(amnt, p, ".")
-				scale_ok = (length(p[2]) == 9)
-				amount_ok = (amnt >= min && scale_ok)
+				amount_ok = (amnt ~ /^[0-9]+\.[0-9]{9}$/ && amnt+0 >= min)
 
 				printf "%d|%d|%d|%d|%s|%s\n",
 					prpk_bad,
