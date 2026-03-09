@@ -1387,7 +1387,6 @@ update_tsa(){
 									if [ -f "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ] && [ -s "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ]
 									then
 										###GET CRL DATES##########################################
-										date +%s.%3N >>${script_path}/times.dat
 										crl_data=$(openssl crl -in "${script_path}/certs/${tsa_service}/${tsa_crl_file}" -text)
 										crl_old_valid_from=$(echo "${crl_data}"|grep "Last Update:")
 										crl_old_valid_from=$(date +%s --date="${crl_old_valid_from#*:}")
@@ -1398,7 +1397,6 @@ update_tsa(){
 										crl_new_valid_from=$(date +%s --date="${crl_new_valid_from#*:}")
 										crl_new_valid_till=$(echo "${crl_data}"|grep "Next Update:")
 										crl_new_valid_till=$(date +%s --date="${crl_new_valid_till#*:}")
-										date +%s.%3N >>${script_path}/times.dat
 
 										###COMPARE VALID FROM AND VALID TILL######################
 										if [ "${crl_old_valid_from}" -eq "${crl_new_valid_from}" ] && [ "${crl_old_valid_till}" -eq "${crl_new_valid_till}" ]
