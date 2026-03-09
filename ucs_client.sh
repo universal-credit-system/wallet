@@ -2957,6 +2957,14 @@ then
 						"-receiver")	cmd_receiver=$1
 								;;
 						"-amount")	cmd_amount=$1
+								case "${cmd_amount}" in
+									*[!0-9.]*|*.*.*|.*|*.)	exit 31 ;;
+									*)			int=${check_value%%.*}
+												frac=${check_value#*.}
+												[ "${frac}" = "${order_amount}" ] && frac=""
+												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] || exit 31
+												;;
+								esac
 								;;
 						"-asset")	cmd_asset=$1
 								;;
@@ -4048,8 +4056,6 @@ do
 															if [ "${gui_mode}" -eq 1 ]
 															then
 																dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_send_fail_amount}" 0 0
-															else
-																exit 31
 															fi
 														fi
 													else
