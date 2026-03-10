@@ -1098,16 +1098,17 @@ check_assets(){
 					###SET VARIABLES###############################################
 					asset_acknowledged=0
 					asset=${line}
-					asset_data=$(grep "asset_" "${script_path}/assets/${asset}"|grep "=")
-					asset_description=$(echo "${asset_data}"|awk -F= '/asset_description/{print $2}'|sed -e 's:^"::g' -e 's:"*$::g')
+					IFS='|' read -r asset_description asset_fungible asset_price asset_quantity  <<-EOF
+					$(awk -F= '
+						/^asset_description/ {description=$2}
+						/^asset_fungible/ {fungible=$2}
+						/^asset_price/ {price=$2}
+						/^asset_quantity/ {quantity=$2}
+						END { printf "%s|%s|%s|%s\n", description, fungible, price, quantity }
+					' "${script_path}/assets/${asset}")
+					EOF
 					asset_symbol=${asset%%.*}
 					asset_stamp=${asset#*.}
-					asset_price=$(echo "${asset_data}"|grep "asset_price")
-					asset_price=${asset_price#*=}
-					asset_quantity=$(echo "${asset_data}"|grep "asset_quantity")
-					asset_quantity=${asset_quantity#*=}
-					asset_fungible=$(echo "${asset_data}"|grep "asset_fungible")
-					asset_fungible=${asset_fungible#*=}
 					stamp_only_digits=$(echo "${asset_stamp}"|grep -c '[^[:digit:]]')
 					stamp_size=${#asset_stamp}
 
@@ -1124,23 +1125,19 @@ check_assets(){
 							then
 								asset_owner_ok=0
 								###IF NON FUNGIBLE ASSET#####################################
-								if [ "${asset_fungible}" -eq 0 ]
+								if [ "${asset_fungible}" -eq 0 ] && [ -n "${asset_quantity}" ]
 								then
-									###CHECK ASSET HARDCAP#######################################
-									if [ -n "${asset_quantity}" ] && [ ! "${asset_quantity}" = "*" ]
+									###CHECK IF ASSET OWNER IS SET###############################
+									asset_owner=$(echo "${asset_data}"|grep "asset_owner")
+									asset_owner=${asset_owner#*=}
+									if [ -n "${asset_owner}" ]
 									then
-										check_value=${asset_quantity}
-										asset_owner=$(echo "${asset_data}"|grep "asset_owner")
-										asset_owner=${asset_owner#*=}
-										###CHECK IF ASSET OWNER IS SET###############################
-										if [ -n "${asset_owner}" ]
+										test -f "${script_path}"/keys/"${asset_owner}"
+										rt_query=$?
+										if [ "${rt_query}" -eq 0 ]
 										then
-											test -f "${script_path}"/keys/"${asset_owner}"
-											rt_query=$?
-											if [ "${rt_query}" -eq 0 ]
-											then
-												asset_owner_ok=1
-											fi
+											check_value=${asset_quantity}
+											asset_owner_ok=1
 										fi
 									fi
 								else
@@ -1154,13 +1151,12 @@ check_assets(){
 								if [ "${asset_owner_ok}" -eq 1 ]
 								then
 									###CHECK ASSET PRICE###################################
-									rt_query=0
 									case "${check_value}" in
 										*[!0-9.]*|*.*.*|.*|*.) 	asset_acknowledged=0 ;;
 										*)			int=${check_value%%.*}
 													frac=${check_value#*.}
 													[ "${frac}" = "${check_value}" ] && frac=""
-													[ ${#frac} -eq 9 ] && asset_acknowledged=1
+													[ ${#frac} -eq 9 ] && $(echo "${int}.${frac} > 0"|bc) && asset_acknowledged=1
 													;;
 									esac
 								fi
@@ -2984,7 +2980,7 @@ then
 									*)			int=${check_value%%.*}
 												frac=${check_value#*.}
 												[ "${frac}" = "${order_amount}" ] && frac=""
-												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] || exit 31
+												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && $(echo "${int}.${frac} > 0"|bc) || exit 31
 												;;
 								esac
 								;;
@@ -4025,32 +4021,29 @@ do
 													if [ "${rt_query}" -eq 0 ]
 													then
 														case "${order_amount}" in
-															*[!0-9.]*|*.*.*|.*|*.)	order_amount_alnum=1 ;;
+															*[!0-9.]*|*.*.*|.*|*.)	amount_okay=1 ;;
 															*)			int=${check_value%%.*}
 																		frac=${check_value#*.}
 																		[ "${frac}" = "${order_amount}" ] && frac=""
-																		[ ${#frac} -eq 9 ] && order_amount_alnum=0
+																		[ ${#frac} -eq 9 ] && $(echo "${int}.${frac} > 0"|bc) && amount_okay=0
 																		;;
 														esac
-														if [ "${order_amount_alnum}" -eq 0 ]
+														if [ "${amount_okay}" -eq 0 ]
 														then
-															amount_big_enough=$(echo "${order_amount} > 0"|bc)
-															if [ "${amount_big_enough}" -eq 0 ]
+															### FILL UP VALUE WITH ZERO NUMBERS 9 DIGIT ########
+															frac="${frac}00000000"
+															frac=$(expr "${frac}" : '\(..........\)')
+															order_amount_formatted="${int}.${frac}"
+															if [ "${receiver_is_asset}" -eq 1 ]
 															then
-																frac="${frac}00000000"
-																frac=$(expr "${frac}" : '\(..........\)')
-																order_amount_formatted="${int}.${frac}"
-																if [ "${receiver_is_asset}" -eq 1 ]
-																then
-																	asset=${order_receiver}
-																else
-																	asset=${main_asset}
-																fi
-																asset_price=$(grep "asset_price=" "${script_path}/assets/${asset}")
-																asset_price=${asset_price#*=}
-																asset_value=$(echo "scale=9; 0.000000001 * ${asset_price}"|bc|sed 's/^\./0./g')
-																amount_big_enough=$(echo "${order_amount_formatted} < ${asset_value}"|bc)
+																asset=${order_receiver}
+															else
+																asset=${main_asset}
 															fi
+															asset_price=$(grep "asset_price=" "${script_path}/assets/${asset}")
+															asset_price=${asset_price#*=}
+															asset_value=$(echo "scale=9; 0.000000001 * ${asset_price}"|bc|sed 's/^\./0./g')
+															amount_big_enough=$(echo "${order_amount_formatted} < ${asset_value}"|bc)
 															if [ "${amount_big_enough}" -eq 0 ]
 															then
 																enough_balance=$(echo "${account_my_balance} - ${order_amount_formatted} >= 0"|bc)
