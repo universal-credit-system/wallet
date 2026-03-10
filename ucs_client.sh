@@ -1107,6 +1107,8 @@ check_assets(){
 						END { printf "%s|%s|%s|%s\n", description, fungible, price, quantity }
 					' "${script_path}/assets/${asset}")
 					EOF
+					asset_description=${asset_description#\"}
+					asset_description=${asset_description%\"}
 					asset_symbol=${asset%%.*}
 					asset_stamp=${asset#*.}
 					stamp_only_digits=$(echo "${asset_stamp}"|grep -c '[^[:digit:]]')
@@ -1156,7 +1158,7 @@ check_assets(){
 										*)			int=${check_value%%.*}
 													frac=${check_value#*.}
 													[ "${frac}" = "${check_value}" ] && frac=""
-													[ ${#frac} -eq 9 ] && $(echo "${int}.${frac} > 0"|bc) && asset_acknowledged=1
+													[ ${#frac} -eq 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] && asset_acknowledged=1
 													;;
 									esac
 								fi
@@ -2980,7 +2982,7 @@ then
 									*)			int=${check_value%%.*}
 												frac=${check_value#*.}
 												[ "${frac}" = "${order_amount}" ] && frac=""
-												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && $(echo "${int}.${frac} > 0"|bc) || exit 31
+												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || exit 31
 												;;
 								esac
 								;;
@@ -4025,7 +4027,7 @@ do
 															*)			int=${check_value%%.*}
 																		frac=${check_value#*.}
 																		[ "${frac}" = "${order_amount}" ] && frac=""
-																		[ ${#frac} -eq 9 ] && $(echo "${int}.${frac} > 0"|bc) && amount_okay=0
+																		[ ${#frac} -eq 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] && amount_okay=0
 																		;;
 														esac
 														if [ "${amount_okay}" -eq 0 ]
