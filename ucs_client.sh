@@ -50,7 +50,7 @@ login_account(){
 				if [ "${rt_query}" -eq 0 ]
 				then
 					####VERIFYING THE MESSAGE###################################
-					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep "GOODSIG"|grep -q "${key_file}"
+					gpg --batch --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}"/tmp/account_"${my_pid}".tmp.gpg 2>/dev/null|grep -q "GOODSIG.*${key_file}"
 					rt_query=$?
 				fi
 				rm -f -- "${script_path}"/tmp/account_"${my_pid}".tmp
@@ -554,24 +554,15 @@ make_signature(){
 verify_signature(){
 			file_to_verify=$1
 			user_signed=$2
-			signed_correct=0
+			rt_query=1
 
 			###CHECK GPG FILE#############################################
-			gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${file_to_verify}" >"${user_path}"/gpg_verify.tmp 2>/dev/null
-			rt_query=$?
-			if [ "${rt_query}" -eq 0 ]
+			if gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${file_to_verify}" 2>/dev/null|grep -q "GOODSIG.*${user_signed}"
 			then
-				signed_correct=$(grep "GOODSIG" "${user_path}"/gpg_verify.tmp|grep -c "${user_signed}")
-				if [ "${signed_correct}" -eq 0 ]
-				then
-					rt_query=1
-				fi
-			else
-				rm -f -- "${file_to_verify}"
+				rt_query=0
 			fi
 			###############################################################
 
-			rm -f -- "${user_path}"/gpg_verify.tmp
 			return ${rt_query}
 }
 check_input(){
@@ -3638,19 +3629,12 @@ do
 										then
 											###VERIFY TRANSACTION SIGNATURE###############################
 											trx_signature="ERROR_VERIFY_SIGNATURE"
-											gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx_file}" >"${script_path}/tmp/gpg_${my_pid}_verify.tmp" 2>/dev/null
-											rt_query=$?
-											if [ "${rt_query}" -eq 0 ]
+											if gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${trx_file}" 2>/dev/null|grep -q "GOODSIG.*${trx_sender}"
 											then
-												###CHECK IF SENDER MATCHES SIGNER#############################
-												signed_correct=$(grep "GOODSIG" "${script_path}/tmp/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
-												if [ "${signed_correct}" -ge 1 ]
+												trx=$(basename "${trx_file}")
+												if [ "${trx%%.*}" = "${trx_sender}" ]
 												then
-													trx=$(basename "${trx_file}")
-													if [ "${trx%%.*}" = "${trx_sender}" ]
-													then
-														trx_signature="OK"
-													fi
+													trx_signature="OK"
 												fi
 											else
 												rt_code=1
@@ -3682,15 +3666,9 @@ do
 											trx_multi_sig=0
 											if [ -f "${script_path}/proofs/${trx_sender}/multi.sig" ] && [ -s "${script_path}/proofs/${trx_sender}/multi.sig" ]
 											then
-												gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}/proofs/${trx_sender}/multi.sig" >/dev/null 2>/dev/null
-												rt_query=$?
-												if [ "${rt_query}" -eq 0 ]
+												if gpg --status-fd 1 --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --verify "${script_path}/proofs/${trx_sender}/multi.sig" 2>/dev/null|grep -q "GOODSIG.*${trx_sender}"
 												then
-													signed_correct=$(grep "GOODSIG" "${script_path}/tmp/gpg_${my_pid}_verify.tmp"|grep -c "${trx_sender}")
-													if [ "${signed_correct}" -ge 1 ]
-													then
-														trx_multi_sig=$(grep -c ":MSIG:" "${script_path}/proofs/${trx_sender}/multi.sig")
-													fi
+													trx_multi_sig=$(grep -c ":MSIG:" "${script_path}/proofs/${trx_sender}/multi.sig")
 												else
 													rt_code=1
 												fi
@@ -3713,7 +3691,6 @@ do
 											echo "TRX_INDEX   :${trx_index}"
 											echo "TRX_MSIG    :${trx_multi_sig}"
 											echo "TRX_CONFIRMS:${trx_confirmations}"
-											rm -f -- "${script_path}/tmp/gpg_${my_pid}_verify.tmp"
 										fi
 									fi
 								fi
