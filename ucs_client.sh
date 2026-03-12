@@ -2977,7 +2977,7 @@ then
 									*[!0-9.]*|*.*.*|.*|*.)	exit 31 ;;
 									*)			int=${cmd_amount%%.*}
 												frac=${cmd_amount#*.}
-												[ "${frac}" = "${order_amount}" ] && frac=""
+												[ "${frac}" = "${cmd_amount}" ] && frac=""
 												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || exit 31
 												;;
 								esac
