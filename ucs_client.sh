@@ -130,7 +130,7 @@ create_keys(){
 		key_remove=0
 
 		###CREATE ADDRESS BY HASHING NAME,PASSWORD AND PIN###########
-		random_secret=$(head -100 /dev/urandom|tr -dc "[:alnum:]"|head -c 512)
+		random_secret=$(tr -dc 'A-Za-z0-9' </dev/urandom|head -c 512)
 		create_name_hashed=$(echo "${create_name}_${random_secret}_${create_pin}"|sha224sum)
 		create_name_hashed=${create_name_hashed%% *}
 		verify_secret=${create_name_hashed}
@@ -4226,7 +4226,7 @@ do
 												receiver=${handover_account}
 											fi
 											###GET RANDOM KEY#######################################
-											random_key=$(head -50 /dev/urandom|tr -dc "[:alnum:]"|head -c 32)
+											random_key=$(tr -dc 'A-Za-z0-9' </dev/urandom|head -c 32)
 											echo "${random_key}" >"${user_path}"/trx_purpose_key.tmp
 											###ENCRYPT KEY##########################################
 											order_purpose_key=$(gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always -r "${receiver}" --pinentry-mode loopback --armor --output - --encrypt "${user_path}"/trx_purpose_key.tmp 2>/dev/null|awk '/-----BEGIN PGP MESSAGE-----/{next} /-----END PGP MESSAGE-----/{next} NF>0 {print}' -)
