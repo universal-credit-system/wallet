@@ -2814,6 +2814,8 @@ script_name=$(basename "${0}")
 script_path=$(cd "$(dirname "$0")" && pwd)
 my_pid=$$
 gui_mode=1
+sec_msig_set=0
+sec_asset_set=0
 observer=0
 extract_all=0
 debug=0
@@ -2835,6 +2837,7 @@ cmd_type=""
 cmd_path=""
 cmd_file=""
 cmd_config=""
+cmd_tmp=""
 
 ###VERSION INFO#############
 core_system_name="Universal Credit System"
@@ -2887,10 +2890,12 @@ then
 			"-amount")	cmd_var=$1
 					;;
 			"-asset")	cmd_var=$1
+					sec_asset_set=1
 					;;
 			"-message_type")cmd_var=$1
 					;;
 			"-msig")	cmd_var=$1
+					sec_msig_set=1
 					;;
 			"-purpose")	cmd_var=$1
 					;;
@@ -2970,8 +2975,8 @@ then
 						"-amount")	cmd_amount=$1
 								case "${cmd_amount}" in
 									*[!0-9.]*|*.*.*|.*|*.)	exit 31 ;;
-									*)			int=${check_value%%.*}
-												frac=${check_value#*.}
+									*)			int=${cmd_amount%%.*}
+												frac=${cmd_amount#*.}
 												[ "${frac}" = "${order_amount}" ] && frac=""
 												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || exit 31
 												;;
@@ -2981,7 +2986,11 @@ then
 								;;
 						"-message_type")cmd_message_type=$1
 								;;
-						"-msig")	cmd_msig="${cmd_msig}$1\n"
+						"-msig")	cmd_tmp=$1
+								case "${cmd_tmp}" in
+									*[!0-9])	exit 6 ;;
+									*)		cmd_msig="${cmd_msig}$1\n" ;;	
+								esac
 								;;
 						"-purpose")	cmd_purpose=$1
 								;;
@@ -2993,9 +3002,7 @@ then
 									"full")		small_trx=1
 											extract_all=1
 											;;
-									*)		echo "ERROR! TRY THIS:"
-											echo "./ucs_client.sh -help"
-											exit 16
+									*)		exit 16
 											;;
 								esac
 								;;
@@ -3029,14 +3036,26 @@ then
 			create_trx|sign|decline)	no_ledger=0 ;;
 		esac
 	fi
-	###CHECK IF CMD_PATH IS SET FOR READ ACTIONS###################
+	###EARLY EXIT CHECKS FOR DIFFERENT ACTIONS#####################
 	case "${cmd_action}" in
-    		read_trx|read_sync)	if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
+    		create_user|create_trx)	###CHECK IF MSIG IS NOT EMPTY WHEN FLAG SET###
+    					if [ "${sec_msig_set}" -eq 1 ] && [ -z "${cmd_msig}" ]
+    					then
+    						exit 18
+    					fi
+    					if [ "${sec_asset_set}" -eq 1 ] && [ -z "${cmd_asset}" ]
+    					then
+    						exit 27
+    					fi
+    					;;
+    		read_trx|read_sync)	###CHECK IF CMD_PATH IS SET###################
+    					if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
     					then
     						exit 35
     					fi
         				;;
-        	sign|decline)		if [ -e "${script_path}/trx/${cmd_path}" ]
+        	sign|decline)		###CHECK IF CMD_PATH IS SET###################		
+        				if [ -e "${script_path}/trx/${cmd_path}" ]
     					then
     						cmd_path="${script_path}/trx/${cmd_path}"
     					else
@@ -4001,10 +4020,10 @@ do
 													then
 														case "${order_amount}" in
 															*[!0-9.]*|*.*.*|.*|*.)	amount_okay=1 ;;
-															*)			int=${check_value%%.*}
-																		frac=${check_value#*.}
+															*)			int=${order_amount%%.*}
+																		frac=${order_amount#*.}
 																		[ "${frac}" = "${order_amount}" ] && frac=""
-																		[ ${#frac} -eq 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] && amount_okay=0
+																		[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] && amount_okay=0
 																		;;
 														esac
 														if [ "${amount_okay}" -eq 0 ]
@@ -4401,7 +4420,7 @@ do
 																###ENCRYPT TRX FILE SO THAT ONLY THE RECEIVER CAN READ IT####################
 																if [ "${receiver_is_asset}" -eq 0 ] && [ "${small_trx}" -ne 255 ]
 																then
-																	echo "${order_receiver}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output "${handover_account}_${trx_now_form}.trx" --passphrase-fd 0 "${handover_account}_${trx_now_form}.trx.tmp"
+																	echo "${order_receiver}"|gpg --batch --no-tty --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo SHA512 --s2k-cipher-algo AES256 --pinentry-mode loopback --symmetric --cipher-algo AES256 --output "tmp/${handover_account}_${trx_now_form}.trx" --passphrase-fd 0 "tmp/${handover_account}_${trx_now_form}.trx.tmp"
 																	rt_query=$?
 																fi
 																if [ "${rt_query}" -eq 0 ]
