@@ -252,7 +252,7 @@ create_keys(){
 																###CHECK PARAMETERS######################################
 																if [ -z "${cmd_msig}" ]
 																then
-																	exit 18
+																	rt_query=1
 																fi
 															fi
 															if [ "${rt_query}" -eq 0 ]
