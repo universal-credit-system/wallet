@@ -4302,7 +4302,8 @@ do
 																		then
 																			echo "keys/${line}"
 																		fi
-																		for tsa_file in $(ls -1 "${script_path}/proofs/${line}"/*.ts*)
+																		set -- "${script_path}/proofs/${line}"/*.ts*
+																		for tsa_file in "$@"
 																		do
 																			file=$(basename "${tsa_file}")
 																			tsa_file_there=$(grep -c "proofs/${line}/${file}" "${receiver_index_file}")
@@ -4338,7 +4339,8 @@ do
 																	while read line
 																	do
 																		echo "keys/${line}"
-																		for tsa_file in $(ls -1 "${script_path}/proofs/${line}"/*.ts*)
+																		set -- "${script_path}/proofs/${line}"/*.ts*
+																		for tsa_file in "$@"
 																		do
 																			file=$(basename "${tsa_file}")
 																			echo "proofs/${line}/${file}"
@@ -4707,6 +4709,16 @@ do
 								then
 									###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 									{
+										###SET VARIABLES#############################
+										if [ "${gui_mode}" -eq 0 ] && [ "${cmd_type}" = "partial" ]
+										then
+											accounts_list="${user_path}/depend_accounts.dat"
+											trx_list="${user_path}/depend_trx.dat"
+										else
+											accounts_list="${user_path}/all_accounts.dat"
+											trx_list="${user_path}/all_trx.dat"
+										fi
+
 										###WRITE ASSETS TO FILE LIST#################
 										awk '{print "assets/" $1}' "${user_path}"/all_assets.dat
 
@@ -4714,7 +4726,8 @@ do
 										while read user
 										do
 											echo "keys/${user}"
-											for tsa_file in $(ls -1 "${script_path}/proofs/${user}"/*.ts*)
+											set -- "${script_path}/proofs/${user}"/*.ts*
+											for tsa_file in "$@"
 											do
 												file=$(basename "${tsa_file}")
 												echo "proofs/${user}/${file}"
@@ -4727,10 +4740,10 @@ do
 											then
 												echo "proofs/${user}/multi.sig"
 											fi
-										done <"${user_path}/depend_accounts.dat"
+										done <"${accounts_list}"
 
 										###WRITE TRX TO FILE LIST####################
-										awk '{print "trx/" $1}' "${user_path}/depend_trx.dat"
+										awk '{print "trx/" $1}' "${trx_list}"
 									} >"${user_path}"/files_list.tmp
 
 									###GET CURRENT TIMESTAMP#################################
@@ -5168,13 +5181,14 @@ do
 							do
 								user=$(dirname "${msig_file}")
 								user=$(basename "${user}")
-								for trx_file in $(ls -1 "${script_path}"/trx/"${user}".* 2>/dev/null)
+								set -- "${script_path}"/trx/"${user}".*
+								for trx_file in "$@"
 								do
-									if [ -e "${trx_file}" ]
+									if [ -f "${trx_file}" ] && [ -s "${trx_file}" ]
 									then
-										echo "${trx_file}" >>"${user_path}"/my_multi_sig_trx.tmp
+										echo "${trx_file}"
 									fi
-								done
+								done >>"${user_path}"/my_multi_sig_trx.tmp
 							done
 
 							###CONCATENATE########################################
