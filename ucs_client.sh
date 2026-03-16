@@ -63,7 +63,7 @@ login_account(){
 				then
 					name_hash=$(echo "${login_name}"|sha224sum)
 					name_hash=${name_hash%% *}
-					if [ "$(grep -c "${name_hash}" "${script_path}"/control/accounts.db)" -eq 0 ]
+					if ! grep -q "${name_hash}" "${script_path}"/control/accounts.db
 					then
 						echo "${name_hash}" >>"${script_path}"/control/accounts.db
 					fi
@@ -301,7 +301,7 @@ create_keys(){
 																				touch "${user_path}/msig_users.tmp"
 																			fi
 																			###CHECK IF USER HAS ALREADY BEEN ADDED########################
-																			if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
+																			if ! grep -q "${user_to_add}" "${user_path}"/msig_users.tmp
 																			then
 																				echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
 																				sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv -- "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
@@ -1100,7 +1100,7 @@ check_assets(){
 					if [ "${stamp_only_digits}" -eq 0 ] && [ "${stamp_size}" -eq 10 ]
 					then
 						###CHECK IF ALL VARIABLES ARE SET##############################
-						if [ "$(echo "${asset_description}"|grep -c '[^a-zA-Z0-9%]')" -eq 0 ] && [ -n "${asset_fungible}" ]
+						if ! echo "${asset_description}"|grep -q '[^a-zA-Z0-9%]' && [ -n "${asset_fungible}" ]
 						then
 							###CHECK FOR ALNUM CHARS AND SIZE##############################
 							symbol_check=$(echo "${asset_symbol}"|grep -c '[^[:alnum:]]')
@@ -1837,10 +1837,10 @@ check_trx(){
 						trx_date_formatted=${trx_stamp%%.*}
 
 						###IF RECEIVER NOT A USER###############################
-						if [ "$(grep -c "${trx_receiver}" "${user_path}"/all_accounts_dates.dat)" -eq 0 ]
+						if ! grep -q "${trx_receiver}" "${user_path}"/all_accounts_dates.dat
 						then
 							###IF RECEIVER NOT A ASSET##############################
-							if [ "$(grep -c "${trx_receiver}" "${user_path}"/all_assets.dat)" -eq 0 ]
+							if ! grep -q "${trx_receiver}" "${user_path}"/all_assets.dat
 							then
 								###GET DATE#############################################
 								trx_receiver_date=${trx_receiver#*.}
@@ -2317,7 +2317,7 @@ get_dependencies(){
 				fi
 
 				###LOGIC FOR TRX MULTI SIGNATURE CONFIRMATIONS################
-				if [ "$(grep -c ":MSIG:" "${script_path}/trx/${line}")" -gt 0 ]
+				if grep -q ":MSIG:" "${script_path}/trx/${line}"
 				then
 					is_multi_sign_okay=1
 
@@ -3592,7 +3592,7 @@ do
 										###CHECK IF SENDER HAS A INDEX FILE TO CHECK WHICH TRX ARE SIGNED######
 										if [ -f "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt" ] && [ -s "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt" ]
 										then
-											if [ "$(grep -c "${trx_name}" "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt")" -eq 0 ]
+											if ! grep -q "${trx_name}" "${script_path}/proofs/${cmd_sender}/${cmd_sender}.txt"
 											then
 												trx_list="${trx_list}${trx_name}\n"
 											fi
@@ -3667,7 +3667,7 @@ do
 
 											###CHECK IF INDEXED BY OWNER##################################
 											trx_index="ERROR_NOT_INDEXED"
-											if [ "$(grep -c "trx/${trx} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")" -gt 0 ]
+											if grep -q "trx/${trx} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt"
 											then
 												trx_index="OK"
 											fi
@@ -3916,7 +3916,7 @@ do
 															touch "${user_path}/msig_users.tmp"
 														fi
 														###CHECK IF USER HAS ALREADY BEEN ADDED########################
-														if [ "$(grep -c "${user_to_add}" "${user_path}/msig_users.tmp")" -eq 0 ]
+														if ! grep -q "${user_to_add}" "${user_path}"/msig_users.tmp
 														then
 															echo "${user_to_add}" >>"${user_path}/msig_users.tmp"
 															sed "/${user_to_add}/d" "${user_path}"/msig_keys.tmp >"${user_path}"/msig_keys.tmp."${my_pid}".bak && mv -- "${user_path}"/msig_keys.tmp."${my_pid}".bak "${user_path}"/msig_keys.tmp
@@ -5040,7 +5040,7 @@ do
 
 																													###CHECK ASSETS##########################
 																													check_assets
-																													if [ "${fungible}" -eq 0 ] && [ "$(grep -c "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat)" -ne 0 ]
+																													if [ "${fungible}" -eq 0 ] && grep -q "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat
 																													then
 																														###CREATE LEDGER ENTRY###################
 																														last_ledger=$(basename -a "${user_path}"/*_ledger.dat|tail -1)
@@ -5296,7 +5296,7 @@ do
 										trx_time_extracted=${decision#*|*}
 										trx_time_extracted=${trx_time_extracted%%|*}
 										trx_date=$(date +%s --date="${trx_date_extracted} ${trx_time_extracted}")
-										if [ "$(grep -c "${trx_date}" "${user_path}"/my_trx_all.tmp)" -eq 0 ]
+										if ! grep -q "${trx_date}" "${user_path}"/my_trx_all.tmp
 										then
 											trx_date=${trx_date%%.*}
 										fi
