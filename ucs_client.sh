@@ -2280,8 +2280,8 @@ get_dependencies(){
 				mv -- "${user_path}"/depend_trx_sort.tmp "${user_path}"/depend_trx.dat
 			else
 				###COPY FILES#################################################################
-				cp -- "${user_path}"/all_accounts.dat "${user_path}"/depend_accounts.dat
-				cp -- "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
+				ln -s -- "${user_path}"/all_accounts.dat "${user_path}"/depend_accounts.dat
+				ln -s -- "${user_path}"/all_trx.dat "${user_path}"/depend_trx.dat
 			fi
 
 			###RESET DEPEND_CONFIRMATIONS FILE####################################
