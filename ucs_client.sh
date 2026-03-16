@@ -683,29 +683,26 @@ build_ledger(){
 				asset_fungible=${asset_fungible#*=}
 				if [ "${asset_fungible}" -eq 0 ]
 				then
-					asset_owner=$(echo "${asset_data}"|grep "asset_owner="|sed "s/\"//g")
+					asset_owner=$(echo "${asset_data}"|grep "asset_owner="|tr -d '"')
 					asset_owner=${asset_owner#*=}
 					asset_quantity=$(echo "${asset_data}"|grep "asset_quantity=")
 					asset_quantity=${asset_quantity#*=}
-					already_exists=$(grep -c "${asset}:${asset_owner}=" "${user_path}"/"${previous_day}"_ledger.dat)
-					if [ "${already_exists}" -eq 0 ]
+					if ! grep -q "${asset}:${asset_owner}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${asset}:${asset_owner}=${asset_quantity}" >>"${user_path}"/"${previous_day}"_ledger.dat
+						echo "${asset}:${asset_owner}=${asset_quantity}"
 					fi
 				else
-					already_exists=$(grep -c "${main_asset}:${asset}=" "${user_path}"/"${previous_day}"_ledger.dat)
-					if [ "${already_exists}" -eq 0 ]
+					if ! grep -q "${main_asset}:${asset}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${main_asset}:${asset}=0" >>"${user_path}"/"${previous_day}"_ledger.dat
+						echo "${main_asset}:${asset}=0"
 					fi
-					already_exists=$(grep -c "${asset}:${main_asset}=" "${user_path}"/"${previous_day}"_ledger.dat)
-					if [ "${already_exists}" -eq 0 ]
+					if ! grep -q "${asset}:${main_asset}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${asset}:${main_asset}=0" >>"${user_path}"/"${previous_day}"_ledger.dat
+						echo "${asset}:${main_asset}=0"
 					fi
 				fi
 			fi
-		done
+		done >>"${user_path}"/"${previous_day}"_ledger.dat
 
 		if [ "${focus}" -le "${now}" ] && [ "${gui_mode}" -eq 1 ]
 		then
@@ -781,19 +778,19 @@ build_ledger(){
 				then
 					asset_quantity=$(grep "asset_quantity=" "${asset_full_path}")
 					asset_quantity=${asset_quantity#*=}
-					asset_owner=$(grep "asset_owner=" "${asset_full_path}"|sed "s/\"//g")
+					asset_owner=$(grep "asset_owner=" "${asset_full_path}"|tr -d '"')
 					asset_owner=${asset_owner#*=}
-					echo "${asset}:${asset_owner}=${asset_quantity}" >>"${user_path}/${focus}_ledger.dat"
+					echo "${asset}:${asset_owner}=${asset_quantity}"
 				fi
 
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				match=$(grep -s -c "asset_fungible=1" "${asset_full_path}") || rt_query=1
 				if [ "${rt_query}" -eq 0 ] && [ "${match}" -eq 1 ] && [ ! "${asset}" = "${main_asset}" ]
 				then
-					echo "${main_asset}:${asset}=0" >>"${user_path}/${focus}_ledger.dat"
-					echo "${asset}:${main_asset}=0" >>"${user_path}/${focus}_ledger.dat"
+					echo "${main_asset}:${asset}=0"
+					echo "${asset}:${main_asset}=0"
 				fi
-			done
+			done >>"${user_path}/${focus}_ledger.dat"
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE##################
 			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/depend_trx.dat) 
@@ -3046,7 +3043,7 @@ then
     						exit 35
     					fi
         				;;
-        	sign|decline)		###CHECK IF CMD_PATH IS SET###################		
+        	sign|decline)		###CHECK IF CMD_PATH IS SET###################
         				if [ -e "${script_path}/trx/${cmd_path}" ]
     					then
     						cmd_path="${script_path}/trx/${cmd_path}"
