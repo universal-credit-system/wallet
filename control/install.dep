@@ -21,6 +21,7 @@ gpg
 grep
 head
 ls
+ln
 mkdir
 mktemp
 mv
