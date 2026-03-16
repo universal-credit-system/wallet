@@ -2947,8 +2947,7 @@ then
 									"show_stats")		user_logged_in=1
 												user_menu=${dialog_stats}
 												;;
-									*)			echo "ERROR! TRY THIS:"
-												echo "./ucs_client.sh -help"
+									*)			printf "%s\n" "[${script_name}][ERROR][parser] Unexpected action $1" >&2
 												exit 16
 												;;
 								esac
@@ -2969,7 +2968,7 @@ then
 									*)			int=${cmd_amount%%.*}
 												frac=${cmd_amount#*.}
 												[ "${frac}" = "${cmd_amount}" ] && frac=""
-												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || exit 31
+												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || printf "%s\n" "[${script_name}][ERROR][parser] Amount does not comply formatting" >&2 && exit 31
 												;;
 								esac
 								;;
@@ -3006,12 +3005,11 @@ then
 								then
 									. "${cmd_config}"
 								else
-									echo "ERROR: -config ${cmd_config}: FILES DOES NOT EXIST OR IS EMPTY"
+									printf "%s\n" "[${script_name}][ERROR][parser] Parameter -config ${cmd_config}: file does not exist or is empty" >&2
 									exit 17
 								fi
 								;;
-						*)		echo "ERROR! TRY THIS:"
-								echo "./ucs_client.sh -help"
+						*)		printf "%s\n" "[${script_name}][ERROR][parser] Unexpected argument $1" >&2
 								exit 16
 								;;
 					esac
@@ -3032,16 +3030,19 @@ then
     		create_user|create_trx)	###CHECK IF MSIG IS NOT EMPTY WHEN FLAG SET###
     					if [ "${sec_msig_set}" -eq 1 ] && [ -z "${cmd_msig}" ]
     					then
-    						exit 18
+    						printf "%s\n" "[${script_name}][ERROR][parser] Parameter -msig set but left empty" >&2
+						exit 18
     					fi
     					if [ "${sec_asset_set}" -eq 1 ] && [ -z "${cmd_asset}" ]
     					then
+    						printf "%s\n" "[${script_name}][ERROR][parser] Parameter -asset set but left empty" >&2
     						exit 27
     					fi
     					;;
     		read_trx|read_sync)	###CHECK IF CMD_PATH IS SET###################
     					if [ ! -f "${cmd_path}" ] || [ ! -s "${cmd_path}" ]
     					then
+    						printf "%s\n" "[${script_name}][ERROR][parser] Parameter -path set but not a file or left empty" >&2
     						exit 35
     					fi
         				;;
@@ -3054,6 +3055,7 @@ then
     						then
     							cmd_path="${script_path}/trx/${cmd_path}"
     						else
+    							printf "%s\n" "[${script_name}][ERROR][parser] Parameter -path set but not a trx file" >&2
     							exit 35
     						fi
     					fi
