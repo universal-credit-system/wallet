@@ -571,11 +571,8 @@ check_input(){
 		rt_query=0
 		length_counter=0
 
-		###CHECK LENGTH OF INPUT STRING########################################
-		length_counter=${#input_string}
-
 		###IF INPUT LESS THAN 1 DISPLAY NOTIFICATION###########################
-		if [ "${length_counter}" -lt 1 ]
+		if [ "${#input_string}" -lt 1 ]
 		then
 			if [ "${gui_mode}" -eq 1 ]
 			then
@@ -587,11 +584,8 @@ check_input(){
 		fi
 
 		case "${check_mode}" in
-			 0)	###CHECK IF ONLY CHARS ARE IN INPUT STRING###################
-				string_check=$(echo "${input_string}"|grep -c '[^[:alnum:]]')
-
-				###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
-				if [ "${string_check}" -eq 1 ]
+			 0)	###IF ALPHANUMERICAL CHARS ARE THERE DISPLAY NOTIFICATION##############
+				if echo "${input_string}"|grep -q '[^[:alnum:]]'
 				then
 					if [ "${gui_mode}" -eq 1 ]
 					then
@@ -602,11 +596,8 @@ check_input(){
 					fi
 				fi
 				;;
-			1)	###CHECK IF ONLY DIGITS ARE IN INPUT STRING############################
-				string_check=$(echo "${input_string}"|grep -c '[^[:digit:]]')
-
-				###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
-				if [ "${string_check}" -eq 1 ]
+			1)	###IF DIGIT CHECK FAILS DISPLAY NOTIFICATION###########################
+				if echo "${input_string}"|grep -q '[^[:digit:]]'
 				then
 					if [ "${gui_mode}" -eq 1 ]
 					then
