@@ -4707,16 +4707,6 @@ do
 								then
 									###GROUP COMMANDS TO OPEN FILE ONLY ONCE###################
 									{
-										###SET VARIABLES#############################
-										if [ "${gui_mode}" -eq 0 ] && [ "${cmd_type}" = "partial" ]
-										then
-											accounts_list="${user_path}/depend_accounts.dat"
-											trx_list="${user_path}/depend_trx.dat"
-										else
-											accounts_list="${user_path}/all_accounts.dat"
-											trx_list="${user_path}/all_trx.dat"
-										fi
-
 										###WRITE ASSETS TO FILE LIST#################
 										awk '{print "assets/" $1}' "${user_path}"/all_assets.dat
 
@@ -4737,10 +4727,10 @@ do
 											then
 												echo "proofs/${user}/multi.sig"
 											fi
-										done <"${accounts_list}"
+										done <"${user_path}/depend_accounts.dat"
 
 										###WRITE TRX TO FILE LIST####################
-										awk '{print "trx/" $1}' "${trx_list}"
+										awk '{print "trx/" $1}' "${user_path}/depend_trx.dat"
 									} >"${user_path}"/files_list.tmp
 
 									###GET CURRENT TIMESTAMP#################################
