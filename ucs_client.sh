@@ -482,49 +482,54 @@ make_signature(){
 				1)	###INDEX FILE####################################################
 					message="${script_path}/proofs/${handover_account}/${handover_account}.txt"
 
-					###WRITE ASSETS TO INDEX FILE####################################
-					for asset in $(cat "${user_path}"/all_assets.dat)
-					do
-						asset_hash=$(sha256sum "${script_path}/assets/${asset}")
-						asset_hash=${asset_hash%% *}
-						echo "assets/${asset} ${asset_hash}" >>"${message_blank}"
-					done
-
-					for key_file in $(cat "${user_path}"/all_accounts.dat)
-					do
-						###WRITE KEYFILE TO INDEX FILE###################################
-						key_hash=$(sha256sum "${script_path}/keys/${key_file}")
-						key_hash=${key_hash%% *}
-						echo "keys/${key_file} ${key_hash}" >>"${message_blank}"
-
-						###ADD TSA FILES#################################################
-						for tsa_file in $(ls -1 "${script_path}/proofs/${key_file}"/*.ts*)
+					###GROUP COMMANDS TO OPEN FILE ONLY ONCE#########################
+					{
+						###WRITE ASSETS TO INDEX FILE####################################
+						for asset in $(cat "${user_path}"/all_assets.dat)
 						do
-							file=$(basename "${tsa_file}")
-							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${file}")
-							file_hash=${file_hash%% *}
-							echo "proofs/${key_file}/${file} ${file_hash}" >>"${message_blank}"
+							asset_hash=$(sha256sum "${script_path}/assets/${asset}")
+							asset_hash=${asset_hash%% *}
+							echo "assets/${asset} ${asset_hash}"
 						done
 
-						###ADD INDEX FILE IF EXISTING####################################
-						if [ -f "${script_path}/proofs/${key_file}/${key_file}.txt" ] && [ -s "${script_path}/proofs/${key_file}/${key_file}.txt" ]
-						then
-							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${key_file}.txt")
-							file_hash=${file_hash%% *}
-							echo "proofs/${key_file}/${key_file}.txt ${file_hash}" >>"${message_blank}"
-						fi
+						for key_file in $(cat "${user_path}"/all_accounts.dat)
+						do
+							###WRITE KEYFILE TO INDEX FILE###################################
+							key_hash=$(sha256sum "${script_path}/keys/${key_file}")
+							key_hash=${key_hash%% *}
+							echo "keys/${key_file} ${key_hash}"
 
-						###ADD INDEX FILE IF EXISTING####################################
-						if [ -f "${script_path}/proofs/${key_file}/multi.sig" ] && [ -s "${script_path}/proofs/${key_file}/multi.sig" ]
-						then
-							file_hash=$(sha256sum "${script_path}/proofs/${key_file}/multi.sig")
-							file_hash=${file_hash%% *}
-							echo "proofs/${key_file}/multi.sig ${file_hash}" >>"${message_blank}"
-						fi
-					done
+							###ADD TSA FILES#################################################
+							set -- "${script_path}/proofs/${key_file}"/*.ts*
+							[ -e "$1" ] || set --
+							for tsa_file in "$@"
+							do
+								file=$(basename "${tsa_file}")
+								file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${file}")
+								file_hash=${file_hash%% *}
+								echo "proofs/${key_file}/${file} ${file_hash}"
+							done
 
-					####WRITE TRX LIST TO INDEX FILE#################################
-					cat "${user_path}"/*_index_trx.dat >>"${message_blank}" 2>/dev/null
+							###ADD INDEX FILE IF EXISTING####################################
+							if [ -f "${script_path}/proofs/${key_file}/${key_file}.txt" ] && [ -s "${script_path}/proofs/${key_file}/${key_file}.txt" ]
+							then
+								file_hash=$(sha256sum "${script_path}/proofs/${key_file}/${key_file}.txt")
+								file_hash=${file_hash%% *}
+								echo "proofs/${key_file}/${key_file}.txt ${file_hash}"
+							fi
+
+							###ADD INDEX FILE IF EXISTING####################################
+							if [ -f "${script_path}/proofs/${key_file}/multi.sig" ] && [ -s "${script_path}/proofs/${key_file}/multi.sig" ]
+							then
+								file_hash=$(sha256sum "${script_path}/proofs/${key_file}/multi.sig")
+								file_hash=${file_hash%% *}
+								echo "proofs/${key_file}/multi.sig ${file_hash}"
+							fi
+						done
+
+						####WRITE TRX LIST TO INDEX FILE#################################
+						cat "${user_path}"/*_index_trx.dat 2>/dev/null
+					} >"${message_blank}"
 					;;
 				2)	###WRITE MULTI SIG USER##########################################
 					message="${user_path}/multi.sig"
@@ -4314,11 +4319,11 @@ do
 																			echo "keys/${line}"
 																		fi
 																		set -- "${script_path}/proofs/${line}"/*.ts*
+																		[ -e "$1" ] || set --
 																		for tsa_file in "$@"
 																		do
 																			file=$(basename "${tsa_file}")
-																			tsa_file_there=$(grep -c "proofs/${line}/${file}" "${receiver_index_file}")
-																			if [ "${tsa_file_there}" -eq 0 ]
+																			if ! grep -q "proofs/${line}/${file}" "${receiver_index_file}"
 																			then
 																				echo "proofs/${line}/${file}"
 																			fi
@@ -4351,6 +4356,7 @@ do
 																	do
 																		echo "keys/${line}"
 																		set -- "${script_path}/proofs/${line}"/*.ts*
+																		[ -e "$1" ] || set --
 																		for tsa_file in "$@"
 																		do
 																			file=$(basename "${tsa_file}")
@@ -4738,6 +4744,7 @@ do
 										do
 											echo "keys/${user}"
 											set -- "${script_path}/proofs/${user}"/*.ts*
+											[ -e "$1" ] || set --
 											for tsa_file in "$@"
 											do
 												file=$(basename "${tsa_file}")
@@ -5193,6 +5200,7 @@ do
 								user=$(dirname "${msig_file}")
 								user=$(basename "${user}")
 								set -- "${script_path}"/trx/"${user}".*
+								[ -e "$1" ] || set --
 								for trx_file in "$@"
 								do
 									if [ -f "${trx_file}" ] && [ -s "${trx_file}" ]
