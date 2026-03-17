@@ -772,9 +772,7 @@ build_ledger(){
 				asset_full_path="${script_path}/assets/${asset}"
 
 				###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSETS#############
-				rt_query=0
-				match=$(grep -s -c "asset_fungible=0" "${asset_full_path}") || rt_query=1
-				if [ "${rt_query}" -eq 0 ] && [ "${match}" -eq 1 ]
+				if grep -q "asset_fungible=0" "${asset_full_path}"
 				then
 					asset_quantity=$(grep "asset_quantity=" "${asset_full_path}")
 					asset_quantity=${asset_quantity#*=}
@@ -784,8 +782,7 @@ build_ledger(){
 				fi
 
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
-				match=$(grep -s -c "asset_fungible=1" "${asset_full_path}") || rt_query=1
-				if [ "${rt_query}" -eq 0 ] && [ "${match}" -eq 1 ] && [ ! "${asset}" = "${main_asset}" ]
+				if grep -q "asset_fungible=1" "${asset_full_path}" && [ ! "${asset}" = "${main_asset}" ]
 				then
 					echo "${main_asset}:${asset}=0"
 					echo "${asset}:${main_asset}=0"
