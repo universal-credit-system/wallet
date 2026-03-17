@@ -25,9 +25,8 @@ MT100_process(){
 		###CHECK IF INDEX-FILE EXISTS#################################
 		if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] || [ "${trx_sender}" = "${handover_account}" ]
 		then
-			###CHECK IF TRX IS SIGNED BY USER#############################
-			is_signed=$(grep -c "^${trx_path} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
-			if [ "${is_signed}" -gt 0 ] || [ "${trx_sender}" = "${handover_account}" ]
+			###CHECK IF TRX IS SIGNED/INDEXED BY USER#####################
+			if grep -q "^${trx_path} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" || [ "${trx_sender}" = "${handover_account}" ]
 			then
 				###CHECK IF SENDER IS IN LEDGER###############################
 				sender_in_ledger=$(grep -c "^${trx_asset}:${trx_sender}" "${user_path}/${focus}_ledger.dat")
@@ -62,7 +61,7 @@ MT100_process(){
 						fi
 
 						###CHECK IF MULTI SIG TRANSACTION#############################
-						if [ "$(grep -c "^:MSIG:" "${trx_file}")" -gt 0 ]
+						if grep -q "^:MSIG:" "${trx_file}"
 						then
 							is_multi_sign=1
 							is_multi_sign_trx=1
@@ -109,14 +108,14 @@ MT100_process(){
 								else
 									if [ "${already_signed}" -eq 1 ]
 									then
-										if [ "$(grep -c "^trx/${trx_filename} ${trx_hash}" "${user_path}"/messages_ack.sig)" -eq 1 ]
+										if grep -q "^trx/${trx_filename} ${trx_hash}" "${user_path}"/messages_ack.sig
 										then
 											self_signed=1
 											###WRITE TRX TO FILE FOR INDEX (ACKNOWLEDGE TRX)##############
 											echo "${trx_path} ${trx_hash}" >>"${user_path}/${focus}_index_trx.dat"
 										fi
 									else
-										if [ "${gui_mode}" -eq 0 ] && [ -n "${cmd_path}" ] && [ "$(echo "${cmd_path}"|grep -c "${trx_filename}")" -eq 1 ]
+										if [ "${gui_mode}" -eq 0 ] && [ -n "${cmd_path}" ] && echo "${cmd_path}"|grep -q "${trx_filename}"
 										then
 											if [ "${cmd_action}" = "sign" ]
 											then
