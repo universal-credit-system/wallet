@@ -746,25 +746,40 @@ build_ledger(){
 			cp -- "${user_path}/${previous_day}_ledger.dat" "${user_path}/${focus}_ledger.dat"
 
 			###GRANT COINLOAD OF THAT DAY####################
-			grep -v "${main_asset}" "${user_path}"/all_assets.dat|grep -v -f - "${user_path}/${focus}_ledger.dat"|LC_NUMERIC=C.utf-8 awk -F= -v coinload="${coinload}" '{printf($1"=");printf "%.9f\n",( $2 + coinload )}' >"${user_path}/${focus}_ledger.tmp"
-			if [ -f "${user_path}/${focus}_ledger.tmp" ] && [ -s "${user_path}/${focus}_ledger.tmp" ]
-			then
-				grep -v "${main_asset}" "${user_path}"/all_assets.dat|grep -f - "${user_path}/${focus}_ledger.dat" >"${user_path}/${focus}_ledger_others.tmp"
-				cat "${user_path}/${focus}_ledger.tmp" "${user_path}/${focus}_ledger_others.tmp" >"${user_path}/${focus}_ledger.dat"
-				rm -f -- "${user_path}/${focus}_ledger_others.tmp"
-			fi
-			rm -f -- "${user_path}/${focus}_ledger.tmp"
+			awk -F'[=:]' -v main_asset="${main_asset}" -v coinload="${coinload}" '
+				### LOAD OTHER ASSETS
+				FNR==NR {
+				    if ($0 != main_asset)
+					other[$0] = 1
+				    next
+				}
+				### LEDGER STREAM PROCESS
+				{
+				    asset1 = $1
+				    asset2 = $2
+				    value  = $3 + 0
+				    if (asset1 == main_asset && !(asset2 in other))
+					value += coinload
+				    else if (asset2 == main_asset && !(asset1 in other))
+					value += coinload
+
+				    printf "%s:%s=%.9f\n", asset1, asset2, value
+				}
+			' "${user_path}/all_assets.dat" \
+			  "${user_path}/${focus}_ledger.dat" \
+			>"${user_path}/${focus}_ledger.dat.tmp" && mv -- "${user_path}/${focus}_ledger.dat.tmp" "${user_path}/${focus}_ledger.dat"
 
 			###GET DATESTAMP OF TOMORROW#####################
 			date_stamp_tomorrow=$(( date_stamp + 86400 ))
 
-			###GET LIST OF ACCOUNTS CREATED TODAY############
-			grep -f "${user_path}"/depend_accounts.dat "${user_path}"/all_accounts_dates.dat|awk -F' ' -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow {print $1}' >"${user_path}"/accounts.tmp
-
-			###CREATE LEDGER ENTRY FOR THESE USERS###########
-			awk -v main_asset="${main_asset}" '{print main_asset":"$1"=0"}' "${user_path}"/accounts.tmp >>"${user_path}/${focus}_ledger.dat"
-			rm -f -- "${user_path}"/accounts.tmp
-
+			###CREATE ENTRIES FOR ACCOUNTS CREATED TODAY#####
+			awk -v main_asset="${main_asset}" -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '
+			    NR==FNR { depend[$1]=1; next }
+			    $2 >= date_stamp && $2 < date_stamp_tomorrow && $1 in depend {
+				print main_asset ":" $1 "=0"
+			    }
+			' "${user_path}"/depend_accounts.dat "${user_path}"/all_accounts_dates.dat >>"${user_path}/${focus}_ledger.dat"
+			
 			###FOR EACH ASSET CREATED THAT DAY###############
 			for asset in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/all_assets.dat)
 			do
