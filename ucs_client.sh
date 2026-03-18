@@ -899,17 +899,19 @@ check_archive(){
 				awk '{print $6}' "${user_path}"/tar_check_full.tmp >"${user_path}"/tar_check.tmp
 
 				###CHECK FOR EXECUTABLES######################################
-				executables_there=$(awk '{print $1}' "${user_path}"/tar_check_full.tmp|grep -v "d"|grep -c "x")
-				if [ "${executables_there}" -eq 0 ]
+				if ! awk '{print $1}' "${user_path}"/tar_check_full.tmp|grep -v "d"|grep -q "x"
 				then
 					###CHECK FOR BAD CHARACTERS###################################
-					bad_chars_there=$(sed 's#/##g' "${user_path}"/tar_check.tmp|sed 's/\.//g'|grep -c '[^[:alnum:]]')
-					if [ "${bad_chars_there}" -eq 0 ]
+					if ! LC_ALL=C grep -q '[^A-Za-z0-9/.]' "${user_path}/tar_check.tmp"
 					then
 						###GO THROUGH CONTENT LIST LINE BY LINE#######################
 						files_not_homedir=""
 						while read line
 						do
+							###SKIP PATHS THAT ARE NOT ALLOWED####################
+							case "${line}" in
+								/* | *../* | ../* | *.. | *[!A-Za-z0-9./]* )	continue ;;
+							esac
 							###CHECK IF FILES MATCH TARGET-DIRECTORIES AND IGNORE OTHERS##
 							files_not_homedir=${line%%/*}
 							case "${files_not_homedir}" in
@@ -919,8 +921,7 @@ check_archive(){
 											then
 												file_full=${line#*/}
 												file_ext=${file_full#*.}
-												file_ext_correct=$(echo "${file_ext}"|grep -c '[^[:digit:]]')
-												if [ "${file_ext_correct}" -gt 0 ]
+												if echo "${file_ext}"|grep -q '[^[:digit:]]'
 												then
 													rt_query=1
 												else
@@ -940,8 +941,7 @@ check_archive(){
 								"keys")		if [ ! -d "${script_path}/${line}" ]
 										then
 											file_full=${line#*/}
-											file_full_correct=$(echo "${file_full}"|grep -c '[^[:alnum:]]')
-											if [ "${file_full_correct}" -gt 0 ]
+											if echo "${file_full}"|grep -q '[^[:alnum:]]'
 											then
 												rt_query=1
 											else
@@ -961,8 +961,7 @@ check_archive(){
 										then
 											file_full=${line#*/}
 											file_ext=${file_full#*.}
-											file_ext_correct=$(echo "${file_ext}"|sed 's/\.//g'|grep -c '[^[:digit:]]')
-											if [ "${file_ext_correct}" -gt 0 ]
+											if echo "${file_ext}"|tr -d '.'|grep -q '[^[:digit:]]'
 											then
 												rt_query=1
 											else
@@ -985,9 +984,10 @@ check_archive(){
 										then
 											file_usr=${line#*/}
 											file_usr=${file_usr%%/*}
-											file_usr_correct=$(echo "${file_usr}"|grep -c '[^[:alnum:]]')
-											if [ "${file_usr_correct}" -eq 0 ]
+											if echo "${file_usr}"|grep -q '[^[:alnum:]]'
 											then
+												rt_query=1
+											else
 												file_full=${line#*/*/}
 												file_ext=${file_full#*.}
 												case "${file_ext}" in
@@ -1038,8 +1038,6 @@ check_archive(){
 														fi
 														;;
 												esac
-											else
-												rt_query=1
 											fi
 										fi
 					       					;;
@@ -4303,8 +4301,7 @@ do
 																	###GET ASSETS###################################################
 																	while read line
 																	do
-																		asset_there=$(grep -c "assets/${line}" "${receiver_index_file}")
-																		if [ "${asset_there}" -eq 0 ]
+																		if ! grep -q "assets/${line}" "${receiver_index_file}"
 																		then
 																			echo "assets/${line}"
 																		fi
@@ -4313,8 +4310,7 @@ do
 																	###GET KEYS AND PROOFS##########################################
 																	while read line
 																	do
-																		key_there=$(grep -c "keys/${line}" "${receiver_index_file}")
-																		if [ "${key_there}" -eq 0 ]
+																		if ! grep -q "keys/${line}" "${receiver_index_file}"
 																		then
 																			echo "keys/${line}"
 																		fi
@@ -4341,8 +4337,7 @@ do
 																	###GET TRX###################################################################
 																	while read line
 																	do
-																		trx_there=$(grep -c "trx/${line}" "${receiver_index_file}")
-																		if [ "${trx_there}" -eq 0 ]
+																		if ! grep -q "trx/${line}" "${receiver_index_file}"
 																		then
 																			echo "trx/${line}"
 																		fi
