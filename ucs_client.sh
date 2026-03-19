@@ -76,7 +76,6 @@ login_account(){
 			then
 				handover_account=${cmd_sender}
 				user_logged_in=1
-				observer=1
 			fi
 		fi
 
@@ -2954,7 +2953,6 @@ then
 									"show_msig_trx")	main_menu=${cmd_action}
 												;;
 									"show_balance")		main_menu=${dialog_main_logon}
-												observer=1
 												;;
 									"show_stats")		user_logged_in=1
 												user_menu=${dialog_stats}
@@ -3070,6 +3068,12 @@ then
     							printf "%s\n" "[${script_name}][ERROR][parser] Parameter -path set but not a trx file" >&2
     							exit 35
     						fi
+    					fi
+    					;;
+    		show_balance)		###IF PW IS NOT SET SWITCH TO OBSERVER MODE######
+    					if [ -z "${cmd_pw}" ]
+    					then
+    						observer=1
     					fi
         				;;
 	esac
