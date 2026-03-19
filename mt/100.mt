@@ -348,11 +348,11 @@ MT100_verify(){
 				asst,
 				amnt
 			}
-			' "$trx_file_path")
+			' "${trx_file_path}")
 
-    			IFS='|' read -r purpose_key_bad purpose_bad multi_sig_bad amount_ok trx_asset trx_amount <<EOF
-$awk_output
-EOF
+		IFS='|' read -r purpose_key_bad purpose_bad multi_sig_bad amount_ok trx_asset trx_amount <<-EOF
+		${awk_output}
+		EOF
 		
 		###CHECK RESULTS##############################################
 		trx_acknowledged=0
