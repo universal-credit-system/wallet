@@ -299,36 +299,36 @@ MT100_verify(){
 		fi
 
 		###CHECK IF PURPOSE CONTAINS ALNUM############################
-		IFS='|' read -r  purpose_key_bad purpose_bad multi_sig_bad amount_ok trx_asset trx_amount <<-EOF
-		$(awk -F: '
+		awk_output=$(awk -F: '
 			BEGIN {
 				in_prpk=0; in_prps=0
 				prpk=""; prps=""
 				msig_cnt=0; msig_dup=0
 			}
 
-			{
-				if ($0 ~ /^:PRPK:/) { in_prpk=1; next }
-				if ($0 ~ /^:PRPS:/) { in_prpk=0; in_prps=1; next }
-				if ($0 ~ /BEGIN PGP SIGNATURE/) { in_prps=0 }
+			/^:PRPK:/ { in_prpk=1; next }
+			/^:PRPS:/ { in_prpk=0; in_prps=1; next }
+			/BEGIN PGP SIGNATURE/ { in_prps=0 }
 
+			{
 				if (in_prpk) prpk = prpk $0
 				if (in_prps) prps = prps $0
 
 				if ($0 ~ /^:MSIG:/) {
 					msig_cnt++
 					if (seen[$0]++) msig_dup=1
-
 					msig_value = $3
-
 					if (msig_value ~ /[^a-zA-Z0-9]/) msig_bad = 1
 				}
 
 				if ($0 ~ /^:ASST:/) { asst = $3 }
-    				if ($0 ~ /^:AMNT:/) { amnt = $3 }
+				if ($0 ~ /^:AMNT:/) { amnt = $3 }
 			}
 
 			END {
+				gsub(/^[ \t\r]+/, "", amnt)
+				gsub(/[ \t\r]+$/, "", amnt)
+
 				prpk_bad = (prpk ~ /[^a-zA-Z0-9+/=]/)
 				prps_bad = (prps ~ /[^a-zA-Z0-9+/=]/)
 
@@ -336,17 +336,23 @@ MT100_verify(){
 				if (msig_dup) msig_bad=1
 
 				min = 0.000000001
-				amount_ok = (amnt ~ /^[0-9]+\.[0-9]{9}$/ && amnt+0 >= min)
+				format_ok = (amnt ~ /^[0-9]+\.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$/)
+				value_ok  = (amnt+0 >= min)
+				amount_ok = (format_ok && value_ok)
 
 				printf "%d|%d|%d|%d|%s|%s\n",
-					prpk_bad,
-					prps_bad,
-					(msig_bad ? 1 : 0),
-					amount_ok,
-					asst,
-					amnt
-			}' "${trx_file_path}")
-		EOF
+				prpk_bad,
+				prps_bad,
+				(msig_bad ? 1 : 0),
+				amount_ok,
+				asst,
+				amnt
+			}
+			' "$trx_file_path")
+
+    			IFS='|' read -r purpose_key_bad purpose_bad multi_sig_bad amount_ok trx_asset trx_amount <<EOF
+$awk_output
+EOF
 		
 		###CHECK RESULTS##############################################
 		trx_acknowledged=0
