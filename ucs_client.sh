@@ -1948,7 +1948,7 @@ process_new_files(){
 				do
 					###CHECK IF USER ALREADY EXISTS#####################
 					user_to_verify=$(basename -s ".txt" "${new_index_file}")
-					if [ "$(grep -c "${user_to_verify}" "${user_path}"/all_accounts.dat)" -eq 1 ]
+					if grep -q "${user_to_verify}" "${user_path}"/all_accounts.dat
 					then
 						###VERIFY SIGNATURE OF USER#########################
 						verify_signature "${user_path}/temp/${new_index_file}" "${user_to_verify}"
@@ -1976,8 +1976,7 @@ process_new_files(){
 						fi
 					else
 						###CHECK IF USER KEY IS CONTAINED#############
-						user_new=$(ls -1 "${user_path}"/temp/keys|grep -c "${user_to_verify}")
-						if [ "${user_new}" -eq 0 ]
+						if ! ls -1 "${user_path}"/temp/keys|grep -q "${user_to_verify}"
 						then
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 						else
@@ -2026,7 +2025,7 @@ process_new_files(){
 
 					###GET USER TRANSACTION OF NEW AND OLD INDEX FILE###########
 					grep "trx/${user_to_verify}" "${user_path}/temp/${new_index_file}" >"${user_path}"/new_index_filelist.tmp
-					grep "trx/${user_to_verify}" "${script_path}/${new_index_file}" >"${user_path}"/old_index_filelist.tmp
+					grep -s "trx/${user_to_verify}" "${script_path}/${new_index_file}" >"${user_path}"/old_index_filelist.tmp
 
 					###GET UNIQUE USER TRANSACIONS OF INDEX FILES###############
 					sort "${user_path}"/old_index_filelist.tmp "${user_path}"/new_index_filelist.tmp "${user_path}"/new_index_filelist.tmp|uniq -u >"${user_path}"/old_unique_filelist.tmp
@@ -2038,8 +2037,8 @@ process_new_files(){
 						stripped_file=${trx%% *}
 						if [ -f "${script_path}/${stripped_file}" ] && [ -s "${script_path}/${stripped_file}" ]
 						then
-							trx_confirmations_old=$(grep -l "${trx}" "${script_path}"/proofs/*/*.txt|wc -l)
-							trx_confirmations_new=$(grep -l "${trx}" "${user_path}"/temp/proofs/*/*.txt|wc -l)
+							trx_confirmations_old=$(grep -s -l "${trx}" "${script_path}"/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -s -l "${trx}" "${user_path}"/temp/proofs/*/*.txt|wc -l)
 							if [ "${trx_confirmations_old}" -gt "${trx_confirmations_new}" ]
 							then
 								trx_confirmations=${trx_confirmations_old}
@@ -2059,8 +2058,8 @@ process_new_files(){
 						stripped_file=${trx%% *}
 						if [ -f "${user_path}/temp/${stripped_file}" ] && [ -s "${user_path}/temp/${stripped_file}" ]
 						then
-							trx_confirmations_old=$(grep -l "${trx}" "${script_path}"/proofs/*/*.txt|wc -l)
-							trx_confirmations_new=$(grep -l "${trx}" "${user_path}"/temp/proofs/*/*.txt|wc -l)
+							trx_confirmations_old=$(grep -s -l "${trx}" "${script_path}"/proofs/*/*.txt|wc -l)
+							trx_confirmations_new=$(grep -s -l "${trx}" "${user_path}"/temp/proofs/*/*.txt|wc -l)
 							if [ "${trx_confirmations_old}" -gt "${trx_confirmations_new}" ]
 							then
 								trx_confirmations=${trx_confirmations_old}
@@ -2077,7 +2076,7 @@ process_new_files(){
 					###COMPARE BOTH############################################
 					if [ "${old_trx_score_highest}" -ge "${new_trx_score_highest}" ]
 					then
-						if [ "${old_trx_score_highest}" -gt "${new_trx_score_highest}" ] || [ "$(grep -c -v "trx/${user_to_verify}" "${user_path}/temp/${new_index_file}")" -le "$(grep -c -v "trx/${user_to_verify}" "${script_path}/${new_index_file}")" ]
+						if [ "${old_trx_score_highest}" -gt "${new_trx_score_highest}" ] || { [ -s "${script_path}/${new_index_file}" ] && [ "$(grep -c -v "trx/${user_to_verify}" "${user_path}/temp/${new_index_file}")" -le "$(grep -c -v "trx/${user_to_verify}" "${script_path}/${new_index_file}")" ]; }
 						then
 							echo "proofs/${user_to_verify}/${user_to_verify}.txt" >>"${user_path}"/remove_list.tmp
 						fi
@@ -2132,7 +2131,7 @@ process_new_files(){
 			do
 				is_asset=$(echo "${line}"|grep -c "assets/")
 				is_fungible=$(grep -c "asset_fungible=1" "${user_path}/temp/${line}")
-				if [ -h "${user_path}/temp/${line}" ] || [ -x "${user_path}/temp/${line}" ] || [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 1 ] && [ "${import_fungible_assets}" -eq 0 ] || [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 0 ] && [ "${import_non_fungible_assets}" -eq 0 ]
+				if [ -h "${user_path}/temp/${line}" ] || [ -x "${user_path}/temp/${line}" ] || { [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 1 ] && [ "${import_fungible_assets}" -eq 0 ]; } || { [ "${is_asset}" -eq 1 ] && [ "${is_fungible}" -eq 0 ] && [ "${import_non_fungible_assets}" -eq 0 ]; }
 				then
 					rm -f -- "${user_path}/temp/${line}"
 				fi
@@ -2345,7 +2344,8 @@ get_dependencies(){
 				fi
 
 				###IF EVERYTHING IS OKAY GET CONFIRMATIONS###################
-				if [ "${is_multi_sign_okay}" -eq 0 ]
+				set -- "${script_path}"/proofs/*/*.txt
+				if [ "${is_multi_sign_okay}" -eq 0 ] && [ -e "$1" ]
 				then
 					total_confirmations=$(awk \
 						-v trx_ref="trx/${trx_file} ${trx_hash}" \
@@ -2978,7 +2978,7 @@ then
 									*)			int=${cmd_amount%%.*}
 												frac=${cmd_amount#*.}
 												[ "${frac}" = "${cmd_amount}" ] && frac=""
-												[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] || printf "%s\n" "[${script_name}][ERROR][parser] Amount does not comply formatting" >&2 && exit 31
+												{ [ "${#frac}" -ge 1 ] && [ "${#frac}" -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ]; } || { printf "%s\n" "[${script_name}][ERROR][parser] Amount does not comply formatting" >&2; exit 31; }
 												;;
 								esac
 								;;
