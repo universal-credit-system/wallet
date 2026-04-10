@@ -24,11 +24,6 @@ BEGIN {
 	}
 }
 
-### CHECK IF INDEX-FILE CONTAINS CONFIRMATION
-index($0, trx_ref) {
-	found = 1
-}
-
 ### EARLY REJECT
 FNR == 1 {
 
