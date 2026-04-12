@@ -398,7 +398,7 @@ create_keys(){
 			fi
 
 			###COPY TSA FILES###################################################
-			for tsa_query in "${user_path}"/*.ts*
+			for tsa_query in "${user_path}"/*.tsq
 			do
 				file_base=$(basename "${tsa_query}")
 				if [ -f "${user_path}/${file_base}.tsq" ] && [ -s "${user_path}/${file_base}.tsq" ] && [ -f "${user_path}/${file_base}.tsr" ] && [ -s "${user_path}/${file_base}.tsr" ]
@@ -639,7 +639,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###GET LAST LEDGER############################
-		last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|awk -F/ 'END{print $NF}')
+		last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 
 		###CHECK IF OLD LEDGER THERE########################
 		if [ -n "${last_ledger}" ] && [ "${new}" -eq 0 ]
@@ -877,7 +877,7 @@ build_ledger(){
 			if [ "${show_balance}" -eq 1 ]
 			then
 				out_stamp=$(date +%s.%3N)
-				last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|awk -F/ 'END{print $NF}')
+				last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 				for balance in $(grep -F -- "${handover_account}" "${user_path}/${last_ledger}"|grep -F -- "${cmd_asset}")
 				do
 					echo "BALANCE_${out_stamp}:${balance}"
@@ -5005,7 +5005,7 @@ do
 																													if [ "${fungible}" -eq 0 ] && grep -qF -- "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat
 																													then
 																														###CREATE LEDGER ENTRY###################
-																														last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|awk -F/ 'END{print $NF}')
+																														last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 																														echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>"${user_path}/${last_ledger}"
 																													fi
 																													quit_creation=1
@@ -5490,7 +5490,7 @@ do
 												rt_query=$?
 												if [ "${rt_query}" -eq 3 ]
 												then
-													last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|awk -F/ 'END{print $NF}')
+													last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 													last_ledger="${last_ledger%%_*}"
 													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
 													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
