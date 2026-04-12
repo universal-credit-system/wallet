@@ -2432,7 +2432,7 @@ get_dependencies(){
 					fi
 				fi
 			fi
-			find "${user_path}" -maxdepth 1 -type f -name "*.tmp" -exec rm -f -- {} +
+			find "${user_path}" -maxdepth 1 -type f,l -name "*.tmp" -exec rm -f -- {} +
 			cd "${script_path}" || exit 13
 			return ${ledger_mode}
 }
