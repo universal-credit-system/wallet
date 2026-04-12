@@ -401,6 +401,7 @@ create_keys(){
 			for tsa_query in "${user_path}"/*.tsq
 			do
 				file_base=$(basename "${tsa_query}")
+				file_base=${file_base%%.*}
 				if [ -f "${user_path}/${file_base}.tsq" ] && [ -s "${user_path}/${file_base}.tsq" ] && [ -f "${user_path}/${file_base}.tsr" ] && [ -s "${user_path}/${file_base}.tsr" ]
 				then
 					cp -- "${user_path}/${file_base}.tsq" "${script_path}/proofs/${create_name_hashed}/${file_base}.tsq"
