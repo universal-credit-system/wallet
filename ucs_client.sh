@@ -3594,7 +3594,7 @@ do
 							;;
 				"show_trx")		rt_code=0
 							###FILTER TRANSACTIONS########################################
-							find "${script_path}/trx/" -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2|while IFS= read -r trx_file
+							find "${script_path}/trx/" -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2 -k3|while IFS= read -r trx_file
 							do
 								###GET MESSAGE TYPE MT########################################
 								trx=$(basename "${trx_file}")
