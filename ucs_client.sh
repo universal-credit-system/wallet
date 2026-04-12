@@ -1561,7 +1561,7 @@ check_tsa(){
 					fi
 					counter=$(( counter + 1 ))
 				done <"${user_path}"/all_accounts.tmp
-				find "${user_path}" -maxdepth 1 -type f -name "*_check.tmp" exec rm -f -- {} +
+				find "${user_path}" -maxdepth 1 -type f -name "*_check.tmp" -exec rm -f -- {} +
 			fi
 
 			#####################################################################################
@@ -2110,7 +2110,7 @@ process_new_files(){
 				###IF FILES OVERWRITTEN DELETE *.DAT FILES####
 				if [ "${files_replaced}" -eq 1 ]
 				then
-					find "${script_path}/userdata/${handover_account}" -maxdepth 1 -type f -name "*.dat" exec rm -f -- {} +
+					find "${script_path}/userdata/${handover_account}" -maxdepth 1 -type f -name "*.dat" -exec rm -f -- {} +
 				fi
 			fi
 			while read line
