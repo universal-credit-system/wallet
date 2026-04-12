@@ -1182,7 +1182,7 @@ update_tsa(){
 			now_stamp=$(date +%s)
 
 			###PURGE OLD TMP FILES###########################
-			find "${script_path}"/certs -maxdepth 1 -type f exec rm -f -- {} +
+			find "${script_path}"/certs -maxdepth 1 -type f -exec rm -f -- {} +
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
 			for tsa_service in $(find "${script_path}"/certs/ -mindepth 1 -maxdepth 1 -type d|awk -F/ '{print $NF}')
