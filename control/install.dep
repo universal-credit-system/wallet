@@ -23,6 +23,7 @@ head
 ls
 ln
 mkdir
+mkfifo
 mktemp
 mv
 netcat
