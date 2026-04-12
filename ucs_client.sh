@@ -640,7 +640,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###GET LAST LEDGER############################
-		last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
+		last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
 
 		###CHECK IF OLD LEDGER THERE########################
 		if [ -n "${last_ledger}" ] && [ "${new}" -eq 0 ]
@@ -878,8 +878,8 @@ build_ledger(){
 			if [ "${show_balance}" -eq 1 ]
 			then
 				out_stamp=$(date +%s.%3N)
-				last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
-				for balance in $(grep -F -- "${handover_account}" "${user_path}/${last_ledger}"|grep -F -- "${cmd_asset}")
+				last_ledger=$(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
+				for balance in $(grep -F -- "${handover_account}" "${last_ledger}"|grep -F -- "${cmd_asset}")
 				do
 					echo "BALANCE_${out_stamp}:${balance}"
 				done
@@ -5007,7 +5007,7 @@ do
 																													then
 																														###CREATE LEDGER ENTRY###################
 																														last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
-																														echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>"${user_path}/${last_ledger}"
+																														echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>"${last_ledger}"
 																													fi
 																													quit_creation=1
 																												fi
@@ -5491,7 +5491,7 @@ do
 												rt_query=$?
 												if [ "${rt_query}" -eq 3 ]
 												then
-													last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
+													last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
 													last_ledger="${last_ledger%%_*}"
 													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
 													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
