@@ -26,40 +26,45 @@ BEGIN {
 
 ### EARLY REJECT
 FNR == 1 {
-
+	### PROCESS PREVIOUS FILE
+	if (NR > 1 && !skip && found) {
+		count++
+	}
+	
+	### SET VARIABLES
+	skip = 0
+	found = 0
 	file = FILENAME
 
 	### REMOVE PATH FROM VARIABLE
 	sub(/^.*\//, "", file)
 
-	#### REMOVE EXTENSION
+	### REMOVE EXTENSION
 	sub(/\..*$/, "", file)
 
 	user = file
 
 	### IF INDEX FROM SENDER / RECEIVER SKIP
 	if ((sndr != "" && user ~ sndr) || (rcvr != "" && user ~ rcvr))
-		nextfile
+		skip = 1
 
 	### IF INDEX-USER NOT IN CHECK-FILE SKIP
 	if (use_check && !(user in allowed))
-		nextfile
+		skip = 1
 }
+
+### SKIP FILTER
+skip { next }
 
 ### FAST MATCH
 index($0, trx_ref) {
 	found = 1
 }
 
-### FILE END
-ENDFILE {
-	if (found) {
-		### COUNT CONFIRMATION
+### END PROCESSING
+END {
+	if (!skip && found) {
 		count++
 	}
-	found = 0
-}
-
-END {
 	print count
 }
