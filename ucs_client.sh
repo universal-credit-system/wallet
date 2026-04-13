@@ -20,13 +20,12 @@ login_account(){
 		mkfifo "${logon_fifo}"
 
 		###WRITE LIST TO FIFO########################################
-		find "${script_path}/control/keys/" -maxdepth 1 -type f -name "${key_filter}.sct" > "${logon_fifo}" &
+		find "${script_path}/control/keys/" -maxdepth 1 -type f -name "${key_filter}.sct"|awk -F/ '{print $NF}' > "${logon_fifo}" &
 
 		###FOR EACH SECRET###########################################
 		while IFS= read -r secret_file
 		do
 			###GET ADDRESS OF SECRET#####################################
-			secret_file=$(basename "${secret_file}")
 			key_file=${secret_file%%.*}
 
 			###IF CMD_SENDER NOT SET#####################################
@@ -5557,14 +5556,14 @@ do
 								dialog --title "${dialog_stats}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_statistic_display}" 0 0
 							else
 								###IF CMD MODE DISPLAY STATISTICS##############
-								echo "TOTAL_NUMBER_COINS      :${total_number_coins}"
-								echo "TOTAL_NUMBER_ASSETS     :${total_number_assets}"
-								echo "TOTAL_NUMBER_USERS      :${total_number_users}"
-								echo "TOTAL_NUMBER_USERS_LOCAL:${total_number_users_local}"
-								echo "TOTAL_NUMBER_TRX        :${total_number_trx}"
-								echo "TOTAL_NUMBER_TRX_TODAY  :${total_number_trx_today}"
-								echo "TOTAL_VOLUME_TRX        :${total_volume_trx}"
-								echo "TOTAL_VOLUME_TRX_TODAY  :${total_volume_trx_today}"
+								printf "%s\n" "TOTAL_NUMBER_COINS      :${total_number_coins}" \
+									"TOTAL_NUMBER_ASSETS     :${total_number_assets}" \
+									"TOTAL_NUMBER_USERS      :${total_number_users}" \
+									"TOTAL_NUMBER_USERS_LOCAL:${total_number_users_local}" \
+									"TOTAL_NUMBER_TRX        :${total_number_trx}" \
+									"TOTAL_NUMBER_TRX_TODAY  :${total_number_trx_today}" \
+									"TOTAL_VOLUME_TRX        :${total_volume_trx}" \
+									"TOTAL_VOLUME_TRX_TODAY  :${total_volume_trx_today}"
 								exit 0
 							fi
 							;;
