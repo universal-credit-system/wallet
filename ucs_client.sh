@@ -79,7 +79,6 @@ login_account(){
 		done <"${logon_fifo}"
 		rm -f -- "${logon_fifo}"
 
-
 		###CHECK IF ACCOUNT HAS BEEN FOUND###########################
 		if [ "${account_found}" -eq 0 ] && [ -n "${cmd_sender}" ] && [ -s "${script_path}/keys/${cmd_sender}" ]
 		then
@@ -433,14 +432,14 @@ create_keys(){
 				dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_keys_final_display}" 0 0
 				key_remove=0
 			else
-				echo "USER:${create_name}"
-				echo "PIN:${create_pin}"
-				echo "PASSWORD:>${create_password}<"
-				echo "ADDRESS:${create_name_hashed}"
-				echo "KEY_PUB:/keys/${create_name_hashed}"
-				echo "KEY_PRV:/control/keys/${create_name_hashed}"
-				echo "KEY_SECRET:/control/keys/${create_name_hashed}.sct"
-				echo "KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
+				printf "%s\n" "USER:${create_name}" \
+					"PIN:${create_pin}" \
+					"PASSWORD:>${create_password}<" \
+					"ADDRESS:${create_name_hashed}" \
+					"KEY_PUB:/keys/${create_name_hashed}" \
+					"KEY_PRV:/control/keys/${create_name_hashed}" \
+					"KEY_SECRET:/control/keys/${create_name_hashed}.sct" \
+					"KEY_VERIFY_SECRET:/userdata/${create_name_hashed}/${create_name_hashed}.scv"
 				exit 0
 			fi
 		else
@@ -3593,7 +3592,7 @@ do
 							;;
 				"show_trx")		rt_code=0
 							###FILTER TRANSACTIONS########################################
-							find "${script_path}/trx/" -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2 -k3|while IFS= read -r trx_file
+							find "${script_path}/trx/" -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":AMNT:${cmd_amount}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2 -k3|while IFS= read -r trx_file
 							do
 								###GET MESSAGE TYPE MT########################################
 								trx=$(basename "${trx_file}")
