@@ -18,9 +18,9 @@ add_trap_command(){
 print_message(){
 			if [ "${rt_query}" -eq 0 ]
 			then
-				printf "%b" "DONE\n"
+				printf "%s\n" "DONE"
 			else
-				printf "%b" "FAILED\n"
+				printf "%s\n" "FAILED"
 				error_counter=$(( error_counter + 1 ))
 			fi
 			rt_query=0
@@ -61,8 +61,8 @@ then
 								;;
 						"-user")	cmd_user=$1
 								;;
-						*)		printf "%b" "[ERROR][parser] Unexpected argument $1\n"
-								printf "%b" "[INFO] To display the HELP run:\n./install.sh -help\n"
+						*)		printf "%s\n" "[${script_name}][ERROR][parser] Unexpected argument $1"
+								printf "%s\n" "[${script_name}][INFO] To display the HELP run: ./install.sh -help"
 								exit 1
 								;;
 					esac
@@ -88,18 +88,18 @@ do
         then
         	### QUERY TO REPLACE COMMANDS WITH PACKAGE NAME ###########
         	case "${program}" in
-        		"netcat")	printf "%b" "netcat-openbsd\n" >>"${install_dep}"
+        		"netcat")	printf "%s\n" "netcat-openbsd" >>"${install_dep}"
         				;;
-        		"gpg")		printf "%b" "gnupg\n"  >>"${install_dep}"
+        		"gpg")		printf "%s\n" "gnupg"  >>"${install_dep}"
         				;;
         		"openssl")	if [ "${cmd_env}" = "termux" ]
         				then
-        					printf "%b" "openssl-tool\n"  >>"${install_dep}"
+        					printf "%s\n" "openssl-tool"  >>"${install_dep}"
         				else
-        					printf "%b" "${program}\n"  >>"${install_dep}"
+        					printf "%s\n" "${program}"  >>"${install_dep}"
         				fi
         				;;
-        		*)		printf "%b" "${program}\n"  >>"${install_dep}"
+        		*)		printf "%s\n" "${program}"  >>"${install_dep}"
         				;;
         	esac
         fi
@@ -125,10 +125,10 @@ then
 					###IF PACKAGING MANAGER DETECTION FAILED####
 					error_counter=1
 					no_of_programs=$(wc -l <"${install_dep}")
-					printf "%b" "[ ERROR ][package] Couldn't detect the package management system used on this machine!\n"
-					printf "%b" "[ ERROR ][package] Found ${no_of_programs} programs that need to be installed:\n"
-					awk '{print "[ ERROR ][package] -> " $1}' "${install_dep}"
-					printf "%b" "[ ERROR ][package] Install these programms first using your package management system and then run install.sh again.\n"
+					printf "%s\n" "[${script_name}][ERROR][package] Couldn't detect the package management system used on this machine!"
+					printf "%s\n" "[${script_name}][ERROR][package] Found ${no_of_programs} programs that need to be installed:"
+					awk -v script_name="${script_name}" '{print "[" script_name "][ERROR][package] -> " $1}' "${install_dep}"
+					printf "%s\n" "[${script_name}][ERROR][package] Install these programms first using your package management system and then run ${script_name} again."
 					############################################
 				fi
 				;;
@@ -139,7 +139,7 @@ then
 		### INSTALL MISSING PKGS #####
 		while IFS= read -r program
 		do
-			printf "%b" "[ INFO ] Trying to install ${program} using ${pkg_mngr}...\n"
+			printf "%s\n" "[${script_name}][INFO] Trying to install ${program} using ${pkg_mngr}..."
 			case "${pkg_mngr}" in
 				"apk")		apk add "${program}" ;;
 				"apt-get")	apt-get -y install "${program}" ;;
@@ -152,8 +152,8 @@ then
 			rt_query=$?
 			if [ "${rt_query}" -gt 0 ]
 			then
-				printf "%b" "[ ERROR ][packages] Error during installation of ${program} using ${pkg_mngr}\n"
-				printf "%b" "[ ERROR ][packages] Maybe the program ${program} is available in a package with different name.\n"
+				printf "%s\n" "[${script_name}][ERROR][packages] Error during installation of ${program} using ${pkg_mngr}"
+				printf "%s\n" "[${script_name}][ERROR][packages] Maybe the program ${program} is available in a package with different name"
 				error_counter=$(( error_counter + 1 ))
 			fi
 		done <"${install_dep}"
@@ -166,11 +166,11 @@ then
 	if [ -n "${cmd_user}" ]
 	then
 		### DOCUMENT SU COMMAND ######
-		printf "%b" "[INFO] Switch to user ${cmd_user}\n"
+		printf "%s\n" "[${script_name}][INFO] Switch to user ${cmd_user}"
 		su - "${cmd_user}" || exit 1
 	fi
 	### CREATE DIRECTORIES #######
-	printf "%b" "[ INFO ] Creating directories..."
+	printf "%s" "[${script_name}][INFO] Creating directories..."
 	mkdir -p "${script_path}"/backup \
 		"${script_path}"/control/keys \
 		"${script_path}"/keys \
@@ -181,7 +181,7 @@ then
 	print_message
 
 	### SAVE UMASK SETTINGS ######
-	printf "%b" "[ INFO ] Getting umask..."
+	printf "%s" "[${script_name}][INFO] Getting umask..."
 	permissions_directories=$(printf "%03o" $(( 0777 & ~$(umask) ))) || rt_query=1
 	permissions_files=$(printf "%03o" $(( 0666 & ~$(umask) ))) || rt_query=1
 	print_message
@@ -189,29 +189,29 @@ then
 	### IF OLD CONFIG THERE ######
 	if [ -s "${script_path}"/control/config.conf ]
 	then
-		printf "%b" "[ INFO ] Backup old config ( ->control/config.bak )..."
+		printf "%s" "[${script_name}][INFO] Backup old config ( ->control/config.bak )..."
 		mv -- "${script_path}"/control/config.conf "${script_path}"/control/config.bak || rt_query=1
 		print_message
 	fi
 
 	### COPY TO PLACE ############
-	printf "%b" "[ INFO ] Copy install_config.conf to config.conf..."
+	printf "%s" "[${script_name}][INFO] Copy install_config.conf to config.conf..."
 	cp -- "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### WRITE PERMISSIONS ########
-	printf "%b" "[ INFO ] Write umask to config.conf..."
+	printf "%s" "[${script_name}][INFO] Write umask to config.conf..."
 	sed "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	sed "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET DEFAULT THEME ########
-	printf "%b" "[ INFO ] Set default theme 'debian.rc' in config.conf..."
+	printf "%s" "[${script_name}][INFO] Set default theme 'debian.rc' in config.conf..."
 	sed "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET PATHS ################
-	printf "%b" "[ INFO ] Define paths in config.conf..."
+	printf "%s" "[${script_name}][INFO] Define paths in config.conf..."
 	sed "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
 	sed "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
@@ -234,7 +234,7 @@ then
 				conf_var_val="${config_line#*=}"
 				if grep -q "^$(printf '%s\n' "${conf_var}"|sed 's/[.[\*^$]/\\&/g')=" "${script_path}"/control/config.conf
 				then
-					printf "%b" "[ INFO ] Configure var \$${conf_var} in config.conf..."
+					printf "%s" "[${script_name}][INFO] Configure var \$${conf_var} in config.conf..."
 					conf_line=$(grep "^${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line:-}" = "${conf_var}=${conf_var_val}" ]
 					then
@@ -249,7 +249,7 @@ then
 	### CHECK FOR ERRORS #####################
 	if [ "${error_counter}" -gt 0 ] && [ -s "${script_path}"/control/config.bak ]
 	then
-		printf "%b" "[ INFO ] Restoring old config ( ->rename control/config.bak back to control/config.conf )..."
+		printf "%s" "[${script_name}][INFO] Restoring old config ( ->rename control/config.bak back to control/config.conf )..."
 		mv -- "${script_path}"/control/config.bak "${script_path}"/control/config.conf || rt_query=1
 		print_message
 	fi
@@ -258,7 +258,7 @@ then
 	if [ ! -d ~/.gnupg/ ]
 	then
 		### RUN GPG ###################
-		printf "%b" "[ INFO ] Wake up gpg-agent..."
+		printf "%s" "[${script_name}][INFO] Wake up gpg-agent..."
 		gpgconf --launch gpg-agent >/dev/null 2>/dev/null || rt_query=1
 		print_message
 	fi
@@ -266,7 +266,7 @@ then
 	### CONFIGURE GPG ########################
 	if [ -s ~/.gnupg/gpg-agent.conf ]
 	then
-		printf "%b" "[ INFO ] Checking gpg-agent.conf configuration..."
+		printf "%s" "[${script_name}][INFO] Checking gpg-agent.conf configuration..."
 		while read config_line
 		do
 			if [ "$(grep -c "${config_line}" ~/.gnupg/gpg-agent.conf)" -eq 0 ]
@@ -276,7 +276,7 @@ then
 		done <"${script_path}"/control/gpg-agent.conf
 		print_message
 	else
-		printf "%b" "[ INFO ] Copy gpg-agent.conf to ~/.gnupg/ folder..."
+		printf "%s" "[${script_name}][INFO] Copy gpg-agent.conf to ~/.gnupg/ folder..."
 		cp -- "${script_path}"/control/gpg-agent.conf ~/.gnupg/gpg-agent.conf || rt_query=1
 		print_message
 	fi
@@ -284,11 +284,11 @@ then
 	### REMOVE USAGE OF KEYBOX ###############
 	if [ -s ~/.gnupg/common.conf ]
 	then
-		printf "%b" "[ INFO ] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
+		printf "%s" "[${script_name}][INFO] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
 		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >~/.gnupg/common.conf."${my_pid}".bak && mv -- ~/.gnupg/common.conf."${my_pid}".bak ~/.gnupg/common.conf|| rt_query=1
 		print_message
 	fi
 fi
 ### DISPLAY OUTPUT #######################
-printf "%b" "[ INFO ] ${script_name} finished (errors:${error_counter})\n"
+printf "%s\n" "[${script_name}][INFO] ${script_name} finished (errors:${error_counter})"
 
