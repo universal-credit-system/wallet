@@ -284,7 +284,7 @@ then
 	if [ -s ~/.gnupg/common.conf ]
 	then
 		printf "%s" "[${script_name}][INFO] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
-		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >"${config_tmp}" && mv -- "${config_tmp}" ~/.gnupg/common.conf|| rt_query=1
+		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >"${config_tmp}" && mv -- "${config_tmp}" ~/.gnupg/common.conf || rt_query=1
 		print_message
 	fi
 fi
