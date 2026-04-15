@@ -29,7 +29,6 @@ print_message(){
 script_path=$(cd "$(dirname "$0")" && pwd)
 script_name=$(basename "$0")
 current_trap=""
-my_pid=$$
 error_counter=0
 cmd_env=""
 cmd_user=""
@@ -199,32 +198,32 @@ then
 	cp -- "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
+	### CREATE TMP FILE ##########
+	add_trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
+	config_tmp=$(mktemp "${script_path}/tmp/config_tmp.XXXXXX") || exit 1
+
 	### WRITE PERMISSIONS ########
 	printf "%s" "[${script_name}][INFO] Write umask to config.conf..."
-	sed "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s/permissions_directories=permissions_directories/permissions_directories=${permissions_directories}/g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
+	sed "s/permissions_files=permissions_files/permissions_files=${permissions_files}/g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET DEFAULT THEME ########
 	printf "%s" "[${script_name}][INFO] Set default theme 'debian.rc' in config.conf..."
-	sed "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#theme_file=theme_file#theme_file=debian.rc#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### SET PATHS ################
 	printf "%s" "[${script_name}][INFO] Define paths in config.conf..."
-	sed "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
-	sed "s#sync_path_output=sync_path_output#sync_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+	sed "s#trx_path_input=trx_path_input#trx_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
+	sed "s#trx_path_output=trx_path_output#trx_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
+	sed "s#sync_path_input=sync_path_input#sync_path_input=${script_path}#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
+	sed "s#sync_path_output=sync_path_output#sync_path_output=${script_path}/tmp#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
 	print_message
 
 	### REWRITE CONFIG ###########
 	if [ -s "${script_path}"/control/config.bak ]
 	then
-		### CREATE TMP FILE ##########
-		add_trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
-		config_tmp=$(mktemp "${script_path}/temp/config_tmp.XXXXXX") || exit 1
-		
 		### READ OLD CONFIG #########
 		grep "path_input\|path_output\|theme_file\|small_trx\|cmd_" "${script_path}"/control/config.bak | while IFS= read -r config_line
 		do
@@ -285,7 +284,7 @@ then
 	if [ -s ~/.gnupg/common.conf ]
 	then
 		printf "%s" "[${script_name}][INFO] Remove 'use-keyboxd' entry in ~/.gnupg/common.conf..."
-		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >~/.gnupg/common.conf."${my_pid}".bak && mv -- ~/.gnupg/common.conf."${my_pid}".bak ~/.gnupg/common.conf|| rt_query=1
+		sed 's/use-keyboxd//g' ~/.gnupg/common.conf >"${config_tmp}" && mv -- "${config_tmp}" ~/.gnupg/common.conf|| rt_query=1
 		print_message
 	fi
 fi
