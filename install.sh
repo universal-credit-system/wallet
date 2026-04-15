@@ -223,7 +223,7 @@ then
 	then
 		### CREATE TMP FILE ##########
 		add_trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
-		config_tmp=$(mktemp "${script_path}/control/config_tmp.XXXXXX") || exit 1
+		config_tmp=$(mktemp "${script_path}/temp/config_tmp.XXXXXX") || exit 1
 		
 		### READ OLD CONFIG #########
 		grep "path_input\|path_output\|theme_file\|small_trx\|cmd_" "${script_path}"/control/config.bak | while IFS= read -r config_line
@@ -238,7 +238,7 @@ then
 					conf_line=$(grep "^${conf_var}" "${script_path}"/control/config.conf)
 					if [ ! "${conf_line:-}" = "${conf_var}=${conf_var_val}" ]
 					then
-						sed "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf || rt_query=1
+						sed "s#${conf_line}#${conf_var}=${conf_var_val}#g" "${script_path}"/control/config.conf >"${config_tmp}" && mv -- "${config_tmp}" "${script_path}"/control/config.conf || rt_query=1
 					fi
 					print_message
 				fi
