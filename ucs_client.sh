@@ -3376,7 +3376,7 @@ do
 															then
 																sed "s/lang_file=${lang_file}/lang_file=${new_lang_file}/g" "${script_path}"/control/config.conf >"${script_path}"/control/config.conf."${my_pid}".bak && mv -- "${script_path}"/control/config.conf."${my_pid}".bak "${script_path}"/control/config.conf
 																. "${script_path}"/control/config.conf
-																. "${script_path}/lang/${lang_file}"
+																. "${script_path}/lang/${new_lang_file}"
 															fi
 														fi
 														rm -f -- "${script_path}"/tmp/lang_list.tmp
