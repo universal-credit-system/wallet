@@ -3361,7 +3361,7 @@ do
 									then
 										case "${settings_menu}" in
 											"${dialog_main_lang}")	rm -f -- "${script_path}"/tmp/lang_list.tmp
-														for language_file in $(find "${script_path}"/theme -maxdepth 1 -type f|awk -F/ '{print $NF}')
+														for language_file in $(find "${script_path}"/lang -maxdepth 1 -type f|awk -F/ '{print $NF}')
 														do
 															lang_ex_short=$(echo "${language_file}"|cut -d '_' -f2)
 															lang_ex_full=$(echo "${language_file}"|cut -d '_' -f3|cut -d '.' -f1)
