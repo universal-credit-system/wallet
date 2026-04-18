@@ -20,7 +20,7 @@ login_account(){
 		mkfifo "${logon_fifo}"
 
 		###WRITE LIST TO FIFO########################################
-		find "${script_path}/control/keys/" -maxdepth 1 -type f -name "${key_filter}.sct"|awk -F/ '{print $NF}' > "${logon_fifo}" &
+		find "${script_path}"/control/keys -maxdepth 1 -type f -name "${key_filter}.sct"|awk -F/ '{print $NF}' > "${logon_fifo}" &
 
 		###FOR EACH SECRET###########################################
 		while IFS= read -r secret_file
@@ -579,7 +579,6 @@ check_input(){
 		input_string=$1
 		check_mode=$2
 		rt_query=0
-		length_counter=0
 
 		###IF INPUT LESS THAN 1 DISPLAY NOTIFICATION###########################
 		if [ "${#input_string}" -lt 1 ]
@@ -638,7 +637,7 @@ build_ledger(){
 		now=$(date -u +%Y%m%d)
 
 		###GET LAST LEDGER############################
-		last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
+		last_ledger=$(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
 
 		###CHECK IF OLD LEDGER THERE########################
 		if [ -n "${last_ledger}" ] && [ "${new}" -eq 0 ]
@@ -684,7 +683,7 @@ build_ledger(){
 		previous_day=$(date +%Y%m%d --date="${focus} - 1 day")
 
 		###CREATE LEDGER ENTRY FOR NON FUNGIBLE ASSET###############
-		for asset in $(awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' "${user_path}"/all_assets.dat)
+		awk -F. -v date_stamp="${date_stamp}" '$2 < date_stamp' "${user_path}"/all_assets.dat|while IFS= read -r asset
 		do
 			if [ ! "${asset}" = "${main_asset}" ] && [ -f "${script_path}/assets/${asset}" ] && [ -s "${script_path}/assets/${asset}" ]
 			then
@@ -699,16 +698,16 @@ build_ledger(){
 					asset_quantity=${asset_quantity#*=}
 					if ! grep -qF -- "${asset}:${asset_owner}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${asset}:${asset_owner}=${asset_quantity}"
+						printf "%s\n" "${asset}:${asset_owner}=${asset_quantity}"
 					fi
 				else
 					if ! grep -qF -- "${main_asset}:${asset}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${main_asset}:${asset}=0"
+						printf "%s\n" "${main_asset}:${asset}=0"
 					fi
 					if ! grep -qF -- "${asset}:${main_asset}=" "${user_path}"/"${previous_day}"_ledger.dat
 					then
-						echo "${asset}:${main_asset}=0"
+						printf "%s\n" "${asset}:${main_asset}=0"
 					fi
 				fi
 			fi
@@ -791,7 +790,7 @@ build_ledger(){
 			' "${user_path}"/depend_accounts.dat "${user_path}"/all_accounts_dates.dat >>"${user_path}/${focus}_ledger.dat"
 			
 			###FOR EACH ASSET CREATED THAT DAY###############
-			for asset in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/all_assets.dat)
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 >= date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/all_assets.dat|while IFS= read -r asset
 			do
 				###SET FULL PATH###########################################
 				asset_full_path="${script_path}/assets/${asset}"
@@ -803,19 +802,19 @@ build_ledger(){
 					asset_quantity=${asset_quantity#*=}
 					asset_owner=$(grep -F -- "asset_owner=" "${asset_full_path}"|tr -d '"')
 					asset_owner=${asset_owner#*=}
-					echo "${asset}:${asset_owner}=${asset_quantity}"
+					printf "%s\n" "${asset}:${asset_owner}=${asset_quantity}"
 				fi
 
 				###CREATE LEDGER ENTRY FOR FUNGIBLE ASSETS#################
 				if grep -qF -- "asset_fungible=1" "${asset_full_path}" && [ ! "${asset}" = "${main_asset}" ]
 				then
-					echo "${main_asset}:${asset}=0"
-					echo "${asset}:${main_asset}=0"
+					printf "%s\n" "${main_asset}:${asset}=0"
+					printf "%s\n" "${asset}:${main_asset}=0"
 				fi
 			done >>"${user_path}/${focus}_ledger.dat"
 
 			###GO TROUGH TRX OF THAT DAY LINE BY LINE##################
-			for trx_filename in $(awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/depend_trx.dat) 
+			awk -F. -v date_stamp="${date_stamp}" -v date_stamp_tomorrow="${date_stamp_tomorrow}" '$2 > date_stamp && $2 < date_stamp_tomorrow' "${user_path}"/depend_trx.dat|while IFS= read -r trx_filename
 			do
 				skip=0
 				ignore=1
@@ -830,7 +829,7 @@ build_ledger(){
 				else
 					###CHECK NAMING############################################
 					trx_msg_type_len=${#trx_msg_type}
-					if [ "${trx_msg_type_len}" -ne 3 ] || [ -n "$(echo "${trx_msg_type}"|grep -- '[^[:digit:]]')" ]
+					if [ "${trx_msg_type_len}" -ne 3 ] || printf "%s" "${trx_msg_type}"|grep -q -- '[^[:digit:]]'
 					then
 						skip=1
 					fi
@@ -847,7 +846,7 @@ build_ledger(){
 				###IF IGNORED WRITE TRX TO FILE############################
 				if [ "${ignore}" -eq 1 ]
 				then
-					echo "${trx_filename}" >>"${user_path}"/ignored_trx.dat
+					printf "%s\n" "${trx_filename}" >>"${user_path}"/ignored_trx.dat
 				fi
 			done
 
@@ -879,7 +878,7 @@ build_ledger(){
 				last_ledger=$(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 				for balance in $(grep -F -- "${handover_account}" "${last_ledger}"|grep -F -- "${cmd_asset}")
 				do
-					echo "BALANCE_${out_stamp}:${balance}"
+					printf "%s\n" "BALANCE_${out_stamp}:${balance}"
 				done
 			fi
 		fi
@@ -1183,7 +1182,7 @@ update_tsa(){
 			find "${script_path}"/certs -maxdepth 1 -type f -exec rm -f -- {} +
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
-			for tsa_service in $(find "${script_path}"/certs/ -mindepth 1 -maxdepth 1 -type d|awk -F/ '{print $NF}')
+			for tsa_service in $(find "${script_path}"/certs -mindepth 1 -maxdepth 1 -type d|awk -F/ '{print $NF}')
 			do
 				###SET VARIABLES#################################
 				tsa_update_required=0
@@ -1469,7 +1468,7 @@ check_tsa(){
 			sort "${user_path}"/all_accounts.dat "${user_path}"/ack_accounts.dat|uniq -u >"${user_path}"/all_accounts.tmp
 			if [ -s "${user_path}"/all_accounts.tmp ]
 			then
-				gpg --with-colons --import-options show-only --import $(awk -v script_path="${script_path}" '{print script_path "/keys/" $1}' "${user_path}"/all_accounts.tmp)|grep -F -- "uid" >"${user_path}"/gpg_check.tmp
+				awk -v script_path="${script_path}" '{print script_path "/keys/" $1}' "${user_path}"/all_accounts.tmp|xargs gpg --with-colons --import-options show-only --import|awk -F: '$1 == "uid"' >"${user_path}"/gpg_check.tmp
 				counter=1
 				while read line
 				do
@@ -1481,7 +1480,7 @@ check_tsa(){
 					if [ "${account}" = "${account_key}" ]
 					then
 						###FOR EACH TSA-SERVICE USED BY USER#####################
-						for tsa_service in $(find "${script_path}"/proofs/"${account}" -maxdepth 1 -type f -name "*.tsr"|awk -F/ '{print $NF}'|cut -d '.' -f1)
+						for tsa_service in $(find "${script_path}/proofs/${account}" -maxdepth 1 -type f -name "*.tsr"|awk -F/ '{print $NF}'|cut -d '.' -f1)
 						do
 							###CHECK IF TSA QUERY AND RESPONSE ARE THERE#############
 							if [ -f "${script_path}/proofs/${account}/${tsa_service}.tsq" ] && [ -s "${script_path}/proofs/${account}/${tsa_service}.tsq" ] && [ -f "${script_path}/proofs/${account}/${tsa_service}.tsr" ] && [ -s "${script_path}/proofs/${account}/${tsa_service}.tsr" ]
@@ -1870,7 +1869,7 @@ check_trx(){
 							else
 								###CHECK FORMATTING OF MESSAGE TYPE#####################
 								trx_msg_type_len=${#trx_msg_type}
-								if [ "${trx_msg_type_len}" -ne 3 ] || [ -n "$(echo "${trx_msg_type}"|grep -- '[^[:digit:]]')" ]
+								if [ "${trx_msg_type_len}" -ne 3 ] || echo "${trx_msg_type}"|grep -q -- '[^[:digit:]]'
 								then
 									rt_query=1
 								fi
@@ -2021,8 +2020,8 @@ process_new_files(){
 						stripped_file=${trx%% *}
 						if [ -f "${script_path}/${stripped_file}" ] && [ -s "${script_path}/${stripped_file}" ]
 						then
-							trx_confirmations_old=$(find "${script_path}"/proofs/ -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
-							trx_confirmations_new=$(find "${script_path}"/temp/proofs/ -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
+							trx_confirmations_old=$(find "${script_path}"/proofs -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
+							trx_confirmations_new=$(find "${script_path}"/temp/proofs -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
 							if [ "${trx_confirmations_old}" -gt "${trx_confirmations_new}" ]
 							then
 								trx_confirmations=${trx_confirmations_old}
@@ -2042,8 +2041,8 @@ process_new_files(){
 						stripped_file=${trx%% *}
 						if [ -f "${user_path}/temp/${stripped_file}" ] && [ -s "${user_path}/temp/${stripped_file}" ]
 						then
-							trx_confirmations_old=$(find "${script_path}"/proofs/ -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
-							trx_confirmations_new=$(find "${script_path}"/temp/proofs/ -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
+							trx_confirmations_old=$(find "${script_path}"/proofs -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
+							trx_confirmations_new=$(find "${script_path}"/temp/proofs -type f -name "*.txt" -exec env LC_ALL=C grep -slF -- "${trx}" {} +|wc -l)
 							if [ "${trx_confirmations_old}" -gt "${trx_confirmations_new}" ]
 							then
 								trx_confirmations=${trx_confirmations_old}
@@ -2120,7 +2119,7 @@ process_new_files(){
 					rm -f -- "${user_path}/temp/${line}"
 				fi
 			done <"${user_path}"/files_to_fetch.tmp
-			files_to_copy=$(find "${user_path}"/temp/ -maxdepth 3 -type f|wc -l)
+			files_to_copy=$(find "${user_path}"/temp -maxdepth 3 -type f|wc -l)
 			if [ "${files_to_copy}" -gt 0 ]
 			then
 				#############################################
@@ -2175,11 +2174,8 @@ set_permissions(){
 }
 purge_files(){
 		###FIRST REMOVE ALL KEYS FROM KEYRING TO AVOID GPG ERRORS##########
-		for key_fp in $(gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-keys 2>/dev/null|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p')
-		do
-			gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-secret-keys "${key_fp}" 2>/dev/null
-			gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-keys "${key_fp}" 2>/dev/null
-		done
+		gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-secret-keys 2>/dev/null|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'|xargs gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-secret-keys 2>/dev/null
+		gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --with-colons --list-keys 2>/dev/null|sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'|xargs gpg --batch --yes --no-default-keyring --keyring="${script_path}"/control/keyring.file --delete-keys 2>/dev/null
 
 		###REMOVE KEYRING AND FILES########################################
 		rm -f -- "${script_path}"/control/keyring.file
@@ -2191,14 +2187,8 @@ purge_files(){
 		find "${script_path}"/userdata -mindepth 1 -exec rm -rf -- {} +
 }
 import_keys(){
-		find "${script_path}"/control/keys -maxdepth 1 -type -f -not -name "*.sct"|while IFS= read -r private_key
-		do
-			gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --import "${private_key}" 2>/dev/null
-		done
-		find "${script_path}"/keys -maxdepth 1 -type -f|while IFS= read -r public_key
-		do
-			gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --import "${public_key}" 2>/dev/null
-		done
+		find "${script_path}"/control/keys -maxdepth 1 -type -f -not -name "*.sct"|xargs gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --import 2>/dev/null
+		find "${script_path}"/keys -maxdepth 1 -type -f|xargs gpg --batch --no-default-keyring --keyring="${script_path}"/control/keyring.file --trust-model always --import 2>/dev/null
 }
 get_dependencies(){
 			cd "${script_path}"/trx || exit 14
@@ -2419,11 +2409,11 @@ get_dependencies(){
 					then
 						cd "${user_path}" || exit 3
 						last_date=$(date +%Y%m%d --date=@"${earliest_date}")
-						for ledger in $(find "${user_path}/" -maxdepth 1 -type f -name "*_ledger.dat"|awk -F'[/_]' -v last_date="${last_date}" '{date = $(NF-1); if (date >= last_date) print date "_ledger.dat"}')
+						for ledger in $(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|awk -F'[/_]' -v last_date="${last_date}" '{date = $(NF-1); if (date >= last_date) print date "_ledger.dat"}')
 						do
 							rm -f -- "${ledger}"
 						done
-						for index in $(find "${user_path}/" -maxdepth 1 -type f -name "*_index_trx.dat"|awk -F'[/_]' -v last_date="${last_date}" '{date = $(NF-2); if (date >= last_date) print date "_index_trx.dat"}')
+						for index in $(find "${user_path}" -maxdepth 1 -type f -name "*_index_trx.dat"|awk -F'[/_]' -v last_date="${last_date}" '{date = $(NF-2); if (date >= last_date) print date "_index_trx.dat"}')
 						do
 							rm -f -- "${index}"
 						done
@@ -3592,7 +3582,7 @@ do
 							;;
 				"show_trx")		rt_code=0
 							###FILTER TRANSACTIONS########################################
-							find "${script_path}/trx/" -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":AMNT:${cmd_amount}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2 -k3|while IFS= read -r trx_file
+							find "${script_path}"/trx -type f -name "*${cmd_sender}*" -name "*${cmd_file}*" -exec sh -c 'for file do grep -qF -- ":RCVR:${cmd_receiver}" "${file}" && grep -qF -- ":AMNT:${cmd_amount}" "${file}" && grep -qF -- ":ASST:${cmd_asset}" "${file}" && printf "%s\n" "${file}"; done' sh {} +|sort -r -t. -k2 -k3|while IFS= read -r trx_file
 							do
 								###GET MESSAGE TYPE MT########################################
 								trx=$(basename "${trx_file}")
@@ -4054,7 +4044,7 @@ do
 												touch "${user_path}"/menu_addresses_fungible.tmp
 												if grep -qF -- "asset_fungible=1" "${script_path}/assets/${order_asset}"
 												then
-													find "${script_path}/assets/" -type f -exec env LC_ALL=C grep -slF -- "asset_fungible=1" {} +|awk -F/ '{print $NF}' >"${user_path}"/menu_addresses_fungible.tmp
+													find "${script_path}"/assets -type f -exec env LC_ALL=C grep -slF -- "asset_fungible=1" {} +|awk -F/ '{print $NF}' >"${user_path}"/menu_addresses_fungible.tmp
 												fi
 												sort -t. -k2 "${user_path}"/menu_addresses_fungible.tmp|grep -Fhvw "${order_asset}" - "${user_path}"/all_accounts.dat >"${user_path}"/menu_addresses.tmp
 												order_receiver=$(dialog --cancel-label "${dialog_main_back}" --title "${dialog_send}" --backtitle "${core_system_name} ${core_system_version}" --no-items --output-fd 1 --scrollbar --menu "..." 0 0 0 --file "${user_path}"/menu_addresses.tmp)
@@ -5004,7 +4994,7 @@ do
 																													if [ "${fungible}" -eq 0 ] && grep -qF -- "${asset_name}.${asset_stamp}" "${user_path}"/all_assets.dat
 																													then
 																														###CREATE LEDGER ENTRY###################
-																														last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
+																														last_ledger=$(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|sort|tail -1)
 																														echo "${asset_name}.${asset_stamp}:${handover_account}=${asset_quantity}" >>"${last_ledger}"
 																													fi
 																													quit_creation=1
@@ -5133,7 +5123,7 @@ do
 							done
 							;;
 				"${dialog_history}")	###CREATE A LIST WITH ALL TRX CONCERNING USER##########
-							find "${script_path}"/trx/ -maxdepth 1 -type f -exec env LC_ALL=C grep -slF -- ":${handover_account}" {} + >"${user_path}"/my_trx.tmp
+							find "${script_path}"/trx -maxdepth 1 -type f -exec env LC_ALL=C grep -slF -- ":${handover_account}" {} + >"${user_path}"/my_trx.tmp
 
 							###INCLUDING TRX OF MULTI SIGNATURE WALLETS############
 							rm -f -- "${user_path}"/my_multi_sig_trx.tmp
@@ -5489,7 +5479,7 @@ do
 												rt_query=$?
 												if [ "${rt_query}" -eq 3 ]
 												then
-													last_ledger=$(find "${user_path}"/ -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
+													last_ledger=$(find "${user_path}" -maxdepth 1 -type f -name "*_ledger.dat"|awk -F/ '{print $NF}'|sort|tail -1)
 													last_ledger="${last_ledger%%_*}"
 													echo "trx/${trx_file} ${trx_hash}" >>"${user_path}"/messages_ack.sig
 													echo "${trx_file}" >>"${user_path}/${last_ledger}_index_trx.dat"
@@ -5528,13 +5518,13 @@ do
 							total_number_coins=$(echo "${user_dates_list}"|awk -v DEBUG_MODE="${debug}" -v start_day="${start_day}" -f "${script_path}"/control/functions/get_payouts.awk)
 
 							###TOTAL NUMBER OF ASSETS######################
-							total_number_assets=$(find "${script_path}"/assets/ -maxdepth 1 -type f|wc -l)
+							total_number_assets=$(find "${script_path}"/assets -maxdepth 1 -type f|wc -l)
 
 							###TOTAL NUMBER OF PUBLIC KEYS#################
-							total_number_users=$(find "${script_path}"/keys/ -maxdepth 1 -type f|wc -l)
+							total_number_users=$(find "${script_path}"/keys -maxdepth 1 -type f|wc -l)
 
 							###TOTAL NUMBER OF PRIVATE KEYS################
-							total_number_users_local=$(find "${script_path}"/control/keys/ -maxdepth 1 -type f -name "*.sct"|wc -l)
+							total_number_users_local=$(find "${script_path}"/control/keys -maxdepth 1 -type f -name "*.sct"|wc -l)
 
 							###GET STAMPS OF TODAY AND TOMORROW############
 							today_start=$(date -u +%s --date="$(date +%Y%m%d)")

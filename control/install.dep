@@ -44,3 +44,4 @@ umask
 uniq
 wc
 wget
+xargs
