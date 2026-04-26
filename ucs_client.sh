@@ -3984,7 +3984,7 @@ do
 														then
 															### FILL UP VALUE WITH ZERO NUMBERS 9 DIGIT ########
 															frac="${frac}00000000"
-															frac=$(expr "${frac}" : '\(..........\)')
+															frac=$(expr "${frac}" : '\(.........\)')
 															order_amount_formatted="${int}.${frac}"
 															if [ "${receiver_is_asset}" -eq 1 ]
 															then
