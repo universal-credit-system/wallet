@@ -5171,11 +5171,10 @@ do
 									trx_hash=${trx_hash%% *}
 
 									###CHECK IF INDEXED####################################
+									trx_signed=0
 									if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 									then
 										trx_signed=$(grep -cF -- "${trx_filename} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
-									else
-										trx_signed=0
 									fi
 
 									###BUILD DIALOG LIST FOR TRANSACTIONS##################
@@ -5329,11 +5328,10 @@ do
 
 										###CHECK STATUS OF TRANSACTION#########################
 										trx_status=""
+										trx_signed=0
 										if [ -f "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ] && [ -s "${script_path}/proofs/${trx_sender}/${trx_sender}.txt" ]
 										then
 											trx_signed=$(grep -cF -- "trx/${trx_file} ${trx_hash}" "${script_path}/proofs/${trx_sender}/${trx_sender}.txt")
-										else
-											trx_signed=0
 										fi
 										if [ "${trx_signed}" -eq 0 ]
 										then
