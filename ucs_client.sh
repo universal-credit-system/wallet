@@ -2581,7 +2581,7 @@ request_uca(){
 			if [ "${gui_mode}" -eq 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
-				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
+				percent_display=${current_percent%%.*}
 				if [ "${rt_query}" -eq 0 ]
 				then
 					status="SUCCESSFULL"
@@ -2705,7 +2705,7 @@ send_uca(){
 			if [ "${gui_mode}" -eq 1 ]
 			then
 				current_percent=$(echo "scale=10; ${current_percent} + ${percent_per_uca}"|bc)
-				percent_display=$(echo "scale=0; ${current_percent} / 1"|bc)
+				percent_display=${current_percent%%.*}
 				if [ "${rt_query}" -eq 0 ]
 				then
 					status="SUCCESSFULL"
@@ -3984,7 +3984,7 @@ do
 														then
 															### FILL UP VALUE WITH ZERO NUMBERS 9 DIGIT ########
 															frac="${frac}00000000"
-															frac=$(expr "${frac}" : '\(.........\)')
+															frac=$(expr "${frac}" : '\(..........\)')
 															order_amount_formatted="${int}.${frac}"
 															if [ "${receiver_is_asset}" -eq 1 ]
 															then
@@ -4952,19 +4952,25 @@ do
 																								if [ "${rt_query}" -eq 0 ]
 																								then
 																									###CHECK VALUE FOR FORMAT SIZE ETC###############
-																									asset_value_alnum=$(echo "${asset_value}"|grep -c -- '[^0-9.,]')
-																									if [ "${asset_value_alnum}" -eq 0 ] && [ "${#asset_value}" -gt 0 ]
+																									asset_value_formatted=$(echo "${asset_value}"|sed -e 's/,/./g' -e 's/ //g')
+																									if [ "${#asset_value_formatted}" -gt 0 ] && ! echo "${asset_value_formatted}"|grep -q -- '[^0-9.]'
 																									then
-																										asset_value_formatted=$(echo "${asset_value}"|sed -e 's/,/./g' -e 's/ //g')
-																										value_mod=$(echo "${asset_value_formatted} % 0.000000001"|bc)
-																										value_mod=$(echo "${value_mod} > 0"|bc)
-																										asset_value_formatted=$(echo "scale=9; ${asset_value_formatted} / 1"|bc|sed 's/^\./0./g')
-																										is_amount_big_enough=$(echo "${asset_value_formatted} >= 0.000000001"|bc)
-																										if [ "${value_mod}" -eq 0 ] && [ "${is_amount_big_enough}" -eq 1 ]
+																										case "${asset_value_formatted}" in
+																										*[!0-9.]*|*.*.*|.*|*.)	asset_value_okay=1 ;;
+																										*)			int=${asset_value_formatted%%.*}
+																													frac=${asset_value_formatted#*.}
+																													[ "${frac}" = "${asset_value_formatted}" ] && frac=""
+																													[ ${#frac} -ge 1 ] && [ ${#frac} -le 9 ] && [ "$(echo "${int}.${frac} > 0"|bc)" -eq 1 ] && asset_value_okay=0
+																													;;
+																										esac
+																										if [ "${asset_value_okay}" -eq 0 ]
 																										then
 																											if [ "${rt_query}" -eq 0 ]
 																											then
 																												###WRITE ASSET###########################
+																												frac="${frac}00000000"
+																												frac=$(expr "${frac}" : '\(.........\)')
+																												asset_value_formatted="${int}.${frac}"
 																												asset_stamp=$(date +%s)
 																												{
 																												echo "asset_fungible=${fungible}"
