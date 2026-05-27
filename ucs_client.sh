@@ -222,7 +222,7 @@ create_keys(){
 									while [ "${retry_counter}" -le "${retry_limit}" ]
 									do
 										###SENT QUERY TO TSA#########################################
-										curl --silent -H "Content-Type: application/timestamp-query" --data-binary @"${tsa_service}.tsq" "${tsa_connect_string}" >"${user_path}/${tsa_service}.tsr"
+										curl --silent --connect-timeout "${tsa_curl_timeout}" --max-time "${tsa_curl_max_time}" -H "Content-Type: application/timestamp-query" --data-binary @"${tsa_service}.tsq" "${tsa_connect_string}" >"${user_path}/${tsa_service}.tsr"
 										rt_query=$?
 										if [ "${rt_query}" -eq 0 ]
 										then
@@ -1180,6 +1180,10 @@ update_tsa(){
 
 			###PURGE OLD TMP FILES###########################
 			find "${script_path}"/certs -maxdepth 1 -type f -exec rm -f -- {} +
+			
+			###GET TOTAL NUMBERS OF TSA TO UPDATE############
+			tsa_number=$(find "${script_path}"/certs -mindepth 1 -maxdepth 1 -type d|wc -l)
+			tsa_counter=0
 
 			###FOR EACH TSA-SERVICE IN CERTS/-FOLDER#########
 			for tsa_service in $(find "${script_path}"/certs -mindepth 1 -maxdepth 1 -type d|awk -F/ '{print $NF}')
@@ -1237,7 +1241,7 @@ update_tsa(){
 					if [ "${tsa_update_required}" -eq 1 ]
 					then
 						###DOWNLOAD TSA.CRT###############################
-						wget -o /dev/null -q -O "${tsa_cert_file}" "${tsa_cert_url}"
+						wget -T "${tsa_wget_timeout}" -t "${tsa_wget_retry_limit}" -o /dev/null -q -O "${tsa_cert_file}" "${tsa_cert_url}"
 						rt_query=$?
 						if [ "${rt_query}" -eq 0 ]
 						then
@@ -1290,7 +1294,7 @@ update_tsa(){
 					if [ "${tsa_update_required}" -eq 1 ]
 					then
 						###DOWNLOAD CACERT.PEM############################
-						wget -o /dev/null -q -O "${tsa_cacert_file}" "${tsa_cert_url}"
+						wget -T "${tsa_wget_timeout}" -t "${tsa_wget_retry_limit}" -o /dev/null -q -O "${tsa_cacert_file}" "${tsa_cert_url}"
 						rt_query=$?
 						if [ "${rt_query}" -eq 0 ]
 						then
@@ -1345,7 +1349,7 @@ update_tsa(){
 							if [ "${period_seconds}" -gt "${check_period_tsa}" ] || [ ! -s "${script_path}/certs/${tsa_service}/${tsa_crl_file}" ]
 							then
 								###DOWNLOAD CURRENT CRL FILE##############################
-								wget -o /dev/null -q -O "${tsa_crl_file}" "${tsa_crl_url}"
+								wget -T "${tsa_wget_timeout}" -t "${tsa_wget_retry_limit}" -o /dev/null -q -O "${tsa_crl_file}" "${tsa_crl_url}"
 								if [ -f "${script_path}/certs/${tsa_crl_file}" ] && [ -s "${script_path}/certs/${tsa_crl_file}" ]
 								then
 									###CHECK IF OLD CRL IS THERE##############################
@@ -1436,13 +1440,19 @@ update_tsa(){
 						then
 							sleep "${retry_wait_seconds}"
 						else
-							if [ "${gui_mode}" -eq 1 ]
-							then
-								dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --infobox "${dialog_no_network}" 0 0
-								sleep 10
-								exit 12
+						        tsa_counter=$(( tsa_counter + 1 ))
+						        if [ "${tsa_counter}" -eq "${tsa_number}" ]
+						        then
+								if [ "${gui_mode}" -eq 1 ]
+								then
+									dialog --title "${dialog_type_title_notification}" --backtitle "${core_system_name} ${core_system_version}" --infobox "${dialog_no_network}" 0 0
+									sleep 10
+									exit 12
+								else
+									exit 12
+								fi
 							else
-								exit 12
+								tsa_checked=1
 							fi
 						fi
 					fi
@@ -2763,6 +2773,12 @@ trx_max_size_bytes=3771
 trx_max_size_purpose_bytes=1024
 asset_max_size_bytes=24734
 asset_max_size_description_bytes=8192
+retry_wait_seconds=2
+retry_limit=3
+tsa_curl_timeout=10
+tsa_curl_max_time=30
+tsa_wget_timeout=10
+tsa_wget_retry_limit=3
 dh_key_length=2048
 max_len_name=30
 rnd_len_name=20
