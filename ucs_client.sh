@@ -1726,7 +1726,7 @@ check_mt(){
 			msg_type=${line%%.*}
 
 			###CHECK NAMING CONVENTION##############################
-			if [ -z "$(echo "${msg_type}"|grep -- '[^[:digit:]]')" ]
+			if ! echo "${msg_type}"|grep -q -- '[^[:digit:]]'
 			then
 				###CHECK AGAINST FUNCTIONS OF SYSTEM####################
 				if ! echo "${sys_functions}"|grep -qFf - -- "${script_path}/mt/${line}"
@@ -2236,7 +2236,7 @@ get_dependencies(){
 			then
 				###CHECK MULTI-SIG FILES######################################################
 				multi_sig_files=""
-				for file in ${script_path}/proofs/*/multi.sig
+				for file in "${script_path}"/proofs/*/multi.sig
 				do
 					if [ -e "${file}" ]
 					then
@@ -2246,7 +2246,7 @@ get_dependencies(){
 
 				###CHECK TRX##################################################################
 				trx_files=""
-				for file in ${script_path}/trx/*
+				for file in "${script_path}"/trx/*
 				do
 					if [ -e "${file}" ]
 					then
@@ -2765,9 +2765,14 @@ urlencode(){
 #Main Menu Screen#
 ##################
 ###SET INITIAL VARIABLES####
+readonly script_name=$(basename "${0}")
+readonly script_path=$(cd "$(dirname "$0")" && pwd)
+readonly my_pid=$$
+readonly initial_coinload=365250
+readonly start_date="20250412"
 import_fungible_assets=0
 import_non_fungible_assets=0
-initial_coinload=365250
+only_process_depend=1
 check_period_tsa=21600
 trx_max_size_bytes=3771
 trx_max_size_purpose_bytes=1024
@@ -2788,8 +2793,7 @@ max_len_pw=10
 rnd_len_pw=30
 main_asset="UCC"
 last_ledger=""
-default_tsa=""
-start_date="20250412"
+default_tsa="ucstsa"
 now=$(date -u +%Y%m%d)
 user_logged_in=0
 uca_trigger=0
@@ -2800,9 +2804,10 @@ new_ledger=0
 no_ledger=0
 end_program=0
 small_trx=0
-script_name=$(basename "${0}")
-script_path=$(cd "$(dirname "$0")" && pwd)
-my_pid=$$
+trx_path_input=${script_path}
+trx_path_output=${script_path}/tmp
+sync_path_input=${script_path}
+sync_path_output=${script_path}/tmp
 gui_mode=1
 sec_msig_set=0
 sec_asset_set=0
@@ -2897,10 +2902,10 @@ then
 					;;
 			"-config")	cmd_var=$1
 					;;
-			"-debug")	debug=1
+			"-debug")	readonly debug=1
 					set -v
 					;;
-			"-trace")	trace=1
+			"-trace")	readonly trace=1
 					set -x
 					;;
 			"-version")	echo "version:${core_system_version}"
@@ -3958,7 +3963,7 @@ do
 												else
 													asset_there=$(grep -cFw -- "${order_receiver}" "${user_path}"/all_assets.dat)
 													asset=$(grep -Fw -- "${order_receiver}" "${user_path}"/all_assets.dat)
-													is_fungible=$(cat "${script_path}/assets/${asset}"|grep -cF -- "asset_fungible=1")
+													is_fungible=$(grep -cF -- "asset_fungible=1" "${script_path}/assets/${asset}")
 													if [ "${asset_there}" -eq 1 ] && [ "${is_fungible}" -eq 1 ]
 													then
 														receiver_is_asset=1
@@ -4790,7 +4795,7 @@ do
 							while [ "${quit_menu}" -eq 0 ]
 							do
 								###BROWSER OVERVIEW######################################
-								browse_type=$(dialog --cancel-label "${dialog_main_back}" --title "${dialog_browser}" --backtitle "${core_system_name} ${core_system_version}" --no-items --output-fd 1 --no-hot-list --menu "${dialog_select}" 0 0 0 "${dialog_assets}" "${dialog_users}" "${dialog_trx}")
+								browse_type=$(dialog --cancel-label "${dialog_main_back}" --title "${dialog_browser}" --backtitle "${core_system_name} ${core_system_version}" --no-items --output-fd 1 --no-hot-list --menu "${dialog_overview}" 0 0 0 "${dialog_assets}" "${dialog_users}" "${dialog_trx}")
 								rt_query=$?
 								if [ "${rt_query}" -eq 0 ]
 								then
@@ -5493,7 +5498,7 @@ do
 												fi
 											fi
 										else
-											if [ "${is_msig}" -eq 1 ] && [ ! "${trx_sender}" = "${handover_account}" ] && [ -z "$(grep -F -- "trx/${trx_file} ${trx_hash}" "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig)" ]
+											if [ "${is_msig}" -eq 1 ] && [ ! "${trx_sender}" = "${handover_account}" ] && ! grep -qF -- "trx/${trx_file} ${trx_hash}" "${user_path}"/messages_ack.sig "${user_path}"/messages_dec.sig
 											then
 												dialog --extra-button --extra-label "SIGN" --help-button --help-label "DECLINE" --title "${dialog_history_show} : MULTI-SIGNATURE" --backtitle "${core_system_name} ${core_system_version}" --msgbox "${dialog_history_show_trx}" 0 0
 												rt_query=$?
