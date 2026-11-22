@@ -23,3 +23,14 @@ EXAMPLES:
 ./install.sh -env termux
 
 ./install.sh -user JohnDoe
+
+Exit Codes:
+
+In case of any errors the script will return a exitcode greater than 0 :
+
+VALUE		EXPLANATION
+=====================================================================
+1       WRONG SYNTAX OR UNKNOWN COMMAND
+2       TEMP FILE FOR INSTALL DEPENDENCIES COULD NOT BE CREATED
+3       TEMP FILE FOR RECONFIGURATION COULD NOT BE CREATED
+4       COULD NOT SWITCH TO GIVEN USER

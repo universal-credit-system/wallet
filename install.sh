@@ -45,13 +45,13 @@ print_message(){
 		message="$1"
 		if [ -n "${message}" ]
 		then
-			printf "%s" "${message}"|tee -a "${script_path}/install_${timestamp}.log"
+			printf "%b" "${message}"|tee -a "${script_path}/install_client_${timestamp}.log"
 		else
 			if [ "${rt_query}" -eq 0 ]
 			then
-				printf "%s\n" "DONE"|tee -a "${script_path}/install_${timestamp}.log"
+				printf "%s\n" "DONE"|tee -a "${script_path}/install_client_${timestamp}.log"
 			else
-				printf "%s\n" "FAILED"|tee -a "${script_path}/install_${timestamp}.log"
+				printf "%s\n" "FAILED"|tee -a "${script_path}/install_client_${timestamp}.log"
 				error_counter=$(( error_counter + 1 ))
 			fi
 		fi
@@ -106,12 +106,14 @@ then
 
 fi
 
+### DISPLAY OUTPUT #######################
+print_message "[${script_name}][INFO] Start installation\n"
+
 ### CREATE TMP ##############
 trap_command '[ -n "${install_dep:-}" ] && rm -f -- "${install_dep}"'
-install_dep=$(mktemp "${script_path}/install_dep.XXXXXX") || exit 1
-
-### DISPLAY OUTPUT #######################
-printf "%s\n" "[${script_name}][INFO] Start installation"|tee -a "${script_path}/install_${timestamp}.log"
+install_dep=$(mktemp "${script_path}/install_dep.XXXXXX") || exit 2
+trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
+config_tmp=$(mktemp "${script_path}/tmp/config_tmp.XXXXXX") || exit 3
 
 ### DETECT OS AND SET PATH ##
 print_message "[${script_name}][INFO] Detecting operating system (uname -s)..."
@@ -246,10 +248,10 @@ then
 					###IF PACKAGING MANAGER DETECTION FAILED####
 					error_counter=1
 					no_of_programs=$(wc -l <"${install_dep}")
-					printf "%s\n" "[${script_name}][ERROR][package] Couldn't detect the package management system used on this machine!"
-					printf "%s\n" "[${script_name}][ERROR][package] Found ${no_of_programs} programs that need to be installed:"
+					print_message "[${script_name}][ERROR][package] Couldn't detect the package management system used on this machine!\n"
+					print_message "[${script_name}][ERROR][package] Found ${no_of_programs} programs that need to be installed:\n"
 					awk -v script_name="${script_name}" '{print "[" script_name "][ERROR][package] -> " $1}' "${install_dep}"
-					printf "%s\n" "[${script_name}][ERROR][package] Install these programms first using your package management system and then run ${script_name} again."
+					print_message "[${script_name}][ERROR][package] Install these programms first using your package management system and then run ${script_name} again.\n"
 					############################################
 				fi
 				;;
@@ -260,7 +262,7 @@ then
 		### INSTALL MISSING PKGS #####
 		while IFS= read -r program
 		do
-			printf "%s\n" "[${script_name}][INFO] Trying to install ${program} using ${pkg_mngr}..."
+			print_message "[${script_name}][INFO] Trying to install ${program} using ${pkg_mngr}...\n"
 			case "${pkg_mngr}" in
 				"apk")		apk add "${program}" ;;
 				"apt-get")	apt-get -y install "${program}" ;;
@@ -277,8 +279,8 @@ then
 			rt_query=$?
 			if [ "${rt_query}" -gt 0 ]
 			then
-				printf "%s\n" "[${script_name}][ERROR][packages] Error during installation of ${program} using ${pkg_mngr}"
-				printf "%s\n" "[${script_name}][ERROR][packages] Maybe the program ${program} is available in a package with different name"
+				print_message "[${script_name}][ERROR][packages] Error during installation of ${program} using ${pkg_mngr}\n"
+				print_message "[${script_name}][ERROR][packages] Maybe the program ${program} is available in a package with different name\n"
 				error_counter=$(( error_counter + 1 ))
 			fi
 		done <"${install_dep}"
@@ -291,8 +293,8 @@ then
 	if [ -n "${cmd_user}" ]
 	then
 		### DOCUMENT SU COMMAND ######
-		printf "%s\n" "[${script_name}][INFO] Switch to user ${cmd_user}"
-		su - "${cmd_user}" || exit 1
+		print_message "[${script_name}][INFO] Switch to user ${cmd_user}\n"
+		su - "${cmd_user}" || exit 4
 	fi
 	### CREATE DIRECTORIES #######
 	print_message "[${script_name}][INFO] Creating directories..."
@@ -323,10 +325,6 @@ then
 	print_message "[${script_name}][INFO] Copy install_config.conf to config.conf..."
 	cp -- "${script_path}"/control/install_config.conf "${script_path}"/control/config.conf || rt_query=1
 	print_message
-
-	### CREATE TMP FILE ##########
-	trap_command '[ -n "${config_tmp:-}" ] && rm -f -- "${config_tmp}"'
-	config_tmp=$(mktemp "${script_path}/tmp/config_tmp.XXXXXX") || exit 1
 
 	### WRITE PERMISSIONS ########
 	print_message "[${script_name}][INFO] Write umask to config.conf..."
@@ -431,5 +429,5 @@ then
 	fi
 fi
 ### DISPLAY OUTPUT #######################
-printf "%s\n" "[${script_name}][INFO] Finished (errors:${error_counter})"|tee -a "${script_path}/install_${timestamp}.log"
+print_message "[${script_name}][INFO] Finished (errors:${error_counter})\n"
 
